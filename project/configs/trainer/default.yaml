@@ -1,0 +1,16 @@
+_target_: lightning.Trainer
+
+logger: null
+accelerator: gpu
+strategy: null
+devices: 1
+
+min_epochs: 1
+max_epochs: 90
+
+# path to output directory, created dynamically by hydra
+# path generation pattern is specified in `configs/hydra/default.yaml`
+# use it to store all files generated during the run, like checkpoints and metrics
+default_root_dir: ${hydra:runtime.output_dir}
+
+detect_anomaly: false

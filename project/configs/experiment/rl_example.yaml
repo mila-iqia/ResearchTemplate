@@ -1,0 +1,46 @@
+# @package _global_
+
+# to execute this experiment run:
+# python main.py experiment=rl_example
+
+# NOTE: This is equivalent to doing this here:
+#
+# python main.py algorithm=reinforce datamodule=rl datamodule.env=CartPole-v1 datamodule.batch_size=10 trainer.max_epochs=1 network=fcnet
+#
+
+defaults:
+  - override /datamodule: rl
+  - override /algorithm: rl_example
+  - override /network: fcnet
+  - override /trainer: default
+  # - override /trainer.callbacks: default
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+seed: 12345
+
+trainer:
+  min_epochs: 1
+  max_epochs: 2
+
+algorithm:
+  gamma: 0.99
+  learning_rate: 0.01
+
+network:
+  hidden_dims: [128, 128]
+
+datamodule:
+  env: CartPole-v1
+  batch_size: 5
+  episodes_per_epoch: 100
+
+
+name: "${hydra:runtime.choices.algorithm}-${hydra:runtime.choices.network}-${hydra:runtime.choices.datamodule}"
+# name: example
+
+# logger:
+#   wandb:
+#     tags: ["${datamodule}", "${algorithm}", "${network}"]
+#     group: ${datamodule.name}

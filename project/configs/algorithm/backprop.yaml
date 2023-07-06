@@ -1,0 +1,5 @@
+_target_: project.algorithms.backprop.Backprop
+network: ${network}
+datamodule: ${datamodule}
+hp:
+  _target_: project.algorithms.backprop.Backprop.HParams

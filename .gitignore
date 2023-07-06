@@ -1,0 +1,9 @@
+.vscode
+.dmypy.json
+*.egg-info
+**__pycache__
+build
+wandb
+logs
+checkpoints
+slurm_logs

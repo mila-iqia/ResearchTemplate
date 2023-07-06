@@ -1,0 +1,6 @@
+_target_: torch.optim.AdamW
+_partial_: True
+# Learning rate of the optimizer.
+lr: 4e-3
+# Weight decay coefficient.
+weight_decay: null

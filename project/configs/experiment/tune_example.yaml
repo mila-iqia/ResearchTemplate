@@ -1,0 +1,71 @@
+# @package _global_
+defaults:
+- overfit_one_batch.yaml
+- override /datamodule: cifar10
+- override /algorithm: example
+- override /network: simple_vgg
+- override /hydra/sweeper: orion
+- override /hydra/launcher: submitit_slurm
+
+name: tune_example
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  max_epochs: 3
+
+hydra:
+  launcher:
+    cpus_per_task: 2
+    nodes: 1
+    # TODO: Pack more than one job on a single GPU.
+    tasks_per_node: 1
+    mem_gb: 16
+    array_parallelism: 16  # max num of jobs to run in parallel
+    gres: gpu:1
+    # Other things to pass to `sbatch`:
+    additional_parameters:
+      time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
+
+    ## A list of commands to add to the generated sbatch script before running srun:
+    setup:
+    - unset CUDA_VISIBLE_DEVICES
+
+  sweeper:
+    params:
+      algorithm:
+        forward_optim:
+          lr: "loguniform(1e-6, 1.0)"
+          weight_decay: "loguniform(1e-6, 1e-2)"
+        feedback_optim:
+          lr: "loguniform(1e-5, 1.0)"
+          weight_decay: "loguniform(1e-6, 1e-2)"
+        feedback_noise_std: "uniform(1e-3, 1.0, default_value=0.05)"
+        n_noise_samples: "uniform(1, 20, default_value=10, discrete=True)"
+        feedback_training_iterations: "uniform(1, 20, default_value=10, discrete=True)"
+
+    orion:
+      name: "${name}"
+      version: 1
+
+    algorithm:
+    #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
+      type: random
+      config:
+          seed: 1
+
+    worker:
+      n_workers: 16
+      max_broken: 3
+      max_trials: 200
+
+    storage:
+      type: legacy
+      database:
+          type: pickleddb
+          host: "${oc.env:SCRATCH}/BeyondBackprop/logs/${name}/multiruns/database.pkl"
+
+seed: 123
+
+datamodule:
+  batch_size: 256
