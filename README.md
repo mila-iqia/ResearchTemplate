@@ -1,4 +1,4 @@
-# WIP: Codebase for biologically-inspired learning algorithms (alternatives to backprop)
+# WIP: Research Template
 
 Inspired / adapted from https://www.github.com/ernoult/ScalingDTP as well as https://github.com/ashleve/lightning-hydra-template
 
