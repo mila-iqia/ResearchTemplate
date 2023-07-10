@@ -31,10 +31,10 @@ logger = get_logger(__name__)
 def main(dict_config: Config) -> float:
     # Convert the "raw" DictConfig (which uses the `Config` class to define it's structure)
     # into an actual `Config` object:
-    config = OmegaConf.to_object(dict_config)
-    assert isinstance(config, Config)
+    # config = OmegaConf.to_object(dict_config)
+    # assert isinstance(config, Config)
 
-    experiment: Experiment = setup_experiment(config)
+    experiment: Experiment = setup_experiment(dict_config)
 
     objective, _metrics = run(experiment)
     assert objective is not None

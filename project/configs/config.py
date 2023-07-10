@@ -1,14 +1,16 @@
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
-from typing import Optional, Callable, Any
+from typing import Literal, Optional, Callable, Any
 import omegaconf
 from torch import nn
 from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig, OmegaConf
 from project.algorithms.algorithm import Algorithm
 from project.configs.datamodule import DataModuleConfig
+from project.configs.network import ResNet18Config
 
 logger = get_logger(__name__)
+LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
 
 @dataclass
@@ -33,10 +35,7 @@ class Config:
     # # Config(s) for the logger(s).
     # logger: Optional[dict] = field(default_factory=dict)  # type: ignore
 
-    # Whether to run in debug mode or not.
-    debug: bool = False
-
-    verbose: bool = False
+    log_level: str = "info"
 
     # Random seed.
     seed: Optional[int] = None

@@ -121,29 +121,29 @@ class FashionMNISTDataModuleConfig(MNISTDataModuleConfig):
     ...
 
 
-# def cifar10_train_transforms():
-#     return transforms.Compose(
-#         [
-#             transforms.RandomHorizontalFlip(p=0.5),
-#             transforms.RandomCrop(size=32, padding=4, padding_mode="edge"),
-#             transforms.ToTensor(),
-#             cifar10_normalization(),
-#         ]
-#     )
+def cifar10_train_transforms():
+    return transforms.Compose(
+        [
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomCrop(size=32, padding=4, padding_mode="edge"),
+            transforms.ToTensor(),
+            cifar10_normalization(),
+        ]
+    )
 
 
-# @hydrated_dataclass(target=cifar10_train_transforms)
-# class Cifar10TrainTransforms:
-#     ...
+@hydrated_dataclass(target=cifar10_train_transforms)
+class Cifar10TrainTransforms:
+    ...
 
 
-# @hydrated_dataclass(target=CIFAR10DataModule, populate_full_signature=True)
-# class CIFAR10DataModuleConfig(VisionDataModuleConfig):
-#     train_transforms: Cifar10TrainTransforms = field(default_factory=Cifar10TrainTransforms)
-#     # Overwriting this one:
-#     batch_size: int = 128
+@hydrated_dataclass(target=CIFAR10DataModule, populate_full_signature=True)
+class CIFAR10DataModuleConfig(VisionDataModuleConfig):
+    train_transforms: Cifar10TrainTransforms = field(default_factory=Cifar10TrainTransforms)
+    # Overwriting this one:
+    batch_size: int = 128
 
-#     num_classes: ClassVar[int] = 10
+    num_classes: ClassVar[int] = 10
 
 
 def imagenet32_train_transforms():
@@ -185,8 +185,8 @@ class RlDataModuleConfig(DataModuleConfig):
 
 cs = ConfigStore.instance()
 # cs.store(group="datamodule", name="base", node=DataModuleConfig)
-# cs.store(group="datamodule", name="cifar10", node=CIFAR10DataModuleConfig)
-# cs.store(group="datamodule", name="mnist", node=MNISTDataModuleConfig)
-# cs.store(group="datamodule", name="fashion_mnist", node=FashionMNISTDataModuleConfig)
-# cs.store(group="datamodule", name="imagenet32", node=ImageNet32DataModuleConfig)
-# cs.store(group="datamodule", name="rl", node=RlDataModuleConfig)
+cs.store(group="datamodule", name="cifar10", node=CIFAR10DataModuleConfig)
+cs.store(group="datamodule", name="mnist", node=MNISTDataModuleConfig)
+cs.store(group="datamodule", name="fashion_mnist", node=FashionMNISTDataModuleConfig)
+cs.store(group="datamodule", name="imagenet32", node=ImageNet32DataModuleConfig)
+cs.store(group="datamodule", name="rl", node=RlDataModuleConfig)

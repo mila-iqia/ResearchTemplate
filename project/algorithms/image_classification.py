@@ -44,7 +44,7 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
         # NOTE: Setting this property allows PL to infer the shapes and number of params.
         # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
         # If possible, we'd like to remove any reference to the device from the algorithm.
-        device = get_device(network)
+        device = get_device(self.network)
         self.example_input_array = torch.rand(
             [datamodule.batch_size, *datamodule.dims],
             device=device,
@@ -131,18 +131,18 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
         assert isinstance(top5_accuracy, MulticlassAccuracy)
 
         # TODO: It's a bit confusing, not sure if this is the right way to use this:
-        assert False, (probs.shape, y.shape)
         accuracy(probs, y)
         top5_accuracy(probs, y)
-
         prog_bar = phase == "train"
-        self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
-        self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
+
+        log_kwargs = {"prog_bar": prog_bar, "sync_dist": True}
+        self.log(f"{phase}/accuracy", accuracy, **log_kwargs)
+        self.log(f"{phase}/top5_accuracy", top5_accuracy, **log_kwargs)
 
         if "cross_entropy" not in step_output:
             # Add the cross entropy loss as a metric.
             ce_loss = F.cross_entropy(logits.detach(), y, reduction="mean")
-            self.log(f"{phase}/cross_entropy", ce_loss, prog_bar=prog_bar, sync_dist=True)
+            self.log(f"{phase}/cross_entropy", ce_loss, **log_kwargs)
 
         fused_output = step_output.copy()
         loss: Tensor | float | None = step_output.get("loss", None)
@@ -152,5 +152,8 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
             # optimization is enabled, for example in the baseline (backprop), where each replica
             # returns the un-reduced cross-entropy loss. Here we need to reduce it to a scalar.
             fused_output["loss"] = loss.mean()
+
+        if loss is not None:
+            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), **log_kwargs)
 
         return fused_output

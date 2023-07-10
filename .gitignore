@@ -1,5 +1,7 @@
 .vscode
 .dmypy.json
+.conda_env
+.mypy_cache
 *.egg-info
 **__pycache__
 build

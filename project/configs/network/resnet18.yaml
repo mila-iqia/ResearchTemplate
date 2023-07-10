@@ -1,6 +1,0 @@
-_target_: torchvision.models.resnet18
-_partial_: True
-pretrained: False
-# TODO: This kind of interpolation is actually pretty hard to do correctly..
-# num_classes: ${datamodule.num_classes}
-# channels: ${datamodule.dims[0]}

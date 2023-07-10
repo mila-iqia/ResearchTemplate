@@ -5,14 +5,13 @@ import random
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
 
-from hydra.utils import instantiate
+from hydra_zen import instantiate
 from lightning import Callback, LightningDataModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
 from project.datamodules.datamodule import DataModule
-from project.utils.hydra_utils import get_outer_class
 from lightning.pytorch.loggers import Logger
 
 from project.utils.utils import validate_datamodule
@@ -78,10 +77,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     """
 
     root_logger = logging.getLogger()
-    if experiment_config.debug:
-        root_logger.setLevel(logging.INFO)
-    elif experiment_config.verbose:
-        root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(getattr(logging, experiment_config.log_level.upper()))
 
     if experiment_config.seed is not None:
         seed = experiment_config.seed
@@ -92,34 +88,49 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     seed_everything(seed=seed, workers=True)
 
     # Create the datamodule:
-    datamodule = setup_datamodule(experiment_config)
+    datamodule = instantiate(experiment_config.datamodule)
+    # Create the network
+
+    # NOTE: Here we register a way to get the attribute of the *object* instead of its config:
+    OmegaConf.register_new_resolver("datamodule", datamodule.__getattribute__)
+
+    # NOTE: Doesn't work, because it needs to have access to the datamodule *instance* attributes!
+    # Could we perhaps create a function that provides more "context variables" for the
+    # interpolation?
+    network = instantiate(experiment_config.network)
 
     # Create the Trainer.
+    trainer_config = OmegaConf.to_container(experiment_config.trainer)
+    assert isinstance(trainer_config, dict)
     # NOTE: The callbacks and loggers are parsed into dict[str, obj] by Hydra, but we need them
     # to be passed as a list of objects to the Trainer. Therefore here we put the dicts in lists
-    callbacks: dict[str, dict] = experiment_config.trainer.get("callbacks", {}) or {}
-    loggers: dict[str, dict] = experiment_config.trainer.setdefault("logger", {}) or {}
+    callbacks: dict[str, Callback] = instantiate(trainer_config.pop("callbacks", {})) or {}
+    loggers: dict[str, Logger] = instantiate(trainer_config.pop("logger", {})) or {}
+
     trainer = instantiate(
-        experiment_config.trainer,
-        callbacks=list(experiment_config.trainer.setdefault("callbacks", {}).values()),
-        logger=list(experiment_config.trainer.setdefault("logger", {}).values()),
+        trainer_config,
+        callbacks=list(callbacks.values()),
+        logger=list(loggers.values()),
+        # callbacks="${oc.dict.values: /trainer/callbacks}",
+        # logger="${oc.dict.values: /trainer/logger}",
     )
     assert isinstance(trainer, Trainer)
 
     # Create the network
     # network = instantiate(experiment_config.network)
-    # assert isinstance(network, nn.Module), network
+    # TODO: Shouldn't we let the algorithm do it though?
+    # assert isinstance(network, (nn.Module, functools.partial))
+    # if isinstance(network, functools.partial):
+    #     network = network()
     # Create the algorithm
     # TODO: Seems a bit too rigid to have the network be create independently of the algorithm.
     # This might need to change.
-    # assert False, experiment_config.algorithm
     # algorithm = instantiate(experiment_config.algorithm, network=132, datamodule=456)
-    experiment_config.algorithm["datamodule"] = datamodule
-    assert False, experiment_config.network
+    # experiment_config.algorithm["datamodule"] = datamodule
     algorithm = instantiate(
         experiment_config.algorithm,
         datamodule=datamodule,
-        network=experiment_config.network,
+        network=network,
     )
     # algo_hparams: Algorithm.HParams = experiment_config.algorithm
     # algorithm_type: type[Algorithm] = get_outer_class(type(algo_hparams))
