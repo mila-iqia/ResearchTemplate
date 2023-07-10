@@ -18,6 +18,7 @@ job_logging:
   handlers:
     rich:
       class: rich.logging.RichHandler
+      markup: True
   root:
-    handlers: [console, rich]
+    handlers: [rich]
   disable_existing_loggers: False
