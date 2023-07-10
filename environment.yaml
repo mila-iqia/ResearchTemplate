@@ -117,7 +117,6 @@ dependencies:
     - pluggy==1.2.0
     - pre-commit==3.3.3
     - proglog==0.1.10
-    - project==0.0.1
     - protobuf==4.23.4
     - psutil==5.9.5
     - pydantic==1.10.11
