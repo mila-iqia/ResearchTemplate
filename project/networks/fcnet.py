@@ -81,26 +81,26 @@ class FcNet(nn.Sequential):
     def __init__(
         self,
         *,
-        input_shape: tuple[int, ...] | int | None = None,
-        output_shape: tuple[int, ...] | int | None = None,
+        input_shape: tuple[int, ...] | list[int] | int | None = None,
+        output_shape: tuple[int, ...] | list[int] | int | None = None,
         # (Optional, only temporarily there so all the networks can be created with the same
         # signature)
         in_channels: int | None = None,
         n_classes: int | None = None,
         hparams: HParams | None = None,
     ):
-        if isinstance(input_shape, tuple):
+        if isinstance(input_shape, (tuple, list)):
             self.input_shape = input_shape
             self.input_dims = int(np.prod(input_shape))
         elif isinstance(input_shape, int):
             self.input_shape = (input_shape,)
             self.input_dims = input_shape
         else:
-            assert input_shape is None
+            assert input_shape is None, input_shape
             self.input_shape = None
             self.input_dims = None
 
-        if isinstance(output_shape, tuple):
+        if isinstance(output_shape, (tuple, list)):
             self.output_shape = output_shape
             self.output_dims = int(np.prod(output_shape))
         elif isinstance(output_shape, int):
@@ -121,8 +121,8 @@ class FcNet(nn.Sequential):
             )
         ):
             block_layers = []
-            # if block_index == 0:
-            #     block_layers.append(Flatten())
+            if block_index == 0:
+                block_layers.append(Flatten())
 
             if in_dims is None:
                 block_layers.append(nn.LazyLinear(out_dims, bias=self.hparams.use_bias))

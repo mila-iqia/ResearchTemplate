@@ -47,7 +47,7 @@ class Algorithm(LightningModule, ABC, Generic[NetworkType, BatchType]):
         self.hp = hp or self.HParams()
         if not isinstance(network, nn.Module):
             network = instantiate(network)
-        assert isinstance(network, nn.Module)
+        assert isinstance(network, nn.Module), network
         self.network: NetworkType = network
         self.trainer: Trainer
 

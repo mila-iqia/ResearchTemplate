@@ -1,36 +1,9 @@
-import inspect
-from typing import TypeVar, cast
-from dataclasses import field
-import functools
-from hydra_zen import hydrated_dataclass, instantiate
-from torchvision.models import resnet18
 from hydra.core.config_store import ConfigStore
-from omegaconf import SI, II
-
-T = TypeVar("T")
-
-
-def _default_factory_(interpolation: str, default_val: T) -> T:
-    current = inspect.currentframe()
-    assert current
-    prev = current.f_back
-    assert prev
-    if inspect.getframeinfo(prev).function == "get_dataclass_data":
-        return cast(T, interpolation)  # type: ignore
-    return default_val
-    caller_functions = []
-    while prev:
-        caller_functions.append(inspect.getframeinfo(prev))
-        prev = prev.f_back
-        assert False, caller_functions[0]
-    assert False, caller_functions
-
-
-def interpolate_or_default(interpolation: str, default: T) -> T:
-    # TODO: If we're in a Hydra instantiate context, return the variable interpolation default (the string)
-    # otherwise, we're probably in the regular dataclass context, so return the default value.
-    assert "${" in interpolation and "}" in interpolation
-    return field(default_factory=functools.partial(_default_factory_, interpolation, default))
+from project.networks.fcnet import FcNet
+from torchvision.models import resnet18
+from dataclasses import field
+from hydra_zen import hydrated_dataclass, instantiate
+from project.utils.hydra_utils import interpolate_or_default
 
 
 @hydrated_dataclass(target=resnet18)
@@ -39,5 +12,26 @@ class ResNet18Config:
     num_classes: int = interpolate_or_default("${datamodule:num_classes}", 1000)
 
 
+@hydrated_dataclass(target=FcNet, hydra_recursive=True, hydra_convert="object")
+class FcNetConfig:
+    input_shape: tuple[int, ...] = interpolate_or_default("${datamodule:dims}", (3, 32, 32))
+    output_shape: int = interpolate_or_default("${datamodule:num_classes}", (10))
+    hparams: FcNet.HParams = field(default_factory=FcNet.HParams)
+
+
+# Design problem: How we create the network depends on the kind of datamodule (and later on maybe
+# even Algorithm..) that we use.
+
+# Option 1: Create a common interface (e.g. have DataModule have input_shape/space and output_shape
+# or similar)
+
+# Option 2: Create handlers for each kind of datamodule (e.g. VisionDataModule, RLDataModule, ...)
+# using something like Singledispatch:
+# - handler for creating the network from a VisionDataModule
+# - handler for creating the network from an RLDataModule
+# - ...
+
 _cs = ConfigStore.instance()
-_cs.store("resnet18", group="network", node=ResNet18Config)
+_cs.store(group="network", name="fcnet", node=FcNetConfig)
+# _cs.store(group="network", name="fcnet", node=FcNet.HParams)
+_cs.store(group="network", name="resnet18", node=ResNet18Config)

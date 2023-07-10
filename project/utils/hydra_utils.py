@@ -9,11 +9,34 @@ from hydra.core.config_store import ConfigStore
 from hydra_zen import instantiate
 from hydra_zen.typing._implementations import Partial as _Partial
 from typing_extensions import ParamSpec
+import inspect
+from typing import TypeVar
+from dataclasses import field
+import functools
+from hydra_zen import instantiate
+from hydra.core.config_store import ConfigStore
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def interpolate_or_default(interpolation: str, default: T) -> T:
+    # TODO: If we're in a Hydra instantiate context, return the variable interpolation default (the string)
+    # otherwise, we're probably in the regular dataclass context, so return the default value.
+    assert "${" in interpolation and "}" in interpolation
+    return field(default_factory=functools.partial(_default_factory, interpolation, default))
+
+
+def _default_factory(interpolation: str, default_val: T) -> T:
+    current = inspect.currentframe()
+    assert current
+    prev = current.f_back
+    assert prev
+    if inspect.getframeinfo(prev).function == "get_dataclass_data":
+        return interpolation  # type: ignore
+    return default_val
 
 
 def config_name(target_type: type) -> str:
