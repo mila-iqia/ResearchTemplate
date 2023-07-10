@@ -176,14 +176,17 @@ class PPO(Algorithm):
         self.datamodule: RlDataModule[PPOActorOutput] = self.datamodule.set_actor(
             actor=self.forward
         )
+        assert isinstance(self.datamodule, RlDataModule)
 
         # NOTE: assuming continuous actions for now.
-        env = self.datamodule.env
-        assert isinstance(env.observation_space, spaces.Box)
-        assert isinstance(env.action_space, spaces.Box)
+        assert isinstance(self.datamodule.observation_space, spaces.Box)
+        assert isinstance(self.datamodule.action_space, spaces.Box)
+
         # NOTE: We later add a wrapper that normalizes the action space to [-1, 1]
-        self._action_space: spaces.Box = spaces.Box(-1, 1, shape=env.action_space.shape)
-        action_dims = flatdim(env.action_space)
+        self._action_space: spaces.Box = spaces.Box(
+            -1, 1, shape=self.datamodule.action_space.shape
+        )
+        action_dims = flatdim(self.datamodule.action_space)
 
         assert isinstance(network, FcNet), "Assuming a fully connected network for now"
         if network.output_dims != action_dims:
@@ -194,7 +197,6 @@ class PPO(Algorithm):
                 last_layer.in_features, action_dims, bias=last_layer.bias is not None
             )
             self.network.output_dims = action_dims
-            self.network.output_shape = (action_dims,)
             # TODO: Not ideal that the FcNet is created differently between Reinforce and PPO..
             logger.warning(
                 RuntimeWarning(
@@ -208,8 +210,8 @@ class PPO(Algorithm):
         self.actor_mean = self.network
         self.actor_logstd = nn.Parameter(torch.zeros(action_dims))
         self.value_network = FcNet(
-            input_shape=env.observation_space.shape,
-            output_shape=(1,),
+            input_shape=self.datamodule.observation_space.shape,
+            output_dims=1,
             hparams=self.hp.value_network,
         )
 
@@ -270,11 +272,12 @@ class PPO(Algorithm):
         # We only add the gym wrappers to the datamodule once at the start of training.
         assert self.datamodule.train_dataset is None
         assert len(self.datamodule.train_wrappers) == 0
-        self.datamodule.train_wrappers.extend(self.gym_wrappers_to_add(videos_subdir="train"))
-        self.datamodule.valid_wrappers.extend(self.gym_wrappers_to_add(videos_subdir="valid"))
-        self.datamodule.test_wrappers.extend(self.gym_wrappers_to_add(videos_subdir="test"))
+        self.datamodule.train_wrappers = self.gym_wrappers_to_add(videos_subdir="train")
+        self.datamodule.valid_wrappers = self.gym_wrappers_to_add(videos_subdir="valid")
+        self.datamodule.test_wrappers = self.gym_wrappers_to_add(videos_subdir="test")
 
     def gym_wrappers_to_add(self, videos_subdir: str) -> list[Callable[[gym.Env], gym.Env]]:
+        # TODO: make this better: also show the change in the obs space.
         clip_function = partial(np.clip, a_min=-10, a_max=10)
         video_folder = str(self.log_dir / "videos" / videos_subdir)
         return [
@@ -308,7 +311,7 @@ class PPO(Algorithm):
         #             "Therefore we need to have the same shape for all the nested tensors."
         #         )
         assert isinstance(action_space, spaces.Box)
-        assert (action_space.low == -1).all() and (action_space.high == 1).all()
+        assert (action_space.low == -1).all() and (action_space.high == 1).all(), action_space
         assert self.network.output_dims == action_space.shape[-1]
 
         action_mean = self.actor_mean(observations)
@@ -467,7 +470,6 @@ class PPO(Algorithm):
             self.log(f"{phase}/old_approx_kl", old_approx_kl, batch_size=batch_size)
             self.log(f"{phase}/approx_kl", approx_kl, batch_size=batch_size)
             self.log(f"{phase}/clip_fraction", clipfracs, batch_size=batch_size)
-
         if self.hp.norm_adv:
             b_advantages = (b_advantages - b_advantages.mean()) / (b_advantages.std() + 1e-8)
 

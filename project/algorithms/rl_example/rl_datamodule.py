@@ -1,18 +1,19 @@
 from __future__ import annotations
-import functools
 
+import functools
+import warnings
 from logging import getLogger as get_logger
-from typing import Any, Callable, Generic, Iterable, Literal, TypeVar, cast
+from typing import Any, Callable, Generic, Iterable, Literal, Sequence, TypeVar, cast
+
 import gym
 import torch
+from gym.spaces.utils import flatdim
+from gym.utils.colorize import colorize
 from lightning import LightningDataModule
 from torch import Tensor
 from torch.utils.data import DataLoader
-import warnings
-from gym.utils.colorize import colorize
-from project.datamodules.datamodule import DataModule
-from project.utils.types import StageStr
 
+from project.algorithms.rl_example.dataset import RlDataset
 from project.algorithms.rl_example.types import (
     Actor,
     ActorOutput,
@@ -20,8 +21,9 @@ from project.algorithms.rl_example.types import (
     Episode,
     EpisodeBatch,
 )
-from project.algorithms.rl_example.dataset import RlDataset
 from project.algorithms.rl_example.utils import ToTensorsWrapper
+from project.datamodules.datamodule import DataModule
+from project.utils.types import StageStr
 
 logger = get_logger(__name__)
 SomeActorOutputType = TypeVar("SomeActorOutputType", bound=ActorOutput)
@@ -90,9 +92,9 @@ class RlDataModule(
         self.valid_dataset: RlDataset[ActorOutputDict] | None = None
         self.test_dataset: RlDataset[ActorOutputDict] | None = None
 
-        self.train_wrappers = train_wrappers or []
-        self.valid_wrappers = valid_wrappers or []
-        self.test_wrappers = test_wrappers or []
+        self._train_wrappers: tuple = tuple(train_wrappers or ())
+        self._valid_wrappers: tuple = tuple(valid_wrappers or ())
+        self._test_wrappers: tuple = tuple(test_wrappers or ())
 
         self.train_dataloader_wrappers: list[
             Callable[
@@ -154,13 +156,93 @@ class RlDataModule(
 
         Called at the beginning of each stage (fit, validate, test).
         """
+        # FIXME: These should create the envs so we can easily inspect the shape of the
+        # observations.
+        if stage in ["fit", None]:
+            logger.debug(f"Creating training environment with wrappers {self.train_wrappers}")
+            self.train_env = self._make_env(wrappers=self.train_wrappers)
+        if stage in ["validate", None]:
+            logger.debug(f"Creating validation environment with wrappers {self.valid_wrappers}")
+            self.valid_env = self._make_env(wrappers=self.valid_wrappers)
+        if stage in ["test", None]:
+            logger.debug(f"Creating testing environment with wrappers {self.test_wrappers}")
+            self.test_env = self._make_env(wrappers=self.test_wrappers)
 
-    def _make_env(self, wrappers: list[Callable[[gym.Env], gym.Env]]) -> gym.Env:
+    @property
+    def train_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+        return self._train_wrappers
+
+    @train_wrappers.setter
+    def train_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+        wrappers = tuple(wrappers)
+        if self.train_env is not None and wrappers != self._train_wrappers:
+            logger.warn("Training wrappers changed, closing the previous environment.")
+            self.train_env.close()
+            self.train_env = None
+        self._train_wrappers = wrappers
+
+    @property
+    def valid_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+        return self._valid_wrappers
+
+    @valid_wrappers.setter
+    def valid_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+        wrappers = tuple(wrappers)
+        if self.valid_env is not None and wrappers != self._valid_wrappers:
+            logger.warn("validation wrappers changed, closing the previous environment.")
+            self.valid_env.close()
+            self.valid_env = None
+        self._valid_wrappers = wrappers
+
+    @property
+    def test_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+        return self._test_wrappers
+
+    @test_wrappers.setter
+    def test_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+        wrappers = tuple(wrappers)
+        if self.test_env is not None and wrappers != self._test_wrappers:
+            logger.warn("testing wrappers changed, closing the previous environment.")
+            self.test_env.close()
+            self.test_env = None
+        self._valid_wrappers = wrappers
+
+    @property
+    def dims(self) -> tuple[int, ...]:
+        if self.observation_space.shape:
+            return self.observation_space.shape
+        return (flatdim(self.observation_space),)
+
+    @property
+    def action_dims(self) -> int:
+        return flatdim(self.action_space)
+
+    @property
+    def observation_space(self) -> gym.Space:
+        if self.train_env is None:
+            self.prepare_data()
+            self.setup(stage="fit")
+        assert self.train_env is not None
+        return self.train_env.observation_space
+
+    @property
+    def action_space(self) -> gym.Space:
+        if self.train_env is None:
+            self.prepare_data()
+            self.setup(stage="fit")
+        assert self.train_env is not None
+        return self.train_env.action_space
+
+    def _make_env(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> gym.Env:
         # TODO: Use gym.vector.make for vector envs, and pass the single-env wrappers to
         # gym.vector.make.
+        logger.debug(f"Creating a new environment with {len(wrappers)} wrappers:")
         env = self.env_fn()
-        for wrapper in wrappers:
+        for i, wrapper in enumerate(wrappers):
             env = wrapper(env)
+            logger.debug(
+                f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
+            )
         # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
         env = ToTensorsWrapper(env, device=self.device)
         return env
@@ -170,8 +252,6 @@ class RlDataModule(
             # warn("No actor was set, using a random policy.", color="red")
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
-
-        logger.debug(f"Creating training environment with wrappers {self.train_wrappers}")
         self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
         self.train_dataset = RlDataset(
             self.train_env,

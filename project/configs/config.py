@@ -1,13 +1,8 @@
+import random
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
-from typing import Literal, Optional, Callable, Any
-import omegaconf
-from torch import nn
+from typing import Literal, Optional, Any
 from hydra.core.config_store import ConfigStore
-from omegaconf import DictConfig, OmegaConf
-from project.algorithms.algorithm import Algorithm
-from project.configs.datamodule import DataModuleConfig
-from project.configs.network import ResNet18Config
 
 logger = get_logger(__name__)
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
@@ -38,7 +33,7 @@ class Config:
     log_level: str = "info"
 
     # Random seed.
-    seed: Optional[int] = None
+    seed: Optional[int] = field(default_factory=lambda: random.randint(0, int(1e5)))
 
     # Name for the experiment.
     name: str = "default"

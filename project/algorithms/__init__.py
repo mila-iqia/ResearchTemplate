@@ -1,7 +1,7 @@
 from hydra.core.config_store import ConfigStore
-
+from hydra_zen import hydrated_dataclass
+from dataclasses import field
 from project.algorithms.ppo.ppo import PPO
-
 from .algorithm import Algorithm
 from .backprop import Backprop
 from .image_classification import ImageClassificationAlgorithm
@@ -20,9 +20,19 @@ from .rl_example.reinforce import ExampleRLAlgorithm
 _cs = ConfigStore.instance()
 # _cs.store(group="algorithm", name="algorithm", node=Algorithm.HParams())
 # _cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
+
+
+@hydrated_dataclass(target=PPO, hydra_convert="object")
+class PpoConfig:
+    # datamodule: Any = interpolated_field("${datamodule}")
+    # network: Any = interpolated_field("${network}")
+    hp: PPO.HParams = field(default_factory=PPO.HParams)
+
+
 _cs.store(group="algorithm", name="manual_optimization", node=ManualGradientsExample.HParams())
 _cs.store(group="algorithm", name="rl_example", node=ExampleRLAlgorithm.HParams())
-_cs.store(group="algorithm", name="ppo", node=PPO.HParams())
+# _cs.store(group="algorithm", name="ppo", node=PPO.HParams())
+_cs.store(group="algorithm", name="ppo", node=PpoConfig)
 
 __all__ = [
     "Algorithm",

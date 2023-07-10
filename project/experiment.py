@@ -1,9 +1,10 @@
 from __future__ import annotations
+from functools import partial
 
 import logging
-import random
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
+from typing import Any
 
 from hydra_zen import instantiate
 from lightning import Callback, LightningDataModule, Trainer, seed_everything
@@ -13,9 +14,11 @@ from project.algorithms import Algorithm
 from project.configs.config import Config
 from project.datamodules.datamodule import DataModule
 from lightning.pytorch.loggers import Logger
+from project.utils.hydra_utils import get_outer_class
 
 from project.utils.utils import validate_datamodule
 from torch import nn
+
 
 logger = get_logger(__name__)
 
@@ -76,28 +79,10 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     constructed are always deterministic.
     """
 
-    root_logger = logging.getLogger()
+    root_logger = logging.getLogger("project")
     root_logger.setLevel(getattr(logging, experiment_config.log_level.upper()))
-
-    if experiment_config.seed is not None:
-        seed = experiment_config.seed
-        print(f"seed manually set to {experiment_config.seed}")
-    else:
-        seed = random.randint(0, int(1e5))
-        print(f"Randomly selected seed: {seed}")
-    seed_everything(seed=seed, workers=True)
-
-    # Create the datamodule:
-    datamodule = instantiate(experiment_config.datamodule)
-    # Create the network
-
-    # NOTE: Here we register a way to get the attribute of the *object* instead of its config:
-    OmegaConf.register_new_resolver("datamodule", datamodule.__getattribute__)
-
-    # NOTE: Doesn't work, because it needs to have access to the datamodule *instance* attributes!
-    # Could we perhaps create a function that provides more "context variables" for the
-    # interpolation?
-    network = instantiate(experiment_config.network)
+    logger.info(f"Using random seed: {experiment_config.seed}")
+    seed_everything(seed=experiment_config.seed, workers=True)
 
     # Create the Trainer.
     trainer_config = OmegaConf.to_container(experiment_config.trainer)
@@ -106,34 +91,46 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     # to be passed as a list of objects to the Trainer. Therefore here we put the dicts in lists
     callbacks: dict[str, Callback] = instantiate(trainer_config.pop("callbacks", {})) or {}
     loggers: dict[str, Logger] = instantiate(trainer_config.pop("logger", {})) or {}
-
     trainer = instantiate(
         trainer_config,
         callbacks=list(callbacks.values()),
         logger=list(loggers.values()),
-        # callbacks="${oc.dict.values: /trainer/callbacks}",
-        # logger="${oc.dict.values: /trainer/logger}",
     )
     assert isinstance(trainer, Trainer)
 
-    # Create the network
-    # network = instantiate(experiment_config.network)
-    # TODO: Shouldn't we let the algorithm do it though?
-    # assert isinstance(network, (nn.Module, functools.partial))
-    # if isinstance(network, functools.partial):
-    #     network = network()
-    # Create the algorithm
+    # Create the datamodule:
+    datamodule = instantiate(experiment_config.datamodule)
+
+    # NOTE: Here we register a way to get the attribute of the *object* instead of its config:
+    OmegaConf.register_new_resolver("datamodule", partial(get_attr, datamodule))
+    # OmegaConf.register_new_resolver(
+    #     "instantiated_obj_attr", partial(get_instantiated_obj_attr, dict(datamodule=datamodule))
+    # )
+
     # TODO: Seems a bit too rigid to have the network be create independently of the algorithm.
     # This might need to change.
-    # algorithm = instantiate(experiment_config.algorithm, network=132, datamodule=456)
-    # experiment_config.algorithm["datamodule"] = datamodule
+    # Create the network
+    network = instantiate(experiment_config.network)
+    assert isinstance(network, nn.Module), (network, type(network))
+
+    # Create the algorithm
     algorithm = instantiate(
         experiment_config.algorithm,
         datamodule=datamodule,
         network=network,
     )
-    # algo_hparams: Algorithm.HParams = experiment_config.algorithm
-    # algorithm_type: type[Algorithm] = get_outer_class(type(algo_hparams))
+
+    if isinstance(algorithm, Algorithm.HParams):
+        algo_hparams = algorithm
+        algo_type: type[Algorithm] = getattr(
+            algo_hparams, "_target_", get_outer_class(type(algo_hparams))
+        )
+        algorithm = algo_type(
+            datamodule=datamodule,
+            network=network,
+            hp=algo_hparams,
+        )
+    assert isinstance(algorithm, Algorithm)
     # assert isinstance(
     #     algo_hparams, algorithm_type.HParams  # type: ignore
     # ), "HParams type should match model type"
@@ -149,4 +146,33 @@ def setup_experiment(experiment_config: Config) -> Experiment:
         algorithm=algorithm,
         network=network,
         datamodule=datamodule,
+    )
+
+
+def get_attr(obj: Any | None, *attributes: str):
+    if not attributes:
+        return obj
+    for attribute in attributes:
+        subobj = obj
+        try:
+            for attr in attribute.split("."):
+                subobj = getattr(subobj, attr)
+            return subobj
+        except AttributeError:
+            pass
+    raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
+
+
+def _get_instantiated_obj_attr(objects: dict, *obj_attributes: str):
+    for attribute in obj_attributes:
+        first, _, rest = attribute.partition(".")
+        if first not in objects:
+            continue
+        obj = objects[first]
+        try:
+            return get_attr(obj, rest)
+        except AttributeError:
+            pass
+    raise AttributeError(
+        f"Could not find any attributes matching {obj_attributes} in objects {objects}."
     )

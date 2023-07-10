@@ -1,9 +1,10 @@
 from __future__ import annotations
+import dataclasses
 
 import functools
 import importlib
-from dataclasses import dataclass
-from typing import Protocol, TypeVar, runtime_checkable
+from dataclasses import MISSING, dataclass
+from typing import Callable, Literal, Protocol, TypeVar, runtime_checkable
 
 from hydra.core.config_store import ConfigStore
 from hydra_zen import instantiate
@@ -18,23 +19,41 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def interpolate_or_default(interpolation: str, default: T) -> T:
+def interpolated_field(
+    interpolation: str,
+    default: T | Literal[MISSING] = MISSING,
+    default_factory: Callable[[], T] | Literal[MISSING] = MISSING,
+) -> T:
     """Returns the string for interpolation when in a Hydra instantiate context, otherwise default.
 
     This is sort-of hacky.
     """
     assert "${" in interpolation and "}" in interpolation
-    return field(default_factory=functools.partial(_default_factory, interpolation, default))
+    assert default is not MISSING or default_factory is not MISSING
+    return field(
+        default_factory=functools.partial(
+            _default_factory,
+            interpolation=interpolation,
+            default=default,
+            default_factory=default_factory,
+        )
+    )
 
 
-def _default_factory(interpolation: str, default_val: T) -> T:
+def _default_factory(
+    interpolation: str,
+    default: T | Literal[dataclasses.MISSING] = dataclasses.MISSING,
+    default_factory: Callable[[], T] | Literal[dataclasses.MISSING] = dataclasses.MISSING,
+) -> T:
     current = inspect.currentframe()
     assert current
     prev = current.f_back
     assert prev
     if inspect.getframeinfo(prev).function == "get_dataclass_data":
         return interpolation  # type: ignore
-    return default_val
+    if default_factory is not dataclasses.MISSING:
+        return default_factory()
+    return default  # type: ignore
 
 
 def config_name(target_type: type) -> str:

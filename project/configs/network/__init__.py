@@ -3,19 +3,18 @@ from project.networks.fcnet import FcNet
 from torchvision.models import resnet18
 from dataclasses import field
 from hydra_zen import hydrated_dataclass
-from project.utils.hydra_utils import interpolate_or_default
+from project.utils.hydra_utils import interpolated_field
 
 
 @hydrated_dataclass(target=resnet18)
 class ResNet18Config:
     pretrained: bool = False
-    num_classes: int = interpolate_or_default("${datamodule:num_classes}", 1000)
+    num_classes: int = interpolated_field("${datamodule:num_classes,action_dims}", 1000)
 
 
 @hydrated_dataclass(target=FcNet, hydra_recursive=True, hydra_convert="object")
 class FcNetConfig:
-    input_shape: tuple[int, ...] = interpolate_or_default("${datamodule:dims}", (3, 32, 32))
-    output_shape: int = interpolate_or_default("${datamodule:num_classes}", (10))
+    output_dims: int = interpolated_field("${datamodule:num_classes,action_dims}", 1)
     hparams: FcNet.HParams = field(default_factory=FcNet.HParams)
 
 
