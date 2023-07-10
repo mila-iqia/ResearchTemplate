@@ -10,7 +10,7 @@ from lightning import LightningDataModule
 from logging import getLogger as get_logger
 from torch.utils.data import DataLoader, Dataset, random_split
 
-from project.utils.types import C, H, W
+from project.utils.types import C, H, W, StageStr
 from torchvision.datasets import VisionDataset
 
 logger = get_logger(__name__)
@@ -53,7 +53,7 @@ class VisionDataModule(LightningDataModule):
             batch_size: How many samples per batch to load
             seed: Random seed to be used for train/val/test splits
             shuffle: If true shuffles the train data every epoch
-            pin_memory: If true, the data loader will copy Tensors into CUDA pinned memory before
+            pin_memory: If true, the data loader will copy Tensors into CUDA pinned memory before \
                         returning them
             drop_last: If true drops the last incomplete batch
             train_transforms: transformations you can apply to train dataset
@@ -75,9 +75,9 @@ class VisionDataModule(LightningDataModule):
         self.shuffle = shuffle
         self.pin_memory = pin_memory
         self.drop_last = drop_last
-        self._train_transforms = train_transforms
-        self._val_transforms = val_transforms
-        self._test_transforms = test_transforms
+        self.train_transforms = train_transforms
+        self.val_transforms = val_transforms
+        self.test_transforms = test_transforms
         self.EXTRA_ARGS = kwargs
 
         self.train_kwargs = self.EXTRA_ARGS.copy()
@@ -86,35 +86,7 @@ class VisionDataModule(LightningDataModule):
             self.train_kwargs["train"] = True
             self.test_kwargs["train"] = False
 
-    @property
-    def train_transforms(self) -> Optional[Callable[..., Any]]:
-        """Optional transforms (or collection of transforms) you can apply to train dataset."""
-        return self._train_transforms
-
-    @train_transforms.setter
-    def train_transforms(self, t: Callable) -> None:
-        self._train_transforms = t
-
-    @property
-    def val_transforms(self) -> Optional[Callable[..., Any]]:
-        """Optional transforms (or collection of transforms) you can apply to validation
-        dataset."""
-        return self._val_transforms
-
-    @val_transforms.setter
-    def val_transforms(self, t: Callable) -> None:
-        self._val_transforms = t
-
-    @property
-    def test_transforms(self) -> Optional[Callable[..., Any]]:
-        """Optional transforms (or collection of transforms) you can apply to test dataset."""
-        return self._test_transforms
-
-    @test_transforms.setter
-    def test_transforms(self, t: Callable) -> None:
-        self._test_transforms = t
-
-    def prepare_data(self, *args: Any, **kwargs: Any) -> None:
+    def prepare_data(self) -> None:
         """Saves files to data_dir."""
         # Call with `train=True` and `train=False` if there is such an argument.
 
@@ -133,7 +105,7 @@ class VisionDataModule(LightningDataModule):
             )
             self.dataset_cls(str(self.data_dir), **test_kwargs)
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: Optional[StageStr] = None) -> None:
         """Creates train, val, and test dataset."""
         if stage == "fit" or stage is None:
             train_transforms = (
@@ -198,27 +170,30 @@ class VisionDataModule(LightningDataModule):
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
 
-    def train_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
+    def train_dataloader(self, **kwargs) -> DataLoader:
         """The train dataloader."""
-        return self._data_loader(self.dataset_train, shuffle=self.shuffle)
+        return self._data_loader(self.dataset_train, shuffle=self.shuffle, **kwargs)
 
-    def val_dataloader(self, *args: Any, **kwargs: Any) -> Union[DataLoader, List[DataLoader]]:
+    def val_dataloader(self, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         """The val dataloader."""
-        return self._data_loader(self.dataset_val)
+        return self._data_loader(self.dataset_val, **kwargs)
 
-    def test_dataloader(self, *args: Any, **kwargs: Any) -> Union[DataLoader, List[DataLoader]]:
+    def test_dataloader(self, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         """The test dataloader."""
-        return self._data_loader(self.dataset_test)
+        return self._data_loader(self.dataset_test, **kwargs)
 
-    def _data_loader(self, dataset: Dataset, shuffle: bool = False) -> DataLoader:
-        return DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            shuffle=shuffle,
-            num_workers=self.num_workers,
-            drop_last=self.drop_last,
-            pin_memory=self.pin_memory,
+    def _data_loader(self, dataset: Dataset, shuffle: bool = False, **kwargs) -> DataLoader:
+        dataloader_kwargs: dict[str, Any] = (
+            dict(
+                batch_size=self.batch_size,
+                shuffle=shuffle,
+                num_workers=self.num_workers,
+                drop_last=self.drop_last,
+                pin_memory=self.pin_memory,
+            )
+            | kwargs
         )
+        return DataLoader(dataset, **dataloader_kwargs)
 
 
 def _has_constructor_argument(cls: type[VisionDataset], arg: str) -> bool:

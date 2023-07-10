@@ -10,11 +10,7 @@ from hydra_zen import instantiate
 from hydra_zen.typing._implementations import Partial as _Partial
 from typing_extensions import ParamSpec
 import inspect
-from typing import TypeVar
 from dataclasses import field
-import functools
-from hydra_zen import instantiate
-from hydra.core.config_store import ConfigStore
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
@@ -23,8 +19,10 @@ R = TypeVar("R")
 
 
 def interpolate_or_default(interpolation: str, default: T) -> T:
-    # TODO: If we're in a Hydra instantiate context, return the variable interpolation default (the string)
-    # otherwise, we're probably in the regular dataclass context, so return the default value.
+    """Returns the string for interpolation when in a Hydra instantiate context, otherwise default.
+
+    This is sort-of hacky.
+    """
     assert "${" in interpolation and "}" in interpolation
     return field(default_factory=functools.partial(_default_factory, interpolation, default))
 

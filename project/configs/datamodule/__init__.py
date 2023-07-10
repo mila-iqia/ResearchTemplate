@@ -104,6 +104,7 @@ def mnist_train_transforms():
     )
 
 
+# TODO: Use `just` from hydra-zen to avoid having to do this ugliness.
 @hydrated_dataclass(target=mnist_train_transforms)
 class MNISTTrainTransforms:
     ...

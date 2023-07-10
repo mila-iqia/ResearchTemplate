@@ -2,7 +2,7 @@ from hydra.core.config_store import ConfigStore
 from project.networks.fcnet import FcNet
 from torchvision.models import resnet18
 from dataclasses import field
-from hydra_zen import hydrated_dataclass, instantiate
+from hydra_zen import hydrated_dataclass
 from project.utils.hydra_utils import interpolate_or_default
 
 
