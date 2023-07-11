@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /hydra/launcher: submitit_slurm
+  - override /hydra/launcher: custom_submitit_slurm
 trainer:
   accelerator: gpu
   devices: 1
@@ -9,8 +9,9 @@ hydra:
   launcher:
     cpus_per_task: 2
     nodes: 1
-    # TODO: Pack more than one job on a single GPU.
-    tasks_per_node: 1
+    # TODO: Packing more than one job on a single GPU seems to be working, but both tasks get the
+    # same job parameters.
+    tasks_per_node: 2
     mem_gb: 16
     array_parallelism: 16  # max num of jobs to run in parallel
     gres: gpu:1

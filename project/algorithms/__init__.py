@@ -19,7 +19,7 @@ from .rl_example.reinforce import ExampleRLAlgorithm
 
 _cs = ConfigStore.instance()
 # _cs.store(group="algorithm", name="algorithm", node=Algorithm.HParams())
-# _cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
+_cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
 
 
 @hydrated_dataclass(target=PPO, hydra_convert="object")

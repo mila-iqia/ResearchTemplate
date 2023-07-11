@@ -6,7 +6,7 @@ with open("README.md") as fh:
     long_description = fh.read()
 
 
-packages = setuptools.find_namespace_packages(include=["project*"])
+packages = setuptools.find_namespace_packages(include=["project*", "hydra_plugins*"])
 print("PACKAGES FOUND:", packages)
 print(sys.version_info)
 

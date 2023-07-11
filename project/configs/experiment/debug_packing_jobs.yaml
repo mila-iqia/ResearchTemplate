@@ -5,28 +5,30 @@ defaults:
 - override /algorithm: backprop
 - override /network: resnet18
 - override /hydra/sweeper: orion
-- override /hydra/launcher: submitit_slurm
+- override /hydra/launcher: custom_submitit_slurm
 
-name: tune_example
+name: debug_packing_jobs
+log_level: DEBUG
 
 trainer:
   accelerator: gpu
   devices: 1
-  max_epochs: 3
+  max_epochs: 1
 
 hydra:
+  mode: MULTIRUN
   launcher:
-    cpus_per_task: 2
     nodes: 1
-    # TODO: Pack more than one job on a single GPU.
-    tasks_per_node: 1
     mem_gb: 16
-    array_parallelism: 16  # max num of jobs to run in parallel
     gres: gpu:1
+    tasks_per_node: 2
+    cpus_per_task: 2
+    # TODO: Pack more than one job on a single GPU.
+    array_parallelism: 2  # max num of jobs to run in parallel
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
-
+      # requeue: null  # requeue job if it fails
     ## A list of commands to add to the generated sbatch script before running srun:
     setup:
     - unset CUDA_VISIBLE_DEVICES
@@ -35,8 +37,9 @@ hydra:
     params:
       algorithm:
         optimizer:
-          lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
-          weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
+          lr: "uniform(0, 1)"
+          # lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
+          # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
 
     experiment:
       name: "${name}"
@@ -49,7 +52,7 @@ hydra:
           seed: 1
 
     worker:
-      n_workers: 16
+      n_workers: ${hydra.launcher.array_parallelism}
       max_broken: 3
       max_trials: 200
 
@@ -57,6 +60,7 @@ hydra:
       type: legacy
       database:
           type: pickleddb
+          # TODO: Use some "Hydra root" environment variable here.
           host: "${oc.env:SCRATCH}/project/logs/${name}/multiruns/database.pkl"
 
 seed: 123
