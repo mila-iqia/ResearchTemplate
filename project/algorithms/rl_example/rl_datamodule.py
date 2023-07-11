@@ -156,16 +156,17 @@ class RlDataModule(
 
         Called at the beginning of each stage (fit, validate, test).
         """
-        # FIXME: These should create the envs so we can easily inspect the shape of the
-        # observations.
         if stage in ["fit", None]:
-            logger.debug(f"Creating training environment with wrappers {self.train_wrappers}")
+            creating = "Recreating" if self.train_env is not None else "Creating"
+            logger.debug(f"{creating} training environment with wrappers {self.train_wrappers}")
             self.train_env = self._make_env(wrappers=self.train_wrappers)
         if stage in ["validate", None]:
-            logger.debug(f"Creating validation environment with wrappers {self.valid_wrappers}")
+            creating = "Recreating" if self.valid_env is not None else "Creating"
+            logger.debug(f"{creating} validation environment with wrappers {self.valid_wrappers}")
             self.valid_env = self._make_env(wrappers=self.valid_wrappers)
         if stage in ["test", None]:
-            logger.debug(f"Creating testing environment with wrappers {self.test_wrappers}")
+            creating = "Recreating" if self.test_env is not None else "Creating"
+            logger.debug(f"{creating} testing environment with wrappers {self.test_wrappers}")
             self.test_env = self._make_env(wrappers=self.test_wrappers)
 
     @property

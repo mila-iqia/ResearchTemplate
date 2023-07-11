@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Callable
+from typing import Generic
 from typing_extensions import TypeVar
 from hydra_zen import instantiate
 from lightning import LightningModule, Trainer
@@ -29,7 +29,9 @@ class Algorithm(LightningModule, ABC, Generic[NetworkType, BatchType]):
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
     boilerplate code to keep the algorithm implementations as simple as possible.
 
-    The networks themselves are created separately and passed as a constructor argument.
+    The networks themselves are created separately and passed as a constructor argument. This is
+    meant to make it easier to compare different learning algorithms on the same network
+    architecture.
     """
 
     @dataclass
