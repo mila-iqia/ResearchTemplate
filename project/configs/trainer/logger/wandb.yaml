@@ -2,7 +2,7 @@
 
 wandb:
   _target_: lightning.loggers.wandb.WandbLogger
-  project: "BeyondBackprop"
+  project: "ResearchTemplate"
   name: ${name}
   save_dir: "."
   offline: False # set True to store all logs only locally

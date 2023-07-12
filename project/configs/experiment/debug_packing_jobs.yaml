@@ -1,38 +1,17 @@
 # @package _global_
 defaults:
-- overfit_one_batch.yaml
-- override /datamodule: cifar10
-- override /algorithm: backprop
-- override /network: resnet18
+- custom_launcher_debug.yaml
 - override /hydra/sweeper: custom_orion
-- override /hydra/launcher: custom_submitit_slurm
 
 name: debug_packing_jobs
-log_level: DEBUG
-
-trainer:
-  accelerator: gpu
-  devices: 1
-  max_epochs: 1
-
-
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
 
 seed: ${oc.env:SLURM_PROCID,123}
 
-datamodule:
-  batch_size: 256
-
 hydra:
   mode: MULTIRUN
   launcher:
-    nodes: 1
-    mem_gb: 16
-    gres: gpu:1
-    tasks_per_node: 2
-    cpus_per_task: 2
-    # TODO: Pack more than one job on a single GPU.
-    array_parallelism: 2  # max num of jobs to run in parallel
+    array_parallelism: 4  # max num of jobs to run in parallel
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
@@ -52,6 +31,7 @@ hydra:
       name: "${name}"
       version: 1
 
+
     algorithm:
     #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
       type: random
@@ -61,7 +41,7 @@ hydra:
     worker:
       n_workers: ${hydra.launcher.array_parallelism}
       max_broken: 10000
-      max_trials: 3
+      max_trials: 10
 
     storage:
       type: legacy

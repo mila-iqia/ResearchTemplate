@@ -322,7 +322,7 @@ class CustomSlurmLauncher(SlurmLauncher):
                     list(overrides),
                     "hydra.sweep.dir",
                     idx,
-                    f"job_id_for_{idx}",
+                    f"job_id_for_{idx}",  # wtf?
                     Singleton.get_state(),
                 )
             )
@@ -344,6 +344,17 @@ class CustomSlurmLauncher(SlurmLauncher):
         job_task_results: list[list[JobReturn]] = [j.results() for j in jobs]
         # assert False, [len(results_per_task[0]), results_per_task[0][0]]
 
+        # TODO: Hacky: Set the result to the average across seeds? Or return a list as the result?
+        # Important: we shouldn't necessarily assume that we're using the Orion sweeper here...
+        # for task_results in job_task_results:
+        #     task_results[0].return_value = [jr.return_value for jr in task_results]
+
+        # FIXME: Trying to return more results than inputs.
+        # BUG: This seems to make the Orion sweeper launch multiple array jobs instead of just one!
+        # Very interesting!
+        # return sum(job_task_results, [])
+
+        # Only return one JobReturn per job. Not sure if things would break otherwise..
         return [task_results[0] for task_results in job_task_results]
 
         # return [j.results()[0] for j in jobs]

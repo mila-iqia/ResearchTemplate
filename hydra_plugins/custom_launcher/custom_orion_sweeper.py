@@ -6,9 +6,6 @@ from hydra.core.config_store import ConfigStore
 from hydra.types import HydraContext, TaskFunction
 from omegaconf import DictConfig
 from orion.client.experiment import ExperimentClient
-from orion.core.utils.exceptions import (
-    BrokenExperiment,
-)
 from dataclasses import dataclass
 from hydra_plugins.hydra_orion_sweeper.config import (
     AlgorithmConf,
@@ -92,6 +89,10 @@ class CustomOrionSweeperImpl(OrionSweeperImpl):
         )
 
     def sweep(self, arguments: List[str]) -> None:
+        # assert self.config is not None
+        # sweep_dir = Path(str(self.config.hydra.sweep.dir))
+        # sweep_dir.mkdir(parents=True, exist_ok=True)
+        # logger.info(f"Sweep dir : " f"{sweep_dir}")
         return super().sweep(arguments)
 
     def show_results(self) -> None:
@@ -99,35 +100,7 @@ class CustomOrionSweeperImpl(OrionSweeperImpl):
 
     def optimize(self, client: ExperimentClient) -> None:
         """Run the hyperparameter search in batches."""
-        failures = []
-        assert client is self.client
-        assert self.client is not None
-        while not self.client.is_done:
-            trials = self.sample_trials()
-            logger.debug(f"Trials: {trials}")
-
-            returns = self.execute_trials(trials)
-
-            self.observe_results(trials, returns, failures)
-
-            if self.client.is_broken:
-                if len(failures) == 0:
-                    logger.error("Experiment has reached is maximum amount of broken trials")
-                    raise BrokenExperiment("Max broken trials reached, stopping")
-
-                # make the `Future` raise the exception it received
-                try:
-                    exception = failures[-1].return_value
-                    raise exception
-
-                except Exception as e:
-                    raise BrokenExperiment("Max broken trials reached, stopping") from e
-
-            if len(failures) > 0:
-                for failure in failures:
-                    logger.error("Exception was received %s", failure.return_value)
-
-        self.show_results()
+        return super().optimize(client)
 
     ...
 
