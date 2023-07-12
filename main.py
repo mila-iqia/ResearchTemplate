@@ -16,6 +16,7 @@ from project.configs.config import Config
 from project.experiment import Experiment, setup_experiment
 from project.utils.hydra_utils import get_instantiated_attr
 from project.utils.utils import print_config
+from hydra_plugins.custom_launcher.custom_launcher import CustomSlurmLauncher  # noqa
 
 if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
     # NOTE: Perhaps unsetting it would also work, but this works atm.

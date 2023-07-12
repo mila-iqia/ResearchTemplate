@@ -7,14 +7,13 @@ trainer:
 hydra:
   mode: MULTIRUN
   launcher:
-    cpus_per_task: 2
     nodes: 1
+    cpus_per_gpu: 4
+    gpus: rtx8000:1
     # TODO: Packing more than one job on a single GPU seems to be working, but both tasks get the
     # same job parameters.
-    tasks_per_node: 2
     mem_gb: 16
     array_parallelism: 16  # max num of jobs to run in parallel
-    gres: gpu:1
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 1-00:00:00  # maximum wall time allocated for the job (D-HH:MM:SS)
