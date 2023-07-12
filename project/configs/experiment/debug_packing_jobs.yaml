@@ -4,7 +4,7 @@ defaults:
 - override /datamodule: cifar10
 - override /algorithm: backprop
 - override /network: resnet18
-- override /hydra/sweeper: orion
+- override /hydra/sweeper: custom_orion
 - override /hydra/launcher: custom_submitit_slurm
 
 name: debug_packing_jobs
@@ -54,10 +54,11 @@ hydra:
     worker:
       n_workers: ${hydra.launcher.array_parallelism}
       max_broken: 3
-      max_trials: 200
+      max_trials: 10
 
     storage:
       type: legacy
+      use_hydra_path: false
       database:
           type: pickleddb
           # TODO: Use some "Hydra root" environment variable here.

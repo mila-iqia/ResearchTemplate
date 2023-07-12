@@ -104,5 +104,6 @@ ConfigStore.instance().store(
     group="hydra/launcher",
     name="custom_submitit_slurm",
     node=ClustomSlurmQueueConf(),
+    provider="ResearchTemplate",
     # provider="submitit_launcher",
 )
