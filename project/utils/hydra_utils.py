@@ -1,22 +1,72 @@
 from __future__ import annotations
-import dataclasses
 
+import dataclasses
 import functools
 import importlib
-from dataclasses import MISSING, dataclass
-from typing import Callable, Literal, Protocol, TypeVar, runtime_checkable
+import inspect
+from collections import ChainMap
+from dataclasses import MISSING, dataclass, field
+from typing import Any, Callable, Literal, TypeVar
 
 from hydra.core.config_store import ConfigStore
 from hydra_zen import instantiate
 from hydra_zen.typing._implementations import Partial as _Partial
 from typing_extensions import ParamSpec
-import inspect
-from dataclasses import field
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def get_instantiated_attr(*attributes: str):
+    """Quite hacky: Allows interpolations to get the value of the objects, rather than configs."""
+    if not attributes:
+        raise RuntimeError("Need to pass one or more attributes to this resolver.")
+
+    frame = inspect.currentframe()
+    assert frame
+    frame = frame.f_back
+    frames = []
+    frame_infos = []
+
+    while frame:
+        frame_info = inspect.getframeinfo(frame)
+        frames.append(frame)
+        frame_infos.append(frame_info)
+        frame = frame.f_back
+
+    # These local variables are defined in the _to_object function inside OmegaConf.
+    init_field_items: list[dict[str, Any]] = []
+    non_init_field_items: list[dict[str, Any]] = []
+    for frame in frames:
+        if "init_field_items" in frame.f_locals:
+            init_field_items.append(frame.f_locals["init_field_items"].copy())
+        if "non_init_field_items" in frame.f_locals:
+            non_init_field_items.append(frame.f_locals["non_init_field_items"].copy())
+
+    # Okay so we now have all the *instantiated* attributes! We can do the interpolation by
+    # getting its value!
+
+    all_init_field_items = ChainMap(*reversed(init_field_items))
+    for attribute in attributes:
+        key, *nested_attribute = attribute.split(".")
+        if key not in all_init_field_items:
+            continue
+        obj = all_init_field_items[key]
+        for attr_part in nested_attribute:
+            if not hasattr(obj, attr_part):
+                break
+            obj = getattr(obj, attr_part)
+        else:
+            # Found the attribute!
+            return obj
+
+    raise RuntimeError(
+        f"Could not find any attributes matching {attributes} on in the instantiated objects.\n"
+        f"The following attributes were found:\n"
+        + "\n".join([f"- {k}: {type(v)}" for k, v in all_init_field_items.items()])
+    )
 
 
 def interpolated_field(
@@ -95,12 +145,6 @@ class CallableConfig:
             # Return out own Partial class, so that we can access the keywords as attributes.
             return Partial(object.func, *object.args, **object.keywords)
         return object
-
-
-@runtime_checkable
-class ConfigDataclass(Protocol[T]):
-    def __call__(self, *args, **kwargs) -> T:
-        ...
 
 
 def is_inner_class(object_type: type) -> bool:

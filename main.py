@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 import warnings
 from logging import getLogger as get_logger
 
 import hydra
-from hydra_zen import instantiate
 from lightning import LightningDataModule
 import rich
 import wandb
@@ -14,6 +14,7 @@ from project.algorithms.rl_example.rl_datamodule import RlDataModule
 
 from project.configs.config import Config
 from project.experiment import Experiment, setup_experiment
+from project.utils.hydra_utils import get_instantiated_attr
 from project.utils.utils import print_config
 
 if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
@@ -28,17 +29,37 @@ logger = get_logger(__name__)
     config_name="config",
     version_base="1.2",
 )
-def main(dict_config: Config) -> float:
+def main(dict_config: DictConfig) -> float:
     # Convert the "raw" DictConfig (which uses the `Config` class to define it's structure)
     # into an actual `Config` object:
-    # config = OmegaConf.to_object(dict_config)
-    # assert isinstance(config, Config)
+    print_config(dict_config, resolve=False)
 
-    experiment: Experiment = setup_experiment(dict_config)
+    # Important: Register this fancy little resolver here so we can get attributes of the
+    # instantiated objects, not just the configs!
+    OmegaConf.register_new_resolver("instance", get_instantiated_attr)
+
+    config = OmegaConf.to_object(dict_config)
+    assert isinstance(config, Config)
+
+    experiment: Experiment = setup_experiment(config)
 
     objective, _metrics = run(experiment)
     assert objective is not None
     return objective
+
+
+def get_attr(obj: Any | None, *attributes: str):
+    if not attributes:
+        return obj
+    for attribute in attributes:
+        subobj = obj
+        try:
+            for attr in attribute.split("."):
+                subobj = getattr(subobj, attr)
+            return subobj
+        except AttributeError:
+            pass
+    raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
 
 
 def run(experiment: Experiment) -> tuple[float | None, dict]:

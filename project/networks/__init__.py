@@ -10,12 +10,16 @@ from .fcnet import FcNet
 @hydrated_dataclass(target=resnet18)
 class ResNet18Config:
     pretrained: bool = False
-    num_classes: int = interpolated_field("${datamodule:num_classes,action_dims}", 1000)
+    num_classes: int = interpolated_field(
+        "${instance:datamodule.num_classes,datamodule.action_dims}", 1000
+    )
 
 
 @hydrated_dataclass(target=FcNet, hydra_recursive=True, hydra_convert="object")
 class FcNetConfig:
-    output_dims: int = interpolated_field("${datamodule:num_classes,action_dims}", 1)
+    output_dims: int = interpolated_field(
+        "${instance:datamodule.num_classes,datamodule.action_dims}", 1
+    )
     hparams: FcNet.HParams = field(default_factory=FcNet.HParams)
 
 

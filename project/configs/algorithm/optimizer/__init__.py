@@ -34,6 +34,8 @@ class SGDConfig:
     __call__ = instantiate
 
 
+# TODO: frozen=True doesn't work here, which is a real bummer. It would have saved us a lot of
+# functools.partial(AdamConfig, lr=123) nonsense.
 @hydrated_dataclass(target=torch.optim.Adam, zen_partial=True)
 class AdamConfig:
     """Configuration for the Adam optimizer."""

@@ -4,6 +4,9 @@ from logging import getLogger as get_logger
 from typing import Literal, Optional, Any
 from hydra.core.config_store import ConfigStore
 
+from project.algorithms.algorithm import Algorithm
+from project.configs.datamodule import DataModuleConfig
+
 logger = get_logger(__name__)
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
@@ -15,20 +18,17 @@ class Config:
     For more info, see https://hydra.cc/docs/tutorials/structured_config/schema/
     """
 
-    # Configuration for the datamodule (dataset + transforms + dataloader creation).
-    datamodule: Any
+    datamodule: DataModuleConfig
+    """Configuration for the datamodule (dataset + transforms + dataloader creation)."""
 
-    # The hyper-parameters of the algorithm to use.
-    algorithm: Any
+    algorithm: Algorithm.HParams
+    """The hyper-parameters of the algorithm to use."""
 
-    # The network to use.
     network: Any
+    """The network to use."""
 
-    # Keyword arguments for the Trainer constructor.
-    trainer: dict = field(default_factory=dict)  # type: ignore
-
-    # # Config(s) for the logger(s).
-    # logger: Optional[dict] = field(default_factory=dict)  # type: ignore
+    trainer: dict = field(default_factory=dict)
+    """Keyword arguments for the Trainer constructor."""
 
     log_level: str = "info"
 

@@ -1,5 +1,4 @@
 from __future__ import annotations
-from functools import partial
 
 import logging
 from dataclasses import dataclass, is_dataclass
@@ -8,7 +7,7 @@ from typing import Any
 
 from hydra_zen import instantiate
 from lightning import Callback, LightningDataModule, Trainer, seed_everything
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
@@ -39,6 +38,14 @@ class Experiment:
 
 
 def setup_datamodule(experiment_config: Config) -> LightningDataModule:
+    """Sets up the datamodule from the config.
+
+    This has a few differences w.r.t. just doing `instantiate(experiment_config.datamodule)`:
+    1. If there is a `batch_size` attribute on the Algorithm's HParams, sets that attribute on the
+       datamodule.
+    2. If the datamodule is a VisionDataModule and has `normalize=False`, removes any normalization
+    transform from the train and val transforms, if present attribute.
+    """
     if isinstance(experiment_config.datamodule, LightningDataModule):
         return experiment_config.datamodule
 
@@ -85,7 +92,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     seed_everything(seed=experiment_config.seed, workers=True)
 
     # Create the Trainer.
-    trainer_config = OmegaConf.to_container(experiment_config.trainer)
+    trainer_config = experiment_config.trainer.copy()
     assert isinstance(trainer_config, dict)
     # NOTE: The callbacks and loggers are parsed into dict[str, obj] by Hydra, but we need them
     # to be passed as a list of objects to the Trainer. Therefore here we put the dicts in lists
@@ -99,13 +106,8 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     assert isinstance(trainer, Trainer)
 
     # Create the datamodule:
-    datamodule = instantiate(experiment_config.datamodule)
-
-    # NOTE: Here we register a way to get the attribute of the *object* instead of its config:
-    OmegaConf.register_new_resolver("datamodule", partial(get_attr, datamodule))
-    # OmegaConf.register_new_resolver(
-    #     "instantiated_obj_attr", partial(get_instantiated_obj_attr, dict(datamodule=datamodule))
-    # )
+    # datamodule = instantiate(experiment_config.datamodule)
+    datamodule = setup_datamodule(experiment_config)
 
     # TODO: Seems a bit too rigid to have the network be create independently of the algorithm.
     # This might need to change.
@@ -114,14 +116,8 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     assert isinstance(network, nn.Module), (network, type(network))
 
     # Create the algorithm
-    algorithm = instantiate(
-        experiment_config.algorithm,
-        datamodule=datamodule,
-        network=network,
-    )
-
-    if isinstance(algorithm, Algorithm.HParams):
-        algo_hparams = algorithm
+    if isinstance(experiment_config.algorithm, Algorithm.HParams):
+        algo_hparams = experiment_config.algorithm
         algo_type: type[Algorithm] = getattr(
             algo_hparams, "_target_", get_outer_class(type(algo_hparams))
         )
@@ -130,16 +126,13 @@ def setup_experiment(experiment_config: Config) -> Experiment:
             network=network,
             hp=algo_hparams,
         )
-    assert isinstance(algorithm, Algorithm)
-    # assert isinstance(
-    #     algo_hparams, algorithm_type.HParams  # type: ignore
-    # ), "HParams type should match model type"
-
-    # algorithm = algorithm_type(
-    #     datamodule=datamodule,
-    #     network=network,
-    #     hp=algo_hparams,
-    # )
+    else:
+        algorithm = instantiate(
+            experiment_config.algorithm,
+            datamodule=datamodule,
+            network=network,
+        )
+    assert isinstance(algorithm, Algorithm), (algorithm, type(algorithm))
 
     return Experiment(
         trainer=trainer,
