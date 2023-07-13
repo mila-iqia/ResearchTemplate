@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - example.yaml
-  - /resources/pack_jobs.yaml
+  - override /resources: pack_jobs.yaml
   - override /trainer/logger: wandb
   - override /hydra/launcher: custom_submitit_slurm
 
@@ -38,4 +38,9 @@ hydra:
   #   subdir: ${oc.env:SLURM_PROCID,}  # NOTE: Can't add this here unfortunately.
   sweep:
     dir: logs/${name}/multiruns/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    subdir: job${hydra.job.num}_task${oc.env:SLURM_PROCID}
+    subdir: ${hydra.job.id}_task${oc.env:SLURM_PROCID}
+
+  # TODO: Try to make it so the .submitit stuff is in the same folder as the checkpoints and
+  # everything else...
+  launcher:
+    submitit_folder: "${hydra.sweep.dir}/%j"

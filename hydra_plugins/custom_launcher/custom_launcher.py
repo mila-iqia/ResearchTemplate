@@ -379,7 +379,6 @@ class CustomSlurmLauncher(SlurmLauncher):
             folder=job_folder,
             max_num_timeout=max_num_timeout,
         )
-        params = executor._convert_parameters(params)
 
         srun_args: list[str] = params.setdefault("srun_args", [])
         # TODO: Add an environment variable to give the run index (which would be different from
@@ -387,6 +386,7 @@ class CustomSlurmLauncher(SlurmLauncher):
         if job_config.parallel_runs_per_job:
             srun_args.append(f"--export=ALL,TASKS_PER_RUN={job_config.parallel_runs_per_job}")
 
+        params = executor._convert_parameters(params)
         executor.update_parameters(**params)
 
         # NOTE: To see the file that would be generated, do:

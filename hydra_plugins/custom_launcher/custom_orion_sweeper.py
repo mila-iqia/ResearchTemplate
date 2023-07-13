@@ -1,4 +1,5 @@
 from logging import getLogger as get_logger
+from pathlib import Path
 from typing import List, Sequence
 from warnings import warn
 
@@ -113,7 +114,18 @@ class CustomOrionSweeperImpl(OrionSweeperImpl):
         super().observe_results(trials, returns, failures)
 
     def show_results(self) -> None:
-        return super().show_results()
+        assert self.config is not None
+        sweep_dir = Path(self.config.hydra.sweep.dir)
+        sweep_dir.mkdir(parents=True, exist_ok=True)
+        super().show_results()
+        assert self.client is not None
+        results = self.client.stats
+        best_trial = self.client.get_trial(uid=results.best_trials_id)
+        assert best_trial is not None
+        best_results = best_trial.results
+        logger.info(f"Best trial: {best_trial}")
+        logger.info(f"Best results: {best_results}")
+        logger.info(f"Best trial working dir: {best_trial.working_dir}")
 
     def optimize(self, client: ExperimentClient) -> None:
         """Run the hyperparameter search in batches."""

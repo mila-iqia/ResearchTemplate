@@ -10,8 +10,15 @@ seed: ${oc.env:SLURM_PROCID,123}
 
 hydra:
   mode: MULTIRUN
+  # TODO: Automatically setup the log dir as a symlink to somewhere on scratch if we detect that
+  # it's in $HOME.
+  sweep:
+    subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
+
   launcher:
     array_parallelism: 4  # max num of jobs to run in parallel
+    job_config:
+      ram_gb: 4  # NOTE: This is the RAM usage per-job!
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
