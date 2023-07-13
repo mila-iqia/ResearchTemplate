@@ -1,11 +1,12 @@
 from logging import getLogger as get_logger
-from typing import List
+from typing import List, Sequence
 from warnings import warn
 
 from hydra.core.config_store import ConfigStore
 from hydra.types import HydraContext, TaskFunction
 from omegaconf import DictConfig
 from orion.client.experiment import ExperimentClient
+from orion.core.worker.trial import Trial
 from dataclasses import dataclass
 from hydra_plugins.hydra_orion_sweeper.config import (
     AlgorithmConf,
@@ -14,6 +15,8 @@ from hydra_plugins.hydra_orion_sweeper.config import (
     StorageConf,
     WorkerConf,
 )
+from hydra.core.utils import JobReturn
+
 from hydra_plugins.hydra_orion_sweeper.implementation import OrionSweeperImpl
 from hydra_plugins.hydra_orion_sweeper.orion_sweeper import OrionSweeper
 
@@ -94,6 +97,20 @@ class CustomOrionSweeperImpl(OrionSweeperImpl):
         # sweep_dir.mkdir(parents=True, exist_ok=True)
         # logger.info(f"Sweep dir : " f"{sweep_dir}")
         return super().sweep(arguments)
+
+    def observe_results(
+        self,
+        trials: list[Trial],
+        returns: Sequence[JobReturn],
+        failures: Sequence[JobReturn],
+    ):
+        """Record the result of each trials."""
+        # TODO: The base class assumes that there is the same number of trials and returns, but if
+        # we pack multiple trials in a single job e.g. with different random seeds and return all
+        # results with the Launcher, then we need to have multiple results per trial or multiple
+        # trials (with different seeds) each!
+        assert len(trials) == len(returns)
+        super().observe_results(trials, returns, failures)
 
     def show_results(self) -> None:
         return super().show_results()

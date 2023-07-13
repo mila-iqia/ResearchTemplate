@@ -19,6 +19,17 @@ job_logging:
     rich:
       class: rich.logging.RichHandler
       markup: True
+      rich_tracebacks: True
+  root:
+    handlers: [rich]
+  disable_existing_loggers: False
+
+hydra_logging:
+  handlers:
+    rich:
+      class: rich.logging.RichHandler
+      markup: True
+      rich_tracebacks: True
   root:
     handlers: [rich]
   disable_existing_loggers: False

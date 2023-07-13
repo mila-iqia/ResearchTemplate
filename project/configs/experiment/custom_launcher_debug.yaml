@@ -1,10 +1,11 @@
 # @package _global_
 defaults:
   - example.yaml
+  - /resources/pack_jobs.yaml
   - override /trainer/logger: wandb
   - override /hydra/launcher: custom_submitit_slurm
 
-name: debug_submitit_launcher
+name: custom_launcher_debug
 seed: ${oc.env:SLURM_PROCID,123}
 log_level: DEBUG
 
@@ -38,34 +39,3 @@ hydra:
   sweep:
     dir: logs/${name}/multiruns/${now:%Y-%m-%d}/${now:%H-%M-%S}
     subdir: job${hydra.job.num}_task${oc.env:SLURM_PROCID}
-  launcher:
-    nodes: 1
-    cpus_per_task: 4
-    gpus: ${.gpu_model}:${trainer.devices}
-    # TODO: Packing more than one job on a single GPU seems to be working, but both tasks get the
-    # same job parameters.
-    mem_gb: 16
-    array_parallelism: 10  # max num of jobs to run in parallel
-
-    srun_args: ["--overcommit"]  # to share CPU cores between tasks
-
-    # max_ram_usage_gb: 8  # TODO: Specify the amount of RAM needed for a single run.
-    max_vram_usage_gb: 5
-    gpu_model: rtx8000
-    parallel_runs_per_job: 2
-
-    # Other things to pass to `sbatch`:
-    additional_parameters:
-      time: 1-00:00:00  # maximum wall time allocated for the job (D-HH:MM:SS)
-      requeue: True
-      overcommit: True  # Make the cpus_per_task above interpreted as the number of cpus per node.
-
-    ## A list of commands to add to the generated sbatch script before running srun:
-    setup:
-    - unset CUDA_VISIBLE_DEVICES
-
-#     # NOTE: `mem_per_task` is a good way to think about this according to @obilaniu, but it
-#     # unfortunately isn't a flag of `sbatch`. You can get the same result by setting `mem_per_cpu`:
-#     # `mem_per_cpu = "mem_per_task" / cpus_per_task`
-#     # In this example, we want "mem_per_task" of 16G:
-    # mem_per_cpu: "${int_divide:16,${.cpus_per_task}}G"

@@ -1,7 +1,8 @@
 from __future__ import annotations
+import dataclasses
 from pathlib import Path
 import subprocess
-from typing import Any, NamedTuple, Sequence
+from typing import Any, NamedTuple, Sequence, TypeGuard, TypeVar
 from hydra.core.singleton import Singleton
 from hydra.core.utils import JobReturn
 import os
@@ -10,6 +11,8 @@ from hydra.types import HydraContext, TaskFunction
 from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
 from dataclasses import dataclass, field
 from hydra.core.config_store import ConfigStore
+from hydra_zen import hydrated_dataclass
+import numpy as np
 from omegaconf import DictConfig, OmegaConf
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import (
     SlurmLauncher,
@@ -18,10 +21,24 @@ from hydra_plugins.hydra_submitit_launcher.submitit_launcher import (
 import enum
 from logging import getLogger as get_logger
 
+from project.utils.hydra_utils import interpolated_field
+
+T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
+
 
 logger = get_logger(__name__)
 
 OmegaConf.register_new_resolver("int_divide", lambda a, b: a // b, replace=True)
+
+
+def keys_are(d: dict[Any, V], key_type: type[K]) -> TypeGuard[dict[K, V]]:
+    return all(isinstance(k, key_type) for k, _ in d.items())
+
+
+def values_are(d: dict[K, Any], value_type: type[V]) -> TypeGuard[dict[K, V]]:
+    return all(isinstance(v, value_type) for _, v in d.items())
 
 
 class GpuModel(enum.Enum):
@@ -77,62 +94,99 @@ def savail() -> dict[str, AvailTotal]:
 
 
 @dataclass
-class ClustomSlurmQueueConf(SlurmQueueConf):
+class CustomSlurmQueueConf(SlurmQueueConf):
     _target_: str = (
         "hydra_plugins.custom_launcher.custom_launcher.CustomSlurmLauncher"
         # "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"
     )
 
-    # slurm partition to use on the cluster
     partition: str | None = None
+    """Slurm partition to use on the cluster."""
     qos: str | None = None
     comment: str | None = None
     constraint: str | None = None
     exclude: str | None = None
     gres: str | None = None
     cpus_per_gpu: int | None = None
-    # gpus_per_task: Optional[int] = None
+    gpus_per_task: int | str | None = None
     mem_per_gpu: str | None = None
     mem_per_cpu: str | None = None
     account: str | None = None
 
-    # Following parameters are submitit specifics
-    #
-    # USR1 signal delay before timeout
+    ################################
+    ### Submitit-specific fields ###
+    ################################
+
     signal_delay_s: int = 120
-    # Maximum number of retries on job timeout.
-    # Change this only after you confirmed your code can handle re-submission
-    # by properly resuming from the latest stored checkpoint.
-    # check the following for more info on slurm_max_num_timeout
-    # https://github.com/facebookincubator/submitit/blob/master/docs/checkpointing.md
+    """USR1 signal delay before timeout."""
+
     max_num_timeout: int = 0
+    """Maximum number of retries on job timeout.
+
+    Change this only after you confirmed your code can handle re-submission by properly resuming
+    from the latest stored checkpoint. check the following for more info on slurm_max_num_timeout
+    https://github.com/facebookincubator/submitit/blob/master/docs/checkpointing.md
+    """
+
     # Useful to add parameters which are not currently available in the plugin.
     # Eg: {"mail-user": "blublu@fb.com", "mail-type": "BEGIN"}
     additional_parameters: dict[str, Any] = field(default_factory=dict)
     # Maximum number of jobs running in parallel
     array_parallelism: int = 256
     # A list of commands to run in sbatch before running srun
-    setup: list[str] | None = None
+    setup: list[str] = field(default_factory=list)
 
     ########################
     ### Added attributes ###
     ########################
 
-    # Also support setting the GPU model, with `gpus_per_task: 'rtx8000:1'`
-    gpus_per_task: int | str | None = None
+    # ntasks_per_gpu: int | None = None  # TODO: Not yet supported by submitit
 
-    ntasks_per_gpu: int | None = None  # TODO: Not yet supported by submitit
-
-    max_vram_usage_gb: int | None = None  # FIXME: remove default
+    # max_vram_usage_gb: int | None = None  # FIXME: remove default
     """The maximum VRAM usage of your job.
 
     Knowing this in advance can be very useful, since it allows the launcher to automatically pack
     multiple runs in parallel within a single job.
     """
-    gpu_model: GpuModel | str | None = None  # FIXME: remove default
+    # gpu_type: GpuModel | str | None = None  # FIXME: remove default
+
+    # parallel_runs_per_job: int | None = None
+
+    # gpus: int | str | None = None
+
+    srun_args: list[str] = field(default_factory=list)
+
+
+@dataclass
+class JobConfig:
+    """Configuration for the resources of a training run.
+
+    IDEA: This gets "translated" into SLURM requirements. Probably not a good idea though.
+    """
+
+    # nodes: int = interpolated_field("${trainer.nodes}", 1)
+    # """ Number of nodes required. """
+
+    cpus: int | None = interpolated_field("${datamodule.num_workers}", None)
+    """Number of CPU cores required."""
+
+    ram_gb: int | None = 4
+    """Amount of CPU RAM required (for a single run)."""
+
+    gpus: int | None = interpolated_field("${trainer.devices}", None)
+    """Number of GPUs required."""
+
+    vram_gb: int | None = None
+    """Amount of GPU VRAM required."""
+
+    gpu_type: GpuModel | str | None = None
+    """Type of GPU required for this job."""
+
+    share_cpus_between_runs: bool = True
+    """Whether to allow different runs within the same job to share CPU cores."""
 
     parallel_runs_per_job: int | None = None
-    """How many distinct runs to execute in parallel within a single job.
+    """How many distinct runs (~tasks) to execute in parallel within a single job.
 
     When `max_vram_usage_gb` is set, and a gpu model has been selected either in "gpu_model",
     "gres" or "gpus", this number is automatically set to `max_vram_usage_gb // gpu_memory_gb`.
@@ -141,9 +195,46 @@ class ClustomSlurmQueueConf(SlurmQueueConf):
     One good way of doing that is by using `SLURM_PROCID` as part of the random seed.
     """
 
-    gpus: int | str | None = None
 
-    srun_args: list[str] | None = None
+def translate_into_slurm_params(
+    job_config: JobConfig, manual_args: CustomSlurmQueueConf
+) -> CustomSlurmQueueConf:
+    assert job_config.parallel_runs_per_job is not None  # FIXME
+    assert job_config.ram_gb is not None  # FIXME
+    gpu_type = (
+        job_config.gpu_type.value
+        if isinstance(job_config.gpu_type, GpuModel)
+        else job_config.gpu_type
+    )
+    assert gpu_type is not None  # FIXME
+
+    srun_args = manual_args.srun_args.copy()
+    additional_parameters = manual_args.additional_parameters.copy()
+
+    if job_config.share_cpus_between_runs and "--overcommit" not in srun_args:
+        srun_args.append("--overcommit")
+        # Make the cpus_per_task be interpreted as the number of cpus per node.
+        additional_parameters["overcommit"] = True
+
+    setup: list[str] = manual_args.setup.copy()
+
+    return dataclasses.replace(
+        manual_args,
+        gres=f"gpu:{gpu_type}:{job_config.gpus}",
+        cpus_per_task=job_config.cpus,
+        mem_gb=job_config.ram_gb * job_config.parallel_runs_per_job,
+        tasks_per_node=job_config.parallel_runs_per_job,
+        srun_args=srun_args,
+        # setup=[]
+        additional_parameters=additional_parameters,
+        setup=setup,
+        # # Other things to pass to `sbatch`:
+        # additional_parameters:
+        #   time: 1-00:00:00  # maximum wall time allocated for the job (D-HH:MM:SS)
+        #   requeue: True
+        #   overcommit: True  # Make the cpus_per_task above interpreted as the number of cpus per
+        # node.
+    )
 
 
 class CustomSlurmLauncher(SlurmLauncher):
@@ -157,65 +248,80 @@ class CustomSlurmLauncher(SlurmLauncher):
     - (detail): Infer the GPU model from the "gpus" or "gres" flags if not passed.
     """
 
-    def __init__(self, **params: Any) -> None:
+    def __init__(self, job_config: JobConfig, **params) -> None:
         super().__init__(**params)
-        # self.params_obj = ClustomSlurmQueueConf(**self.params)
-        gpus: int | str | None = self.params.pop("gpus", None)
-        gpu_model: GpuModel | str | None = self.params.pop("gpu_model", None)
-        parallel_runs_per_job: int | None = self.params.pop("parallel_runs_per_job", None)
-        max_vram_usage_gb: int | None = self.params.pop("max_vram_usage_gb", None)
+        self.params: dict[str, Any]
+        self.job_config = job_config
 
-        if gpu_model is None:
-            if (
-                (gres := self.params["gres"])
-                and ":" in gres
-                and (model := gres.partition(":")[0]) in gpu_memory_gb.keys()
-            ):
-                gpu_model = GpuModel[model]
+    def adjust_job_config(self, job_config: JobConfig) -> JobConfig:
+        gpu_type = job_config.gpu_type
+        required_vram_gb = job_config.vram_gb
+        gpus: int | None = job_config.gpus
+        parallel_runs_per_job = job_config.parallel_runs_per_job
 
-            if (
-                (gpus := self.params["gpus"])
-                and isinstance(gpus, str)
-                and ":" in gpus
-                and (model := gpus.partition(":")[0]) in gpu_memory_gb.keys()
-            ):
-                gpu_model = GpuModel[model]
-        if gpu_model is None:
+        if (
+            gpu_type is not None
+            and required_vram_gb is not None
+            and parallel_runs_per_job is not None
+        ):
+            logger.debug("Job config looks good, not adjusting anything.")
+            return job_config
+
+        if gpu_type is None or not isinstance(gpus, int):
+            for flag in ["gres", "gpus", "gpus_per_task"]:
+                value = self.params[flag]
+                if isinstance(value, str) and value.count(":") == 1:
+                    # TODO: Might not always be true, IIRC there could also be a constraint or
+                    # VRAM or something.
+                    model, _, gpus_str = value.partition(":")
+                    gpu_type = GpuModel[model]
+                    gpus = int(gpus_str)
+                    logger.debug(
+                        f"Inferred {gpu_type=} and num_gpus of {gpus} from {flag}={value}"
+                    )
+                    break
+
+        if gpu_type is None:
+            gpus_available = savail()
+            compatible_gpus = gpus_available
+            if job_config.vram_gb:
+                compatible_gpus = {
+                    k if job_config.vram_gb < gpu_memory_gb[k] else k for k in gpus_available
+                }
+            most_widely_available_gpu = max(compatible_gpus, key=lambda k: gpus_available[k][0])
+
             warnings.warn(
                 RuntimeWarning(
                     f"You didn't specify a GPU model to use! This means that we can't "
                     f"automatically pack multiple runs per job for you.\n"
                     f"We suggest you use `gpu_model={'|'.join(gpu_memory_gb)}`."
                     f"Here are some of the currently available GPU models: \n"
-                    f"{savail()}"
+                    f"{gpus_available}\n"
+                    f"Of these, the most widely available GPU is {most_widely_available_gpu}.\n"
                 )
             )
 
-        if max_vram_usage_gb is not None and gpu_model and parallel_runs_per_job is None:
+        if required_vram_gb is not None and gpu_type and parallel_runs_per_job is None:
+            # TODO: Also take the RAM into account here.
             gpu_vram = gpu_memory_gb[
-                gpu_model.value if isinstance(gpu_model, GpuModel) else gpu_model
+                gpu_type.value if isinstance(gpu_type, GpuModel) else gpu_type
             ]
-            parallel_runs_per_job = gpu_vram // max_vram_usage_gb
+            parallel_runs_per_job = gpu_vram // required_vram_gb
             logger.info(
                 f"Automatically set the number of parallel runs per job to {parallel_runs_per_job}"
             )
-        self.max_vram_usage_gb = max_vram_usage_gb
-        self.gpu_model = gpu_model
-        self.parallel_runs_per_job = parallel_runs_per_job
-        self.gpus = gpus
 
-        # assert False, f"About to stack {num_stacked_runs} runs"
-        # self.config: DictConfig | None = None
-        # self.task_function: TaskFunction | None = None
-        # self.sweep_configs: TaskFunction | None = None
-        # self.hydra_context: HydraContext | None = None
+        return dataclasses.replace(
+            job_config,
+            vram_gb=required_vram_gb,
+            gpu_type=gpu_type,
+            parallel_runs_per_job=parallel_runs_per_job,
+        )
 
     def setup(
         self, *, hydra_context: HydraContext, task_function: TaskFunction, config: DictConfig
     ) -> None:
-        return super().setup(
-            hydra_context=hydra_context, task_function=task_function, config=config
-        )
+        super().setup(hydra_context=hydra_context, task_function=task_function, config=config)
 
     def __call__(
         self,
@@ -235,69 +341,51 @@ class CustomSlurmLauncher(SlurmLauncher):
     ) -> Sequence[JobReturn]:
         # lazy import to ensure plugin discovery remains fast
         import submitit
+        from submitit.core.utils import DelayedSubmission
 
         assert self.config is not None
+
+        job_config = self.adjust_job_config(self.job_config)
+
+        parallel_runs_per_job: int = job_config.parallel_runs_per_job or 1
+
+        manual_slurm_params = CustomSlurmQueueConf(**self.params)
+
+        run_slurm_params: CustomSlurmQueueConf = translate_into_slurm_params(
+            job_config, manual_slurm_params
+        )
+
+        if job_config.parallel_runs_per_job and job_config.parallel_runs_per_job > 1:
+            logger.info(
+                f"Packing {job_config.parallel_runs_per_job} runs into each job by increasing "
+                f"ntasks_per_node to {run_slurm_params.tasks_per_node}."
+            )
+
         # build executor
         num_jobs = len(job_overrides)
         assert num_jobs > 0
 
-        params = self.params.copy()
+        params = dataclasses.asdict(run_slurm_params)
+
+        # TODO: Need to get rid of the _target_ flags.
+        params = _remove_hydra_fields_recursive(params)
+        assert isinstance(params, dict)
+        assert keys_are(params, str)
+
+        job_folder = Path(params.pop("submitit_folder"))
+        max_num_timeout: int = params.pop("max_num_timeout")
 
         executor = submitit.SlurmExecutor(
-            folder=params.pop("submitit_folder"),
-            max_num_timeout=params.pop("max_num_timeout"),
+            folder=job_folder,
+            max_num_timeout=max_num_timeout,
         )
-        eq_dict = executor._equivalence_dict()
-        params = {eq_dict.get(k, k): v for k, v in params.items()}
+        params = executor._convert_parameters(params)
 
-        # Enable multiple tasks sharing the same CPU.
-        # TODO: Check that this makes sense!
         srun_args: list[str] = params.setdefault("srun_args", [])
-        if "--overcommit" not in srun_args:
-            srun_args.append("--overcommit")
-
-        # Additional flags for sbatch.
-        additional_parameters: dict[str, Any] = params.setdefault("additional_parameters", {})
-
-        # TODO: Need to decide how we want to "pack" the multiple jobs: Either with ntasks_per_gpu
-        # or #ntasks_per_node. PyTorch-Lightning complains if we don't set ntasks_per_node, which
-        # is quite frustrating.
-
-        # FIXME: Opting for `ntasks_per_node` approach for now.
-        ntasks_per_gpu: int | None = params.pop("ntasks_per_gpu", None)
-        # ntasks_per_gpu = ntasks_per_gpu or self.parallel_runs_per_job  # Option 1
-
-        if ntasks_per_gpu:
-            additional_parameters.update({"ntasks_per_gpu": ntasks_per_gpu})
-
-        ntasks_per_node = params.pop("ntasks_per_node", None) or 1
-        assert isinstance(ntasks_per_node, int)
-        if self.parallel_runs_per_job:
-            prev = ntasks_per_node
-            ntasks_per_node *= self.parallel_runs_per_job  # Option 2
-            logger.info(
-                f"Packing {self.parallel_runs_per_job} runs into each job by increasing "
-                f"ntasks_per_node from {prev} to {ntasks_per_node}"
-            )
-        params["ntasks_per_node"] = ntasks_per_node
-
-        if self.gpus is not None:
-            additional_parameters.update({"gpus": self.gpus})
-
-        if (mem := params["mem"]) and isinstance(mem, int) or not mem.endswith("G"):
-            params["mem"] = f"{mem}G"
-
-        params["stderr_to_stdout"] = True
-
-        if ntasks_per_gpu and "ntasks_per_node" in params:
-            logger.debug(
-                f"Removing `ntasks_per_node={ntasks_per_node}` from sbatch parameters "
-                f"since we'll be using ntasks_per_gpu to pack multiple runs in each job."
-            )
-
         # TODO: Add an environment variable to give the run index (which would be different from
         # $SLURM_PROCID when using >1 gpus per job.)
-        # srun_args.append("--export=ALL,RUN_INDEX=%t")
+        if job_config.parallel_runs_per_job:
+            srun_args.append(f"--export=ALL,TASKS_PER_RUN={job_config.parallel_runs_per_job}")
 
         executor.update_parameters(**params)
 
@@ -315,8 +403,10 @@ class CustomSlurmLauncher(SlurmLauncher):
         job_params: list[Any] = []
         for idx, overrides in enumerate(job_overrides):
             idx = initial_job_idx + idx
-            lst = " ".join(filter_overrides(overrides))
-            logger.info(f"\t#{idx} : {lst}")
+            overrides_list = " ".join(filter_overrides(overrides))
+            logger.info(f"\t#{idx} : {overrides_list}")
+            # TODO: Could perhaps use a TypedDict or a NamedTuple, to show that this is the args
+            # that are passed to self.__call__.
             job_params.append(
                 (
                     list(overrides),
@@ -329,10 +419,10 @@ class CustomSlurmLauncher(SlurmLauncher):
 
         # IDEA: Inject a few things before, during, and after running the sweep:
         # jobs = executor.map_array(self, *zip(*job_params))
-        # This is expanded into:
+        # NOTE: Just inspecting things, this `map_array` is expanded into:
+
         fn = self
         iterable = zip(*job_params)
-        from submitit.core.utils import DelayedSubmission
 
         submissions = [DelayedSubmission(fn, *args) for args in zip(*iterable)]
         if len(submissions) == 0:
@@ -350,20 +440,68 @@ class CustomSlurmLauncher(SlurmLauncher):
         #     task_results[0].return_value = [jr.return_value for jr in task_results]
 
         # FIXME: Trying to return more results than inputs.
-        # BUG: This seems to make the Orion sweeper launch multiple array jobs instead of just one!
-        # Very interesting!
         # return sum(job_task_results, [])
+        if parallel_runs_per_job > 1:
+            warnings.warn(
+                RuntimeWarning(
+                    "NOTE: Running multiple seeds in each job, but only able to report the first "
+                    "result.."
+                )
+            )
 
-        # Only return one JobReturn per job. Not sure if things would break otherwise..
+        average_results = []
+        for task_results in job_task_results:
+            return_values: list[int | float] = []
+            for result in task_results:
+                if isinstance(result.return_value, (int, float)):
+                    return_values.append(result.return_value)
+            if not return_values:
+                break
+            if np.isnan(return_values).any():
+                # TODO: Do something about it?
+                continue
+            average_results.append(np.mean(return_values))
+
+        # TODO: Perhaps turn this behaviour on-off with a flag? Because we might be using
+        # multi-gpu jobs or something, so perhaps we don't want to do this?
+        if len(average_results) == len(job_task_results):
+            return average_results
+
+        # Only return one JobReturn per job. (default behaviour of the launcher of Hydra).
         return [task_results[0] for task_results in job_task_results]
 
         # return [j.results()[0] for j in jobs]
 
 
+@hydrated_dataclass(target=CustomSlurmLauncher, hydra_convert="object")
+class CustomLauncherConfig(CustomSlurmQueueConf):
+    _target_: str = CustomSlurmLauncher.__module__ + "." + CustomSlurmLauncher.__qualname__
+
+    job_config: JobConfig = field(default_factory=JobConfig)
+    # slurm: CustomSlurmQueueConf = field(default_factory=CustomSlurmQueueConf)
+
+    srun_args: list[str] = field(default_factory=list)
+    """Additional arguments to pass to `srun` in `srun (...) <here> (...) python (...)`"""
+
+    stderr_to_stdout: bool = True
+    """Whether to use the same file for stderr and stdout."""
+
+    # ntasks_per_gpu: int | None = None  # TODO: Not yet supported by submitit. Could perhaps be
+    # used as the "nruns_per_job" parameter.
+
+
+def _remove_hydra_fields_recursive(d: dict[str, V]) -> dict[str, V]:
+    return {
+        k: _remove_hydra_fields_recursive(v) if isinstance(v, dict) else v
+        for k, v in d.items()
+        if not (k.startswith("_") and k.endswith("_"))
+    }
+
+
 ConfigStore.instance().store(
     group="hydra/launcher",
     name="custom_submitit_slurm",
-    node=ClustomSlurmQueueConf(),
+    node=CustomLauncherConfig,
     # provider="ResearchTemplate",
     # provider="submitit_launcher",
 )
