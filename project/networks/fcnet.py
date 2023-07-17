@@ -105,14 +105,14 @@ def make_fcnet_for(datamodule: DataModule, hparams: FcNet.HParams | None = None)
     raise NotImplementedError(f"Unsupported datamodule type: {type(datamodule)}")
 
 
-@make_fcnet_for.register
+@make_fcnet_for.register(ImageClassificationDataModule)
 def make_fcnet_for_vision(
     datamodule: ImageClassificationDataModule, hparams: FcNet.HParams | None = None
 ) -> FcNet:
     return FcNet(input_shape=datamodule.dims, output_dims=datamodule.num_classes, hparams=hparams)
 
 
-@make_fcnet_for.register
+@make_fcnet_for.register(RlDataModule)
 def make_fcnet_for_rl(datamodule: RlDataModule, hparams: FcNet.HParams | None = None) -> FcNet:
     return FcNet(
         input_shape=(flatdim(datamodule.observation_space),),

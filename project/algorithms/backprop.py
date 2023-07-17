@@ -8,8 +8,9 @@ import functools
 from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
-from attr import field
 
+from torchmetrics.classification import MulticlassAccuracy
+import torch
 from hydra_zen import instantiate
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor, nn
@@ -17,26 +18,23 @@ from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.algorithm import PhaseStr
-from project.algorithms.image_classification import ImageClassificationAlgorithm
+from project.algorithms.algorithm import Algorithm
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
-from project.datamodules.image_classification import (
-    ImageClassificationDataModule,
-)
-from project.utils.types import ClassificationOutputs
+from project.datamodules.image_classification import ImageClassificationDataModule
+from project.utils.types import PhaseStr, StepOutputDict
 
 logger = getLogger(__name__)
 
 
-class Backprop(ImageClassificationAlgorithm):
+class Backprop(Algorithm):
     """Baseline model that uses normal backpropagation."""
 
     # TODO: Make this less specific to Image classification once we add other supervised learning
     # settings.
 
     @dataclass
-    class HParams(ImageClassificationAlgorithm.HParams):
+    class HParams(Algorithm.HParams):
         """Hyper-Parameters of the baseline model."""
 
         # Arguments to be passed to the LR scheduler.
@@ -68,6 +66,27 @@ class Backprop(ImageClassificationAlgorithm):
         hp: HParams | None = None,
     ):
         super().__init__(datamodule=datamodule, network=network, hp=hp)
+        self.datamodule: ImageClassificationDataModule
+        # NOTE: Setting this property allows PL to infer the shapes and number of params.
+        # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
+        # If possible, we'd like to remove any reference to the device from the algorithm.
+        # device = get_device(self.network)
+        self.example_input_array = torch.rand(
+            [datamodule.batch_size, *datamodule.dims],
+            # device=device,
+        )
+        num_classes: int = datamodule.num_classes
+
+        # IDEA: Could use a dict of metrics from torchmetrics instead of just accuracy:
+        # self.supervised_metrics: dist[str, Metrics]
+        # NOTE: Need to have one per phase! Not 100% sure that I'm not forgetting a phase here.
+        self.train_accuracy = MulticlassAccuracy(num_classes=num_classes)
+        self.val_accuracy = MulticlassAccuracy(num_classes=num_classes)
+        self.test_accuracy = MulticlassAccuracy(num_classes=num_classes)
+        self.train_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
+        self.val_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
+        self.test_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
+
         self.hp: Backprop.HParams
         self.automatic_optimization = True
 
@@ -76,10 +95,6 @@ class Backprop(ImageClassificationAlgorithm):
 
         # TODO: Check that this works with the dataclasses.
         self.save_hyperparameters({"network_type": type(network), "hp": self.hp})
-
-    def make_forward_network(self, base_network: nn.Module) -> nn.Module:
-        # Backprop works with basically anything:
-        return base_network
 
     def forward(self, input: Tensor) -> Tensor:  # type: ignore
         # Dummy forward pass, not used in practice. We just implement it so that PL can
@@ -90,13 +105,34 @@ class Backprop(ImageClassificationAlgorithm):
     def shared_step(
         self,
         batch: tuple[Tensor, Tensor],
-        batch_idx: int,
+        batch_index: int,
         phase: PhaseStr,
-    ) -> ClassificationOutputs:
+    ) -> StepOutputDict:
         x, y = batch
         logits = self(x)
-        loss = F.cross_entropy(logits, y, reduction="none")  # reduction=None for easier multi-gpu.
-        return {"logits": logits.detach(), "y": y, "loss": loss}
+        # NOTE: There's an issue with PyTorch-Lightning's precision plugin, it assumes that the
+        # loss, if returned, is a scalar!
+
+        # reduction=sum to get the proper gradients in a backward pass when using multiple gpus.
+        loss = F.cross_entropy(logits, y, reduction="none")
+        self.log(f"{phase}/local_loss", loss.detach().mean())
+
+        total_loss = self.all_gather(loss, sync_grads=True)
+        assert isinstance(total_loss, Tensor)
+        loss = total_loss.mean()
+        self.log(f"{phase}/loss", loss, rank_zero_only=True)
+
+        probs = torch.softmax(logits, -1)
+        accuracy = getattr(self, f"{phase}_accuracy")
+        top5_accuracy = getattr(self, f"{phase}_top5_accuracy")
+
+        # TODO: It's a bit confusing, not sure if this is the right way to use this:
+        accuracy(probs, y)
+        top5_accuracy(probs, y)
+        prog_bar = phase == "train"
+        self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
+        self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
+        return {"loss": loss}
 
     def configure_optimizers(self) -> dict:
         """Creates the optimizers and the LR schedulers (if needed)."""

@@ -53,19 +53,19 @@ class Algorithm(LightningModule, ABC, Generic[NetworkType, BatchType]):
         self.network: NetworkType = network
         self.trainer: Trainer
 
-    def training_step(self, batch: BatchType) -> StepOutputDict:
+    def training_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:
         """Performs a training step."""
-        return self.shared_step(batch=batch, phase="train")
+        return self.shared_step(batch=batch, batch_index=batch_index, phase="train")
 
-    def validation_step(self, batch: BatchType) -> StepOutputDict:
+    def validation_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:
         """Performs a validation step."""
-        return self.shared_step(batch=batch, phase="val")
+        return self.shared_step(batch=batch, batch_index=batch_index, phase="val")
 
-    def test_step(self, batch: BatchType) -> StepOutputDict:
+    def test_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:
         """Performs a test step."""
-        return self.shared_step(batch=batch, phase="test")
+        return self.shared_step(batch=batch, batch_index=batch_index, phase="test")
 
-    def shared_step(self, batch: BatchType, phase: PhaseStr) -> StepOutputDict:
+    def shared_step(self, batch: BatchType, batch_index: int, phase: PhaseStr) -> StepOutputDict:
         """Performs a training/validation/test step.
 
         This must return a dictionary with at least the 'y' and 'logits' keys, and an optional

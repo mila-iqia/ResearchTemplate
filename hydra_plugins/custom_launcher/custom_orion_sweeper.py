@@ -1,3 +1,4 @@
+from __future__ import annotations
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import List, Sequence

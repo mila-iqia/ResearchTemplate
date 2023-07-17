@@ -14,7 +14,7 @@ with open("requirements.txt") as f:
     requirements = [line.strip() for line in f.readlines() if not line.strip().startswith("#")]
 
 extras_require = {
-    "test": ["pytest", "pytest-xdist", "pytest-timeout", "pytest-regressions", "xdoctest"],
+    "test": ["pytest", "pytest-xdist", "pytest-timeout", "pytest-regressions"],
     "dev": ["pre-commit", "black"],
 }
 extras_require["all"] = sorted(set(sum(extras_require.values(), [])))

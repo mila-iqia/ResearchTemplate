@@ -1,12 +1,34 @@
 # @package _global_
 defaults:
-- custom_launcher_debug.yaml
-- override /hydra/sweeper: custom_orion
+  - example.yaml
+  - override /resources: pack_jobs.yaml
+  - override /trainer/logger: wandb
+  - override /hydra/launcher: custom_submitit_slurm
+  - override /hydra/sweeper: custom_orion
 
-name: debug_packing_jobs
+name: cluster_sweep_example
+log_level: DEBUG
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
-
 seed: ${oc.env:SLURM_PROCID,123}
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  max_epochs: 1
+  logger:
+    wandb:
+      project: "ResearchTemplate"
+      # TODO: Use the Orion trial name?
+      name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
+      save_dir: "${hydra:runtime.output_dir}"
+      offline: False # set True to store all logs only locally
+      id: null # pass correct id to resume experiment!
+      # entity: ""  # set to name of your wandb team
+      log_model: False
+      prefix: ""
+      job_type: "train"
+      group: ${oc.env:SLURM_JOB_ID}
+      # tags: ["${name}"]
 
 hydra:
   mode: MULTIRUN

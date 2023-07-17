@@ -12,7 +12,7 @@ from project.algorithms.algorithm import Algorithm, NetworkType
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.types import ClassificationOutputs, PhaseStr, StepOutputDict
+from project.utils.types import ClassificationOutputs, PhaseStr
 from project.utils.utils import get_device
 
 
@@ -92,23 +92,23 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
         - the main metrics are logged inside `training_step_end` (supposed to be better for DP/DDP)
         """
 
-    def training_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+    def training_step_end(self, step_output: ClassificationOutputs) -> ClassificationOutputs:
         """Called with the results of each worker / replica's output.
 
         See the `training_step_end` of pytorch-lightning for more info.
         """
         return self.shared_step_end(step_output, phase="train")
 
-    def validation_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+    def validation_step_end(self, step_output: ClassificationOutputs) -> ClassificationOutputs:
         return self.shared_step_end(step_output, phase="val")
 
-    def test_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+    def test_step_end(self, step_output: ClassificationOutputs) -> ClassificationOutputs:
         return self.shared_step_end(step_output, phase="test")
 
-    def shared_step_end(self, step_output: StepOutputDict, phase: PhaseStr) -> StepOutputDict:
-        # TODO: Use the '__required_keys__'  and '__optional_keys__' on the TypedDict instead of
-        # hard-coding these.
-        required_entries = ("logits", "y")
+    def shared_step_end(
+        self, step_output: ClassificationOutputs, phase: PhaseStr
+    ) -> ClassificationOutputs:
+        required_entries = ClassificationOutputs.__required_keys__
         if not isinstance(step_output, dict):
             raise RuntimeError(
                 f"Expected the {phase} step method to output a dictionary with at least the "

@@ -169,6 +169,5 @@ dependencies:
     - websocket-client==1.6.1
     - websockets==11.0.3
     - wheel==0.38.4
-    - xdoctest==1.1.1
     - yarl==1.9.2
 prefix: /network/scratch/n/normandf/ResearchTemplate/.conda_env

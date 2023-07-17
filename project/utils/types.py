@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import dataclasses
 from typing import Any, ClassVar, Literal, NewType, Protocol, TypedDict, TypeVar
-from typing_extensions import Required
+from typing_extensions import Required, TypeAlias
 from lightning import LightningDataModule
 from torch import Tensor, nn
 
@@ -15,7 +15,7 @@ DM = TypeVar("DM", bound=LightningDataModule)
 ModuleType = TypeVar("ModuleType", bound=nn.Module)
 ModuleType_co = TypeVar("ModuleType_co", bound=nn.Module, covariant=True)
 StageStr = Literal["fit", "validate", "test", "predict"]
-PhaseStr = Literal["train", "val", "test"]
+PhaseStr: TypeAlias = Literal["train", "val", "test"]
 """The trainer phases.
 
 TODO: There has to exist an enum for it somewhere in PyTorch Lightning.
@@ -36,9 +36,9 @@ class StepOutputDict(TypedDict, total=False):
     """Optional dictionary of things to log at each step."""
 
 
-class ClassificationOutputs(StepOutputDict):
+class ClassificationOutputs(StepOutputDict, total=False):
     """The dictionary format that is minimally required to be returned from
-    `training/val/test_step`."""
+    `training/val/test_step` for image classification algorithms."""
 
     logits: Required[Tensor]
     """The un-normalized logits."""
