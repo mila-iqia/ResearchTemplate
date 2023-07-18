@@ -9,7 +9,7 @@
 #
 
 defaults:
-  - override /datamodule: rl
+  - override /datamodule: cartpole
   - override /algorithm: rl_example
   - override /network: fcnet
   - override /trainer: default
@@ -29,7 +29,8 @@ algorithm:
   learning_rate: 0.01
 
 network:
-  hidden_dims: [128, 128]
+  hparams:
+    hidden_dims: [128, 128]
 
 datamodule:
   env: CartPole-v1

@@ -1,7 +1,7 @@
 from __future__ import annotations
+import functools
 
 import os
-from typing import Any
 import warnings
 from logging import getLogger as get_logger
 
@@ -14,7 +14,7 @@ from project.algorithms.rl_example.rl_datamodule import RlDataModule
 
 from project.configs.config import Config
 from project.experiment import Experiment, setup_experiment
-from project.utils.hydra_utils import get_instantiated_attr
+from project.utils.hydra_utils import get_attr, get_instantiated_attr, set_attr
 from project.utils.utils import print_config
 from hydra_plugins.custom_launcher.custom_launcher import CustomSlurmLauncher  # noqa
 
@@ -37,9 +37,33 @@ def main(dict_config: DictConfig) -> float:
 
     # Important: Register this fancy little resolver here so we can get attributes of the
     # instantiated objects, not just the configs!
-    OmegaConf.register_new_resolver("instance", get_instantiated_attr)
+    # TODO: Add a "_instantiated_args_cache: dict" parameter to `get_instantiated_attr` so we can
+    # share the instantiated objects between different calls to OmegaConf.to_object for each field.
+    instantiated_objects_cache = {}
+    OmegaConf.register_new_resolver(
+        "instance",
+        functools.partial(
+            get_instantiated_attr, _instantiated_objects_cache=instantiated_objects_cache
+        ),
+    )
+    # config_dict = OmegaConf.to_container(dict_config, resolve=False)
+    config = OmegaConf.to_object(dict_config)  # NOTE: doesn't quite work!
 
-    config = OmegaConf.to_object(dict_config)
+    # If we had to instantiate some of the configs into objects in order to find the interpolated
+    # values (e.g. ${instance:datamodule.dims} or similar in order to construct the network), then
+    # we don't waste that, put the object instance into the config.
+    # TODO: This isn't quite correct typing-wise, since for example the field for `datamodule` is a
+    # `DataModuleConfig` while we're setting it to a value of `LightningDataModule` if we
+    # instantiated it.
+    for config_nested_attribute, pre_instantiated_object in instantiated_objects_cache.items():
+        attribute_in_config = get_attr(config, config_nested_attribute)
+        if pre_instantiated_object != attribute_in_config:
+            logger.debug(
+                f"Overwriting the config at {config_nested_attribute} with the pre-instantiated "
+                f"object {pre_instantiated_object}"
+            )
+            set_attr(config, config_nested_attribute, pre_instantiated_object)
+
     assert isinstance(config, Config)
 
     experiment: Experiment = setup_experiment(config)
@@ -47,20 +71,6 @@ def main(dict_config: DictConfig) -> float:
     objective, _metrics = run(experiment)
     assert objective is not None
     return objective
-
-
-def get_attr(obj: Any | None, *attributes: str):
-    if not attributes:
-        return obj
-    for attribute in attributes:
-        subobj = obj
-        try:
-            for attr in attribute.split("."):
-                subobj = getattr(subobj, attr)
-            return subobj
-        except AttributeError:
-            pass
-    raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
 
 
 def run(experiment: Experiment) -> tuple[float | None, dict]:

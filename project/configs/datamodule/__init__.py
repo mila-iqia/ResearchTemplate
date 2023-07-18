@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Callable, ClassVar, Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 from hydra.core.config_store import ConfigStore
@@ -143,8 +143,6 @@ class CIFAR10DataModuleConfig(VisionDataModuleConfig):
     train_transforms: Cifar10TrainTransforms = field(default_factory=Cifar10TrainTransforms)
     # Overwriting this one:
     batch_size: int = 128
-
-    num_classes: ClassVar[int] = 10
 
 
 def imagenet32_train_transforms():

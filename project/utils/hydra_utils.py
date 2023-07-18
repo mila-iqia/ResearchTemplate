@@ -5,13 +5,19 @@ import functools
 import importlib
 import inspect
 from collections import ChainMap
-from dataclasses import MISSING, dataclass, field
-from typing import Any, Callable, Literal, TypeVar
+from dataclasses import MISSING, dataclass, field, fields, is_dataclass
+from typing import Any, Callable, Literal, Mapping, MutableMapping, TypeVar
+from logging import getLogger as get_logger
 
 from hydra.core.config_store import ConfigStore
 from hydra_zen import instantiate
 from hydra_zen.typing._implementations import Partial as _Partial
 from typing_extensions import ParamSpec
+
+from omegaconf import DictConfig
+
+
+logger = get_logger(__name__)
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
@@ -19,7 +25,38 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def get_instantiated_attr(*attributes: str):
+def get_attr(obj: Any, *attributes: str):
+    if not attributes:
+        return obj
+    for attribute in attributes:
+        subobj = obj
+        try:
+            for attr in attribute.split("."):
+                subobj = getattr(subobj, attr)
+            return subobj
+        except AttributeError:
+            pass
+    raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
+
+
+def has_attr(obj: Any, potentially_nested_attribute: str):
+    for attribute in potentially_nested_attribute.split("."):
+        if not hasattr(obj, attribute):
+            return False
+        obj = getattr(obj, attribute)
+    return True
+
+
+def set_attr(obj: Any, potentially_nested_attribute: str, value: Any) -> None:
+    attributes = potentially_nested_attribute.split(".")
+    for attr in attributes[:-1]:
+        obj = getattr(obj, attr)
+    setattr(obj, attributes[-1], value)
+
+
+def get_instantiated_attr(
+    *attributes: str, _instantiated_objects_cache: MutableMapping[str, Any] | None = None
+):
     """Quite hacky: Allows interpolations to get the value of the objects, rather than configs."""
     if not attributes:
         raise RuntimeError("Need to pass one or more attributes to this resolver.")
@@ -36,7 +73,7 @@ def get_instantiated_attr(*attributes: str):
         frame_infos.append(frame_info)
         frame = frame.f_back
 
-    # These local variables are defined in the _to_object function inside OmegaConf.
+    # SUPER HACKY: These local variables are defined in the _to_object function inside OmegaConf.
     init_field_items: list[dict[str, Any]] = []
     non_init_field_items: list[dict[str, Any]] = []
     for frame in frames:
@@ -47,25 +84,89 @@ def get_instantiated_attr(*attributes: str):
 
     # Okay so we now have all the *instantiated* attributes! We can do the interpolation by
     # getting its value!
-
+    # BUG: This isn't quite working as I'd like, the interpolation is trying to get the attribute
+    # on the object *instance*, but this is getting called during the first OmegaConf.to_object
+    # which is only responsible for creating the configs, not the objects!
     all_init_field_items = ChainMap(*reversed(init_field_items))
+
+    if _instantiated_objects_cache is not None:
+        _instantiated_objects_cache.update(all_init_field_items)
+
+    objects_cache: Mapping[str, Any] = _instantiated_objects_cache or all_init_field_items
+
     for attribute in attributes:
+        logger.debug(f"Looking for attribute {attribute} from {all_init_field_items}")
         key, *nested_attribute = attribute.split(".")
-        if key not in all_init_field_items:
+        if key not in objects_cache:
             continue
-        obj = all_init_field_items[key]
-        for attr_part in nested_attribute:
-            if not hasattr(obj, attr_part):
+
+        obj = objects_cache[key]
+
+        # Recursive getattr that tries to instantiate configs to objects when missing an attribute
+        # values.
+        new_instantiated_objects: dict[str, Any] = {}  # NOTE: unused so far.
+        for level, attr_part in enumerate(nested_attribute):
+            if hasattr(obj, attr_part):
+                obj = getattr(obj, attr_part)
+                continue
+
+            if not (
+                (isinstance(obj, (dict, DictConfig)) and "_target_" in obj)
+                or (is_dataclass(obj) and any(f.name == "_target_" for f in fields(obj)))
+            ):
+                # attribute not found, and the `obj` isn't a config with a _target_ field.
                 break
-            obj = getattr(obj, attr_part)
+
+            # FIXME: SUPER HACKY: Instantiating the object just to get the value. Super bad.
+            # FIXME: It's either this, or we pull a surprise and replace the config object in
+            # the cache with the instantiated object.
+
+            path_so_far = key
+            if nested_attribute[:level]:
+                path_so_far += "." + ".".join(nested_attribute[:level])
+            logger.debug(
+                f"Will pro-actively attempt to instantiate {path_so_far} just to retrieve "
+                f"the {attr_part} attribute."
+            )
+            try:
+                instantiated_obj = instantiate(obj)
+            except Exception as err:
+                logger.debug(
+                    f"Unable to instantiate {obj} to get the missing {attr_part} "
+                    f"attribute: {err}"
+                )
+                break
+            new_instantiated_objects[path_so_far] = instantiated_obj
+
+            logger.info(
+                f"Instantiated the config at {path_so_far!r} while trying to find one of the "
+                f"{attributes} attributes."
+            )
+
+            if _instantiated_objects_cache is None:
+                logger.warning(
+                    f"The config {obj} at path {path_so_far} was instantiated while trying to "
+                    f"find the {attr_part} portion of the {attribute} attributes in {attributes}."
+                    f"This compute is being wasted because {_instantiated_objects_cache=}. "
+                    f"If this is an expensive config to instantiate (e.g. Dataset, model, etc), "
+                    f"consider passing a dictionary that will be populated with the instantiated "
+                    f"objects so they can be reused."
+                )
+            else:
+                _instantiated_objects_cache[path_so_far] = instantiated_obj
+
+            if not hasattr(instantiated_obj, attr_part):
+                # _instantiated_objects_cache[path_so_far] = instantiated_obj
+                break
+
+            obj = getattr(instantiated_obj, attr_part)
         else:
             # Found the attribute!
             return obj
-
     raise RuntimeError(
-        f"Could not find any attributes matching {attributes} on in the instantiated objects.\n"
-        f"The following attributes were found:\n"
-        + "\n".join([f"- {k}: {type(v)}" for k, v in all_init_field_items.items()])
+        f"Could not find any of these attributes {attributes} from the instantiated objects: "
+        + str({k: type(v) for k, v in _instantiated_objects_cache.items()})
+        # + "\n".join([f"- {k}: {type(v)}" for k, v in all_init_field_items.items()])
     )
 
 

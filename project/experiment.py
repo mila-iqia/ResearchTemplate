@@ -3,11 +3,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
-from typing import Any
 
 from hydra_zen import instantiate
 from lightning import Callback, LightningDataModule, Trainer, seed_everything
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
@@ -52,6 +51,7 @@ def setup_datamodule(experiment_config: Config) -> LightningDataModule:
     datamodule_config = experiment_config.datamodule
     if isinstance(datamodule_config, (dict, DictConfig)):
         assert "_target_" in datamodule_config
+        # datamodule = OmegaConf.to_object(datamodule_config)
         datamodule = instantiate(datamodule_config)
         assert isinstance(datamodule, LightningDataModule)
         return datamodule
@@ -93,6 +93,8 @@ def setup_experiment(experiment_config: Config) -> Experiment:
 
     # Create the Trainer.
     trainer_config = experiment_config.trainer.copy()
+    if isinstance(trainer_config, DictConfig):
+        trainer_config = OmegaConf.to_container(trainer_config)
     assert isinstance(trainer_config, dict)
     # NOTE: The callbacks and loggers are parsed into dict[str, obj] by Hydra, but we need them
     # to be passed as a list of objects to the Trainer. Therefore here we put the dicts in lists
@@ -139,33 +141,4 @@ def setup_experiment(experiment_config: Config) -> Experiment:
         algorithm=algorithm,
         network=network,
         datamodule=datamodule,
-    )
-
-
-def get_attr(obj: Any | None, *attributes: str):
-    if not attributes:
-        return obj
-    for attribute in attributes:
-        subobj = obj
-        try:
-            for attr in attribute.split("."):
-                subobj = getattr(subobj, attr)
-            return subobj
-        except AttributeError:
-            pass
-    raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
-
-
-def _get_instantiated_obj_attr(objects: dict, *obj_attributes: str):
-    for attribute in obj_attributes:
-        first, _, rest = attribute.partition(".")
-        if first not in objects:
-            continue
-        obj = objects[first]
-        try:
-            return get_attr(obj, rest)
-        except AttributeError:
-            pass
-    raise AttributeError(
-        f"Could not find any attributes matching {obj_attributes} in objects {objects}."
     )
