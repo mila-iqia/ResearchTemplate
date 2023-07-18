@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-set -x
-set -v
+# set -x
+# set -v
 module load anaconda/3
 ENV_PATH="${SLURM_TMPDIR:?SLURM_TMPDIR is not set.}/env"
 # NOTE: Getting lots of issues with Python 3.10, switching to python 3.9 instead.
