@@ -1,6 +1,7 @@
 import sys
 
 import setuptools
+import versioneer
 
 with open("README.md") as fh:
     long_description = fh.read()
@@ -21,7 +22,8 @@ extras_require["all"] = sorted(set(sum(extras_require.values(), [])))
 
 setuptools.setup(
     name="project",
-    version="0.0.1",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     author="Fabrice Normandin",  # TODO: Replace
     author_email="fabrice.normandin@gmail.com",  # TODO: Replace
     description=("A Research Template repository for PyTorch projects."),
