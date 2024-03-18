@@ -1,10 +1,40 @@
 from __future__ import annotations
-from typing import Any, Callable, Optional, Union
 
+from typing import Any, Callable
+
+from torch import Tensor
+from torchvision import transforms
 from torchvision import transforms as transform_lib
 from torchvision.datasets import MNIST
+
 from project.utils.types import C, H, W
-from project.datamodules.vision import VisionDataModule
+
+from .vision_datamodule import VisionDataModule
+
+
+def mnist_train_transforms():
+    return transforms.Compose(
+        [
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomCrop(size=28, padding=4, padding_mode="edge"),
+            transforms.ToTensor(),
+            mnist_normalization(),
+        ]
+    )
+
+
+def mnist_normalization():
+    # NOTE: Taken from https://stackoverflow.com/a/67233938/6388696
+    # return transforms.Normalize(mean=0.5, std=0.5)
+    return transforms.Normalize(mean=0.1307, std=0.3081)
+
+
+def mnist_unnormalization(x: Tensor) -> Tensor:
+    # NOTE: Taken from https://stackoverflow.com/a/67233938/6388696
+    # return transforms.Normalize(mean=0.5, std=0.5)
+    mean = 0.1307
+    std = 0.3081
+    return (x * std) + mean
 
 
 class MNISTDataModule(VisionDataModule):
@@ -41,8 +71,8 @@ class MNISTDataModule(VisionDataModule):
 
     def __init__(
         self,
-        data_dir: Optional[str] = None,
-        val_split: Union[int, float] = 0.2,
+        data_dir: str | None = None,
+        val_split: int | float = 0.2,
         num_workers: int | None = 0,
         normalize: bool = False,
         batch_size: int = 32,
@@ -50,9 +80,6 @@ class MNISTDataModule(VisionDataModule):
         shuffle: bool = True,
         pin_memory: bool = True,
         drop_last: bool = False,
-        train_transforms: Callable | None = None,
-        val_transforms: Callable | None = None,
-        test_transforms: Callable | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -79,9 +106,6 @@ class MNISTDataModule(VisionDataModule):
             shuffle=shuffle,
             pin_memory=pin_memory,
             drop_last=drop_last,
-            train_transforms=train_transforms,
-            val_transforms=val_transforms,
-            test_transforms=test_transforms,
             *args,
             **kwargs,
         )
@@ -97,6 +121,6 @@ class MNISTDataModule(VisionDataModule):
     def default_transforms(self) -> Callable:
         if self.normalize:
             return transform_lib.Compose(
-                [transform_lib.ToTensor(), transform_lib.Normalize(mean=(0.5,), std=(0.5,))]
+                [transform_lib.ToTensor(), mnist_normalization()]
             )
         return transform_lib.Compose([transform_lib.ToTensor()])

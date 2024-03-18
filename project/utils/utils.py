@@ -1,27 +1,58 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import field
 from logging import getLogger as get_logger
-from typing import Iterable, Sequence, TypeVar, Union
+from pathlib import Path
+from typing import Iterable, Sequence, TypeVar
 
 import rich
 import rich.syntax
 import rich.tree
 import torch
+from lightning import Trainer
 from omegaconf import DictConfig, OmegaConf
 from torch import Tensor, nn
 from torch.nn.parameter import Parameter
 from torchvision import transforms
+
 from project.datamodules.image_classification import ImageClassificationDataModule
 
-
-from .types import DM
+from .types import DM, NestedDict
 
 logger = get_logger(__name__)
 
 K = TypeVar("K")
 T = TypeVar("T")
-V = TypeVar("V", bound=Union[int, float])
+V = TypeVar("V")
+
+
+def relative_if_possible(p: Path) -> Path:
+    try:
+        return p.relative_to(Path.cwd())
+    except ValueError:
+        return p.absolute()
+
+
+def get_log_dir(trainer: Trainer | None) -> Path:
+    """Gives back the default directory to use when `trainer.log_dir` is None (no logger used?)"""
+    # TODO: This isn't great.. It could probably be a property on the Algorithm class or
+    # customizable somehow.
+    # ALSO: This
+    if trainer:
+        if trainer.logger and trainer.logger.log_dir:
+            return Path(trainer.logger.log_dir)
+        if trainer.log_dir:
+            return Path(trainer.log_dir)
+    base = Path(trainer.default_root_dir) if trainer else Path.cwd() / "logs"
+    log_dir = base / "default"
+    warnings.warn(
+        RuntimeWarning(
+            f"Using the default log directory of {log_dir} because the trainer.log_dir is None. "
+            f"Consider setting `trainer.logger` (e.g. `trainer.logger=wandb`) so this is set!"
+        )
+    )
+    return log_dir
 
 
 def list_field(*values: T) -> list[T]:
@@ -39,10 +70,16 @@ def named_trainable_parameters(module: nn.Module) -> Iterable[tuple[str, Paramet
 
 
 def get_device(mod: nn.Module) -> torch.device:
-    return next(p.device for p in mod.parameters() if p.requires_grad)
+    return next(p.device for p in mod.parameters())
 
 
-def _remove_normalization_from_transforms(datamodule: ImageClassificationDataModule) -> None:
+def get_devices(mod: nn.Module) -> set[torch.device]:
+    return set(p.device for p in mod.parameters())
+
+
+def _remove_normalization_from_transforms(
+    datamodule: ImageClassificationDataModule,
+) -> None:
     transform_properties = (
         datamodule.train_transforms,
         datamodule.val_transforms,
@@ -54,7 +91,9 @@ def _remove_normalization_from_transforms(datamodule: ImageClassificationDataMod
         assert isinstance(transform_list, transforms.Compose)
         if isinstance(transform_list.transforms[-1], transforms.Normalize):
             t = transform_list.transforms.pop(-1)
-            logger.info(f"Removed normalization transform {t} since datamodule.normalize=False")
+            logger.info(
+                f"Removed normalization transform {t} since datamodule.normalize=False"
+            )
         if any(isinstance(t, transforms.Normalize) for t in transform_list.transforms):
             raise RuntimeError(
                 f"Unable to remove all the normalization transforms from datamodule {datamodule}: "
@@ -67,7 +106,10 @@ def validate_datamodule(datamodule: DM) -> DM:
 
     Returns the same datamodule.
     """
-    if isinstance(datamodule, ImageClassificationDataModule) and not datamodule.normalize:
+    if (
+        isinstance(datamodule, ImageClassificationDataModule)
+        and not datamodule.normalize
+    ):
         _remove_normalization_from_transforms(datamodule)
     else:
         # todo: maybe check that the normalization transform is present everywhere?
@@ -149,7 +191,9 @@ def print_config(
     queue = []
 
     for f in print_order:
-        queue.append(f) if f in config else logger.info(f"Field '{f}' not found in config")
+        queue.append(f) if f in config else logger.info(
+            f"Field '{f}' not found in config"
+        )
 
     for f in config:
         if f not in queue:
@@ -170,3 +214,69 @@ def print_config(
 
     # with open("config_tree.log", "w") as file:
     #     rich.print(tree, file=file)
+
+
+def flatten(nested: NestedDict[K, V]) -> dict[tuple[K, ...], V]:
+    """Flatten a dictionary of dictionaries. The returned dictionary's keys are tuples, one entry
+    per layer.
+
+    >>> flatten({"a": {"b": 2, "c": 3}, "c": {"d": 3, "e": 4}})
+    {('a', 'b'): 2, ('a', 'c'): 3, ('c', 'd'): 3, ('c', 'e'): 4}
+    """
+    flattened: dict[tuple[K, ...], V] = {}
+    for k, v in nested.items():
+        if isinstance(v, dict):
+            for subkeys, subv in flatten(v).items():
+                collision_key = (k, *subkeys)
+                assert collision_key not in flattened
+                flattened[collision_key] = subv
+        else:
+            flattened[(k,)] = v
+    return flattened
+
+
+def unflatten(flattened: dict[tuple[K, ...], V]) -> NestedDict[K, V]:
+    """Unflatten a dictionary back into a possibly nested dictionary.
+
+    >>> unflatten({('a', 'b'): 2, ('a', 'c'): 3, ('c', 'd'): 3, ('c', 'e'): 4})
+    {'a': {'b': 2, 'c': 3}, 'c': {'d': 3, 'e': 4}}
+    """
+    nested: NestedDict[K, V] = {}
+    for keys, value in flattened.items():
+        sub_dictionary = nested
+        for part in keys[:-1]:
+            assert isinstance(sub_dictionary, dict)
+            sub_dictionary = sub_dictionary.setdefault(part, {})
+        assert isinstance(sub_dictionary, dict)
+        sub_dictionary[keys[-1]] = value
+    return nested
+
+
+def flatten_dict(nested: NestedDict[str, V], sep: str = ".") -> dict[str, V]:
+    """Flatten a dictionary of dictionaries. Joins different nesting levels with `sep` as
+    separator.
+
+    >>> flatten_dict({'a': {'b': 2, 'c': 3}, 'c': {'d': 3, 'e': 4}})
+    {'a.b': 2, 'a.c': 3, 'c.d': 3, 'c.e': 4}
+    >>> flatten_dict({'a': {'b': 2, 'c': 3}, 'c': {'d': 3, 'e': 4}}, sep="/")
+    {'a/b': 2, 'a/c': 3, 'c/d': 3, 'c/e': 4}
+    """
+    return {sep.join(keys): value for keys, value in flatten(nested).items()}
+
+
+def unflatten_dict(
+    flattened: dict[str, V], sep: str = ".", recursive: bool = False
+) -> NestedDict[str, V]:
+    """Unflatten a dict into a possibly nested dict. Keys are split using `sep`.
+
+    >>> unflatten_dict({'a.b': 2, 'a.c': 3, 'c.d': 3, 'c.e': 4})
+    {'a': {'b': 2, 'c': 3}, 'c': {'d': 3, 'e': 4}}
+
+    >>> unflatten_dict({'a': 2, 'b.c': 3})
+    {'a': 2, 'b': {'c': 3}}
+
+    NOTE: This function expects the input to be flat. It does *not* unflatten nested dicts:
+    >>> unflatten_dict({"a": {"b.c": 2}})
+    {'a': {'b.c': 2}}
+    """
+    return unflatten({tuple(key.split(sep)): value for key, value in flattened.items()})

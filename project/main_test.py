@@ -5,12 +5,15 @@ import typing
 from pathlib import Path
 
 import pytest
-from hydra import compose, initialize_config_module
-from omegaconf import OmegaConf, open_dict
 
 from project.algorithms import Algorithm, Backprop
+from project.algorithms.dtp.dtp import DTP
+from project.algorithms.target_prop_example.example_algorithm import ExampleAlgorithm
 from project.configs.config import Config
-from project.networks import FcNet
+from project.configs.datamodule import CIFAR10DataModuleConfig
+from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
+from project.networks import LeNet, ResNet18, ResNet34, SimpleVGG
+from project.utils.hydra_utils import resolve_dictconfig
 
 if typing.TYPE_CHECKING:
     pass
@@ -36,48 +39,11 @@ def set_testing_hydra_dir():
     """
 
 
-@pytest.fixture(autouse=True)
-def setup_hydra(tmp_path: Path):
-    with initialize_config_module(
-        "project.configs", job_name="test", version_base="1.1"
-    ):
-        config = compose(config_name="config", return_hydra_config=True)
-
-        # BUG: Weird errors with Hydra variable interpolation.. Setting these manually seems to fix
-        # it for now..
-        from hydra.conf import HydraHelpConf
-        from hydra.core.hydra_config import HydraConfig
-
-        with open_dict(config):
-            # BUG: Getting some weird Hydra omegaconf error in unit tests:
-            # "MissingMandatoryValue while resolving interpolation: Missing mandatory value:
-            # hydra.job.num"
-            config.hydra.job.num = 0
-            config.hydra.hydra_help = HydraHelpConf(hydra_help="", template="")
-            config.hydra.job.id = 0
-            config.hydra.runtime.output_dir = str(tmp_path)
-
-        HydraConfig.instance().set_config(config)
-
-        yield
-
-        # HydraConfig.instance().set_config(base_config.conf)
-
-
-def test_defaults() -> None:
-    # config is relative to a module
-    config = compose(config_name="config")
-    options = OmegaConf.to_object(config)
-    assert isinstance(options, Config)
-
-    # TODO: Comparing `functools.partial`s doesn't work?
-    # assert options.algorithm == Backprop.HParams()
-    assert isinstance(options.algorithm, Backprop.HParams)
-    assert False, options.network
-
-    # NOTE: Not doing this since there are lots of paths that vary between a local machine and the
-    # Mila cluster.
-    # file_regression.check(OmegaConf.to_yaml(config), extension=".yaml")
+@use_overrides([""])
+def test_defaults(experiment_config: Config) -> None:
+    assert isinstance(experiment_config.algorithm, Backprop.HParams)
+    assert isinstance(experiment_config.network, SimpleVGG.HParams)
+    assert isinstance(experiment_config.datamodule, CIFAR10DataModuleConfig)
 
 
 def _ids(v):
@@ -89,7 +55,9 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
+        (["algorithm=example"], ExampleAlgorithm.HParams),
         (["algorithm=backprop"], Backprop.HParams),
+        (["algorithm=dtp"], DTP.HParams),
     ],
     ids=_ids,
 )
@@ -99,17 +67,22 @@ def test_setting_algorithm(
     testing_overrides: list[str],
     tmp_path: Path,
 ) -> None:
-    config = compose(config_name="config", overrides=testing_overrides + overrides)
-    assert config.seed == TEST_SEED  # note: from the testing_overrides above.
-    options = OmegaConf.to_object(config)
-    assert isinstance(options, Config)
-    assert isinstance(options.algorithm, expected_type)
+    with setup_hydra_for_tests_and_compose(
+        all_overrides=testing_overrides + overrides, tmp_path=tmp_path
+    ) as dictconfig:
+        assert dictconfig.seed == TEST_SEED  # note: from the testing_overrides above.
+        config = resolve_dictconfig(dictconfig)
+        assert isinstance(config, Config)
+        assert isinstance(config.algorithm, expected_type)
 
 
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=backprop", "network=fcnet"], FcNet.HParams),
+        (["algorithm=backprop", "network=lenet"], LeNet.HParams),
+        (["algorithm=backprop", "network=simple_vgg"], SimpleVGG.HParams),
+        (["algorithm=backprop", "network=resnet18"], ResNet18.HParams),
+        (["algorithm=backprop", "network=resnet34"], ResNet34.HParams),
     ],
     ids=_ids,
 )
@@ -117,9 +90,13 @@ def test_setting_network(
     overrides: list[str],
     expected_type: type[Algorithm.HParams],
     testing_overrides: list[str],
+    tmp_path: Path,
 ) -> None:
-    config = compose(config_name="config", overrides=testing_overrides + overrides)
-    options = OmegaConf.to_object(config)
+    # NOTE: Still unclear on the difference between initialize and initialize_config_module
+    with setup_hydra_for_tests_and_compose(
+        all_overrides=testing_overrides + overrides, tmp_path=tmp_path
+    ) as dictconfig:
+        options = resolve_dictconfig(dictconfig)
     assert isinstance(options, Config)
     assert isinstance(options.network, expected_type)
 

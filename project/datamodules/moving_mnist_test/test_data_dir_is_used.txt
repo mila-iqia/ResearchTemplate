@@ -1,0 +1,1 @@
+/Tmp/slurm.3490567.0/tmp_test_data/MovingMNIST

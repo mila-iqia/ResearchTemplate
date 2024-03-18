@@ -1,19 +1,30 @@
+import sys
+from pathlib import Path
+
+import pytest
+from torch.utils.data import Subset
+from torchvision import transforms as T
+from torchvision.datasets import INaturalist
+
 from project.datamodules.image_classification import ImageClassificationDataModule
 
 from .inaturalist import INaturalistDataModule, TargetType, Version2021
-from torchvision import transforms as T
-from torchvision.datasets import INaturalist
-from torch.utils.data import Subset
-import pytest
-import sys
 
-slow = pytest.mark.skipif("-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed.")
+slow = pytest.mark.skipif(
+    "-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed."
+)
 
 
-@slow
+@pytest.mark.slow
 @pytest.mark.parametrize("version", ["2021_train", "2021_train_mini", "2021_valid"])
 @pytest.mark.parametrize(
     "target_type", ["full", "kingdom", "phylum", "class", "order", "family", "genus"]
+)
+@pytest.mark.xfail(
+    not Path("/network/datasets/inat").exists(),
+    strict=True,
+    raises=NotImplementedError,
+    reason="Expects to run on the Mila cluster",
 )
 def test_dataset_download_works(target_type: TargetType, version: Version2021):
     batch_size = 64

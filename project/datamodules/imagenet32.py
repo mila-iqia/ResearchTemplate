@@ -16,7 +16,8 @@ from torchvision import transforms
 from torchvision.datasets.vision import VisionDataset
 
 from project.utils.types import C, H, StageStr, W
-from project.datamodules.vision import VisionDataModule
+
+from .vision_datamodule import VisionDataModule
 
 logger = getLogger(__name__)
 
@@ -28,7 +29,9 @@ def imagenet32_normalization():
 class ImageNet32Dataset(VisionDataset):
     """Downsampled ImageNet 32x32 Dataset."""
 
-    url: ClassVar[str] = "https://drive.google.com/uc?id=1XAlD_wshHhGNzaqy8ML-Jk0ZhAm8J5J_"
+    url: ClassVar[str] = (
+        "https://drive.google.com/uc?id=1XAlD_wshHhGNzaqy8ML-Jk0ZhAm8J5J_"
+    )
     md5: ClassVar[str] = "64cae578416aebe1576729ee93e41c25"
     archive_filename: ClassVar[str] = "imagenet32.tar.gz"
 
@@ -41,14 +44,18 @@ class ImageNet32Dataset(VisionDataset):
         target_transform: Callable | None = None,
         download: bool = False,
     ):
-        super().__init__(str(root), transform=transform, target_transform=target_transform)
+        super().__init__(
+            str(root), transform=transform, target_transform=target_transform
+        )
         self.base_folder = "imagenet32"
         self.train = train  # training set or test set
         self.split = "train" if self.train else "val"
         self.split_folder = f"out_data_{self.split}"
         # TODO: Look for the archive in this directory before downloading it.
         self.readonly_datasets_dir = (
-            Path(readonly_datasets_dir).expanduser().absolute() if readonly_datasets_dir else None
+            Path(readonly_datasets_dir).expanduser().absolute()
+            if readonly_datasets_dir
+            else None
         )
 
         self._data_loaded = False
@@ -102,11 +109,17 @@ class ImageNet32Dataset(VisionDataset):
             logger.info(f"Extraction path {extracted_path} already exists.")
             try:
                 self._load_dataset()
-                logger.info(f"Archive already downloaded and extracted to {extracted_path}")
+                logger.info(
+                    f"Archive already downloaded and extracted to {extracted_path}"
+                )
             except Exception as exc:
                 # Unable to load the dataset, for some reason. Re-extract it.
-                logger.info(f"Unable to load the dataset from {extracted_path}: {exc}\n")
-                logger.info("Re-extracting the archive, which will overwrite the files present.")
+                logger.info(
+                    f"Unable to load the dataset from {extracted_path}: {exc}\n"
+                )
+                logger.info(
+                    "Re-extracting the archive, which will overwrite the files present."
+                )
                 extract_archive_in_root()
             return
 
@@ -119,8 +132,12 @@ class ImageNet32Dataset(VisionDataset):
         ):
             readonly_archive_path = self.readonly_datasets_dir / self.archive_filename
             logger.info(f"Found the archive at {readonly_archive_path}")
-            logger.info(f"Copying archive from {readonly_archive_path} -> {archive_path}")
-            shutil.copyfile(src=readonly_archive_path, dst=archive_path, follow_symlinks=False)
+            logger.info(
+                f"Copying archive from {readonly_archive_path} -> {archive_path}"
+            )
+            shutil.copyfile(
+                src=readonly_archive_path, dst=archive_path, follow_symlinks=False
+            )
             extract_archive_in_root()
             return
 
@@ -146,7 +163,9 @@ class ImageNet32Dataset(VisionDataset):
         logger.info(f"Loading ImageNet32 {self.split} dataset...")
         for i in range(1, 11):
             file_name = "train_data_batch_" + str(i)
-            file_path = Path(self.root, self.base_folder, self.split_folder, file_name).absolute()
+            file_path = Path(
+                self.root, self.base_folder, self.split_folder, file_name
+            ).absolute()
             with open(file_path, "rb") as f:
                 entry = pickle.load(f, encoding="latin1")
                 data.append(entry["data"])
@@ -158,7 +177,9 @@ class ImageNet32Dataset(VisionDataset):
         # self.targets = [t - 1 for t in self.targets]
         self.data = np.vstack(data).reshape(-1, 3, 32, 32)
         self.data = self.data.transpose((0, 2, 3, 1))
-        logger.info(f"Loaded {len(self.data)} images from ImageNet32 {self.split} split")
+        logger.info(
+            f"Loaded {len(self.data)} images from ImageNet32 {self.split} split"
+        )
         self._data_loaded = True
 
 
@@ -187,6 +208,7 @@ class ImageNet32DataModule(VisionDataModule):
         val_transforms: Callable | None = None,
         test_transforms: Callable | None = None,
     ) -> None:
+        Path(data_dir).mkdir(parents=True, exist_ok=True)
         super().__init__(
             data_dir=str(data_dir),
             val_split=val_split,
@@ -248,12 +270,17 @@ class ImageNet32DataModule(VisionDataModule):
                 else self.train_transforms
             )
             val_transforms = (
-                self.default_transforms() if self.val_transforms is None else self.val_transforms
+                self.default_transforms()
+                if self.val_transforms is None
+                else self.val_transforms
             )
             # Create the entire dataset twice. This is only needed because they have different
             # transforms...
             base_dataset = self.dataset_cls(
-                self.data_dir, train=True, transform=transforms.ToTensor(), **self.EXTRA_ARGS
+                self.data_dir,
+                train=True,
+                transform=transforms.ToTensor(),
+                **self.EXTRA_ARGS,
             )
             # Make sure they both use the same underlying data. (so we don't use twice as much
             # memory, like the base-class does!
@@ -281,7 +308,9 @@ class ImageNet32DataModule(VisionDataModule):
 
         if stage in ["test", None]:
             test_transforms = (
-                self.default_transforms() if self.test_transforms is None else self.test_transforms
+                self.default_transforms()
+                if self.test_transforms is None
+                else self.test_transforms
             )
             self.dataset_test = self.dataset_cls(
                 self.data_dir, train=False, transform=test_transforms, **self.EXTRA_ARGS
