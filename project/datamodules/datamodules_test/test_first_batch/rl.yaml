@@ -1,0 +1,53 @@
+actions:
+  device: cpu
+  hash: -8553731702899738008
+  max: 1
+  mean: 0.18206895887851715
+  min: 0
+  shape:
+  - 100
+  - 58
+  sum: 1056
+infos:
+  item_types:
+  - list
+  length: 100
+observations:
+  device: cuda:0
+  hash: -942052974470817723
+  max: 2.5302488803863525
+  mean: 0.007067096419632435
+  min: -2.4280812740325928
+  shape:
+  - 100
+  - 59
+  - 4
+  sum: 166.78347778320312
+rewards:
+  device: cuda:0
+  hash: -6745158437209228431
+  max: 1.0
+  mean: 0.3832758665084839
+  min: 0.0
+  shape:
+  - 100
+  - 58
+  sum: 2223.0
+terminated:
+  device: cpu
+  hash: -5473960796853483260
+  max: true
+  mean: 1.0
+  min: true
+  shape:
+  - 100
+  sum: 100
+truncated:
+  device: cpu
+  hash: -5473960796853483260
+  max: true
+  mean: 1.0
+  min: true
+  shape:
+  - 100
+  sum: 100

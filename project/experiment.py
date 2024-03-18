@@ -1,22 +1,31 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, is_dataclass
+import random
+from dataclasses import dataclass
 from logging import getLogger as get_logger
+from typing import Any
 
-from hydra_zen import instantiate
-from lightning import Callback, LightningDataModule, Trainer, seed_everything
-from omegaconf import DictConfig, OmegaConf
+import hydra_zen
+import torch
+from gym import spaces
+from hydra.utils import instantiate
+from lightning import Callback, Trainer, seed_everything
+from omegaconf import DictConfig
+from torch import nn
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
 from project.datamodules.datamodule import DataModule
-from lightning.pytorch.loggers import Logger
+from project.datamodules.image_classification import (
+    ImageClassificationDataModule,
+)
+from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.networks import Network
+from project.networks.fcnet import FcNet, fcnet_for_env
 from project.utils.hydra_utils import get_outer_class
-
+from project.utils.types import Dataclass
 from project.utils.utils import validate_datamodule
-from torch import nn
-
 
 logger = get_logger(__name__)
 
@@ -36,31 +45,106 @@ class Experiment:
     trainer: Trainer
 
 
-def setup_datamodule(experiment_config: Config) -> LightningDataModule:
-    """Sets up the datamodule from the config.
+def setup_experiment(experiment_config: Config) -> Experiment:
+    """Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
+    Trainer, Algorithm, etc) to go from the options that come from Hydra, into all required
+    components for the experiment, which is stored as a dataclass called `Experiment`.
 
-    This has a few differences w.r.t. just doing `instantiate(experiment_config.datamodule)`:
-    1. If there is a `batch_size` attribute on the Algorithm's HParams, sets that attribute on the
-       datamodule.
-    2. If the datamodule is a VisionDataModule and has `normalize=False`, removes any normalization
-    transform from the train and val transforms, if present attribute.
+    NOTE: This also has the effect of seeding the random number generators, so the weights that are
+    constructed are deterministic and reproducible.
     """
-    if isinstance(experiment_config.datamodule, LightningDataModule):
-        return experiment_config.datamodule
+    setup_logging(experiment_config)
+    seed_rng(experiment_config)
+    trainer = instantiate_trainer(experiment_config)
 
-    datamodule_config = experiment_config.datamodule
-    if isinstance(datamodule_config, (dict, DictConfig)):
-        assert "_target_" in datamodule_config
-        # datamodule = OmegaConf.to_object(datamodule_config)
-        datamodule = instantiate(datamodule_config)
-        assert isinstance(datamodule, LightningDataModule)
-        return datamodule
+    datamodule = instantiate_datamodule(experiment_config)
 
-    if not is_dataclass(datamodule_config):
-        raise NotImplementedError(
-            f"Assuming that the 'datamodule' config entry is either a datamodule or a config "
-            f"dataclass. (Got {datamodule_config} of type {type(datamodule_config)})."
-        )
+    network = instantiate_network(experiment_config, datamodule=datamodule)
+
+    algorithm = instantiate_algorithm(
+        experiment_config, datamodule=datamodule, network=network
+    )
+
+    return Experiment(
+        trainer=trainer,
+        algorithm=algorithm,
+        network=network,  # todo: fix typing issues (maybe removing/reworking the `Network` class?)
+        datamodule=datamodule,
+    )
+
+
+def setup_logging(experiment_config: Config) -> None:
+    import os
+
+    import rich.console
+    import rich.logging
+    import rich.traceback
+
+    LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=LOGLEVEL,
+        # format="%(asctime)s - %(levelname)s - %(message)s",
+        format="%(message)s",
+        datefmt="[%X]",
+        force=True,
+        handlers=[
+            rich.logging.RichHandler(
+                rich_tracebacks=True,
+                tracebacks_width=100,
+                tracebacks_show_locals=False,
+            )
+        ],
+    )
+
+    root_logger = logging.getLogger("beyond_backprop")
+
+    if experiment_config.debug:
+        root_logger.setLevel(logging.INFO)
+    elif experiment_config.verbose:
+        root_logger.setLevel(logging.DEBUG)
+
+
+def seed_rng(experiment_config: Config):
+    if experiment_config.seed is not None:
+        seed = experiment_config.seed
+        print(f"seed manually set to {experiment_config.seed}")
+    else:
+        seed = random.randint(0, int(1e5))
+        print(f"Randomly selected seed: {seed}")
+    seed_everything(seed=seed, workers=True)
+
+
+def instantiate_trainer(experiment_config: Config) -> Trainer:
+    # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
+    # fields have the right type.
+
+    # instantiate all the callbacks
+    callbacks: dict[str, Callback] | None = hydra_zen.instantiate(
+        experiment_config.trainer.pop("callbacks", {})
+    )
+    # Create the loggers, if any.
+    loggers: dict[str, Any] | None = instantiate(
+        experiment_config.trainer.pop("logger", {})
+    )
+    # Create the Trainer.
+    assert isinstance(experiment_config.trainer, dict)
+    if experiment_config.debug:
+        logger.info("Setting the max_epochs to 1, since the 'debug' flag was passed.")
+        experiment_config.trainer["max_epochs"] = 1
+    if "_target_" not in experiment_config.trainer:
+        experiment_config.trainer["_target_"] = Trainer
+
+    trainer = instantiate(
+        experiment_config.trainer,
+        callbacks=list(callbacks.values()) if callbacks else None,
+        logger=list(loggers.values()) if loggers else None,
+    )
+    assert isinstance(trainer, Trainer)
+    return trainer
+
+
+def instantiate_datamodule(experiment_config: Config) -> DataModule:
+    datamodule_config: Dataclass | DataModule = experiment_config.datamodule
 
     datamodule_overrides = {}
     if hasattr(experiment_config.algorithm, "batch_size"):
@@ -72,73 +156,163 @@ def setup_datamodule(experiment_config: Config) -> LightningDataModule:
             f"hyper-parameters: {algo_batch_size}"
         )
         datamodule_overrides["batch_size"] = algo_batch_size
-    datamodule = instantiate(datamodule_config, **datamodule_overrides)
+
+    datamodule: DataModule
+    if isinstance(datamodule_config, DataModule):
+        logger.info(
+            f"Datamodule was already instantiated (probably to interpolate a field value). "
+            f"{datamodule_config=}"
+        )
+        datamodule = datamodule_config
+    else:
+        datamodule = instantiate(datamodule_config, **datamodule_overrides)
+        assert isinstance(datamodule, DataModule)
+
     datamodule = validate_datamodule(datamodule)
     return datamodule
 
 
-def setup_experiment(experiment_config: Config) -> Experiment:
-    """Do all the postprocessing necessary (e.g., create the network, Algorithm, datamodule,
-    callbacks, Trainer, etc) to go from the options that come from Hydra, into all required
-    components for the experiment, which is stored as a namedtuple-like class called `Experiment`.
+def get_experiment_device(experiment_config: Config | DictConfig) -> torch.device:
+    if experiment_config.trainer.get("accelerator", "cpu") == "gpu":
+        return torch.device("cuda", torch.cuda.current_device())
+    return torch.device("cpu")
 
-    NOTE: This also has the effect of seeding the random number generators, so the weights that are
-    constructed are always deterministic.
-    """
 
-    root_logger = logging.getLogger("project")
-    root_logger.setLevel(getattr(logging, experiment_config.log_level.upper()))
-    logger.info(f"Using random seed: {experiment_config.seed}")
-    seed_everything(seed=experiment_config.seed, workers=True)
+def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
+    network_config = experiment_config.network
 
-    # Create the Trainer.
-    trainer_config = experiment_config.trainer.copy()
-    if isinstance(trainer_config, DictConfig):
-        trainer_config = OmegaConf.to_container(trainer_config)
-    assert isinstance(trainer_config, dict)
-    # NOTE: The callbacks and loggers are parsed into dict[str, obj] by Hydra, but we need them
-    # to be passed as a list of objects to the Trainer. Therefore here we put the dicts in lists
-    callbacks: dict[str, Callback] = instantiate(trainer_config.pop("callbacks", {})) or {}
-    loggers: dict[str, Logger] = instantiate(trainer_config.pop("logger", {})) or {}
-    trainer = instantiate(
-        trainer_config,
-        callbacks=list(callbacks.values()),
-        logger=list(loggers.values()),
-    )
-    assert isinstance(trainer, Trainer)
+    device = get_experiment_device(experiment_config)
 
-    # Create the datamodule:
-    # datamodule = instantiate(experiment_config.datamodule)
-    datamodule = setup_datamodule(experiment_config)
-
-    # TODO: Seems a bit too rigid to have the network be create independently of the algorithm.
-    # This might need to change.
-    # Create the network
-    network = instantiate(experiment_config.network)
-    assert isinstance(network, nn.Module), (network, type(network))
-
-    # Create the algorithm
-    if isinstance(experiment_config.algorithm, Algorithm.HParams):
-        algo_hparams = experiment_config.algorithm
-        algo_type: type[Algorithm] = getattr(
-            algo_hparams, "_target_", get_outer_class(type(algo_hparams))
+    if hasattr(network_config, "_target_"):
+        with device:
+            network = instantiate(network_config)
+    elif isinstance(network_config, Network.HParams):
+        with device:
+            network = instantiate_network_from_hparams(
+                network_hparams=network_config, datamodule=datamodule
+            )
+        assert isinstance(network, nn.Module)
+    elif isinstance(network_config, nn.Module):
+        logger.warning(
+            RuntimeWarning(
+                f"The network config is a nn.Module. Consider using a _target_ or _partial_"
+                f"in a config instead, so the config stays lightweight. (network={network_config})"
+            )
         )
-        algorithm = algo_type(
-            datamodule=datamodule,
-            network=network,
-            hp=algo_hparams,
-        )
+        network = network_config.to(device=device)
+    elif callable(network_config):
+        # for example when using _partial_ in a config.
+        with device:
+            network = network_config()
     else:
-        algorithm = instantiate(
-            experiment_config.algorithm,
-            datamodule=datamodule,
-            network=network,
-        )
-    assert isinstance(algorithm, Algorithm), (algorithm, type(algorithm))
+        raise RuntimeError(f"Unsupported network config passed: {network_config}")
 
-    return Experiment(
-        trainer=trainer,
-        algorithm=algorithm,
-        network=network,
+    return network
+
+
+def instantiate_algorithm(
+    experiment_config: Config, datamodule: DataModule, network: nn.Module
+) -> Algorithm:
+    # Create the algorithm
+    algo_config = experiment_config.algorithm
+    if isinstance(algo_config, Algorithm):
+        logger.info(
+            f"Algorithm was already instantiated (probably to interpolate a field value)."
+            f"{algo_config=}"
+        )
+        return algo_config
+
+    if isinstance(algo_config, (dict, DictConfig)):
+        if "_target_" not in algo_config:
+            raise NotImplementedError(
+                "The algorithm config, if a dict, should have a _target_ set to an Algorithm class."
+            )
+        if algo_config.get("_partial_", False):
+            algo_config = instantiate(algo_config)
+            algorithm = algo_config(datamodule=datamodule, network=network)
+        else:
+            algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
+
+        if not isinstance(algorithm, Algorithm):
+            raise NotImplementedError(
+                f"The algorithm config didn't create an Algorithm instance:\n"
+                f"{algo_config=}\n"
+                f"{algorithm=}"
+            )
+        return algorithm
+
+    if not isinstance(algo_config, Algorithm.HParams):
+        raise NotImplementedError(
+            f"For now the algorithm config can either have a _target_ set to an Algorithm class, "
+            f"or configure an inner Algorithm.HParams dataclass. Got:\n{algo_config=}"
+        )
+
+    algorithm_type: type[Algorithm] = get_outer_class(type(algo_config))
+    assert isinstance(
+        algo_config,
+        algorithm_type.HParams,  # type: ignore
+    ), "HParams type should match model type"
+
+    algorithm = algorithm_type(
         datamodule=datamodule,
+        network=network,
+        hp=algo_config,
     )
+    return algorithm
+
+
+def instantiate_network_from_hparams(
+    network_hparams: Network.HParams, datamodule: DataModule
+) -> Network:
+    """TODO: Refactor this if possible. Shouldn't be as complicated as it currently is.
+
+    Perhaps we could register handler functions for each pair of datamodule and network type, a bit
+    like a multiple dispatch?
+    """
+    network_type: type[Network] = get_outer_class(type(network_hparams))
+    assert isinstance(
+        network_hparams,
+        network_type.HParams,  # type: ignore
+    ), "HParams type should match net type"
+    if isinstance(datamodule, ImageClassificationDataModule):
+        # if issubclass(network_type, ImageClassifierNetwork):
+        return network_type(
+            in_channels=datamodule.dims[0],
+            n_classes=datamodule.num_classes,  # type: ignore
+            hparams=network_hparams,
+        )
+
+    if isinstance(datamodule, RlDataModule):
+        # TODO: Make this more general: Reinforce should be able to use other architectures on SL
+        # problems also.
+        observation_space = datamodule.env.observation_space
+        action_space = datamodule.env.action_space
+        if issubclass(network_type, FcNet):
+            assert isinstance(network_hparams, FcNet.HParams)
+            return fcnet_for_env(
+                observation_space=observation_space,  # type: ignore
+                action_space=action_space,  # type: ignore
+                hparams=network_hparams,
+            )
+        if isinstance(observation_space, spaces.Box) and isinstance(
+            action_space, spaces.Discrete
+        ):
+            # TODO: These networks assume that the input are images. For now we tried CartPole with
+            # Reinforce, but we could potentially try other Gym envs with Pixel observations.
+            input_shape = datamodule.env.observation_space.shape
+            assert isinstance(datamodule.env.action_space, spaces.Discrete)
+            n_classes = datamodule.env.action_space.n
+            if len(observation_space.shape) == 3:
+                in_channels = observation_space.shape[0]
+                return network_type(
+                    in_channels=in_channels,
+                    n_classes=n_classes,
+                    hparams=network_hparams,
+                )
+            # TODO: Make this more generic once we add more types of datamodules / networks.
+            return network_type(
+                input_shape=input_shape,
+                output_shape=(n_classes,),
+                hparams=network_hparams,
+            )
+    raise NotImplementedError(datamodule, network_hparams)

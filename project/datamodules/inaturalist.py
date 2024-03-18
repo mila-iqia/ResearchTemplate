@@ -1,14 +1,16 @@
 from __future__ import annotations
-from typing import Any, Callable, ClassVar
-from project.datamodules.vision import VisionDataModule
-from project.utils.types import C, H, W
+
 import os
-from typing import Literal, Union
-from pathlib import Path
 import warnings
-from torchvision.datasets import INaturalist
 from logging import getLogger as get_logger
+from pathlib import Path
+from typing import Any, Callable, ClassVar, Literal, Union
+
 import torchvision.transforms as T
+from torchvision.datasets import INaturalist
+
+from project.datamodules.vision_datamodule import VisionDataModule
+from project.utils.types import C, H, W
 
 logger = get_logger(__name__)
 
@@ -42,7 +44,9 @@ def get_slurm_tmpdir() -> Path:
 def inat_dataset_dir() -> Path:
     network_dir = Path("/network/datasets/inat")
     if not network_dir.exists():
-        raise NotImplementedError("For now this assumes that we're running on the Mila cluster.")
+        raise NotImplementedError(
+            "For now this assumes that we're running on the Mila cluster."
+        )
     return network_dir
 
 
@@ -151,10 +155,14 @@ class INaturalistDataModule(VisionDataModule):
                 symlink_in_tmpdir.symlink_to(file_on_network)
 
         try:
-            logger.debug(f"Checking if the dataset has already been created in {self.data_dir}.")
+            logger.debug(
+                f"Checking if the dataset has already been created in {self.data_dir}."
+            )
             self.dataset_cls(str(self.data_dir), download=False, **self.EXTRA_ARGS)
         except RuntimeError:
-            logger.debug(f"The dataset has not already been created in {self.data_dir}.")
+            logger.debug(
+                f"The dataset has not already been created in {self.data_dir}."
+            )
             pass
         else:
             logger.debug(f"The dataset has already been downloaded in {self.data_dir}.")
@@ -166,7 +174,7 @@ class INaturalistDataModule(VisionDataModule):
         """Default transform for the dataset."""
         return T.Compose(
             [
-                T.RandomResizedCrop(224),
+                T.CenterCrop(224),
                 T.ToTensor(),
             ]
         )

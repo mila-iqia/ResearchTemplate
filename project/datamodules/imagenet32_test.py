@@ -1,15 +1,19 @@
 import itertools
-import os
 from pathlib import Path
+
+import pytest
+
+from project.configs.datamodule import SCRATCH
 
 from .imagenet32 import ImageNet32DataModule
 
 
-def test_dataset_download_works():
+@pytest.mark.slow
+def test_dataset_download_works(data_dir: Path):
     batch_size = 16
     datamodule = ImageNet32DataModule(
-        data_dir=Path(os.environ.get("DATA_DIR", "data")) / "imagenet32",
-        readonly_datasets_dir=Path("~/scratch").expanduser(),
+        data_dir=data_dir,
+        readonly_datasets_dir=SCRATCH,
         batch_size=batch_size,
         num_images_per_val_class=10,
     )
@@ -39,4 +43,5 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG)
-    test_dataset_download_works()
+    assert SCRATCH
+    test_dataset_download_works(SCRATCH / "data")
