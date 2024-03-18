@@ -10,7 +10,7 @@ from typing import (
 )
 
 from lightning import LightningDataModule
-from torch import Tensor, nn
+from torch import Tensor
 from typing_extensions import (
     ParamSpec,
     TypeVar,
@@ -20,6 +20,8 @@ from typing_extensions import (
 
 if typing.TYPE_CHECKING:
     from project.datamodules.datamodule import DataModule
+from .outputs import ClassificationOutputs, StepOutputDict
+from .protocols import HasInputOutputShapes, Module
 
 # These are used to show which dim is which.
 C = NewType("C", int)
@@ -27,8 +29,7 @@ H = NewType("H", int)
 W = NewType("W", int)
 S = NewType("S", int)
 DM = TypeVar("DM", bound=Union[LightningDataModule, "DataModule"])
-ModuleType = TypeVar("ModuleType", bound=nn.Module)
-ModuleType_co = TypeVar("ModuleType_co", bound=nn.Module, covariant=True)
+
 StageStr = Literal["fit", "validate", "test", "predict"]
 PhaseStr = Literal["train", "val", "test"]
 """The trainer phases.
@@ -41,13 +42,9 @@ R = ParamSpec("R")
 OutT = TypeVar("OutT", default=Tensor, covariant=True)
 Ts = TypeVarTuple("Ts", default=Unpack[Tuple[Tensor, ...]])
 T = TypeVar("T", default=Tensor)
-K = TypeVar("K")
-V = TypeVar("V")
-NestedDict = Mapping[K, Union[V, "NestedDict[K, V]"]]
 
-from .HasInputOutputShapes import HasInputOutputShapes
-from .Module import Module
-from .outputs import ClassificationOutputs, StepOutputDict
+type NestedDict[K, V] = Mapping[K, Union[V, NestedDict[K, V]]]
+
 
 __all__ = [
     "HasInputOutputShapes",
