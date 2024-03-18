@@ -24,3 +24,16 @@ class Module[**P, OutT](Protocol):
         # note: the overloads on nn.Module.to cause a bug with missing `self`.
         # This shouldn't be a problem.
         to = nn.Module().to
+
+
+@runtime_checkable
+class HasInputOutputShapes(Module, Protocol):
+    """Protocol for a a module that is "easy to invert" since it has known input and output shapes.
+
+    It's easier to mark modules as invertible in-place than to create new subclass for every single
+    nn.Module class that we want to potentially use in the forward net.
+    """
+
+    input_shape: tuple[int, ...]
+    # input_shapes: tuple[tuple[int, ...] | None, ...] = ()
+    output_shape: tuple[int, ...]
