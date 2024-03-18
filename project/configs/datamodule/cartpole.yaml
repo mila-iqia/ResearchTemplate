@@ -1,0 +1,3 @@
+defaults:
+  - rl
+env: "CartPole-v1"
