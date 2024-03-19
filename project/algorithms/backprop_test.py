@@ -1,6 +1,7 @@
 from typing import ClassVar
 
-from project.algorithms.image_classification_test import ImageClassificationAlgorithmTests
+from project.algorithms.bases.image_classification_test import ImageClassificationAlgorithmTests
+
 from .backprop import Backprop
 
 

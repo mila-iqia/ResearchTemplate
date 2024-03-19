@@ -1,30 +1,40 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Iterable, Sequence
 from dataclasses import field
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Iterable, Sequence, TypeVar
+from typing import Literal
 
 import rich
 import rich.syntax
 import rich.tree
 import torch
-from lightning import Trainer
+from lightning import LightningDataModule, Trainer
 from omegaconf import DictConfig, OmegaConf
-from torch import Tensor, nn
+from torch import Tensor
 from torch.nn.parameter import Parameter
 from torchvision import transforms
 
 from project.datamodules.image_classification import ImageClassificationDataModule
+from project.utils.types.protocols import DataModule, Module
 
-from .types import DM, NestedDict
+from .types import NestedDict
 
 logger = get_logger(__name__)
 
-K = TypeVar("K")
-T = TypeVar("T")
-V = TypeVar("V")
+
+def get_shape_ish(t: Tensor) -> tuple[int | Literal["?"], ...]:
+    if not t.is_nested:
+        return t.shape
+    dim_sizes = []
+    for dim in range(t.ndim):
+        try:
+            dim_sizes.append(t.size(dim))
+        except RuntimeError:
+            dim_sizes.append("?")
+    return tuple(dim_sizes)
 
 
 def relative_if_possible(p: Path) -> Path:
@@ -55,25 +65,25 @@ def get_log_dir(trainer: Trainer | None) -> Path:
     return log_dir
 
 
-def list_field(*values: T) -> list[T]:
+def list_field[T](*values: T) -> list[T]:
     return field(default_factory=list(values).copy)
 
 
-def is_trainable(layer: nn.Module) -> bool:
+def is_trainable(layer: Module) -> bool:
     return any(p.requires_grad for p in layer.parameters())
 
 
-def named_trainable_parameters(module: nn.Module) -> Iterable[tuple[str, Parameter]]:
+def named_trainable_parameters(module: Module) -> Iterable[tuple[str, Parameter]]:
     for name, param in module.named_parameters():
         if param.requires_grad:
             yield name, param
 
 
-def get_device(mod: nn.Module) -> torch.device:
+def get_device(mod: Module) -> torch.device:
     return next(p.device for p in mod.parameters())
 
 
-def get_devices(mod: nn.Module) -> set[torch.device]:
+def get_devices(mod: Module) -> set[torch.device]:
     return set(p.device for p in mod.parameters())
 
 
@@ -91,9 +101,7 @@ def _remove_normalization_from_transforms(
         assert isinstance(transform_list, transforms.Compose)
         if isinstance(transform_list.transforms[-1], transforms.Normalize):
             t = transform_list.transforms.pop(-1)
-            logger.info(
-                f"Removed normalization transform {t} since datamodule.normalize=False"
-            )
+            logger.info(f"Removed normalization transform {t} since datamodule.normalize=False")
         if any(isinstance(t, transforms.Normalize) for t in transform_list.transforms):
             raise RuntimeError(
                 f"Unable to remove all the normalization transforms from datamodule {datamodule}: "
@@ -101,15 +109,12 @@ def _remove_normalization_from_transforms(
             )
 
 
-def validate_datamodule(datamodule: DM) -> DM:
+def validate_datamodule[DM: DataModule | LightningDataModule](datamodule: DM) -> DM:
     """Checks that the transforms / things are setup correctly.
 
     Returns the same datamodule.
     """
-    if (
-        isinstance(datamodule, ImageClassificationDataModule)
-        and not datamodule.normalize
-    ):
+    if isinstance(datamodule, ImageClassificationDataModule) and not datamodule.normalize:
         _remove_normalization_from_transforms(datamodule)
     else:
         # todo: maybe check that the normalization transform is present everywhere?
@@ -191,9 +196,7 @@ def print_config(
     queue = []
 
     for f in print_order:
-        queue.append(f) if f in config else logger.info(
-            f"Field '{f}' not found in config"
-        )
+        queue.append(f) if f in config else logger.info(f"Field '{f}' not found in config")
 
     for f in config:
         if f not in queue:
@@ -216,7 +219,7 @@ def print_config(
     #     rich.print(tree, file=file)
 
 
-def flatten(nested: NestedDict[K, V]) -> dict[tuple[K, ...], V]:
+def flatten[K, V](nested: NestedDict[K, V]) -> dict[tuple[K, ...], V]:
     """Flatten a dictionary of dictionaries. The returned dictionary's keys are tuples, one entry
     per layer.
 
@@ -235,7 +238,7 @@ def flatten(nested: NestedDict[K, V]) -> dict[tuple[K, ...], V]:
     return flattened
 
 
-def unflatten(flattened: dict[tuple[K, ...], V]) -> NestedDict[K, V]:
+def unflatten[K, V](flattened: dict[tuple[K, ...], V]) -> NestedDict[K, V]:
     """Unflatten a dictionary back into a possibly nested dictionary.
 
     >>> unflatten({('a', 'b'): 2, ('a', 'c'): 3, ('c', 'd'): 3, ('c', 'e'): 4})
@@ -252,7 +255,7 @@ def unflatten(flattened: dict[tuple[K, ...], V]) -> NestedDict[K, V]:
     return nested
 
 
-def flatten_dict(nested: NestedDict[str, V], sep: str = ".") -> dict[str, V]:
+def flatten_dict[V](nested: NestedDict[str, V], sep: str = ".") -> dict[str, V]:
     """Flatten a dictionary of dictionaries. Joins different nesting levels with `sep` as
     separator.
 
@@ -264,7 +267,7 @@ def flatten_dict(nested: NestedDict[str, V], sep: str = ".") -> dict[str, V]:
     return {sep.join(keys): value for keys, value in flatten(nested).items()}
 
 
-def unflatten_dict(
+def unflatten_dict[V](
     flattened: dict[str, V], sep: str = ".", recursive: bool = False
 ) -> NestedDict[str, V]:
     """Unflatten a dict into a possibly nested dict. Keys are split using `sep`.

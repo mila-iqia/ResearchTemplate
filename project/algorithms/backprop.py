@@ -2,6 +2,7 @@
 
 Uses regular backprop.
 """
+
 from __future__ import annotations
 
 import functools
@@ -9,7 +10,6 @@ from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
 
-from torchmetrics.classification import MulticlassAccuracy
 import torch
 from hydra_zen import instantiate
 from lightning.pytorch.callbacks import Callback, EarlyStopping
@@ -17,8 +17,9 @@ from torch import Tensor, nn
 from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
+from torchmetrics.classification import MulticlassAccuracy
 
-from project.algorithms.algorithm import Algorithm
+from project.algorithms.bases.algorithm import Algorithm
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
@@ -65,8 +66,9 @@ class Backprop(Algorithm):
         network: nn.Module,
         hp: HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, network=network, hp=hp)
+        super().__init__(datamodule=datamodule, hp=hp)
         self.datamodule: ImageClassificationDataModule
+        self.hp = hp
         # NOTE: Setting this property allows PL to infer the shapes and number of params.
         # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
         # If possible, we'd like to remove any reference to the device from the algorithm.

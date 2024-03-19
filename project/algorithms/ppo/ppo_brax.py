@@ -1,21 +1,21 @@
 # @title Import Brax and some helper modules
 
-from datetime import datetime
 import math
 import os
 import time
-from typing import Any, Callable, Dict, NamedTuple, Optional, Sequence
-import tqdm
+from collections.abc import Callable, Sequence
+from datetime import datetime
+from typing import Any, NamedTuple
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torch import Tensor, nn
-from torch import optim
 import torch.nn.functional as F
-
+import tqdm
 from brax import envs
 from brax.envs.wrappers.gym import VectorGymWrapper
 from brax.envs.wrappers.torch import TorchWrapper
+from torch import Tensor, nn, optim
 
 
 class Agent(nn.Module):
@@ -149,7 +149,7 @@ class Agent(nn.Module):
         return vs, advantages
 
     @torch.jit.export
-    def loss(self, td: Dict[str, torch.Tensor]):
+    def loss(self, td: dict[str, torch.Tensor]):
         observation = self.normalize(td["observation"])
         policy_logits = self.policy(observation[:-1])
         baseline = self.value(observation)
@@ -257,7 +257,7 @@ def train(
     entropy_cost: float = 1e-2,
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
-    progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
+    progress_fn: Callable[[int, dict[str, Any]], None] | None = None,
 ):
     """Trains a policy via PPO."""
     env = envs.create(

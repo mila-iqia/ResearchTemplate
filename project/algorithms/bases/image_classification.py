@@ -1,32 +1,31 @@
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import torch
 from torch import Tensor
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAccuracy
-from project.algorithms.algorithm import Algorithm, NetworkType
 
+from project.algorithms.bases.algorithm import Algorithm
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import ClassificationOutputs, PhaseStr
-from project.utils.utils import get_device
+from project.utils.types.protocols import Module
 
 
-class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]):
-    """Base class for a learning algorithm.
+class ImageClassificationAlgorithm[
+    NetworkType: Module[[Tensor], Tensor],
+    BatchType: tuple[Tensor, Tensor],
+](Algorithm[NetworkType, BatchType], ABC):
+    """Base class for a learning algorithm for image classification.
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
     boilerplate code to keep the algorithm implementations as simple as possible.
 
-    The networks themselves are created separately.
-
-    ## TODOs:
-    - Once a non-image-classification algorithm comes up, move all the image-classification-related
-    things to a new intermediate subclass, such as `ImageClassificationAlgorithm`.
+    The network can be created separately. This makes it easier to compare different algorithms on the same architecture (e.g. your method vs a baseline).
     """
 
     @dataclass
@@ -35,7 +34,7 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
 
     def __init__(
         self,
-        datamodule: ImageClassificationDataModule,
+        datamodule: ImageClassificationDataModule[BatchType],
         network: NetworkType,
         hp: ImageClassificationAlgorithm.HParams | None = None,
     ):
@@ -44,10 +43,9 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
         # NOTE: Setting this property allows PL to infer the shapes and number of params.
         # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
         # If possible, we'd like to remove any reference to the device from the algorithm.
-        device = get_device(self.network)
         self.example_input_array = torch.rand(
             [datamodule.batch_size, *datamodule.dims],
-            device=device,
+            device=self.device,
         )
         num_classes: int = datamodule.num_classes
 
@@ -135,14 +133,13 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
         top5_accuracy(probs, y)
         prog_bar = phase == "train"
 
-        log_kwargs = {"prog_bar": prog_bar, "sync_dist": True}
-        self.log(f"{phase}/accuracy", accuracy, **log_kwargs)
-        self.log(f"{phase}/top5_accuracy", top5_accuracy, **log_kwargs)
+        self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
+        self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
 
         if "cross_entropy" not in step_output:
             # Add the cross entropy loss as a metric.
             ce_loss = F.cross_entropy(logits.detach(), y, reduction="mean")
-            self.log(f"{phase}/cross_entropy", ce_loss, **log_kwargs)
+            self.log(f"{phase}/cross_entropy", ce_loss, prog_bar=prog_bar, sync_dist=True)
 
         fused_output = step_output.copy()
         loss: Tensor | float | None = step_output.get("loss", None)
@@ -154,6 +151,8 @@ class ImageClassificationAlgorithm(Algorithm[NetworkType, tuple[Tensor, Tensor]]
             fused_output["loss"] = loss.mean()
 
         if loss is not None:
-            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), **log_kwargs)
+            self.log(
+                f"{phase}/loss", torch.as_tensor(loss).mean(), prog_bar=prog_bar, sync_dist=True
+            )
 
         return fused_output

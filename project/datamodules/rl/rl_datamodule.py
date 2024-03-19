@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import warnings
+from collections.abc import Callable, Iterable
 from logging import getLogger as get_logger
-from typing import Any, Callable, Generic, Iterable, Literal
+from typing import Any, Generic, Literal
 
 import gym
 import torch
@@ -12,9 +13,9 @@ from lightning import LightningDataModule
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from project.datamodules.datamodule import DataModule
 from project.datamodules.rl.stacking_utils import stack_dicts
 from project.utils.types import StageStr
+from project.utils.types.protocols import DataModule
 
 from .gym_utils import ToTensorsWrapper
 from .rl_dataset import RlDataset
@@ -132,9 +133,7 @@ class RlDataModule(
         Called at the beginning of each stage (fit, validate, test).
         """
 
-    def _make_env(
-        self, wrappers: list[Callable[[gym.Env], gym.Env]]
-    ) -> ToTensorsWrapper:
+    def _make_env(self, wrappers: list[Callable[[gym.Env], gym.Env]]) -> ToTensorsWrapper:
         # TODO: Use gym.vector.make for vector envs, and pass the single-env wrappers to
         # gym.vector.make.
         env = self.env_fn()
@@ -151,9 +150,7 @@ class RlDataModule(
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
 
-        logger.debug(
-            f"Creating training environment with wrappers {self.train_wrappers}"
-        )
+        logger.debug(f"Creating training environment with wrappers {self.train_wrappers}")
         self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
         self.train_dataset = RlDataset(
             self.train_env,
@@ -276,9 +273,7 @@ def custom_collate_fn(
 ) -> EpisodeBatch[ActorOutput]:
     """Collates a list of episodes into an EpisodeBatch object containing nested tensors."""
     return EpisodeBatch(
-        observations=torch.nested.as_nested_tensor(
-            [ep["observations"] for ep in episodes]
-        ),
+        observations=torch.nested.as_nested_tensor([ep["observations"] for ep in episodes]),
         actions=torch.nested.as_nested_tensor([ep["actions"] for ep in episodes]),
         rewards=torch.nested.as_nested_tensor([ep["rewards"] for ep in episodes]),
         # TODO: Could perhaps stack the infos so it mimics what the RecordEpisodeStatistics wrapper
@@ -298,9 +293,7 @@ def custom_collate_fn(
     )
 
 
-def _error_actor_required(
-    dm: RlDataModule[Any], name: Literal["train", "valid", "test"]
-):
+def _error_actor_required(dm: RlDataModule[Any], name: Literal["train", "valid", "test"]):
     return RuntimeError(
         "An actor must be set with before we can gather episodes.\n"
         "Either provide a value to the `actor` constructor argument, or call "

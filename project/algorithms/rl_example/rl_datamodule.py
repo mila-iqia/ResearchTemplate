@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import warnings
+from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
-from typing import Any, Callable, Generic, Iterable, Literal, Sequence, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast
 
 import gym
 import torch
@@ -22,8 +23,8 @@ from project.algorithms.rl_example.types import (
     EpisodeBatch,
 )
 from project.algorithms.rl_example.utils import ToTensorsWrapper
-from project.datamodules.datamodule import DataModule
 from project.utils.types import StageStr
+from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
 SomeActorOutputType = TypeVar("SomeActorOutputType", bound=ActorOutput)
@@ -96,12 +97,15 @@ class RlDataModule(
         self._valid_wrappers: tuple = tuple(valid_wrappers or ())
         self._test_wrappers: tuple = tuple(test_wrappers or ())
 
-        self.train_dataloader_wrappers: list[
-            Callable[
-                [Iterable[EpisodeBatch[ActorOutputDict]]],
-                Iterable[EpisodeBatch[ActorOutputDict]],
+        self.train_dataloader_wrappers: (
+            list[
+                Callable[
+                    [Iterable[EpisodeBatch[ActorOutputDict]]],
+                    Iterable[EpisodeBatch[ActorOutputDict]],
+                ]
             ]
-        ] | None = train_dataloader_wrappers
+            | None
+        ) = train_dataloader_wrappers
 
         self.train_actor = actor
         self.valid_actor = actor

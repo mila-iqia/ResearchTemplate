@@ -6,14 +6,12 @@ import importlib
 import inspect
 import typing
 from collections import ChainMap
+from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import MISSING, field, fields, is_dataclass
 from logging import getLogger as get_logger
 from typing import (
     Any,
-    Callable,
     Literal,
-    Mapping,
-    MutableMapping,
     TypeVar,
 )
 
@@ -68,9 +66,7 @@ def get_attr(obj: Any, *attributes: str):
             return subobj
         except AttributeError:
             pass
-    raise AttributeError(
-        f"Could not find any attributes matching {attributes} on {obj}."
-    )
+    raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
 
 
 def has_attr(obj: Any, potentially_nested_attribute: str):
@@ -107,7 +103,7 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
     # Convert the "raw" DictConfig (which uses the `Config` class to define it's structure)
     # into an actual `Config` object:
     config = OmegaConf.to_object(dict_config)
-    from beyond_backprop.configs.config import Config
+    from project.configs.config import Config
 
     assert isinstance(config, Config)
     # If we had to instantiate some of the configs into objects in order to find the interpolated
@@ -158,7 +154,7 @@ def get_instantiated_attr(
 
     for frame_info in frame_infos:
         if frame_info.function == DictConfig._to_object.__name__:
-            self_obj: DictConfig = frame_info.frame.f_locals["self"]
+            _self_obj: DictConfig = frame_info.frame.f_locals["self"]
 
             assert "init_field_items" in frame_info.frame.f_locals
             frame_init_field_items = frame_info.frame.f_locals["init_field_items"]
@@ -168,9 +164,7 @@ def get_instantiated_attr(
             init_field_items.append(frame_init_field_items.copy())
 
             assert "non_init_field_items" in frame_info.frame.f_locals
-            frame_non_init_field_items = frame_info.frame.f_locals[
-                "non_init_field_items"
-            ]
+            frame_non_init_field_items = frame_info.frame.f_locals["non_init_field_items"]
             non_init_field_items.append(frame_non_init_field_items.copy())
             logger.debug(
                 f"Adding the following items into the init field items: {frame_non_init_field_items}"
@@ -189,14 +183,10 @@ def get_instantiated_attr(
     if _instantiated_objects_cache is not None:
         _instantiated_objects_cache.update(all_init_field_items)
 
-    objects_cache: Mapping[str, Any] = (
-        _instantiated_objects_cache or all_init_field_items
-    )
+    objects_cache: Mapping[str, Any] = _instantiated_objects_cache or all_init_field_items
 
     for attribute in attributes:
-        logger.debug(
-            f"Looking for instantiated attribute {attribute} from {all_init_field_items}"
-        )
+        logger.debug(f"Looking for instantiated attribute {attribute} from {all_init_field_items}")
         key, *nested_attribute = attribute.split(".")
         if key not in objects_cache:
             continue
@@ -212,10 +202,8 @@ def get_instantiated_attr(
                 continue
 
             if not (
-                (isinstance(obj, (dict, DictConfig)) and "_target_" in obj)
-                or (
-                    is_dataclass(obj) and any(f.name == "_target_" for f in fields(obj))
-                )
+                (isinstance(obj, dict | DictConfig) and "_target_" in obj)
+                or (is_dataclass(obj) and any(f.name == "_target_" for f in fields(obj)))
             ):
                 # attribute not found, and the `obj` isn't a config with a _target_ field.
                 break
@@ -348,8 +336,7 @@ def _being_called_by(*functions: Callable) -> bool:
 def _default_factory(
     interpolation: str,
     default: T | Literal[dataclasses.MISSING] = dataclasses.MISSING,
-    default_factory: Callable[[], T]
-    | Literal[dataclasses.MISSING] = dataclasses.MISSING,
+    default_factory: Callable[[], T] | Literal[dataclasses.MISSING] = dataclasses.MISSING,
 ) -> T:
     if being_called_in_hydra_context():
         return interpolation  # type: ignore

@@ -9,24 +9,22 @@ import pytest
 import torch
 from hydra import compose, initialize_config_module
 from hydra_zen import instantiate
-from omegaconf import DictConfig, OmegaConf, open_dict
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
+from omegaconf import DictConfig, OmegaConf, open_dict
 from torch import Tensor, nn
 
 from project.configs.config import Config, cs
-from project.datamodules.datamodule import DataModule
 from project.datamodules.vision import VisionDataModule
-from project.utils.hydra_utils import get_instantiated_attr, get_outer_class
 from project.main import main
+from project.utils.hydra_utils import get_instantiated_attr, get_outer_class
+from project.utils.types.protocols import DataModule
 
 from .algorithm import Algorithm
 
 AlgorithmType = TypeVar("AlgorithmType", bound=Algorithm)
 
 
-slow = pytest.mark.skipif(
-    "-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed."
-)
+slow = pytest.mark.skipif("-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed.")
 
 
 def get_experiment_config(command_line_overrides: list[str]) -> Config:
@@ -150,9 +148,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         # NOTE: You can return a pytest.param(network_name, marks=pytest.mark.skip) to skip a
         # particular network, e.g. if it isn't supported by this algorithm.
         if network_name in self.unsupported_network_names:
-            pytest.skip(
-                reason=f"{self.algorithm_cls.__name__} doesn't support {network_name}"
-            )
+            pytest.skip(reason=f"{self.algorithm_cls.__name__} doesn't support {network_name}")
         return network_name
 
     @pytest.fixture(scope="class")
@@ -171,9 +167,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
         algorithm_name = self.algorithm_name
-        with initialize_config_module(
-            config_module="project.configs", version_base="1.2"
-        ):
+        with initialize_config_module(config_module="project.configs", version_base="1.2"):
             config = compose(
                 "config",
                 overrides=[
@@ -290,10 +284,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         from typing import get_args
 
         class_under_test = get_args(cls.__orig_bases__[0])[0]  # type: ignore
-        if not (
-            inspect.isclass(class_under_test)
-            and issubclass(class_under_test, Algorithm)
-        ):
+        if not (inspect.isclass(class_under_test) and issubclass(class_under_test, Algorithm)):
             raise RuntimeError(
                 "Your test class needs to pass the class under test to the generic base class.\n"
                 "for example: `class TestMyAlgorithm(AlgorithmTests[MyAlgorithm]):`\n"

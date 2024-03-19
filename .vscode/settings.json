@@ -2,6 +2,7 @@
     "files.exclude": {
         ".venv": true
     },
-    "python.autoComplete.extraPaths": ["__pypackages__/3.12/lib"],
-    "python.analysis.extraPaths": ["__pypackages__/3.12/lib"]
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "always"
+    }
 }

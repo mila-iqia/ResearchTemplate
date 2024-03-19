@@ -4,6 +4,7 @@ import dataclasses
 import os
 import warnings
 from logging import getLogger as get_logger
+from pathlib import Path
 
 import hydra
 import omegaconf
@@ -23,9 +24,11 @@ if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 logger = get_logger(__name__)
 
+project_name = Path(__file__).parent.name
+
 
 @hydra.main(
-    config_path="pkg://beyond_backprop.configs",
+    config_path="pkg://project.configs",
     config_name="config",
     version_base="1.2",
 )
@@ -36,13 +39,9 @@ def main(dict_config: DictConfig) -> dict:
     experiment: Experiment = setup_experiment(config)
 
     if wandb.run:
+        wandb.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
         wandb.config.update(
-            {k: v for k, v in os.environ.items() if k.startswith("SLURM")}
-        )
-        wandb.config.update(
-            omegaconf.OmegaConf.to_container(
-                dict_config, resolve=False, throw_on_missing=True
-            )
+            omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
         wandb.config.update(
             dataclasses.asdict(config),
@@ -66,9 +65,7 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     assert isinstance(experiment.algorithm.datamodule, LightningDataModule)
 
     # TODO: Add ckpt_path argument to resume a training run.
-    experiment.trainer.fit(
-        experiment.algorithm, datamodule=experiment.algorithm.datamodule
-    )
+    experiment.trainer.fit(experiment.algorithm, datamodule=experiment.algorithm.datamodule)
 
     metric_name, error, metrics = evaluation(experiment)
     if wandb.run:
@@ -86,11 +83,9 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
     # TODO Probably log the hydra config with something like this:
     # exp.trainer.logger.log_hyperparams()
     # When overfitting on a single batch or only training, we return the train error.
-    if (
-        experiment.trainer.limit_val_batches
-        == experiment.trainer.limit_test_batches
-        == 0
-    ) or (experiment.trainer.overfit_batches == 1):
+    if (experiment.trainer.limit_val_batches == experiment.trainer.limit_test_batches == 0) or (
+        experiment.trainer.overfit_batches == 1
+    ):
         # We want to report the training error.
         metrics = {
             **experiment.trainer.logged_metrics,
@@ -143,15 +138,9 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
         average_episode_rewards = results_dict.pop(f"{results_type}/avg_episode_reward")
         average_episode_returns = results_dict.pop(f"{results_type}/avg_episode_return")
         average_episode_length = results_dict.pop(f"{results_type}/avg_episode_length")
-        rich.print(
-            f"{results_type} Average episode rewards: {average_episode_rewards:.2f}"
-        )
-        rich.print(
-            f"{results_type} Average episode returns: {average_episode_returns:.2f}"
-        )
-        rich.print(
-            f"{results_type} Average episode length: {average_episode_length:.1}"
-        )
+        rich.print(f"{results_type} Average episode rewards: {average_episode_rewards:.2f}")
+        rich.print(f"{results_type} Average episode returns: {average_episode_returns:.2f}")
+        rich.print(f"{results_type} Average episode length: {average_episode_length:.1}")
         # NOTE: This is the "lower is better" value that is used for HParam sweeps. Does it make
         # sense to use the (val/test) loss here? Or should we use -1 * rewards/returns?
         error = loss

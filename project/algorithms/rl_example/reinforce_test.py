@@ -6,7 +6,7 @@ from typing import ClassVar
 import pytest
 from hydra_zen import instantiate
 
-from project.algorithms.algorithm_test import (
+from project.algorithms.bases.algorithm_test import (
     AlgorithmTests,
     get_all_datamodule_names,
     get_all_network_names,
@@ -26,9 +26,7 @@ class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
     unsupported_datamodule_names: ClassVar[list[str]] = list(
         set(get_all_datamodule_names()) - {"rl", "cartpole"}
     )
-    unsupported_network_names: ClassVar[list[str]] = list(
-        set(get_all_network_names()) - {"fcnet"}
-    )
+    unsupported_network_names: ClassVar[list[str]] = list(set(get_all_network_names()) - {"fcnet"})
 
     @pytest.fixture(scope="class")
     def datamodule(self, hydra_options: Config) -> RlDataModule:
@@ -38,9 +36,7 @@ class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
         return datamodule
 
     @pytest.fixture
-    def algorithm(
-        self, algorithm_kwargs: dict, datamodule: RlDataModule
-    ) -> ExampleRLAlgorithm:
+    def algorithm(self, algorithm_kwargs: dict, datamodule: RlDataModule) -> ExampleRLAlgorithm:
         algo = self.algorithm_cls(**algorithm_kwargs)
         assert algo.datamodule is datamodule
         return algo

@@ -1,14 +1,16 @@
 from __future__ import annotations
+
+from dataclasses import dataclass, field
 from functools import singledispatch
-from torch import Tensor, nn
+
+import numpy as np
 import torch
 from gym.spaces.utils import flatdim
-from dataclasses import dataclass, field
-import numpy as np
-from project.algorithms.rl_example.rl_datamodule import RlDataModule
+from torch import Tensor, nn
 
-from project.datamodules.datamodule import DataModule
+from project.algorithms.rl_example.rl_datamodule import RlDataModule
 from project.datamodules.image_classification import ImageClassificationDataModule
+from project.utils.types.protocols import DataModule
 
 
 class Flatten(nn.Flatten):

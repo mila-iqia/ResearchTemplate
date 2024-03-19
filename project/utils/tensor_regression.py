@@ -3,9 +3,10 @@ import functools
 import os
 import re
 import warnings
+from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 import pytest
@@ -15,8 +16,7 @@ from pytest_regressions.data_regression import DataRegressionFixture
 from pytest_regressions.ndarrays_regression import NDArraysRegressionFixture
 from torch import Tensor
 
-from project.algorithms.reinforce_rl.reinforce_rl import get_shape_ish
-from project.utils.utils import flatten_dict
+from project.utils.utils import flatten_dict, get_shape_ish
 
 logger = get_logger(__name__)
 
@@ -89,9 +89,7 @@ class TensorRegressionFixture:
         self.data_regression = data_regression
         self.monkeypatch = monkeypatch
 
-    def get_source_file(
-        self, extension: str, additional_subfolder: str | None = None
-    ) -> Path:
+    def get_source_file(self, extension: str, additional_subfolder: str | None = None) -> Path:
         source_file, _test_file = get_test_source_and_temp_file_paths(
             extension=extension,
             request=self.request,
@@ -165,9 +163,7 @@ class TensorRegressionFixture:
             return
 
         if simple_attributes_source_file.exists():
-            logger.debug(
-                f"Simple attributes file found at {simple_attributes_source_file}."
-            )
+            logger.debug(f"Simple attributes file found at {simple_attributes_source_file}.")
             logger.debug(f"Regenerating the full arrays at {arrays_source_file}")
             # Go straight to the full check.
             # TODO: Need to get the full error when the tensors change instead of just the check
@@ -190,9 +186,7 @@ class TensorRegressionFixture:
             )
             return
 
-        logger.warning(
-            f"Creating the simple attributes file at {simple_attributes_source_file}."
-        )
+        logger.warning(f"Creating the simple attributes file at {simple_attributes_source_file}.")
 
         with dont_fail_if_files_are_missing():
             self.pre_check(
@@ -223,12 +217,8 @@ class TensorRegressionFixture:
                 + "\n"
             )
 
-    def pre_check(
-        self, data_dict: dict[str, Any], simple_attributes_source_file: Path
-    ) -> None:
-        version_controlled_simple_attributes = get_version_controlled_attributes(
-            data_dict
-        )
+    def pre_check(self, data_dict: dict[str, Any], simple_attributes_source_file: Path) -> None:
+        version_controlled_simple_attributes = get_version_controlled_attributes(data_dict)
         # Run the regression check with the hashes (and don't fail if they don't exist)
         __tracebackhide__ = True
         # TODO: Figure out how to include/use the names of the GPUs:
@@ -236,10 +226,7 @@ class TensorRegressionFixture:
         _gpu_names = get_gpu_names(data_dict)
         if len(set(_gpu_names)) == 1:
             gpu_name = _gpu_names[0]
-            if any(
-                isinstance(t, Tensor) and t.device.type == "cuda"
-                for t in data_dict.values()
-            ):
+            if any(isinstance(t, Tensor) and t.device.type == "cuda" for t in data_dict.values()):
                 version_controlled_simple_attributes["GPU"] = gpu_name
 
         self.data_regression.check(
@@ -256,7 +243,7 @@ class TensorRegressionFixture:
     ) -> None:
         array_dict: dict[str, np.ndarray] = {}
         for key, array in data_dict.items():
-            if isinstance(key, (int, bool, float)):
+            if isinstance(key, int | bool | float):
                 new_key = f"{key}"
                 assert new_key not in data_dict
                 key = new_key
@@ -358,9 +345,7 @@ def tensor_simple_attributes(tensor: Tensor) -> dict:
         "sum": tensor.sum().item(),
         "mean": tensor.float().mean().item(),
         "device": (
-            "cpu"
-            if tensor.device.type == "cpu"
-            else f"{tensor.device.type}:{tensor.device.index}"
+            "cpu" if tensor.device.type == "cpu" else f"{tensor.device.type}:{tensor.device.index}"
         ),
     }
 
@@ -399,12 +384,7 @@ def _catch_fails_with_files_didnt_exist():
     try:
         yield
     except Failed as failure_exc:
-        if (
-            failure_exc.msg
-            and "File not found in data directory, created" in failure_exc.msg
-        ):
-            raise FilesDidntExist(
-                failure_exc.msg, pytrace=failure_exc.pytrace
-            ) from failure_exc
+        if failure_exc.msg and "File not found in data directory, created" in failure_exc.msg:
+            raise FilesDidntExist(failure_exc.msg, pytrace=failure_exc.pytrace) from failure_exc
         else:
             raise

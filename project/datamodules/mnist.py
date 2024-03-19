@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from torch import Tensor
-from torchvision import transforms
-from torchvision import transforms as transform_lib
 from torchvision.datasets import MNIST
+from torchvision.transforms import v2 as transforms
 
 from project.utils.types import C, H, W
 
@@ -15,6 +15,7 @@ from .vision_datamodule import VisionDataModule
 def mnist_train_transforms():
     return transforms.Compose(
         [
+            transforms.ToImage(),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomCrop(size=28, padding=4, padding_mode="edge"),
             transforms.ToTensor(),
@@ -26,7 +27,7 @@ def mnist_train_transforms():
 def mnist_normalization():
     # NOTE: Taken from https://stackoverflow.com/a/67233938/6388696
     # return transforms.Normalize(mean=0.5, std=0.5)
-    return transforms.Normalize(mean=0.1307, std=0.3081)
+    return transforms.Normalize(mean=[0.1307], std=[0.3081])
 
 
 def mnist_unnormalization(x: Tensor) -> Tensor:
@@ -120,7 +121,5 @@ class MNISTDataModule(VisionDataModule):
 
     def default_transforms(self) -> Callable:
         if self.normalize:
-            return transform_lib.Compose(
-                [transform_lib.ToTensor(), mnist_normalization()]
-            )
-        return transform_lib.Compose([transform_lib.ToTensor()])
+            return transforms.Compose([transforms.ToImage(), mnist_normalization()])
+        return transforms.Compose([transforms.ToImage()])

@@ -1,12 +1,14 @@
 from hydra.core.config_store import ConfigStore
+
 from project.algorithms.ppo.ppo import PPO
-from .algorithm import Algorithm
+
 from .backprop import Backprop
-from .image_classification import ImageClassificationAlgorithm
+from .bases.algorithm import Algorithm
+from .bases.image_classification import ImageClassificationAlgorithm
 from .manual_optimization_example import ManualGradientsExample
 from .rl_example.reinforce import ExampleRLAlgorithm
 
-# Store the different configuration options for each algorithm.
+# Store the different configuration options.
 
 # NOTE: This works the same way as creating config files for each algorithm under
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
@@ -21,11 +23,17 @@ _cs = ConfigStore.instance()
 
 _cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
 
+# from hydra_zen import hydrated_dataclass
+
+
 # @hydrated_dataclass(target=Backprop, hydra_convert="object")
 # class BackpropConfig:
+#     __partial__: bool = True
 #     # datamodule: Any = interpolated_field("${datamodule}")
 #     # network: Any = interpolated_field("${network}")
 #     hp: Backprop.HParams = field(default_factory=Backprop.HParams)
+
+
 # _cs.store(group="algorithm", name="backprop", node=BackpropConfig)
 
 # @hydrated_dataclass(target=PPO, hydra_convert="object")
