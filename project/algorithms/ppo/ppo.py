@@ -3,11 +3,11 @@ from __future__ import annotations
 import copy
 import logging
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Callable
 
 import gym
 import gym.wrappers
@@ -31,7 +31,7 @@ from torch import Tensor, nn
 from torch.distributions import Normal
 from torch.optim.optimizer import Optimizer
 
-from project.algorithms.algorithm import Algorithm
+from project.algorithms.bases.algorithm import Algorithm
 from project.algorithms.ppo.dataloader_wrapper import PpoDataLoaderWrapper
 from project.algorithms.ppo.utils import (
     PPOActorOutput,

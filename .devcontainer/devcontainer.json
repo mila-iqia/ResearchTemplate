@@ -6,7 +6,6 @@
 	"image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-		// "ghcr.io/devcontainers/features/python:1": {},
 		"ghcr.io/devcontainers-contrib/features/pdm:2": {},
 		"ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
 	},
@@ -22,7 +21,7 @@
 			"settings": {
 				"[python]": {
 					"editor.codeActionsOnSave": {
-						"source.fixAll.ruff": "explicit",
+						"source.fixAll.ruff": "always",
 						"source.organizeImports.ruff": "explicit"
 					},
 					"editor.defaultFormatter": "charliermarsh.ruff",

@@ -6,11 +6,13 @@ TODOs/ideas:
 
 from __future__ import annotations
 
+import math
 import os
 import subprocess
 import warnings
+from collections.abc import Callable, Mapping
 from dataclasses import fields, is_dataclass
-from typing import Any, Callable, Literal, Mapping, overload
+from typing import Any, Literal, overload
 
 import pytest
 from hydra import initialize
@@ -22,11 +24,10 @@ from hydra.types import HydraContext, RunMode
 from hydra_zen import instantiate
 from hydra_zen._launch import _NotSet, _store_config
 from omegaconf import OmegaConf
-import math
 
 from project.configs.config import Config
-from project.utils.types import Dataclass
 from project.main import main
+from project.utils.types import Dataclass
 
 PROJECT_NAME = "project"  # TODO: Change this to the name of your project.
 TEST_JOB_NAME = "cluster_test"
@@ -56,9 +57,7 @@ def scancel_jobs_after_tests():
     subprocess.check_call(["scancel", "-u", username, "--name", TEST_JOB_NAME])
 
 
-@pytest.mark.skipif(
-    "SLURM_JOB_ID" not in os.environ, reason="Not running on a SLURM cluster"
-)
+@pytest.mark.skipif("SLURM_JOB_ID" not in os.environ, reason="Not running on a SLURM cluster")
 @pytest.mark.parametrize("nodes", [1])
 @pytest.mark.parametrize("gpus", [1, 2])
 @pytest.mark.parametrize("gpu_type", gpu_types)
@@ -85,7 +84,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
         "trainer.max_epochs=1",
         # This 'resources' group is where most of the configuration options for the slurm
         # launcher are. Here we just overwrite some of them.
-        # For more info, check out beyond_backprop/configs/resources/one_gpu.yaml
+        # For more info, check out project/configs/resources/one_gpu.yaml
         "resources=one_gpu",
         # Overrides compared to `one_gpu.yaml`:
         # TODO: Pack more than one job on a single GPU.
@@ -105,9 +104,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
 
     if gpu_type == "" and distributed_training:
         # Avoid the nodes with MIG-ed GPUs when asking for "any" GPU in a distributed setting.
-        overrides.append(
-            "hydra.launcher.additional_parameters.exclude=cn-g[005-012,017-026]"
-        )
+        overrides.append("hydra.launcher.additional_parameters.exclude=cn-g[005-012,017-026]")
     if distributed_training:
         overrides.append("+trainer.strategy=ddp")
     if nodes > 1:
@@ -160,7 +157,7 @@ def test_packing_runs_in_one_jobs() -> None:
         "trainer.max_epochs=1",
         # This 'resources' group is where most of the configuration options for the slurm
         # launcher are. Here we just overwrite some of them.
-        # For more info, check out beyond_backprop/configs/resources/one_gpu.yaml
+        # For more info, check out project/configs/resources/one_gpu.yaml
         "resources=one_gpu",
         # Overrides compared to `one_gpu.yaml`:
         # TODO: Pack more than one job on a single GPU.
@@ -180,9 +177,7 @@ def test_packing_runs_in_one_jobs() -> None:
 
     if gpu_type == "" and distributed_training:
         # Avoid the nodes with MIG-ed GPUs when asking for "any" GPU in a distributed setting.
-        overrides.append(
-            "hydra.launcher.additional_parameters.exclude=cn-g[005-012,017-026]"
-        )
+        overrides.append("hydra.launcher.additional_parameters.exclude=cn-g[005-012,017-026]")
     if distributed_training:
         overrides.append("+trainer.strategy=ddp")
     if nodes > 1:
@@ -227,7 +222,8 @@ def launch(
     # Added parameters:
     config_path: str | None = None,
     caller_stack_depth: int = 2,
-) -> list[list[JobReturn]]: ...
+) -> list[list[JobReturn]]:
+    ...
 
 
 @overload
@@ -245,7 +241,8 @@ def launch(
     # Added parameters:
     config_path: str | None = None,
     caller_stack_depth: int = 2,
-) -> JobReturn: ...
+) -> JobReturn:
+    ...
 
 
 # NOTE: This is a copied and slightly modified version of `launch` from `hydra_zen._launch` to add
@@ -435,9 +432,7 @@ def launch(
     # store config in ConfigStore
     if to_dictconfig and is_dataclass(config):
         # convert Dataclass to a DictConfig
-        dictconfig = OmegaConf.create(
-            OmegaConf.to_container(OmegaConf.structured(config))
-        )
+        dictconfig = OmegaConf.create(OmegaConf.to_container(OmegaConf.structured(config)))
         config_name = _store_config(dictconfig, config_name)
     else:
         config_name = _store_config(config, config_name)
@@ -463,14 +458,10 @@ def launch(
         )
 
         callbacks = Callbacks(cfg)
-        run_start = (
-            callbacks.on_run_start if not multirun else callbacks.on_multirun_start
-        )
+        run_start = callbacks.on_run_start if not multirun else callbacks.on_multirun_start
         run_start(config=cfg, config_name=config_name)
 
-        hydra_context = HydraContext(
-            config_loader=gh.config_loader(), callbacks=callbacks
-        )
+        hydra_context = HydraContext(config_loader=gh.config_loader(), callbacks=callbacks)
 
         if not multirun:
             job = run_job(
@@ -495,9 +486,7 @@ def launch(
                 task_function=task_function,
             )
 
-            task_overrides = OmegaConf.to_container(
-                cfg.hydra.overrides.task, resolve=False
-            )
+            task_overrides = OmegaConf.to_container(cfg.hydra.overrides.task, resolve=False)
             assert isinstance(task_overrides, list)
             job = sweeper.sweep(arguments=task_overrides)
             callbacks.on_multirun_end(config=cfg, config_name=config_name)

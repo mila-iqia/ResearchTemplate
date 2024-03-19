@@ -1,0 +1,2 @@
+- algorithm=backprop
+- datamodule=mnist

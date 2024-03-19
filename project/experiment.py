@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
 from typing import Any
 
@@ -16,15 +16,14 @@ from torch import nn
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
-from project.datamodules.datamodule import DataModule
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.rl.rl_datamodule import RlDataModule
-from project.networks import Network
-from project.networks.fcnet import FcNet, fcnet_for_env
+from project.networks.fcnet import FcNet
 from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass
+from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)
@@ -61,9 +60,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
 
     network = instantiate_network(experiment_config, datamodule=datamodule)
 
-    algorithm = instantiate_algorithm(
-        experiment_config, datamodule=datamodule, network=network
-    )
+    algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
 
     return Experiment(
         trainer=trainer,
@@ -96,7 +93,7 @@ def setup_logging(experiment_config: Config) -> None:
         ],
     )
 
-    root_logger = logging.getLogger("beyond_backprop")
+    root_logger = logging.getLogger("project")
 
     if experiment_config.debug:
         root_logger.setLevel(logging.INFO)
@@ -123,9 +120,7 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
         experiment_config.trainer.pop("callbacks", {})
     )
     # Create the loggers, if any.
-    loggers: dict[str, Any] | None = instantiate(
-        experiment_config.trainer.pop("logger", {})
-    )
+    loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
     # Create the Trainer.
     assert isinstance(experiment_config.trainer, dict)
     if experiment_config.debug:
@@ -186,7 +181,7 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
     if hasattr(network_config, "_target_"):
         with device:
             network = instantiate(network_config)
-    elif isinstance(network_config, Network.HParams):
+    elif is_dataclass(network_config):
         with device:
             network = instantiate_network_from_hparams(
                 network_hparams=network_config, datamodule=datamodule
@@ -222,7 +217,7 @@ def instantiate_algorithm(
         )
         return algo_config
 
-    if isinstance(algo_config, (dict, DictConfig)):
+    if isinstance(algo_config, dict | DictConfig):
         if "_target_" not in algo_config:
             raise NotImplementedError(
                 "The algorithm config, if a dict, should have a _target_ set to an Algorithm class."
@@ -261,15 +256,14 @@ def instantiate_algorithm(
     return algorithm
 
 
-def instantiate_network_from_hparams(
-    network_hparams: Network.HParams, datamodule: DataModule
-) -> Network:
+def instantiate_network_from_hparams(network_hparams: Dataclass, datamodule: DataModule) -> Module:
     """TODO: Refactor this if possible. Shouldn't be as complicated as it currently is.
 
     Perhaps we could register handler functions for each pair of datamodule and network type, a bit
     like a multiple dispatch?
     """
-    network_type: type[Network] = get_outer_class(type(network_hparams))
+    network_type = get_outer_class(type(network_hparams))
+    assert issubclass(network_type, nn.Module)
     assert isinstance(
         network_hparams,
         network_type.HParams,  # type: ignore
@@ -289,14 +283,14 @@ def instantiate_network_from_hparams(
         action_space = datamodule.env.action_space
         if issubclass(network_type, FcNet):
             assert isinstance(network_hparams, FcNet.HParams)
-            return fcnet_for_env(
-                observation_space=observation_space,  # type: ignore
-                action_space=action_space,  # type: ignore
-                hparams=network_hparams,
-            )
-        if isinstance(observation_space, spaces.Box) and isinstance(
-            action_space, spaces.Discrete
-        ):
+            # todo:
+            raise NotImplementedError("This is not implemented yet.")
+            # return fcnet_for_env(
+            #     observation_space=observation_space,  # type: ignore
+            #     action_space=action_space,  # type: ignore
+            #     hparams=network_hparams,
+            # )
+        if isinstance(observation_space, spaces.Box) and isinstance(action_space, spaces.Discrete):
             # TODO: These networks assume that the input are images. For now we tried CartPole with
             # Reinforce, but we could potentially try other Gym envs with Pixel observations.
             input_shape = datamodule.env.observation_space.shape

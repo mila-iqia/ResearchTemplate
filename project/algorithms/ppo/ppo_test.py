@@ -1,5 +1,6 @@
 from typing import ClassVar
-from project.algorithms.algorithm_test import (
+
+from project.algorithms.bases.algorithm_test import (
     get_all_datamodule_names,
     get_all_network_names,
 )

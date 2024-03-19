@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic
-from gym import Space
-import numpy as np
-from torch import Tensor
-from typing_extensions import TypeVar, TypedDict, ParamSpec, NotRequired
+from collections.abc import Callable
+from typing import Any, Generic, NotRequired, TypedDict
 
+import numpy as np
+from gym import Space
+from torch import Tensor
+from typing_extensions import ParamSpec, TypeVar
 
 TensorType = TypeVar("TensorType", bound=Tensor, default=Tensor)
 ObservationT = TypeVar("ObservationT", default=np.ndarray)
 ActionT = TypeVar("ActionT", default=int)
 D = TypeVar("D", bound=TypedDict)
-K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
 P = ParamSpec("P")

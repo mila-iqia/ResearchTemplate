@@ -1,23 +1,23 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 import torch
 from torch import Tensor, nn
 
-from project.algorithms.algorithm import Algorithm
-from project.algorithms.image_classification import ImageClassificationAlgorithm
+from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import ClassificationOutputs, PhaseStr
 
 
-class ManualGradientsExample(ImageClassificationAlgorithm[nn.Module]):
+class ManualGradientsExample(ImageClassificationAlgorithm):
     """Example of an algorithm that calculates the gradients manually instead of having PL do the
     backward pass."""
 
     @dataclass
-    class HParams(Algorithm.HParams):
+    class HParams(ImageClassificationAlgorithm.HParams):
         """Hyper-parameters of this example algorithm."""
 
         lr: float = 0.1
@@ -29,9 +29,9 @@ class ManualGradientsExample(ImageClassificationAlgorithm[nn.Module]):
         self,
         datamodule: ImageClassificationDataModule,
         network: nn.Module,
-        hp: Algorithm.HParams | None = None,
+        hp: ManualGradientsExample.HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, network=network, hp=hp)
+        super().__init__(datamodule=datamodule, network=network, hp=hp or self.HParams())
         # Just to let the type checker know the right type.
         self.hp: ManualGradientsExample.HParams
 

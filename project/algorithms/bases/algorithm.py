@@ -2,28 +2,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic
-from typing_extensions import TypeVar
-from hydra_zen import instantiate
+
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import Callback
-from torch import Tensor, nn
-from project.datamodules.datamodule import DataModule
+from torch import Tensor
 
 from project.utils.types import PhaseStr, StepOutputDict
-from hydra_zen.typing import Partial
-
-# Type variable that describes the supported base networks for an algorithm class.
-# This is just a fancy way of showing at 'compile-time' that the base network must be one of the
-# supported types, otherwise an error will be raised when creating the algorithm.
-# NOTE: This is marked as contravariant, because an algorithm that declares is accepts only ResNets
-# (e.g. `class MyAlgorithm(Algorithm[ResNet])` cannot be given an arbitrary nn.Module, it must be
-# given either a ResNet, or a subclass of ResNet like ResNet18.
-NetworkType = TypeVar("NetworkType", bound=nn.Module, contravariant=True)
-BatchType = TypeVar("BatchType")
+from project.utils.types.protocols import DataModule, Module
+from project.utils.utils import get_device
 
 
-class Algorithm(LightningModule, ABC, Generic[NetworkType, BatchType]):
+class Algorithm[NetworkType: Module, BatchType](LightningModule, ABC):
     """Base class for a learning algorithm.
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
@@ -41,16 +30,14 @@ class Algorithm(LightningModule, ABC, Generic[NetworkType, BatchType]):
     def __init__(
         self,
         datamodule: DataModule[BatchType],
-        network: NetworkType | Partial[NetworkType],
+        network: NetworkType,
         hp: Algorithm.HParams | None = None,
     ):
         super().__init__()
-        self.datamodule: DataModule[BatchType] = datamodule
+        self.datamodule = datamodule
+        self._device = get_device(network)  # fix for `self.device` property which defaults to cpu.
+        self.network = network
         self.hp = hp or self.HParams()
-        if not isinstance(network, nn.Module):
-            network = instantiate(network)
-        assert isinstance(network, nn.Module), network
-        self.network: NetworkType = network
         self.trainer: Trainer
 
     def training_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:

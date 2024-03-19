@@ -1,9 +1,11 @@
 from __future__ import annotations
-from dataclasses import dataclass
 
 import functools
+from collections.abc import Callable
+from dataclasses import dataclass
+from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import gym
 import gym.spaces
@@ -11,21 +13,19 @@ import lightning
 import numpy as np
 import torch
 from gym import spaces
+from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
+from gym.wrappers.record_video import RecordVideo
 from lightning import LightningModule
 from torch import Tensor
 from torch.distributions import Categorical, Normal
 
-from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
-from gym.wrappers.record_video import RecordVideo
-from project.algorithms.algorithm import Algorithm
+from project.algorithms.bases.algorithm import Algorithm
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
-from .rl_datamodule import RlDataModule, EpisodeBatch
-from .utils import (
-    check_and_normalize_box_actions,
-)
+
+from .rl_datamodule import EpisodeBatch, RlDataModule
 from .types import ActorOutput
-from logging import getLogger as get_logger
+from .utils import check_and_normalize_box_actions
 
 logger = get_logger(__name__)
 # torch.set_float32_matmul_precision("high")
@@ -243,7 +243,7 @@ class ExampleRLAlgorithm(Algorithm[FcNet, EpisodeBatch], LightningModule):
         """Creates an action distribution based on the network outputs."""
         # TODO: Once we can work with batched environments, should `action_space` here always be
         # the single action space?
-        assert isinstance(action_space, (spaces.Discrete, spaces.Box))
+        assert isinstance(action_space, spaces.Discrete | spaces.Box)
 
         if isinstance(action_space, spaces.Discrete):
             return Categorical(logits=network_outputs)

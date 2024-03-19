@@ -3,23 +3,22 @@ from __future__ import annotations
 import contextlib
 import functools
 import typing
+from collections.abc import Generator, Iterable
 from functools import partial
-from typing import Any, Generator, Iterable, overload
+from typing import Any, Concatenate, overload
 
 import torch
 from torch import Tensor, nn
 from torch import distributions as dist
 from torch.utils.hooks import RemovableHandle
-from typing_extensions import Concatenate
 
 from project.algorithms.common.layers import (
-    Module,
     OutT,
     Sample,
     SampleIfDistribution,
     T,
 )
-from project.utils.types import ModuleType, is_sequence_of
+from project.utils.types import Module, is_sequence_of
 
 if typing.TYPE_CHECKING:
     from project.networks.layers import Sequential
@@ -35,7 +34,7 @@ def get_distributions(
     yielded.extend(list(distributions.values()))
 
 
-def modules_of_type(
+def modules_of_type[ModuleType: Module](
     module: nn.Module, module_type: type[ModuleType] | tuple[type[ModuleType], ...]
 ) -> Iterable[ModuleType]:
     for mod in module.modules():
@@ -43,7 +42,7 @@ def modules_of_type(
             yield mod
 
 
-def named_modules_of_type(
+def named_modules_of_type[ModuleType: Module](
     module: Module, module_type: type[ModuleType] | tuple[type[ModuleType], ...]
 ) -> Iterable[tuple[str, ModuleType]]:
     for name, mod in module.named_modules():
@@ -53,9 +52,7 @@ def named_modules_of_type(
 
 @contextlib.contextmanager
 def get_block_inputs(
-    sequential_network: Sequential[Module[[T], Any]]
-    | nn.Sequential
-    | Iterable[Module[[T], Any]],
+    sequential_network: Sequential[Module[[T], Any]] | nn.Sequential | Iterable[Module[[T], Any]],
 ) -> Generator[list[T], None, None]:
     yielded: list[T] = []
     named_layers = [(f"{i}", layer) for i, layer in enumerate(sequential_network)]
@@ -70,21 +67,24 @@ def get_block_inputs(
 @contextlib.contextmanager
 def get_block_outputs(
     sequential_network: nn.Sequential,
-) -> Generator[list[Tensor], None, None]: ...
+) -> Generator[list[Tensor], None, None]:
+    ...
 
 
 @overload
 @contextlib.contextmanager
 def get_block_outputs(
     sequential_network: Sequential[Module[..., OutT]],
-) -> Generator[list[OutT], None, None]: ...
+) -> Generator[list[OutT], None, None]:
+    ...
 
 
 @overload
 @contextlib.contextmanager
 def get_block_outputs(
     sequential_network: Iterable[Module[..., OutT]],
-) -> Generator[list[OutT], None, None]: ...
+) -> Generator[list[OutT], None, None]:
+    ...
 
 
 @contextlib.contextmanager
@@ -106,9 +106,7 @@ def get_block_outputs(
 def get_module_inputs(
     layers: Module[[T], OutT] | Iterable[tuple[str, Module[[T], OutT]]],
 ) -> Generator[dict[str, T], None, None]:
-    named_layers = (
-        layers.named_modules() if isinstance(layers, (nn.Module, Module)) else layers
-    )  # type: ignore
+    named_layers = layers.named_modules() if isinstance(layers, nn.Module | Module) else layers  # type: ignore
     layer_inputs: dict[str, T] = {}
     hook_handles: list[RemovableHandle] = []
 
@@ -251,8 +249,7 @@ def _replace_layer_input_hook(
         replaced_inputs = (replaced_inputs,)
     assert len(replaced_inputs) == len(args)
     assert all(
-        replaced_input.shape == arg.shape
-        for replaced_input, arg in zip(replaced_inputs, args)
+        replaced_input.shape == arg.shape for replaced_input, arg in zip(replaced_inputs, args)
     )
     return replaced_inputs
 
@@ -264,9 +261,7 @@ def set_layer_inputs(
     """Context that temporarily makes these layers use these inputs in their forward pass."""
     handles: list[RemovableHandle] = []
     for layer, input in layers_and_inputs.items():
-        handle = layer.register_forward_pre_hook(
-            partial(_replace_layer_input_hook, input)
-        )
+        handle = layer.register_forward_pre_hook(partial(_replace_layer_input_hook, input))
         handles.append(handle)
 
     yield
@@ -337,9 +332,7 @@ def _get_input_and_output_shapes_hook(
 @contextlib.contextmanager
 def get_input_and_output_shapes(
     module: Module,
-) -> Generator[
-    tuple[dict[str, tuple[int, ...]], dict[str, tuple[int, ...]]], None, None
-]:
+) -> Generator[tuple[dict[str, tuple[int, ...]], dict[str, tuple[int, ...]]], None, None]:
     input_shapes: dict[str, tuple[int, ...]] = {}
     output_shapes: dict[str, tuple[int, ...]] = {}
 
@@ -366,9 +359,7 @@ def get_input_and_output_shapes(
 @contextlib.contextmanager
 def save_input_output_shapes(
     module: nn.Module,
-) -> Generator[
-    tuple[dict[str, tuple[int, ...]], dict[str, tuple[int, ...]]], None, None
-]:
+) -> Generator[tuple[dict[str, tuple[int, ...]], dict[str, tuple[int, ...]]], None, None]:
     """Makes the module easier to "invert" by adding a hook to each layer that sets its
     `input_shape` and `output_shape` attributes during a forward pass.
 
@@ -435,7 +426,7 @@ def _detach_block_inputs_forward_pre_hook(
     kwargs: dict[str, Any],
 ) -> tuple[tuple[Tensor | torch.distributions.Distribution, ...], dict[str, Any]]:
     assert isinstance(inputs, tuple)
-    if isinstance(module, (Sample, SampleIfDistribution)):
+    if isinstance(module, Sample | SampleIfDistribution):
         if len(inputs) != 1 or kwargs:
             raise NotImplementedError(f"Don't know how to detach {inputs}.")
         input: Tensor | torch.distributions.Distribution = inputs[0]

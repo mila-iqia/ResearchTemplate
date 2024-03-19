@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
-from project.datamodules.datamodule import DataModule
 from project.utils.types import C, H, StageStr, W
+from project.utils.types.protocols import DataModule
 
 
 @runtime_checkable
-class ImageClassificationDataModule(DataModule[tuple[Tensor, Tensor]], Protocol):
+class ImageClassificationDataModule[BatchType: tuple[Tensor, Tensor]](
+    DataModule[BatchType], Protocol
+):
     """Protocol that describes lightning data modules for image classification."""
 
     num_classes: int
@@ -39,18 +42,17 @@ class ImageClassificationDataModule(DataModule[tuple[Tensor, Tensor]], Protocol)
     val_transforms: Callable[..., Any] | None
     test_transforms: Callable[..., Any] | None
 
-    def prepare_data(self): ...
+    def prepare_data(self):
+        ...
 
-    def setup(self, stage: StageStr | None = None): ...
+    def setup(self, stage: StageStr | None = None):
+        ...
 
-    def train_dataloader(
-        self, *args: Any, **kwargs: Any
-    ) -> DataLoader[tuple[Tensor, Tensor]]: ...
+    def train_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader[tuple[Tensor, Tensor]]:
+        ...
 
-    def val_dataloader(
-        self, *args: Any, **kwargs: Any
-    ) -> DataLoader[tuple[Tensor, Tensor]]: ...
+    def val_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader[tuple[Tensor, Tensor]]:
+        ...
 
-    def test_dataloader(
-        self, *args: Any, **kwargs: Any
-    ) -> DataLoader[tuple[Tensor, Tensor]]: ...
+    def test_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader[tuple[Tensor, Tensor]]:
+        ...

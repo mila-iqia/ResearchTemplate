@@ -13,7 +13,7 @@ from project.utils.tensor_regression import (
 )
 from project.utils.types import is_sequence_of
 
-from .datamodule import DataModule
+from ..utils.types.protocols import DataModule
 
 
 @pytest.mark.timeout(25, func_only=True)

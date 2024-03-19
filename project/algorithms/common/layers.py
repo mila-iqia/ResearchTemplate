@@ -3,13 +3,17 @@ from __future__ import annotations
 import functools
 import operator
 import typing
+from collections.abc import Callable
 from logging import getLogger as get_logger
-from typing import Any, Callable, Union
+from typing import Any
 
 import torch
 from torch import Tensor, nn
+from typing_extensions import ParamSpec
 
-from project.utils.types import Module, OutT, P, T, is_sequence_of
+from project.utils.types import Module, OutT, T, is_sequence_of
+
+P = ParamSpec("P", default=[Tensor])
 
 logger = get_logger(__name__)
 
@@ -53,10 +57,7 @@ class Lambda(nn.Module, Module[..., OutT]):
             self.kwargs = kwargs
         elif is_sequence_of(kwargs.values(), Tensor):
             self.kwargs = nn.ParameterDict(
-                {
-                    k: nn.Parameter(v, requires_grad=v.requires_grad)
-                    for k, v in kwargs.items()
-                }  # type: ignore
+                {k: nn.Parameter(v, requires_grad=v.requires_grad) for k, v in kwargs.items()}  # type: ignore
             )
         elif is_sequence_of(kwargs.values(), nn.Module):
             self.kwargs = nn.ModuleDict(kwargs)  # type: ignore
@@ -105,13 +106,13 @@ class Lambda(nn.Module, Module[..., OutT]):
             func_message = f"f={self.f}"
 
         args_message = ""
-        if isinstance(self.args, (nn.ParameterList, nn.ModuleList)):
+        if isinstance(self.args, nn.ParameterList | nn.ModuleList):
             args_message = ""
         elif self.args:
             args_message = ", ".join(f"{arg!r}" for (arg) in self.args)
 
         kwargs_message = ""
-        if isinstance(self.kwargs, (nn.ParameterDict, nn.ModuleDict)):
+        if isinstance(self.kwargs, nn.ParameterDict | nn.ModuleDict):
             kwargs_message = ""
         elif self.kwargs:
             kwargs_message = ", ".join(f"{k}={v!r}" for (k, v) in self.kwargs.items())
@@ -161,7 +162,7 @@ class Merge(nn.Module, Module[[tuple[Tensor, ...] | dict[str, Tensor]], OutT]):
         self.f = f
 
     def forward(self, packed_inputs: tuple[Tensor, ...] | dict[str, Tensor]) -> OutT:
-        if isinstance(packed_inputs, (tuple, list)):
+        if isinstance(packed_inputs, tuple | list):
             return self.f(*packed_inputs)  # type: ignore
         else:
             return self.f(**packed_inputs)  # type: ignore
@@ -172,9 +173,7 @@ class Merge(nn.Module, Module[[tuple[Tensor, ...] | dict[str, Tensor]], OutT]):
 
 class Sample(Lambda, Module[[torch.distributions.Distribution], Tensor]):
     def __init__(self, differentiable: bool = False) -> None:
-        super().__init__(
-            f=operator.methodcaller("rsample" if differentiable else "sample")
-        )
+        super().__init__(f=operator.methodcaller("rsample" if differentiable else "sample"))
         self._differentiable = differentiable
 
     @property
@@ -196,9 +195,7 @@ class Sample(Lambda, Module[[torch.distributions.Distribution], Tensor]):
         __call__ = forward
 
 
-class SampleIfDistribution(
-    nn.Module, Module[[Union[Tensor, torch.distributions.Distribution]], Tensor]
-):
+class SampleIfDistribution(nn.Module, Module[[Tensor | torch.distributions.Distribution], Tensor]):
     def __init__(self, differentiable=False) -> None:
         super().__init__()
         self._differentiable = differentiable
@@ -214,9 +211,7 @@ class SampleIfDistribution(
         self._differentiable = value
 
     # TODO: add __init__ and such
-    def forward(
-        self, tensor_or_distribution: Tensor | torch.distributions.Distribution
-    ) -> Tensor:
+    def forward(self, tensor_or_distribution: Tensor | torch.distributions.Distribution) -> Tensor:
         if isinstance(tensor_or_distribution, torch.distributions.Distribution):
             return self.sample(tensor_or_distribution)
         return tensor_or_distribution

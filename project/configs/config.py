@@ -1,10 +1,11 @@
 import random
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
-from typing import Literal, Optional, Any
+from typing import Any, Literal
+
 from hydra.core.config_store import ConfigStore
 
-from project.algorithms.algorithm import Algorithm
+from project.algorithms.bases.algorithm import Algorithm
 from project.configs.datamodule import DataModuleConfig
 
 logger = get_logger(__name__)
@@ -33,13 +34,15 @@ class Config:
     log_level: str = "info"
 
     # Random seed.
-    seed: Optional[int] = field(default_factory=lambda: random.randint(0, int(1e5)))
+    seed: int | None = field(default_factory=lambda: random.randint(0, int(1e5)))
 
     # Name for the experiment.
     name: str = "default"
 
+    debug: bool = False
 
-Options = Config  # Alias for backward compatibility.
+    verbose: bool = False
+
 
 cs = ConfigStore.instance()
 cs.store(name="base_config", node=Config)

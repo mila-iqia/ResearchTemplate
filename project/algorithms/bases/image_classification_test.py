@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import ClassVar, TypeVar
+
 import pytest
 from torch import Tensor
 
-from project.algorithms.algorithm_test import AlgorithmTests
-from project.algorithms.image_classification import ImageClassificationAlgorithm
+from project.algorithms.bases.algorithm_test import AlgorithmTests
+from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import setup_experiment
 from project.main import run
 
-from .algorithm_test import slow, get_experiment_config
+from .algorithm_test import get_experiment_config, slow
 
 ImageAlgorithmType = TypeVar("ImageAlgorithmType", bound=ImageClassificationAlgorithm)
 
@@ -35,9 +36,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
         assert y_pred.shape == (y.shape[0], algorithm.datamodule.num_classes)
 
     @pytest.fixture(scope="class")
-    def training_batch(
-        self, datamodule: ImageClassificationDataModule
-    ) -> tuple[Tensor, Tensor]:
+    def training_batch(self, datamodule: ImageClassificationDataModule) -> tuple[Tensor, Tensor]:
         """Returns a batch of data from the training set of the datamodule."""
         datamodule.prepare_data()
         datamodule.setup("fit")

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
-from typing import Any, Callable, Mapping, Sequence, SupportsFloat
+from typing import Any, Concatenate, SupportsFloat
 
 import gym
 import gym.spaces
@@ -11,9 +12,8 @@ from gym import spaces
 from gym.core import ActionWrapper, Env, ObservationWrapper
 from numpy import ndarray
 from torch import LongTensor, Tensor
-from typing_extensions import Concatenate
 
-from .types import P, T, TensorType, V
+from .types import P, T, TensorType
 
 logger = get_logger(__name__)
 
@@ -53,7 +53,7 @@ def check_and_normalize_box_actions(env: gym.Env) -> gym.Env:
     if isinstance(env.action_space, spaces.Box):
         low, high = env.action_space.low, env.action_space.high
         if (
-            not np.equal(low, -np.ones_like(low)).all()
+            not np.equal(low, -1 * np.ones_like(low)).all()
             or not np.equal(high, np.ones_like(high)).all()
         ):
             logger.info("Normalizing environment action space to [-1, 1] range.")
@@ -214,7 +214,7 @@ def get_numpy_and_torch_dtypes(dtype: np.dtype | type) -> tuple[np.dtype, torch.
     raise ValueError(f"Invalid dtype {dtype} (type {type(dtype)})")
 
 
-def stack_dicts(
+def stack_dicts[**P, T, V](
     values: Sequence[Mapping[str, T]],
     stack_fn: Callable[Concatenate[list[T] | tuple[T, ...], P], V] = torch.stack,
     *args: P.args,

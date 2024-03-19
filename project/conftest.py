@@ -5,10 +5,10 @@ import os
 import random
 import sys
 import typing
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Callable, Generator, Union
 
 import lightning.pytorch as pl
 import numpy as np
@@ -28,7 +28,6 @@ from project.algorithms.common.hooks import (
 )
 from project.configs.config import Config
 from project.configs.datamodule import DATA_DIR
-from project.datamodules.datamodule import DataModule
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.datamodules.vision_datamodule import VisionDataModule, num_cpus_on_node
 from project.experiment import (
@@ -40,16 +39,17 @@ from project.experiment import (
     setup_experiment,
     setup_logging,
 )
-from project.testutils import default_marks_for_config_name
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.tensor_regression import TensorRegressionFixture
+from project.utils.testutils import default_marks_for_config_name
 from project.utils.types import is_sequence_of
+from project.utils.types.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
     from _pytest.python import Function
 
-    Param = Union[str, tuple[str, ...], ParameterSet]
+    Param = str | tuple[str, ...] | ParameterSet
 
 
 logger = get_logger(__name__)
@@ -63,9 +63,7 @@ DEFAULT_SEED = 42
 
 
 def pytest_configure(config: pytest.Config):
-    config.addinivalue_line(
-        "markers", "fast: mark test as fast to run (after fixtures are setup)"
-    )
+    config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
     config.addinivalue_line(
         "markers", "very_fast: mark test as very fast to run (including test setup)."
     )
@@ -246,7 +244,7 @@ def overrides(request: pytest.FixtureRequest):
     Multiple test using the same overrides will use the same experiment.
     """
     cmdline_overrides = getattr(request, "param", ())
-    assert isinstance(cmdline_overrides, (str, list, tuple))
+    assert isinstance(cmdline_overrides, str | list | tuple)
     if isinstance(cmdline_overrides, str):
         cmdline_overrides = cmdline_overrides.split()
     cmdline_overrides = tuple(cmdline_overrides)
@@ -271,7 +269,7 @@ def use_overrides(command_line_overrides: Param | list[Param], ids=None):
         overrides.__name__,
         (
             [command_line_overrides]
-            if isinstance(command_line_overrides, (str, tuple))
+            if isinstance(command_line_overrides, str | tuple)
             else command_line_overrides
         ),
         indirect=True,
@@ -289,7 +287,7 @@ def setup_hydra_for_tests_and_compose(
         contextlib.nullcontext()
         if GlobalHydra().is_initialized()
         else initialize_config_module(
-            config_module="beyond_backprop.configs", job_name="test", version_base="1.2"
+            config_module="project.configs", job_name="test", version_base="1.2"
         )
     ):
         config = compose(
@@ -319,9 +317,7 @@ def setup_hydra_for_tests_and_compose(
         yield config
 
 
-def _add_default_marks_for_config_name(
-    config_name: str, request: pytest.FixtureRequest
-):
+def _add_default_marks_for_config_name(config_name: str, request: pytest.FixtureRequest):
     """Applies some default marks to tests when running with this config (if any)."""
     if config_name in default_marks_for_config_name:
         for marker in default_marks_for_config_name[config_name]:
@@ -423,16 +419,12 @@ def common_setup_experiment_part(experiment_config: Config):
 
 
 @pytest.fixture(scope="function")
-def trainer(
-    experiment_config: Config, common_setup_experiment_part: None
-) -> pl.Trainer:
+def trainer(experiment_config: Config, common_setup_experiment_part: None) -> pl.Trainer:
     return instantiate_trainer(experiment_config)
 
 
 @pytest.fixture(scope="session")
-def datamodule(
-    experiment_config: Config, common_setup_experiment_part: None
-) -> DataModule:
+def datamodule(experiment_config: Config, common_setup_experiment_part: None) -> DataModule:
     # NOTE: creating the datamodule by itself instead of with everything else.
     return instantiate_datamodule(experiment_config)
 
@@ -465,13 +457,9 @@ def training_batch(
 
 
 @pytest.fixture(scope="session")
-def x_y(
-    training_batch: tuple[Tensor, ...], datamodule: DataModule
-) -> tuple[Tensor, Tensor]:
+def x_y(training_batch: tuple[Tensor, ...], datamodule: DataModule) -> tuple[Tensor, Tensor]:
     """Returns a batch of data from the training set of an image classification datamodule."""
-    if len(training_batch) != 2 or not isinstance(
-        datamodule, ImageClassificationDataModule
-    ):
+    if len(training_batch) != 2 or not isinstance(datamodule, ImageClassificationDataModule):
         pytest.skip(
             reason=(
                 f"Test requires a batch of classification data (with 2 elements), batch has "
@@ -524,15 +512,11 @@ def network(
 
 @pytest.fixture(scope="function")
 def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
-    return instantiate_algorithm(
-        experiment_config, datamodule=datamodule, network=network
-    )
+    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
 
 
 @pytest.fixture(scope="session")
-def classifier_network(
-    network: nn.Module, x_y: tuple[Tensor, Tensor], datamodule: DataModule
-):
+def classifier_network(network: nn.Module, x_y: tuple[Tensor, Tensor], datamodule: DataModule):
     """Renames the "network" fixture to `classifier_network` if it is indeed an image classifier.
 
     Skips dependent tests if `network` isn't a classifier.
