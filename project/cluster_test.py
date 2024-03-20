@@ -222,8 +222,7 @@ def launch(
     # Added parameters:
     config_path: str | None = None,
     caller_stack_depth: int = 2,
-) -> list[list[JobReturn]]:
-    ...
+) -> list[list[JobReturn]]: ...
 
 
 @overload
@@ -241,8 +240,7 @@ def launch(
     # Added parameters:
     config_path: str | None = None,
     caller_stack_depth: int = 2,
-) -> JobReturn:
-    ...
+) -> JobReturn: ...
 
 
 # NOTE: This is a copied and slightly modified version of `launch` from `hydra_zen._launch` to add

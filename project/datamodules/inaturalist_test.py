@@ -10,9 +10,7 @@ from project.datamodules.image_classification import ImageClassificationDataModu
 
 from .inaturalist import INaturalistDataModule, TargetType, Version2021
 
-slow = pytest.mark.skipif(
-    "-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed."
-)
+slow = pytest.mark.skipif("-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed.")
 
 
 @pytest.mark.slow

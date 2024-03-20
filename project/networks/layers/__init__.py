@@ -22,16 +22,13 @@ class Sequential(nn.Sequential, Sequence[ModuleType]):
     _modules: dict[str, ModuleType]
 
     @overload
-    def __init__(self, *args: ModuleType) -> None:
-        ...
+    def __init__(self, *args: ModuleType) -> None: ...
 
     @overload
-    def __init__(self, **kwargs: ModuleType) -> None:
-        ...
+    def __init__(self, **kwargs: ModuleType) -> None: ...
 
     @overload
-    def __init__(self, arg: dict[str, ModuleType]) -> None:
-        ...
+    def __init__(self, arg: dict[str, ModuleType]) -> None: ...
 
     def __init__(self, *args, **kwargs):
         if args:
@@ -68,12 +65,10 @@ class Sequential(nn.Sequential, Sequence[ModuleType]):
         self._modules
 
     @overload
-    def __getitem__(self, idx: int) -> ModuleType:
-        ...
+    def __getitem__(self, idx: int) -> ModuleType: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> Sequential[ModuleType]:
-        ...
+    def __getitem__(self, idx: slice) -> Sequential[ModuleType]: ...
 
     @_copy_to_script_wrapper
     def __getitem__(self, idx: int | slice) -> Sequential[ModuleType] | ModuleType:
