@@ -15,7 +15,6 @@ import torch
 from gym import spaces
 from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from gym.wrappers.record_video import RecordVideo
-from lightning import LightningModule
 from torch import Tensor
 from torch.distributions import Categorical, Normal
 
@@ -56,11 +55,12 @@ This just means "EpisodeBatch objects where the actor outputs are of type Exampl
 
 
 class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
-    Algorithm[ModuleType, EpisodeBatch], LightningModule
+    Algorithm[EpisodeBatch, StepOutputDict, ModuleType]
 ):
     """Example of a Reinforcement Learning algorithm: Reinforce.
 
-    TODO: Figure out how to make this algorithm applicable in Supervised Learning as desired.
+    IDEA: Make this algorithm applicable in Supervised Learning by wrapping the
+    dataset into a gym env, just to prove a point?
     """
 
     @dataclass

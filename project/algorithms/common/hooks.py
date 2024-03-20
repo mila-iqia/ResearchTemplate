@@ -11,7 +11,7 @@ import torch
 from torch import Tensor, nn
 from torch.utils.hooks import RemovableHandle
 
-from project.algorithms.common.layers import (
+from project.networks.layers.layers import (
     OutT,
     Sample,
     SampleIfDistribution,
