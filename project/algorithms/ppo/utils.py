@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-
 import numpy as np
 import torch
 from torch import Tensor
+
 from project.algorithms.rl_example.rl_datamodule import EpisodeBatch
 from project.algorithms.rl_example.types import ActorOutput
 

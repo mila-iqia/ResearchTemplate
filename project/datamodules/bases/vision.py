@@ -16,7 +16,7 @@ from typing_extensions import ParamSpec
 
 from project.utils.types import C, H, W
 
-from ..utils.types.protocols import DataModule
+from ...utils.types.protocols import DataModule
 
 P = ParamSpec("P")
 
@@ -167,11 +167,13 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 transform=train_transforms,
                 **self.train_kwargs,
             )
+            # dataset_train = wrap_dataset_for_transforms_v2(dataset_train)
             dataset_val = self.dataset_cls(
                 str(self.data_dir),
                 transform=val_transforms,
                 **self.train_kwargs,  # todo: Assuming those are the same for now.
             )
+            # dataset_val = wrap_dataset_for_transforms_v2(dataset_val)
 
             # Split
             self.dataset_train = self._split_dataset(dataset_train, train=True)
@@ -181,9 +183,11 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             test_transforms = (
                 self.default_transforms() if self.test_transforms is None else self.test_transforms
             )
-            self.dataset_test = self.dataset_cls(
+            dataset_test = self.dataset_cls(
                 str(self.data_dir), transform=test_transforms, **self.test_kwargs
             )
+            # dataset_test = wrap_dataset_for_transforms_v2(dataset_test)
+            self.dataset_test = dataset_test
 
     def _split_dataset(self, dataset: VisionDataset, train: bool = True) -> Dataset:
         """Splits the dataset into train and validation set."""

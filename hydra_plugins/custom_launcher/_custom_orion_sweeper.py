@@ -1,15 +1,18 @@
 from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import List, Sequence
 from warnings import warn
 
 from hydra.core.config_store import ConfigStore
+from hydra.core.utils import JobReturn
 from hydra.types import HydraContext, TaskFunction
 from omegaconf import DictConfig
 from orion.client.experiment import ExperimentClient
 from orion.core.worker.trial import Trial
-from dataclasses import dataclass
+
 from hydra_plugins.hydra_orion_sweeper.config import (
     AlgorithmConf,
     OrionClientConf,
@@ -17,8 +20,6 @@ from hydra_plugins.hydra_orion_sweeper.config import (
     StorageConf,
     WorkerConf,
 )
-from hydra.core.utils import JobReturn
-
 from hydra_plugins.hydra_orion_sweeper.implementation import OrionSweeperImpl
 from hydra_plugins.hydra_orion_sweeper.orion_sweeper import OrionSweeper
 
@@ -93,7 +94,7 @@ class CustomOrionSweeperImpl(OrionSweeperImpl):
             hydra_context=hydra_context, task_function=task_function, config=config
         )
 
-    def sweep(self, arguments: List[str]) -> None:
+    def sweep(self, arguments: list[str]) -> None:
         # assert self.config is not None
         # sweep_dir = Path(str(self.config.hydra.sweep.dir))
         # sweep_dir.mkdir(parents=True, exist_ok=True)

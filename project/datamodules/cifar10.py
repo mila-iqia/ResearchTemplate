@@ -1,13 +1,45 @@
 from __future__ import annotations
+
 from argparse import ArgumentParser
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
-from torchvision import transforms as transform_lib
+import torch
 from torchvision.datasets import CIFAR10
+from torchvision.transforms import v2 as transform_lib
+from torchvision.transforms import v2 as transforms
 
-from project.datamodules.transforms import cifar10_normalization
-from project.datamodules.vision import VisionDataModule
 from project.utils.types import C, H, W
+
+from .bases.vision import VisionDataModule
+
+
+def cifar10_train_transforms():
+    return transforms.Compose(
+        [
+            transforms.ToImage(),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomCrop(size=32, padding=4, padding_mode="edge"),
+            transforms.ToDtype(torch.float32, scale=True),
+            cifar10_normalization(),
+        ]
+    )
+
+
+def cifar10_normalization() -> Callable:
+    return transforms.Normalize(
+        mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
+        std=[x / 255.0 for x in [63.0, 62.1, 66.7]],
+    )
+
+
+def cifar10_unnormalization(x: torch.Tensor) -> torch.Tensor:
+    mean = torch.as_tensor([x / 255.0 for x in [125.3, 123.0, 113.9]], device=x.device).view(
+        [1, 1, 3]
+    )
+    std = torch.as_tensor([x / 255.0 for x in [63.0, 62.1, 66.7]], device=x.device).view([1, 1, 3])
+    assert x.shape[-3:] == (32, 32, 3), x.shape
+    return (x * std) + mean
 
 
 class CIFAR10DataModule(VisionDataModule):
@@ -26,8 +58,9 @@ class CIFAR10DataModule(VisionDataModule):
     Transforms::
 
         transforms = transform_lib.Compose([
-            transform_lib.ToTensor(),
-            transforms.Normalize(
+            transform_lib.ToImage(),
+            transform_lib.ToDtype(torch.float32, scale=True),
+            transform_lib.Normalize(
                 mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
                 std=[x / 255.0 for x in [63.0, 62.1, 66.7]]
             )
@@ -53,13 +86,12 @@ class CIFAR10DataModule(VisionDataModule):
 
     name = "cifar10"
     dataset_cls = CIFAR10
-    dims: tuple[C, H, W] = (C(3), H(32), W(32))
-    num_classes: int = 10
+    dims = (C(3), H(32), W(32))
 
     def __init__(
         self,
-        data_dir: Optional[str] = None,
-        val_split: Union[int, float] = 0.2,
+        data_dir: str | None = None,
+        val_split: int | float = 0.2,
         num_workers: int | None = 0,
         normalize: bool = False,
         batch_size: int = 32,
@@ -102,13 +134,30 @@ class CIFAR10DataModule(VisionDataModule):
         train_len, _ = self._get_splits(len_dataset=50_000)
         return train_len
 
+    @property
+    def num_classes(self) -> int:
+        """
+        Return:
+            10
+        """
+        return 10
+
     def default_transforms(self) -> Callable:
         if self.normalize:
             cf10_transforms = transform_lib.Compose(
-                [transform_lib.ToTensor(), cifar10_normalization()]
+                [
+                    transform_lib.ToImage(),
+                    transform_lib.ToDtype(torch.float32, scale=True),
+                    cifar10_normalization(),
+                ]
             )
         else:
-            cf10_transforms = transform_lib.Compose([transform_lib.ToTensor()])
+            cf10_transforms = transform_lib.Compose(
+                [
+                    transform_lib.ToImage(),
+                    transform_lib.ToDtype(torch.float32, scale=True),
+                ]
+            )
 
         return cf10_transforms
 

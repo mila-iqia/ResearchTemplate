@@ -1,31 +1,37 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
+from hydra.core.config_store import ConfigStore
 
 from hydra_plugins.custom_launcher.custom_launcher import (
     CustomSlurmLauncher,
     CustomSlurmQueueConf,
 )
 
-FILE = Path(__file__)
-REPO_ROOTDIR = FILE.parent
-for level in range(5):
-    if "README.md" in list(p.name for p in REPO_ROOTDIR.iterdir()):
-        break
-    REPO_ROOTDIR = REPO_ROOTDIR.parent
-
-
-SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
-)
-SLURM_JOB_ID: int | None = (
-    int(os.environ["SLURM_JOB_ID"]) if "SLURM_JOB_ID" in os.environ else None
-)
-
-from .algorithm import *  # noqa
 from .config import Config
-from .datamodule import *  # noqa
+from .datamodule import (
+    CIFAR10DataModuleConfig,
+    DataModuleConfig,
+    FashionMNISTDataModuleConfig,
+    ImageNet32DataModuleConfig,
+    INaturalistDataModuleConfig,
+    MNISTDataModuleConfig,
+    MovingMnistDataModuleConfig,
+    RlDataModuleConfig,
+)
+
+# todo: look into using this instead:
+# from hydra_zen import store
+
+cs = ConfigStore.instance()
+cs.store(group="datamodule", name="base", node=DataModuleConfig)
+cs.store(group="datamodule", name="cifar10", node=CIFAR10DataModuleConfig)
+cs.store(group="datamodule", name="mnist", node=MNISTDataModuleConfig)
+cs.store(group="datamodule", name="fashion_mnist", node=FashionMNISTDataModuleConfig)
+cs.store(group="datamodule", name="imagenet32", node=ImageNet32DataModuleConfig)
+cs.store(group="datamodule", name="inaturalist", node=INaturalistDataModuleConfig)
+cs.store(group="datamodule", name="rl", node=RlDataModuleConfig)
+cs.store(group="datamodule", name="moving_mnist", node=MovingMnistDataModuleConfig)
+
 
 __all__ = [
     "Config",

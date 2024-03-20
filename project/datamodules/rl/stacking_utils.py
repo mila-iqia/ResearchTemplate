@@ -1,21 +1,22 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, Concatenate, TypeGuard, Unpack, overload
+
 import torch
 from torch import Tensor
-from typing_extensions import Concatenate, TypeGuard, Unpack
-from typing import overload
-from .rl_types import P, T, V, ActorOutput, Episode, UnstackedEpisode
+
+from project.utils.types import is_sequence_of
+
+from .rl_types import ActorOutput, Episode, UnstackedEpisode
 
 
 @overload
-def stack(values: list[Tensor], **kwargs) -> Tensor:
-    ...
+def stack(values: list[Tensor], **kwargs) -> Tensor: ...
 
 
 @overload
-def stack(values: list[ActorOutput], **kwargs) -> ActorOutput:
-    ...
+def stack(values: list[ActorOutput], **kwargs) -> ActorOutput: ...
 
 
 def stack(values: list[Tensor] | list[ActorOutput], **kwargs) -> Tensor | ActorOutput:
@@ -35,9 +36,9 @@ def contains_only_tensors(values: list[Any]) -> TypeGuard[list[Tensor]]:
     return all(isinstance(v, Tensor) for v in values)
 
 
-def stack_dicts(
+def stack_dicts[**P, T: Tensor, V](
     values: Sequence[Mapping[str, T]],
-    stack_fn: Callable[Concatenate[list[T] | tuple[T, ...], P], V] = stack,
+    stack_fn: Callable[Concatenate[list[T], P], V] = stack,
     *args: P.args,
     **kwargs: P.kwargs,
 ) -> Mapping[str, V]:
@@ -49,6 +50,7 @@ def stack_dicts(
     for key in all_keys:
         item_values = [v[key] for v in values]
         if isinstance(item_values[0], dict):
+            assert is_sequence_of(item_values, dict)
             items[key] = stack_dicts(item_values, stack_fn, *args, **kwargs)
         else:
             items[key] = stack_fn(item_values, *args, **kwargs)
@@ -84,7 +86,7 @@ def _get_device(values: Any) -> torch.device:
                 if device is not None:
                     return device
             return None
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, list | tuple):
             for v in value:
                 device = _get_device(v)
                 if device is not None:

@@ -1,25 +1,37 @@
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 from typing import ClassVar, TypeVar
 
 import pytest
-from torch import Tensor
+import torch.testing
+from torch import Tensor, nn
+from torch.utils.data import DataLoader, TensorDataset
 
-from project.algorithms.bases.algorithm_test import AlgorithmTests
+from project.algorithms.bases.algorithm_test import (
+    AlgorithmTests,
+    CheckBatchesAreTheSameAtEachStep,
+)
 from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.datamodules.image_classification import ImageClassificationDataModule
-from project.experiment import setup_experiment
-from project.main import run
-
-from .algorithm_test import get_experiment_config, slow
+from project.datamodules.moving_mnist import MovingMnistDataModule
+from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.utils.types import DataModule
 
 ImageAlgorithmType = TypeVar("ImageAlgorithmType", bound=ImageClassificationAlgorithm)
 
 
 class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
-    metric_name: ClassVar[str] = "train/cross_entropy"
-    """The main 'loss' metric to inspect to check if training is working."""
+    unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = [
+        RlDataModule,
+        MovingMnistDataModule,
+    ]
+    unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
+
+    metric_name: ClassVar[str] = "train/accuracy"
+    """The main  metric to inspect to check if training is working."""
+    lower_is_better: ClassVar[bool] = False
 
     def test_output_shapes(
         self,
@@ -33,65 +45,82 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
             y_pred, x_hat = algorithm(x)
         else:
             y_pred = output
-        assert y_pred.shape == (y.shape[0], algorithm.datamodule.num_classes)
+        assert isinstance(y_pred, Tensor)
+        if y_pred.dtype.is_floating_point:
+            # y_pred should be the logits.
+            assert y_pred.shape == (y.shape[0], algorithm.datamodule.num_classes)
+        else:
+            # y_pred might be the sampled classes (e.g. REINFORCE).
+            assert y_pred.shape == (y.shape[0],)
+            assert y_pred.max() < algorithm.datamodule.num_classes
 
     @pytest.fixture(scope="class")
-    def training_batch(self, datamodule: ImageClassificationDataModule) -> tuple[Tensor, Tensor]:
+    def training_batch(
+        self, datamodule: ImageClassificationDataModule, device: torch.device
+    ) -> tuple[Tensor, Tensor]:
         """Returns a batch of data from the training set of the datamodule."""
         datamodule.prepare_data()
         datamodule.setup("fit")
-        return next(iter(datamodule.train_dataloader()))
+        batch = next(iter(datamodule.train_dataloader()))
+        return (batch[0].to(device), batch[1].to(device))
 
-    @slow()
-    def test_overfit_single_batch(
-        self, network_name: str, datamodule_name: str, tmp_path: Path
-    ) -> None:
-        """Test the performance of this algorithm when learning from a single batch.
+    @pytest.fixture(scope="class")
+    def repeat_first_batch_dataloader(
+        self,
+        # algorithm: ImageAlgorithmType,
+        datamodule: ImageClassificationDataModule,
+        n_updates: int,
+    ):
+        """Returns a dataloader that yields a exactly the same batch over and over again.
 
-        If this doesn't work, there isn't really a point in trying to train for longer.
+        The image transforms are only executed once here, so the exact same tensors are served over
+        and over again. This is different than using `overfit_batches=1` in the trainer and\
+        `num_epochs=n_updates`, which would give the same batch but with a (potentially different
+        image transformation) every time.
         """
-        # Number of training iterations (NOTE: each iteration is one call to training_step, which
-        # itself may do more than a single update, e.g. in the case of DTP).
-        # By how much the model should be better than chance accuracy to pass this test.
-        num_training_iterations = 10
+        # Doing this just in case the algorithm wraps the datamodule somehow.
+        # dm = getattr(algorithm, "datamodule", datamodule)
+        dm = datamodule
+        dm.prepare_data()
+        dm.setup("fit")
 
-        # FIXME: This threshold is really low, we should expect more like > 90% accuracy, but it's
-        # currently taking a long time to get those values.
-        better_than_chance_threshold_pct = 0.10
-
-        algorithm_name = self.algorithm_name or self.algorithm_cls.__name__.lower()
-        assert isinstance(algorithm_name, str)
-        assert isinstance(datamodule_name, str)
-        assert isinstance(network_name, str)
-        experiment_config = get_experiment_config(
-            command_line_overrides=[
-                f"algorithm={algorithm_name}",
-                f"network={network_name}",
-                f"datamodule={datamodule_name}",
-                "seed=123",
-                # "trainer.detect_anomaly=true",
-                "~trainer/logger",
-                "trainer/callbacks=no_checkpoints",
-                "+trainer.overfit_batches=1",
-                "+trainer.limit_val_batches=0",
-                "+trainer.limit_test_batches=0",
-                "+trainer.enable_checkpointing=false",
-                f"++trainer.max_epochs={num_training_iterations}",
-                f"++trainer.default_root_dir={tmp_path}",
-            ]
+        train_dataloader = dm.train_dataloader()
+        assert isinstance(train_dataloader, DataLoader)
+        batch = next(iter(train_dataloader))
+        batches = list(itertools.repeat(batch, n_updates))
+        n_batches_dataset = TensorDataset(
+            *(torch.concatenate([b[i] for b in batches]) for i in range(len(batches[0])))
         )
-        assert experiment_config.trainer["max_epochs"] == num_training_iterations
+        train_dl = DataLoader(
+            n_batches_dataset, batch_size=train_dataloader.batch_size, shuffle=False
+        )
+        torch.testing.assert_close(next(iter(train_dl)), batch)
+        return train_dl
 
-        experiment = setup_experiment(experiment_config)
-        classification_error, metrics = run(experiment)
-
-        assert hasattr(experiment.datamodule, "num_classes")
-        num_classes: int = experiment.datamodule.num_classes  # type: ignore
-        chance_accuracy = 1 / num_classes
-        assert classification_error is not None
-        accuracy = 1 - classification_error
-        assert metrics["train/accuracy"] == accuracy
-
-        # NOTE: In this particular case, this error below is the training error, not the validation
-        # error.
-        assert accuracy > (chance_accuracy + better_than_chance_threshold_pct)
+    @pytest.mark.slow
+    @pytest.mark.timeout(10)
+    def test_overfit_exact_same_training_batch(
+        self,
+        algorithm: ImageAlgorithmType,
+        repeat_first_batch_dataloader: DataLoader,
+        accelerator: str,
+        devices: list[int],
+        n_updates: int,
+        tmp_path: Path,
+    ):
+        """Perform `n_updates` training steps on exactly the same batch of training data."""
+        testing_callbacks = self.get_testing_callbacks() + [
+            CheckBatchesAreTheSameAtEachStep(),
+        ]
+        self._train(
+            algorithm=algorithm,
+            train_dataloader=repeat_first_batch_dataloader,
+            accelerator=accelerator,
+            devices=devices,
+            max_epochs=1,
+            limit_train_batches=n_updates,
+            limit_val_batches=0.0,
+            limit_test_batches=0.0,
+            tmp_path=tmp_path,
+            testing_callbacks=testing_callbacks,
+        )

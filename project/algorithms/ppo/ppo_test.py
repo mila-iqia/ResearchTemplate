@@ -1,11 +1,11 @@
 from typing import ClassVar
 
-from project.algorithms.bases.algorithm_test import (
+from project.algorithms.ppo.ppo import PPO
+from project.algorithms.rl_example.reinforce_test import TestReinforce as ReinforceTests
+from project.utils.testutils import (
     get_all_datamodule_names,
     get_all_network_names,
 )
-from project.algorithms.ppo.ppo import PPO
-from project.algorithms.rl_example.reinforce_test import TestReinforce as ReinforceTests
 
 
 class TestPpo(ReinforceTests):

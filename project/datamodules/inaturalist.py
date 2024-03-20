@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import Callable
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Literal, Union
+from typing import Any, ClassVar, Literal
 
 import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
-from project.datamodules.vision_datamodule import VisionDataModule
+from project.datamodules.bases.vision import VisionDataModule
 from project.utils.types import C, H, W
 
 logger = get_logger(__name__)
@@ -20,8 +21,8 @@ Version2017_2019 = Literal["2017", "2018", "2019"]
 Target2017_2019 = Literal["full", "super"]
 Target2021 = Literal["full", "kingdom", "phylum", "class", "order", "family", "genus"]
 
-TargetType = Union[Target2017_2019, Target2021]
-Version = Union[Version2017_2019, Version2021]
+TargetType = Target2017_2019 | Target2021
+Version = Version2017_2019 | Version2021
 
 
 def get_slurm_tmpdir() -> Path:
@@ -44,9 +45,7 @@ def get_slurm_tmpdir() -> Path:
 def inat_dataset_dir() -> Path:
     network_dir = Path("/network/datasets/inat")
     if not network_dir.exists():
-        raise NotImplementedError(
-            "For now this assumes that we're running on the Mila cluster."
-        )
+        raise NotImplementedError("For now this assumes that we're running on the Mila cluster.")
     return network_dir
 
 
@@ -155,14 +154,10 @@ class INaturalistDataModule(VisionDataModule):
                 symlink_in_tmpdir.symlink_to(file_on_network)
 
         try:
-            logger.debug(
-                f"Checking if the dataset has already been created in {self.data_dir}."
-            )
+            logger.debug(f"Checking if the dataset has already been created in {self.data_dir}.")
             self.dataset_cls(str(self.data_dir), download=False, **self.EXTRA_ARGS)
         except RuntimeError:
-            logger.debug(
-                f"The dataset has not already been created in {self.data_dir}."
-            )
+            logger.debug(f"The dataset has not already been created in {self.data_dir}.")
             pass
         else:
             logger.debug(f"The dataset has already been downloaded in {self.data_dir}.")

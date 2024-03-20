@@ -5,10 +5,11 @@ import enum
 import os
 import subprocess
 import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, NamedTuple, Sequence, TypeVar, Optional, Union
+from typing import Any, NamedTuple, TypeGuard, TypeVar
 
 import numpy as np
 from hydra.core.config_store import ConfigStore
@@ -17,7 +18,6 @@ from hydra.core.utils import JobReturn
 from hydra.types import HydraContext, TaskFunction
 from hydra_zen import hydrated_dataclass
 from omegaconf import DictConfig, OmegaConf
-from typing_extensions import TypeGuard
 
 from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import (
@@ -103,18 +103,18 @@ class CustomSlurmQueueConf(SlurmQueueConf):
         # "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"
     )
 
-    partition: Optional[str] = None
+    partition: str | None = None
     """Slurm partition to use on the cluster."""
-    qos: Optional[str] = None
-    comment: Optional[str] = None
-    constraint: Optional[str] = None
-    exclude: Optional[str] = None
-    gres: Optional[str] = None
-    cpus_per_gpu: Optional[int] = None
-    gpus_per_task: Optional[Union[int, str]] = None
-    mem_per_gpu: Optional[str] = None
-    mem_per_cpu: Optional[str] = None
-    account: Optional[str] = None
+    qos: str | None = None
+    comment: str | None = None
+    constraint: str | None = None
+    exclude: str | None = None
+    gres: str | None = None
+    cpus_per_gpu: int | None = None
+    gpus_per_task: int | str | None = None
+    mem_per_gpu: str | None = None
+    mem_per_cpu: str | None = None
+    account: str | None = None
 
     ################################
     ### Submitit-specific fields ###
@@ -170,25 +170,25 @@ class JobConfig:
     # nodes: int = interpolated_field("${trainer.nodes}", 1)
     # """ Number of nodes required. """
 
-    cpus: Optional[int] = interpolated_field("${datamodule.num_workers}", None)
+    cpus: int | None = interpolated_field("${datamodule.num_workers}", None)
     """Number of CPU cores required."""
 
-    ram_gb: Optional[int] = 4
+    ram_gb: int | None = 4
     """Amount of CPU RAM required (for a single run)."""
 
-    gpus: Optional[int] = interpolated_field("${trainer.devices}", None)
+    gpus: int | None = interpolated_field("${trainer.devices}", None)
     """Number of GPUs required."""
 
-    vram_gb: Optional[int] = None
+    vram_gb: int | None = None
     """Amount of GPU VRAM required."""
 
-    gpu_type: Optional[Union[GpuModel, str]] = None
+    gpu_type: GpuModel | str | None = None
     """Type of GPU required for this job."""
 
     share_cpus_between_runs: bool = True
     """Whether to allow different runs within the same job to share CPU cores."""
 
-    parallel_runs_per_job: Optional[int] = None
+    parallel_runs_per_job: int | None = None
     """How many distinct runs (~tasks) to execute in parallel within a single job.
 
     When `max_vram_usage_gb` is set, and a gpu model has been selected either in "gpu_model",
@@ -456,7 +456,7 @@ class CustomSlurmLauncher(SlurmLauncher):
         for task_results in job_task_results:
             return_values: list[int | float] = []
             for result in task_results:
-                if isinstance(result.return_value, (int, float)):
+                if isinstance(result.return_value, int | float):
                     return_values.append(result.return_value)
             if not return_values:
                 break

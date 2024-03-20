@@ -1,9 +1,14 @@
 from __future__ import annotations
-from typing import Any, Callable
-from torchvision import transforms as transform_lib
+
+from collections.abc import Callable
+from typing import Any
+
+import torch
 from torchvision.datasets import FashionMNIST
+from torchvision.transforms import v2 as transform_lib
+
+from project.datamodules.bases.vision import VisionDataModule
 from project.utils.types import C, H, W
-from project.datamodules.vision import VisionDataModule
 
 
 class FashionMNISTDataModule(VisionDataModule):
@@ -80,6 +85,8 @@ class FashionMNISTDataModule(VisionDataModule):
             *args,
             **kwargs,
         )
+        self.prepare_data()
+        self.setup("fit")
 
     @property
     def num_classes(self) -> int:
@@ -89,9 +96,13 @@ class FashionMNISTDataModule(VisionDataModule):
     def default_transforms(self) -> Callable:
         if self.normalize:
             mnist_transforms = transform_lib.Compose(
-                [transform_lib.ToTensor(), transform_lib.Normalize(mean=(0.5,), std=(0.5,))]
+                [
+                    transform_lib.ToImage(),
+                    transform_lib.ToDtype(torch.float32, scale=True),
+                    transform_lib.Normalize(mean=(0.5,), std=(0.5,)),
+                ]
             )
         else:
-            mnist_transforms = transform_lib.Compose([transform_lib.ToTensor()])
+            mnist_transforms = transform_lib.Compose([transform_lib.ToImage()])
 
         return mnist_transforms

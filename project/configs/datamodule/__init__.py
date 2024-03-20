@@ -5,12 +5,9 @@ from logging import getLogger as get_logger
 from pathlib import Path
 
 import torch
-from hydra.core.config_store import ConfigStore
 from hydra_zen import hydrated_dataclass, instantiate
 from torch import Tensor
-from torchvision import transforms
 
-from project.configs import REPO_ROOTDIR, SLURM_JOB_ID, SLURM_TMPDIR
 from project.datamodules import (
     CIFAR10DataModule,
     FashionMNISTDataModule,
@@ -18,12 +15,27 @@ from project.datamodules import (
     MNISTDataModule,
     RlDataModule,
     VisionDataModule,
-    cifar10_normalization,
-    imagenet32_normalization,
 )
+from project.datamodules.cifar10 import cifar10_train_transforms
+from project.datamodules.imagenet32 import imagenet32_train_transforms
 from project.datamodules.inaturalist import INaturalistDataModule, TargetType, Version
 from project.datamodules.mnist import mnist_train_transforms
 from project.datamodules.moving_mnist import MovingMnistDataModule
+
+FILE = Path(__file__)
+REPO_ROOTDIR = FILE.parent
+for level in range(5):
+    if "README.md" in list(p.name for p in REPO_ROOTDIR.iterdir()):
+        break
+    REPO_ROOTDIR = REPO_ROOTDIR.parent
+
+
+SLURM_TMPDIR: Path | None = (
+    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
+)
+SLURM_JOB_ID: int | None = (
+    int(os.environ["SLURM_JOB_ID"]) if "SLURM_JOB_ID" in os.environ else None
+)
 
 logger = get_logger(__name__)
 
@@ -40,8 +52,8 @@ if not SLURM_TMPDIR and SLURM_JOB_ID is not None:
     _slurm_tmpdir = Path(f"/Tmp/slurm.{SLURM_JOB_ID}.0")
     if _slurm_tmpdir.exists():
         SLURM_TMPDIR = _slurm_tmpdir
-DATA_DIR = Path(os.environ.get("DATA_DIR", (SLURM_TMPDIR or REPO_ROOTDIR) / "data"))
 SCRATCH = Path(os.environ["SCRATCH"]) if "SCRATCH" in os.environ else None
+DATA_DIR = Path(os.environ.get("DATA_DIR", (SLURM_TMPDIR or SCRATCH or REPO_ROOTDIR) / "data"))
 
 NUM_WORKERS = int(
     os.environ.get(
@@ -79,6 +91,11 @@ class VisionDataModuleConfig(DataModuleConfig):
     __call__ = instantiate
 
 
+# todo: look into this to avoid having to make dataclasses with no fields just to call a function..
+from hydra_zen import store, zen  # noqa
+
+
+# FIXME: This is dumb!
 @hydrated_dataclass(target=mnist_train_transforms)
 class MNISTTrainTransforms: ...
 
@@ -94,17 +111,6 @@ class MNISTDataModuleConfig(VisionDataModuleConfig):
 class FashionMNISTDataModuleConfig(MNISTDataModuleConfig): ...
 
 
-def cifar10_train_transforms():
-    return transforms.Compose(
-        [
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomCrop(size=32, padding=4, padding_mode="edge"),
-            transforms.ToTensor(),
-            cifar10_normalization(),
-        ]
-    )
-
-
 @hydrated_dataclass(target=cifar10_train_transforms)
 class Cifar10TrainTransforms: ...
 
@@ -114,17 +120,6 @@ class CIFAR10DataModuleConfig(VisionDataModuleConfig):
     train_transforms: Cifar10TrainTransforms = field(default_factory=Cifar10TrainTransforms)
     # Overwriting this one:
     batch_size: int = 128
-
-
-def imagenet32_train_transforms():
-    return transforms.Compose(
-        [
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomCrop(size=32, padding=4, padding_mode="edge"),
-            transforms.ToTensor(),
-            imagenet32_normalization(),
-        ]
-    )
 
 
 @hydrated_dataclass(target=imagenet32_train_transforms)
@@ -158,14 +153,3 @@ class INaturalistDataModuleConfig(VisionDataModuleConfig):
 @hydrated_dataclass(target=MovingMnistDataModule, populate_full_signature=True)
 class MovingMnistDataModuleConfig(VisionDataModuleConfig):
     data_dir: Path | None = SLURM_TMPDIR
-
-
-cs = ConfigStore.instance()
-cs.store(group="datamodule", name="base", node=DataModuleConfig)
-cs.store(group="datamodule", name="cifar10", node=CIFAR10DataModuleConfig)
-cs.store(group="datamodule", name="mnist", node=MNISTDataModuleConfig)
-cs.store(group="datamodule", name="fashion_mnist", node=FashionMNISTDataModuleConfig)
-cs.store(group="datamodule", name="imagenet32", node=ImageNet32DataModuleConfig)
-cs.store(group="datamodule", name="inaturalist", node=INaturalistDataModuleConfig)
-cs.store(group="datamodule", name="rl", node=RlDataModuleConfig)
-cs.store(group="datamodule", name="moving_mnist", node=MovingMnistDataModuleConfig)

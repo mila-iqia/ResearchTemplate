@@ -17,7 +17,7 @@ from typing_extensions import (
 )
 
 from .outputs import ClassificationOutputs, StepOutputDict
-from .protocols import Dataclass, HasInputOutputShapes, Module
+from .protocols import Dataclass, DataModule, HasInputOutputShapes, Module
 
 # These are used to show which dim is which.
 C = NewType("C", int)
@@ -55,6 +55,7 @@ __all__ = [
     "HasInputOutputShapes",
     "Module",
     "Dataclass",
+    "DataModule",
     "StepOutputDict",
     "ClassificationOutputs",
 ]

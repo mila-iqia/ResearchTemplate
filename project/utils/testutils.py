@@ -24,8 +24,8 @@ from torch.optim import Optimizer
 
 from project.configs.config import Config, cs
 from project.configs.datamodule import DATA_DIR
+from project.datamodules.bases.vision import VisionDataModule
 from project.datamodules.image_classification import ImageClassificationDataModule
-from project.datamodules.vision_datamodule import VisionDataModule
 from project.experiment import instantiate_trainer
 from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr

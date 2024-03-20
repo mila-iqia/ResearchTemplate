@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic
+from collections.abc import Callable
+from typing import Any, Generic, NotRequired, TypedDict
 
 import numpy as np
 from gym import Space
 from torch import Tensor
-from typing_extensions import NotRequired, ParamSpec, TypedDict, TypeVar
+from typing_extensions import TypeVar
 
 TensorType = TypeVar("TensorType", bound=Tensor, default=Tensor)
 ObservationT = TypeVar("ObservationT", default=np.ndarray)
 ActionT = TypeVar("ActionT", default=int)
-D = TypeVar("D", bound=TypedDict)
-K = TypeVar("K")
-V = TypeVar("V")
-T = TypeVar("T")
-P = ParamSpec("P")
 # TypeVars for the observations and action types for a gym environment.
 
 ActorOutput = TypeVar("ActorOutput", default=dict, covariant=True)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any, Generic, overload
+from typing import Any, Generic, Unpack, overload
 
 import gym
 import gym.spaces
@@ -9,9 +9,8 @@ import numpy as np
 import torch
 from torch import Tensor
 from torch.utils.data import IterableDataset
-from typing_extensions import Unpack
 
-from .types import ActorOutputDict, UnstackedEpisode, Episode, Actor
+from .types import Actor, ActorOutputDict, Episode, UnstackedEpisode
 from .utils import stack_dicts
 
 eps = np.finfo(np.float32).eps.item()
@@ -105,13 +104,11 @@ class RlDataset(IterableDataset[Episode[ActorOutputDict]], Generic[ActorOutputDi
 
 
 @overload
-def _stack(values: list[Tensor], **kwargs) -> Tensor:
-    ...
+def _stack(values: list[Tensor], **kwargs) -> Tensor: ...
 
 
 @overload
-def _stack(values: list[ActorOutputDict], **kwargs) -> ActorOutputDict:
-    ...
+def _stack(values: list[ActorOutputDict], **kwargs) -> ActorOutputDict: ...
 
 
 def _stack(values: list[Tensor] | list[ActorOutputDict], **kwargs) -> Tensor | ActorOutputDict:
@@ -134,7 +131,7 @@ def _get_device(values: Any) -> torch.device:
                 if device is not None:
                     return device
             return None
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, list | tuple):
             for v in value:
                 device = _get_device(v)
                 if device is not None:

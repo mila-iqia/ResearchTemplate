@@ -28,19 +28,12 @@ repos:
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.261'
+    rev: "v0.3.3"
     hooks:
       - id: ruff
         args: ['--line-length', '99', '--fix']
         require_serial: true
 
-  # python code formatting
-  - repo: https://github.com/psf/black
-    rev: 22.12.0
-    hooks:
-      - id: black
-        args: [--line-length, "99"]
-        require_serial: true
 
   # python docstring formatting
   - repo: https://github.com/myint/docformatter
@@ -60,9 +53,16 @@ repos:
 
   # jupyter notebook cell output clearing
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.6.1
+    rev: 0.7.1
     hooks:
       - id: nbstripout
+        require_serial: true
+
+  # Dependency management
+  - repo: https://github.com/pdm-project/pdm
+    rev: 2.12.4
+    hooks:
+      - id: pdm-lock-check
         require_serial: true
 
 

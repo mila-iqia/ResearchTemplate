@@ -1,15 +1,15 @@
 from typing import TypeVar
 
 import torch.optim.lr_scheduler
-from hydra.core.config_store import ConfigStore
 from hydra_zen import hydrated_dataclass
 from hydra_zen.typing._implementations import PartialBuilds
-from typing_extensions import TypeAlias
 
 LRSchedulerType = TypeVar("LRSchedulerType", bound=torch.optim.lr_scheduler._LRScheduler)
 # TODO: Double-check this, but defining LRSchedulerConfig like this makes it unusable as a type
 # annotation on the hparams, since omegaconf will complain it isn't a valid base class.
-LRSchedulerConfig: TypeAlias = PartialBuilds[LRSchedulerType]
+type LRSchedulerConfig[LRSchedulerType: torch.optim.lr_scheduler._LRScheduler] = PartialBuilds[
+    LRSchedulerType
+]
 
 
 @hydrated_dataclass(target=torch.optim.lr_scheduler.StepLR, zen_partial=True)
@@ -30,8 +30,3 @@ class CosineAnnealingLRConfig:
     eta_min: float = 0
     last_epoch: int = -1
     verbose: bool = False
-
-
-# cs = ConfigStore.instance()
-# cs.store(group="lr_scheduler", name="step", node=StepLRConfig)
-# cs.store(group="lr_scheduler", name="cosine", node=CosineAnnealingLRConfig)
