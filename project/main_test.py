@@ -7,12 +7,11 @@ from pathlib import Path
 import pytest
 
 from project.algorithms import Algorithm, Backprop
-from project.algorithms.dtp.dtp import DTP
-from project.algorithms.target_prop_example.example_algorithm import ExampleAlgorithm
+from project.algorithms.rl_example.reinforce import ExampleRLAlgorithm
 from project.configs.config import Config
 from project.configs.datamodule import CIFAR10DataModuleConfig
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
-from project.networks import LeNet, ResNet18, ResNet34, SimpleVGG
+from project.networks.fcnet import FcNet
 from project.utils.hydra_utils import resolve_dictconfig
 
 if typing.TYPE_CHECKING:
@@ -42,7 +41,6 @@ def set_testing_hydra_dir():
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.algorithm, Backprop.HParams)
-    assert isinstance(experiment_config.network, SimpleVGG.HParams)
     assert isinstance(experiment_config.datamodule, CIFAR10DataModuleConfig)
 
 
@@ -55,9 +53,8 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=example"], ExampleAlgorithm.HParams),
+        (["algorithm=example_rl"], ExampleRLAlgorithm.HParams),
         (["algorithm=backprop"], Backprop.HParams),
-        (["algorithm=dtp"], DTP.HParams),
     ],
     ids=_ids,
 )
@@ -79,10 +76,7 @@ def test_setting_algorithm(
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=backprop", "network=lenet"], LeNet.HParams),
-        (["algorithm=backprop", "network=simple_vgg"], SimpleVGG.HParams),
-        (["algorithm=backprop", "network=resnet18"], ResNet18.HParams),
-        (["algorithm=backprop", "network=resnet34"], ResNet34.HParams),
+        (["algorithm=backprop", "network=fcnet"], FcNet.HParams),
     ],
     ids=_ids,
 )

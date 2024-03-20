@@ -6,11 +6,11 @@ import pytest
 from torch import Tensor
 
 from project.datamodules.rl.rl_datamodule import RlDataModule
-from project.testutils import run_for_all_datamodules
 from project.utils.tensor_regression import (
     TensorRegressionFixture,
     get_test_source_and_temp_file_paths,
 )
+from project.utils.testutils import run_for_all_datamodules
 from project.utils.types import is_sequence_of
 
 from ..utils.types.protocols import DataModule
