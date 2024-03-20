@@ -11,6 +11,10 @@ repos:
       - id: end-of-file-fixer
         require_serial: true
       # - id: check-docstring-first
+      - id: check-added-large-files
+        require_serial: true
+      - id: check-ast
+        require_serial: true
       - id: check-yaml
         require_serial: true
       - id: debug-statements
