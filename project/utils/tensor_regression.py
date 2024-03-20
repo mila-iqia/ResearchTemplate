@@ -69,7 +69,7 @@ class TensorRegressionFixture:
     that their contents' hash matches what is stored with git!
 
     TODO: Add a `--regen-missing` option (currently implicitly always true) that decides if we
-    raise an error if a file is missing.
+    raise an error if a file is missing. (for example in unit tests we don't want this to be true!)
     """
 
     def __init__(
@@ -88,6 +88,10 @@ class TensorRegressionFixture:
         self.ndarrays_regression = ndarrays_regression
         self.data_regression = data_regression
         self.monkeypatch = monkeypatch
+        self.generate_missing_files: bool | None = self.request.config.getoption(
+            "--gen-missing",
+            default=None,  # type: ignore
+        )
 
     def get_source_file(self, extension: str, additional_subfolder: str | None = None) -> Path:
         source_file, _test_file = get_test_source_and_temp_file_paths(
@@ -133,6 +137,10 @@ class TensorRegressionFixture:
         assert isinstance(regen_all, bool)
 
         if regen_all:
+            assert self.generate_missing_files in [
+                True,
+                None,
+            ], "--gen-missing contradicts --regen-all!"
             # Regenerate everything.
             if arrays_source_file.exists():
                 arrays_source_file.unlink()
@@ -141,6 +149,13 @@ class TensorRegressionFixture:
 
         if arrays_source_file.exists():
             logger.info(f"Full arrays file found at {arrays_source_file}.")
+            if not simple_attributes_source_file.exists():
+                # Weird: the simple attributes file doesn't exist. Re-create it if allowed.
+                with dont_fail_if_files_are_missing(enabled=bool(self.generate_missing_files)):
+                    self.pre_check(
+                        data_dict,
+                        simple_attributes_source_file=simple_attributes_source_file,
+                    )
 
             # We already generated the file with the full tensors (and we also already checked
             # that their hashes correspond to what we expect.)
@@ -188,13 +203,13 @@ class TensorRegressionFixture:
 
         logger.warning(f"Creating the simple attributes file at {simple_attributes_source_file}.")
 
-        with dont_fail_if_files_are_missing():
+        with dont_fail_if_files_are_missing(enabled=bool(self.generate_missing_files)):
             self.pre_check(
                 data_dict,
                 simple_attributes_source_file=simple_attributes_source_file,
             )
 
-        with dont_fail_if_files_are_missing():
+        with dont_fail_if_files_are_missing(enabled=bool(self.generate_missing_files)):
             self.regular_check(
                 data_dict=data_dict,
                 fullpath=arrays_source_file,
@@ -243,7 +258,7 @@ class TensorRegressionFixture:
     ) -> None:
         array_dict: dict[str, np.ndarray] = {}
         for key, array in data_dict.items():
-            if isinstance(key, int | bool | float):
+            if isinstance(key, (int | bool | float)):
                 new_key = f"{key}"
                 assert new_key not in data_dict
                 key = new_key
@@ -370,13 +385,16 @@ class FilesDidntExist(Failed):
 
 
 @contextlib.contextmanager
-def dont_fail_if_files_are_missing():
+def dont_fail_if_files_are_missing(enabled: bool = True):
     try:
         with _catch_fails_with_files_didnt_exist():
             yield
     except FilesDidntExist as exc:
-        logger.warning(exc)
-        warnings.warn(RuntimeWarning(exc.msg))
+        if enabled:
+            logger.warning(exc)
+            warnings.warn(RuntimeWarning(exc.msg))
+        else:
+            raise
 
 
 @contextlib.contextmanager

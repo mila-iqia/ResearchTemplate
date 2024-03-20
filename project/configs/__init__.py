@@ -9,6 +9,9 @@ from hydra_plugins.custom_launcher.custom_launcher import (
 
 from .config import Config
 from .datamodule import (
+    REPO_ROOTDIR,
+    SLURM_JOB_ID,
+    SLURM_TMPDIR,
     CIFAR10DataModuleConfig,
     DataModuleConfig,
     FashionMNISTDataModuleConfig,

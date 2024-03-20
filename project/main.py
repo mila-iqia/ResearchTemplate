@@ -13,6 +13,7 @@ import wandb
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 
+from project.algorithms import algorithm_store
 from project.configs.config import Config
 from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.experiment import Experiment, setup_experiment
@@ -25,6 +26,8 @@ if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
 logger = get_logger(__name__)
 
 project_name = Path(__file__).parent.name
+
+algorithm_store.add_to_hydra_store()
 
 
 @hydra.main(
