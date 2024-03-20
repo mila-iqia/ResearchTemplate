@@ -19,6 +19,7 @@ dependencies = [
     "wandb>=0.16.4",
     "hydra-colorlog>=1.2.0",
     "matplotlib>=3.8.3",
+    "moviepy>=1.0.3",
 ]
 requires-python = ">=3.12"
 readme = "README.md"

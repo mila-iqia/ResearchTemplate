@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:33d9ebc01859fcdb83f2298a531af9140fc39bb6739d410331595dd81bfddddc"
+content_hash = "sha256:361061d0cd3322b58c5ecd2c1632cd072f0f839adfc2bf70a0403f86e70522ad"
 
 [[package]]
 name = "aiohttp"
@@ -340,6 +340,17 @@ files = [
 ]
 
 [[package]]
+name = "decorator"
+version = "4.4.2"
+requires_python = ">=2.6, !=3.0.*, !=3.1.*"
+summary = "Decorators for Humans"
+groups = ["default"]
+files = [
+    {file = "decorator-4.4.2-py2.py3-none-any.whl", hash = "sha256:41fa54c2a0cc4ba648be4fd43cff00aedf5b9465c9bf18d64325bc225f08f760"},
+    {file = "decorator-4.4.2.tar.gz", hash = "sha256:e3a62f0520172440ca0dcc823749319382e377f37f140a0b99ef45fecb84bfe7"},
+]
+
+[[package]]
 name = "deepdiff"
 version = "6.7.1"
 requires_python = ">=3.7"
@@ -643,6 +654,41 @@ files = [
 ]
 
 [[package]]
+name = "imageio"
+version = "2.34.0"
+requires_python = ">=3.8"
+summary = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
+groups = ["default"]
+marker = "python_version >= \"3.4\""
+dependencies = [
+    "numpy",
+    "pillow>=8.3.2",
+]
+files = [
+    {file = "imageio-2.34.0-py3-none-any.whl", hash = "sha256:08082bf47ccb54843d9c73fe9fc8f3a88c72452ab676b58aca74f36167e8ccba"},
+    {file = "imageio-2.34.0.tar.gz", hash = "sha256:ae9732e10acf807a22c389aef193f42215718e16bd06eed0c5bb57e1034a4d53"},
+]
+
+[[package]]
+name = "imageio-ffmpeg"
+version = "0.4.9"
+requires_python = ">=3.5"
+summary = "FFMPEG wrapper for Python"
+groups = ["default"]
+marker = "python_version >= \"3.4\""
+dependencies = [
+    "setuptools",
+]
+files = [
+    {file = "imageio-ffmpeg-0.4.9.tar.gz", hash = "sha256:39bcd1660118ef360fa4047456501071364661aa9d9021d3d26c58f1ee2081f5"},
+    {file = "imageio_ffmpeg-0.4.9-py3-none-macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:24095e882a126a0d217197b86265f821b4bb3cf9004104f67c1384a2b4b49168"},
+    {file = "imageio_ffmpeg-0.4.9-py3-none-manylinux2010_x86_64.whl", hash = "sha256:2996c64af3e5489227096580269317719ea1a8121d207f2e28d6c24ebc4a253e"},
+    {file = "imageio_ffmpeg-0.4.9-py3-none-manylinux2014_aarch64.whl", hash = "sha256:7eead662d2f46d748c0ab446b68f423eb63d2b54d0a8ef96f80607245540866d"},
+    {file = "imageio_ffmpeg-0.4.9-py3-none-win32.whl", hash = "sha256:b6de1e18911687c538d5585d8287ab1a23624ca9dc2044fcc4607de667bcf11e"},
+    {file = "imageio_ffmpeg-0.4.9-py3-none-win_amd64.whl", hash = "sha256:7e900c695c6541b1cb17feb1baacd4009b30a53a45b81c23d53a67ab13ffb766"},
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.0.0"
 requires_python = ">=3.7"
@@ -918,6 +964,25 @@ groups = ["default"]
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
+]
+
+[[package]]
+name = "moviepy"
+version = "1.0.3"
+summary = "Video editing with Python"
+groups = ["default"]
+dependencies = [
+    "decorator<5.0,>=4.0.2",
+    "imageio-ffmpeg>=0.2.0; python_version >= \"3.4\"",
+    "imageio<3.0,>=2.5; python_version >= \"3.4\"",
+    "numpy; python_version >= \"2.7\"",
+    "numpy>=1.17.3; python_version != \"2.7\"",
+    "proglog<=1.0.0",
+    "requests<3.0,>=2.8.1",
+    "tqdm<5.0,>=4.11.2",
+]
+files = [
+    {file = "moviepy-1.0.3.tar.gz", hash = "sha256:2884e35d1788077db3ff89e763c5ba7bfddbd7ae9108c9bc809e7ba58fa433f5"},
 ]
 
 [[package]]
@@ -1222,6 +1287,19 @@ groups = ["dev"]
 files = [
     {file = "pluggy-1.4.0-py3-none-any.whl", hash = "sha256:7db9f7b503d67d1c5b95f59773ebb58a8c1c288129a88665838012cfb07b8981"},
     {file = "pluggy-1.4.0.tar.gz", hash = "sha256:8c85c2876142a764e5b7548e7d9a0e0ddb46f5185161049a79b7e974454223be"},
+]
+
+[[package]]
+name = "proglog"
+version = "0.1.10"
+summary = "Log and progress bar manager for console, notebooks, web..."
+groups = ["default"]
+dependencies = [
+    "tqdm",
+]
+files = [
+    {file = "proglog-0.1.10-py3-none-any.whl", hash = "sha256:19d5da037e8c813da480b741e3fa71fb1ac0a5b02bf21c41577c7f327485ec50"},
+    {file = "proglog-0.1.10.tar.gz", hash = "sha256:658c28c9c82e4caeb2f25f488fff9ceace22f8d69b15d0c1c86d64275e4ddab4"},
 ]
 
 [[package]]
