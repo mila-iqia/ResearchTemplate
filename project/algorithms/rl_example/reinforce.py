@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import gym
 import gym.spaces
@@ -20,19 +20,18 @@ from torch import Tensor
 from torch.distributions import Categorical, Normal
 
 from project.algorithms.bases.algorithm import Algorithm
+from project.datamodules.rl.gym_utils import check_and_normalize_box_actions
+from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.datamodules.rl.rl_types import EpisodeBatch
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
-
-from .rl_datamodule import EpisodeBatch, RlDataModule
-from .types import ActorOutput
-from .utils import check_and_normalize_box_actions
 
 logger = get_logger(__name__)
 # torch.set_float32_matmul_precision("high")
 eps = np.finfo(np.float32).eps.item()
 
 
-class ExampleActorOutput(ActorOutput):
+class ExampleActorOutput(TypedDict):
     """Additional outputs of the Actor (besides the action to take) for a single step in the env.
 
     This should be used to store whatever is needed to train the model later (e.g. the action log-

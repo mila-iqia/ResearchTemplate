@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import logging
+import os
 import random
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
 from typing import Any
 
 import hydra_zen
+import rich.console
+import rich.logging
+import rich.traceback
 import torch
 from gym import spaces
 from hydra.utils import instantiate
@@ -71,13 +75,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
 
 
 def setup_logging(experiment_config: Config) -> None:
-    import os
-
-    import rich.console
-    import rich.logging
-    import rich.traceback
-
-    LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
+    LOGLEVEL = os.environ.get("LOGLEVEL", "info").upper()
     logging.basicConfig(
         level=LOGLEVEL,
         # format="%(asctime)s - %(levelname)s - %(message)s",
@@ -86,6 +84,7 @@ def setup_logging(experiment_config: Config) -> None:
         force=True,
         handlers=[
             rich.logging.RichHandler(
+                markup=True,
                 rich_tracebacks=True,
                 tracebacks_width=100,
                 tracebacks_show_locals=False,

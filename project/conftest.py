@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import typing
+import warnings
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
@@ -62,50 +63,82 @@ DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
 
 
-def pytest_configure(config: pytest.Config):
-    config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
-    config.addinivalue_line(
-        "markers", "very_fast: mark test as very fast to run (including test setup)."
-    )
-
-
 def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
     # NOTE: One can select multiple marks like so: `pytest -m "fast or very_fast"`
+    cutoff_time: float | None = config.getoption("--shorter-than", default=None)  # type: ignore
 
-    for node in items:
-        test_is_slow: bool = node.get_closest_marker("slow") is not None
-        test_is_fast: bool = node.get_closest_marker("fast") is not None
-        test_is_very_fast: bool = node.get_closest_marker("very_fast") is not None
+    if cutoff_time is not None:
+        if config.getoption("--slow"):
+            raise RuntimeError(
+                "Can't use both --shorter-than (a cutoff time) and --slow (also run slow tests) since slow tests have no cutoff time!"
+            )
 
-        timeout_marker: pytest.Mark | None = node.get_closest_marker("timeout")
+    # This -m flag could also be something more complicated like 'fast and not slow', but
+    # keeping it simple for now.
+    only_running_slow_tests = config.getoption("-m", default=None) == "slow"  # type: ignore
 
-        test_is_unknown_speed = not any(
-            [test_is_slow, test_is_fast, test_is_very_fast, bool(timeout_marker)]
-        )
-        # NOTE: The setup time doesn't seem to be properly included in the timeout.
-        very_fast = pytest.mark.timeout(DEFAULT_TIMEOUT, func_only=False)
-        fast = pytest.mark.timeout(DEFAULT_TIMEOUT, func_only=True)
+    very_fast_time = DEFAULT_TIMEOUT / 10
+    very_fast_timeout_mark = pytest.mark.timeout(very_fast_time, func_only=False)
 
-        if test_is_unknown_speed:
-            # No timeout explicitly set for the test. Assume that it is (very?) fast to run.
-            # NOTE: Defaulting to `fast` just because `very_fast` is a little bit too aggressive.
+    fast_time = DEFAULT_TIMEOUT
+    # NOTE: The setup time doesn't seem to be properly included in the timeout.
+    fast_timeout = pytest.mark.timeout(fast_time, func_only=True)
+
+    indices_to_remove: list[int] = []
+    for _node_index, node in enumerate(items):
+        # timeout value of the test. None for unknown length.
+        test_timeout: float | None = None
+        if node.get_closest_marker("very_fast"):
+            test_timeout = very_fast_time
+            node.add_marker(very_fast_timeout_mark)
+        elif node.get_closest_marker("fast"):
+            test_timeout = fast_time
+            node.add_marker(fast_timeout)
+        elif timeout_marker := node.get_closest_marker("timeout"):
+            test_timeout = timeout_marker.args[0]
+            assert isinstance(test_timeout, int | float)
+        elif node.get_closest_marker("slow"):
+            # pytest-skip-slow already handles this.
+            test_timeout = None
+            running_slow_tests = config.getoption("--slow")
+            if not running_slow_tests:
+                indices_to_remove.append(_node_index)
+                continue
+        else:
             logger.debug(
-                f"Test {node.name} doesn't have a `fast`, `very_fast` or `slow` mark. "
+                f"Test {node.name} doesn't have a `fast`, `very_fast`, `slow` or `timeout` mark. "
                 "Assuming it's fast to run (after test setup)."
             )
-            node.add_marker(fast)
-        elif test_is_fast:
-            # The test has `pytest.mark.fast` set.
-            node.add_marker(fast)
-        elif test_is_very_fast:
-            # The test has `pytest.mark.veryfast` set.
-            node.add_marker(very_fast)
-        elif test_is_slow:
-            pass  # could maybe set a timeout even for slow tests, like 60 secs?
-        else:
-            # Test already has a timeout marker. Perhaps we could check its duration and set the
-            # right mark on it?
-            ...
+            node.add_marker(fast_timeout)
+            test_timeout = fast_time
+
+        if cutoff_time is not None:
+            assert cutoff_time > 0
+            if test_timeout is not None:
+                assert test_timeout > 0
+                if test_timeout > cutoff_time:
+                    node.add_marker(
+                        pytest.mark.skip(f"Test takes longer than {cutoff_time}s to run.")
+                    )
+                    # Note: could also remove indices so we don't have thousands of skipped tests..
+                    indices_to_remove.append(_node_index)
+                    continue
+        elif only_running_slow_tests:
+            # IDEA: If we do pytest -m slow --slow, we'd also want to include tests that have a
+            # long(er) timeout than ...?
+            pass
+
+    if indices_to_remove:
+        removed = len(indices_to_remove)
+        total = len(items)
+        warnings.warn(
+            RuntimeWarning(
+                f"De-selecting {removed/total:.0%} of tests ({removed}/{total}) because of their length."
+            )
+        )
+
+    for index in sorted(indices_to_remove, reverse=True):
+        items.pop(index)
 
 
 @pytest.fixture(scope="session")
@@ -576,3 +609,47 @@ def tensor_regression(
         data_regression=data_regression,
         monkeypatch=monkeypatch,
     )
+
+
+# Incremental testing: https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps
+# content of conftest.py
+
+
+# store history of failures per test class name and per index in parametrize (if parametrize used)
+_test_failed_incremental: dict[str, dict[tuple[int, ...], str]] = {}
+
+
+def pytest_runtest_makereport(item, call):
+    if "incremental" in item.keywords:
+        # incremental marker is used
+        if call.excinfo is not None:
+            # the test has failed
+            # retrieve the class name of the test
+            cls_name = str(item.cls)
+            # retrieve the index of the test (if parametrize is used in combination with incremental)
+            parametrize_index = (
+                tuple(item.callspec.indices.values()) if hasattr(item, "callspec") else ()
+            )
+            # retrieve the name of the test function
+            test_name = item.originalname or item.name
+            # store in _test_failed_incremental the original name of the failed test
+            _test_failed_incremental.setdefault(cls_name, {}).setdefault(
+                parametrize_index, test_name
+            )
+
+
+def pytest_runtest_setup(item):
+    if "incremental" in item.keywords:
+        # retrieve the class name of the test
+        cls_name = str(item.cls)
+        # check if a previous test has failed for this class
+        if cls_name in _test_failed_incremental:
+            # retrieve the index of the test (if parametrize is used in combination with incremental)
+            parametrize_index = (
+                tuple(item.callspec.indices.values()) if hasattr(item, "callspec") else ()
+            )
+            # retrieve the name of the first test function to fail for this class name and index
+            test_name = _test_failed_incremental[cls_name].get(parametrize_index, None)
+            # if name found, test has failed for the combination of class name & test name
+            if test_name is not None:
+                pytest.xfail(f"previous test failed ({test_name})")

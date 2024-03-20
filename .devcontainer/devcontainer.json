@@ -48,8 +48,17 @@
 			]
 		}
 	},
-	// IDEA: use this to mount a "$SCRATCH" directory in the host to ~/scratch in the container.
-	// "mounts": [],
+	"containerEnv": {
+		"SCRATCH": "/home/vscode/scratch"
+	},
+	// Mount a "$SCRATCH" directory in the host to ~/scratch in the container.
+	// Mount /network to use this to mount a "$SCRATCH" directory in the host to ~/scratch in the container.
+	"mounts": [
+		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
+		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
+		"source=${localEnv:NETWORK_DIR:/network},target=/network,type=bind,readonly"
+	],
+
 	"runArgs": [
 		"--gpus",
 		"all"

@@ -5,11 +5,10 @@ import functools
 import typing
 from collections.abc import Generator, Iterable
 from functools import partial
-from typing import Any, Concatenate, overload
+from typing import Any, Concatenate
 
 import torch
 from torch import Tensor, nn
-from torch import distributions as dist
 from torch.utils.hooks import RemovableHandle
 
 from project.algorithms.common.layers import (
@@ -22,16 +21,6 @@ from project.utils.types import Module, is_sequence_of
 
 if typing.TYPE_CHECKING:
     from project.networks.layers import Sequential
-
-
-@contextlib.contextmanager
-def get_distributions(
-    network: nn.Module,
-) -> Generator[list[dist.Distribution], None, None]:
-    yielded = []
-    with get_module_inputs(named_modules_of_type(network, Sample)) as distributions:
-        yield yielded
-    yielded.extend(list(distributions.values()))
 
 
 def modules_of_type[ModuleType: Module](
@@ -48,58 +37,6 @@ def named_modules_of_type[ModuleType: Module](
     for name, mod in module.named_modules():
         if isinstance(mod, module_type):
             yield name, mod
-
-
-@contextlib.contextmanager
-def get_block_inputs(
-    sequential_network: Sequential[Module[[T], Any]] | nn.Sequential | Iterable[Module[[T], Any]],
-) -> Generator[list[T], None, None]:
-    yielded: list[T] = []
-    named_layers = [(f"{i}", layer) for i, layer in enumerate(sequential_network)]
-    with get_module_inputs(named_layers) as inputs:
-        # NOTE: This is in the same order as the layers since dicts are ordered.
-        # yield list(inputs.values())
-        yield yielded
-    yielded.extend([inputs[f"{i}"] for i in range(len(named_layers))])
-
-
-@overload
-@contextlib.contextmanager
-def get_block_outputs(
-    sequential_network: nn.Sequential,
-) -> Generator[list[Tensor], None, None]:
-    ...
-
-
-@overload
-@contextlib.contextmanager
-def get_block_outputs(
-    sequential_network: Sequential[Module[..., OutT]],
-) -> Generator[list[OutT], None, None]:
-    ...
-
-
-@overload
-@contextlib.contextmanager
-def get_block_outputs(
-    sequential_network: Iterable[Module[..., OutT]],
-) -> Generator[list[OutT], None, None]:
-    ...
-
-
-@contextlib.contextmanager
-def get_block_outputs(
-    sequential_network: Sequential[Module[..., OutT]]
-    | nn.Sequential
-    | Iterable[Module[..., OutT]],
-) -> Generator[list[OutT], None, None]:
-    yielded: list[OutT] = []
-    named_layers = [(f"{i}", layer) for i, layer in enumerate(sequential_network)]
-    with get_module_outputs(named_layers) as outputs:
-        # NOTE: This is in the same order as the layers since dicts are ordered.
-        # yield list(inputs.values())
-        yield yielded
-    yielded.extend([outputs[f"{i}"] for i in range(len(named_layers))])
 
 
 @contextlib.contextmanager
@@ -270,46 +207,6 @@ def set_layer_inputs(
         handle.remove()
 
 
-@contextlib.contextmanager
-def _save_inputs_and_outputs(
-    layers: Module[[T], OutT] | Iterable[tuple[str, Module[[T], OutT]]],
-) -> Generator[tuple[dict[str, T], dict[str, OutT]], None, None]:
-    named_layers = layers.named_modules() if isinstance(layers, Module) else layers  # type: ignore
-    layer_inputs: dict[str, T] = {}
-    layer_outputs: dict[str, OutT] = {}
-    hook_handles: list[RemovableHandle] = []
-
-    for name, layer in named_layers:
-        assert isinstance(layer, nn.Module)
-        layer_hook = partial(
-            _save_input_and_output_hook,
-            name,
-            layer_inputs,
-            layer_outputs,
-        )
-        hook_handle = layer.register_forward_hook(layer_hook, with_kwargs=True)
-        hook_handles.append(hook_handle)
-
-    yield layer_inputs, layer_outputs
-
-    for hook_handle in hook_handles:
-        hook_handle.remove()
-
-
-@contextlib.contextmanager
-def save_forward_activation_distributions(
-    module: nn.Module,
-) -> Generator[dict[str, torch.distributions.Distribution], None, None]:
-    from .layers import Sample
-
-    named_sampling_layers = dict(named_modules_of_type(module, Sample))
-    with save_all_module_inputs_and_outputs(named_sampling_layers.items()) as (
-        layer_inputs,
-        _,
-    ):
-        yield layer_inputs
-
-
 def _get_input_and_output_shapes_hook(
     _name: str,
     _input_shapes: dict[str, tuple[int, ...]],
@@ -365,27 +262,8 @@ def save_input_output_shapes(
 
     Modifies the module in-place.
     """
-    input_shapes: dict[str, tuple[int, ...]] = {}
-    output_shapes: dict[str, tuple[int, ...]] = {}
-
-    hook_handles: list[RemovableHandle] = []
-
-    for name, layer in module.named_modules():
-        assert isinstance(layer, nn.Module)
-        layer_hook = partial(
-            _get_input_and_output_shapes_hook,
-            name,
-            input_shapes,
-            output_shapes,
-            1,
-        )
-        hook_handle = layer.register_forward_hook(layer_hook, with_kwargs=True)
-        hook_handles.append(hook_handle)
-
-    yield input_shapes, output_shapes
-
-    for hook_handle in hook_handles:
-        hook_handle.remove()
+    with get_input_and_output_shapes(module) as (input_shapes, output_shapes):
+        yield input_shapes, output_shapes
 
     for name, input_shape in input_shapes.items():
         submodule = module

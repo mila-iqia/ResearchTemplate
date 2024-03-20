@@ -1,4 +1,4 @@
-from hydra.core.config_store import ConfigStore
+from hydra_zen import store
 
 from project.algorithms.ppo.ppo import PPO
 
@@ -8,8 +8,6 @@ from .bases.image_classification import ImageClassificationAlgorithm
 from .manual_optimization_example import ManualGradientsExample
 from .rl_example.reinforce import ExampleRLAlgorithm
 
-# Store the different configuration options.
-
 # NOTE: This works the same way as creating config files for each algorithm under
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
 # well as structured config (dataclasses).
@@ -17,11 +15,19 @@ from .rl_example.reinforce import ExampleRLAlgorithm
 # If you add a configuration file under `configs/algorithm`, it will also be available as an option
 # from the command-line, and be validated against the schema.
 
-_cs = ConfigStore.instance()
-# _cs.store(group="algorithm", name="algorithm", node=Algorithm.HParams())
+algorithm_store = store(group="algorithm")
+algorithm_store(Backprop.HParams(), name="backprop")
+algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
+algorithm_store(ExampleRLAlgorithm.HParams(), name="rl_example")
+algorithm_store(PPO.HParams(), name="ppo")
 
-
-_cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
+# from hydra.core.config_store import ConfigStore
+# cs = ConfigStore.instance()
+# cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
+# cs.store(group="algorithm", name="manual_optimization", node=ManualGradientsExample.HParams())
+# cs.store(group="algorithm", name="rl_example", node=ExampleRLAlgorithm.HParams())
+# cs.store(group="algorithm", name="ppo", node=PPO.HParams())
+# Store the different configuration options.
 
 # from hydra_zen import hydrated_dataclass
 
@@ -43,10 +49,6 @@ _cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
 #     hp: PPO.HParams = field(default_factory=PPO.HParams)
 # _cs.store(group="algorithm", name="ppo", node=PpoConfig)
 
-
-_cs.store(group="algorithm", name="manual_optimization", node=ManualGradientsExample.HParams())
-_cs.store(group="algorithm", name="rl_example", node=ExampleRLAlgorithm.HParams())
-_cs.store(group="algorithm", name="ppo", node=PPO.HParams())
 
 __all__ = [
     "Algorithm",

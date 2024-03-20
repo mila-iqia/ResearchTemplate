@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
 from typing import Any, Generic, Literal
 
 import gym
 import torch
+from gym.spaces.utils import flatdim
 from gym.utils.colorize import colorize
 from lightning import LightningDataModule
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from project.datamodules.rl.stacking_utils import stack_dicts
 from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
 
@@ -52,6 +52,13 @@ class RlDataModule(
         train_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
         valid_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
         test_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
+        train_dataloader_wrappers: list[
+            Callable[
+                [Iterable[EpisodeBatch[ActorOutput]]],
+                Iterable[EpisodeBatch[ActorOutput]],
+            ]
+        ]
+        | None = None,
         train_seed: int | None = 123,
         val_seed: int = 42,
     ):
@@ -85,9 +92,19 @@ class RlDataModule(
         self.valid_dataset: RlDataset[ActorOutput] | None = None
         self.test_dataset: RlDataset[ActorOutput] | None = None
 
-        self.train_wrappers = train_wrappers or []
-        self.valid_wrappers = valid_wrappers or []
-        self.test_wrappers = test_wrappers or []
+        self._train_wrappers: tuple = tuple(train_wrappers or ())
+        self._valid_wrappers: tuple = tuple(valid_wrappers or ())
+        self._test_wrappers: tuple = tuple(test_wrappers or ())
+
+        self.train_dataloader_wrappers: (
+            list[
+                Callable[
+                    [Iterable[EpisodeBatch[ActorOutput]]],
+                    Iterable[EpisodeBatch[ActorOutput]],
+                ]
+            ]
+            | None
+        ) = train_dataloader_wrappers
 
         self.train_actor = actor
         self.valid_actor = actor
@@ -97,19 +114,29 @@ class RlDataModule(
         self.valid_seed = val_seed
         self.test_seed = 111
 
-        self._device: torch.device | None = None
+        self._train_dataloader: Iterable[EpisodeBatch[ActorOutput]] | None = None
 
-    def set_actor(self, actor: Actor[Tensor, Tensor, ActorOutput]) -> None:
+    def set_actor[SomeActorOutputType: dict](
+        self, actor: Actor[Tensor, Tensor, SomeActorOutputType]
+    ) -> RlDataModule[SomeActorOutputType]:
+        """Sets the actor to be used for collecting episodes.
+
+        Also potentially changes the type of information stored in the `actor_output` entry in the
+        EpisodeBatches yielded by the dataloaders.
+        """
+        # Note: doing this just to save some typing trouble below.
+        # _actor = cast(Actor[Tensor, Tensor, ActorOutput], actor)
+        _actor = actor
         if self.train_actor is None:
             assert self.test_actor is None
             assert self.valid_actor is None
 
-            self.train_actor = actor
+            self.train_actor = _actor
             # Save some computation by disabling gradient computation. Actor can still turn it on
             # internally necessary with a context manager or decorator.
-            self.valid_actor = torch.no_grad()(torch.inference_mode()(actor))
-            self.test_actor = torch.no_grad()(torch.inference_mode()(actor))
-            return
+            self.valid_actor = torch.no_grad()(torch.inference_mode()(_actor))
+            self.test_actor = torch.no_grad()(torch.inference_mode()(_actor))
+            return self  # type: ignore
 
         assert self.test_actor is not None
         assert self.valid_actor is not None
@@ -122,6 +149,7 @@ class RlDataModule(
             self.valid_dataset.actor = self.valid_actor
         if self.test_dataset is not None:
             self.test_dataset.actor = self.test_actor
+        return self  # type: ignore
 
     def prepare_data(self) -> None:
         # NOTE: We don't use this hook here.
@@ -132,15 +160,95 @@ class RlDataModule(
 
         Called at the beginning of each stage (fit, validate, test).
         """
+        if stage in ["fit", None]:
+            creating = "Recreating" if self.train_env is not None else "Creating"
+            logger.debug(f"{creating} training environment with wrappers {self.train_wrappers}")
+            self.train_env = self._make_env(wrappers=self.train_wrappers)
+        if stage in ["validate", None]:
+            creating = "Recreating" if self.valid_env is not None else "Creating"
+            logger.debug(f"{creating} validation environment with wrappers {self.valid_wrappers}")
+            self.valid_env = self._make_env(wrappers=self.valid_wrappers)
+        if stage in ["test", None]:
+            creating = "Recreating" if self.test_env is not None else "Creating"
+            logger.debug(f"{creating} testing environment with wrappers {self.test_wrappers}")
+            self.test_env = self._make_env(wrappers=self.test_wrappers)
 
-    def _make_env(self, wrappers: list[Callable[[gym.Env], gym.Env]]) -> ToTensorsWrapper:
+    @property
+    def train_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+        return self._train_wrappers
+
+    @train_wrappers.setter
+    def train_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+        wrappers = tuple(wrappers)
+        if self.train_env is not None and wrappers != self._train_wrappers:
+            logger.warn("Training wrappers changed, closing the previous environment.")
+            self.train_env.close()
+            self.train_env = None
+        self._train_wrappers = wrappers
+
+    @property
+    def valid_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+        return self._valid_wrappers
+
+    @valid_wrappers.setter
+    def valid_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+        wrappers = tuple(wrappers)
+        if self.valid_env is not None and wrappers != self._valid_wrappers:
+            logger.warn("validation wrappers changed, closing the previous environment.")
+            self.valid_env.close()
+            self.valid_env = None
+        self._valid_wrappers = wrappers
+
+    @property
+    def test_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+        return self._test_wrappers
+
+    @test_wrappers.setter
+    def test_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+        wrappers = tuple(wrappers)
+        if self.test_env is not None and wrappers != self._test_wrappers:
+            logger.warn("testing wrappers changed, closing the previous environment.")
+            self.test_env.close()
+            self.test_env = None
+        self._valid_wrappers = wrappers
+
+    @property
+    def dims(self) -> tuple[int, ...]:
+        if self.observation_space.shape:
+            return self.observation_space.shape
+        return (flatdim(self.observation_space),)
+
+    @property
+    def action_dims(self) -> int:
+        return flatdim(self.action_space)
+
+    @property
+    def observation_space(self) -> gym.Space:
+        if self.train_env is None:
+            self.prepare_data()
+            self.setup(stage="fit")
+        assert self.train_env is not None
+        return self.train_env.observation_space
+
+    @property
+    def action_space(self) -> gym.Space:
+        if self.train_env is None:
+            self.prepare_data()
+            self.setup(stage="fit")
+        assert self.train_env is not None
+        return self.train_env.action_space
+
+    def _make_env(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> gym.Env:
         # TODO: Use gym.vector.make for vector envs, and pass the single-env wrappers to
         # gym.vector.make.
+        logger.debug(f"Creating a new environment with {len(wrappers)} wrappers:")
         env = self.env_fn()
-        for wrapper in wrappers:
+        for i, wrapper in enumerate(wrappers):
             env = wrapper(env)
+            logger.debug(
+                f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
+            )
         # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
-        logger.debug(f"The episodes will be placed on device {self.device}.")
         env = ToTensorsWrapper(env, device=self.device)
         return env
 
@@ -149,8 +257,6 @@ class RlDataModule(
             # warn("No actor was set, using a random policy.", color="red")
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
-
-        logger.debug(f"Creating training environment with wrappers {self.train_wrappers}")
         self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
         self.train_dataset = RlDataset(
             self.train_env,
@@ -158,15 +264,19 @@ class RlDataModule(
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.train_seed,
         )
-        return DataLoader(
+        dataloader: Iterable[EpisodeBatch[ActorOutput]] = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=0,
             collate_fn=custom_collate_fn,
         )
+        for dataloader_wrapper in self.train_dataloader_wrappers or []:
+            logger.debug(f"Applying dataloader wrapper {dataloader_wrapper}")
+            dataloader = dataloader_wrapper(dataloader)
+        return dataloader
 
-    def val_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
+    def val_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
         if self.valid_actor is None:
             raise _error_actor_required(self, "valid")
 
@@ -177,15 +287,16 @@ class RlDataModule(
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.valid_seed,
         )
-        return DataLoader(
+        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
             self.valid_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=0,
             collate_fn=custom_collate_fn,
         )
+        return dataloader
 
-    def test_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
+    def test_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
         if self.test_actor is None:
             raise _error_actor_required(self, "test")
 
@@ -196,24 +307,19 @@ class RlDataModule(
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.test_seed,
         )
-        return DataLoader(
+        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
             self.test_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=0,
             collate_fn=custom_collate_fn,
         )
+        return dataloader
 
     @property
     def device(self) -> torch.device:
-        """Figures out the right device to place the data on based on the Trainer if possible.
-
-        Otherwise, returns the Cuda device if available, else the CPU device.
-        """
         from lightning.pytorch.accelerators.cuda import CUDAAccelerator
 
-        if self._device is not None:
-            return self._device
         if self.trainer is None:
             return torch.device("cuda" if torch.cuda.is_available() else "cpu")
         return torch.device(
@@ -221,17 +327,6 @@ class RlDataModule(
             if isinstance(self.trainer.accelerator, CUDAAccelerator)
             else "cpu"
         )
-
-    def set_device(self, device: torch.device) -> None:
-        """Sets the device that the episodes should be transferred to."""
-        logger.debug(f"The RL DataLoader will place episode data on device {device}.")
-        self._device = device
-        for env in [self.train_env, self.valid_env, self.test_env]:
-            if env is None:
-                continue
-            for wrapper in wrappers_in(env):
-                if isinstance(wrapper, ToTensorsWrapper):
-                    wrapper.device = device
 
     def teardown(self, stage: StageStr) -> None:
         if stage in ("fit", "validate", None):
@@ -268,28 +363,31 @@ class RlDataModule(
             setattr(self, f"{name}_env", None)
 
 
-def custom_collate_fn(
-    episodes: list[Episode[ActorOutput]],
-) -> EpisodeBatch[ActorOutput]:
+def custom_collate_fn(episodes: list[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
     """Collates a list of episodes into an EpisodeBatch object containing nested tensors."""
+
+    def _stack(tensors: list[torch.Tensor]) -> torch.Tensor:
+        """Stacks tensors using torch.stack if all the sequences have the same length, otherwise
+        uses torch.nested.as_nested_tensor."""
+        if all(t_i.shape == tensors[0].shape for t_i in tensors):
+            return torch.stack(tensors)
+        return torch.nested.as_nested_tensor(tensors)
+
     return EpisodeBatch(
-        observations=torch.nested.as_nested_tensor([ep["observations"] for ep in episodes]),
-        actions=torch.nested.as_nested_tensor([ep["actions"] for ep in episodes]),
-        rewards=torch.nested.as_nested_tensor([ep["rewards"] for ep in episodes]),
+        observations=_stack([ep["observations"] for ep in episodes]),
+        actions=_stack([ep["actions"] for ep in episodes]),
+        rewards=_stack([ep["rewards"] for ep in episodes]),
         # TODO: Could perhaps stack the infos so it mimics what the RecordEpisodeStatistics wrapper
         # does for VectorEnvs.
         infos=[ep["infos"] for ep in episodes],
         terminated=torch.as_tensor([ep["terminated"] for ep in episodes]),
         truncated=torch.as_tensor([ep["terminated"] for ep in episodes]),
-        actor_outputs=stack_dicts([ep["actor_outputs"] for ep in episodes]),
-        # type(episodes[0]["actor_outputs"])(
-        #     **{
-        #         key: torch.nested.as_nested_tensor(
-        #             [ep["actor_outputs"][key] for ep in episodes]
-        #         )
-        #         for key in episodes[0]["actor_outputs"].keys()
-        #     }
-        # ),
+        actor_outputs=type(episodes[0]["actor_outputs"])(
+            **{
+                key: _stack([ep["actor_outputs"][key] for ep in episodes])
+                for key in episodes[0]["actor_outputs"].keys()
+            }
+        ),
     )
 
 
@@ -304,12 +402,3 @@ def _error_actor_required(dm: RlDataModule[Any], name: Literal["train", "valid",
 
 def warn(message, warning_type=RuntimeWarning, color="orange", stacklevel=1):
     warnings.warn(warning_type(colorize(message, color)), stacklevel=stacklevel + 1)
-
-
-def wrappers_in(env: gym.Wrapper | gym.Env) -> list[gym.Wrapper | gym.Env]:
-    """Returns the list of wrappers in the given environment."""
-    wrappers = []
-    while isinstance(env, gym.Wrapper):
-        wrappers.append(env)
-        env = env.env
-    return wrappers

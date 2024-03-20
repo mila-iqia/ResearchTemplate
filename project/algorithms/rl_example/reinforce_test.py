@@ -33,7 +33,7 @@ def get_experiment_config(command_line_overrides: list[str]) -> Config:
 
 class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
     algorithm_type: type[ExampleRLAlgorithm] = ExampleRLAlgorithm
-    algorithm_name: ClassVar[str] = "reinforce_rl"
+    algorithm_name: ClassVar[str] = "rl_example"
 
     metric_name: ClassVar[str] = "train/avg_episode_return"
     lower_is_better: ClassVar[bool] = False

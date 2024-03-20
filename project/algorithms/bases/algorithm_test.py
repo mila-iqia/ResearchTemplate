@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import inspect
 import operator
 import sys
 from collections.abc import Callable, Sequence
@@ -459,14 +460,24 @@ class AlgorithmTests(Generic[AlgorithmType]):
                     f"because {config_type} is a subclass of one of {unsupported_types}."
                 )
             )
-        if supported_types and not issubclass(config_type, tuple(supported_types)):
-            skip_or_xfail(
-                reason=(
-                    f"{self.algorithm_cls.__name__} doesn't support {group}={config_name} "
-                    f"because {config_type} is not a subclass of one of {supported_types}."
+        if supported_types:
+            assert all(inspect.isclass(t) for t in tuple(supported_types)), supported_types
+        if supported_types:
+            if inspect.isclass(config_type):
+                if not issubclass(config_type, tuple(supported_types)):
+                    skip_or_xfail(
+                        reason=(
+                            f"{self.algorithm_cls.__name__} doesn't support {group}={config_name} "
+                            f"because {config_type} is not a subclass of one of {supported_types}."
+                        )
+                    )
+            else:
+                # config_type is not a class. Check if it is in the list of supported types anyway?
+                # or check based on the return type maybe?
+                logger.warning(
+                    f"Unable to check if {config_type=} is within the list of supported types "
+                    f"{supported_types=}!"
                 )
-            )
-
         return True
 
 
@@ -479,6 +490,8 @@ class TestingCallback(Callback):
     When the checks are done, it should call `self.done()` to indicate that the checks have been
     performed.
     """
+
+    __test__ = False
 
     def __init__(self) -> None:
         super().__init__()
