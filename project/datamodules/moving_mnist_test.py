@@ -21,9 +21,7 @@ def data_dir() -> Path:
 
 
 slow_if_not_downloaded = (
-    pytest.mark.slow
-    if not (DATA_DIR / "MovingMNIST").exists()
-    else pytest.mark.timeout(5)
+    pytest.mark.slow if not (DATA_DIR / "MovingMNIST").exists() else pytest.mark.timeout(5)
 )
 
 
@@ -31,9 +29,7 @@ slow_if_not_downloaded = (
 class TestMovingMnist:
     """Tests for the MovingMNIST DataModule."""
 
-    def test_data_dir_is_used(
-        self, data_dir: Path, file_regression: FileRegressionFixture
-    ):
+    def test_data_dir_is_used(self, data_dir: Path, file_regression: FileRegressionFixture):
         datamodule = MovingMnistDataModule(data_dir=data_dir)
         assert datamodule.data_dir == data_dir
         datamodule.prepare_data()
