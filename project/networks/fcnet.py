@@ -8,8 +8,8 @@ import torch
 from gym.spaces.utils import flatdim
 from torch import Tensor, nn
 
-from project.algorithms.rl_example.rl_datamodule import RlDataModule
 from project.datamodules.image_classification import ImageClassificationDataModule
+from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.utils.types.protocols import DataModule
 
 
@@ -26,6 +26,7 @@ class Flatten(nn.Flatten):
             )
         if input.ndim == 3:
             # FIXME: Hacky: don't collapse the `sequence length` dimension here.
+            # TOOD: Perhaps use a named dimension to detect this case?
             return input.reshape([input.shape[0], input.shape[1], -1])
         return super().forward(input)
 

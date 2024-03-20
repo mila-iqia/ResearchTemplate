@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:89f77ffe330bc56c22057f82afac2d5ac9d73a90bd011a75db4eef14db4a2035"
+content_hash = "sha256:33d9ebc01859fcdb83f2298a531af9140fc39bb6739d410331595dd81bfddddc"
 
 [[package]]
 name = "aiohttp"

@@ -32,13 +32,14 @@ from torch.distributions import Normal
 from torch.optim.optimizer import Optimizer
 
 from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.common.hooks import modules_of_type
 from project.algorithms.ppo.dataloader_wrapper import PpoDataLoaderWrapper
 from project.algorithms.ppo.utils import (
     PPOActorOutput,
     discount_cumsum,
 )
-from project.algorithms.rl_example.rl_datamodule import EpisodeBatch, RlDataModule
-from project.algorithms.rl_example.utils import check_and_normalize_box_actions
+from project.datamodules.rl.gym_utils import check_and_normalize_box_actions
+from project.datamodules.rl.rl_datamodule import EpisodeBatch, RlDataModule
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
 
@@ -47,9 +48,8 @@ eps = np.finfo(np.float32).eps.item()
 
 
 def init_linear_layers(module: nn.Module, std=np.sqrt(2), bias_const=0.0):
-    for layer in [module] + list(module.children()):
-        if isinstance(layer, nn.Linear):
-            init_linear_layer(layer, std, bias_const)
+    for layer in modules_of_type(module, nn.Linear):
+        init_linear_layer(layer, std, bias_const)
 
 
 def init_linear_layer(layer: nn.Linear, std=np.sqrt(2), bias_const=0.0):

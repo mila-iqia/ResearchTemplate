@@ -10,7 +10,7 @@ from rich.console import Console
 from torch.utils.data import DataLoader
 from tqdm.rich import tqdm_rich
 
-from project.algorithms.rl_example.dataset import RlDataset
+from project.datamodules.rl.rl_dataset import RlDataset
 
 from .utils import (
     PpoEpisodeBatch,
