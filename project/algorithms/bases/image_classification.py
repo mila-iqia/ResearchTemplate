@@ -17,9 +17,10 @@ from project.utils.types.protocols import Module
 
 
 class ImageClassificationAlgorithm[
-    NetworkType: Module[[Tensor], Tensor],
     BatchType: tuple[Tensor, Tensor],
-](Algorithm[NetworkType, BatchType], ABC):
+    NetworkType: Module[[Tensor], Tensor],
+    StepOutputType: ClassificationOutputs,
+](Algorithm[BatchType, StepOutputType, NetworkType], ABC):
     """Base class for a learning algorithm for image classification.
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common

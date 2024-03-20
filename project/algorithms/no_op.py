@@ -1,8 +1,11 @@
 from typing import Any
 
+import torch
 from torch import nn
 
 from project.algorithms.bases import Algorithm
+from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
+from project.algorithms.common.callback import Callback
 from project.utils.types import PhaseStr, StepOutputDict
 from project.utils.types.protocols import DataModule
 
@@ -14,6 +17,7 @@ class NoOp(Algorithm):
         super().__init__(datamodule=datamodule, network=network)
         # Set this so PyTorch-Lightning doesn't try to train the model using our 'loss'
         self.automatic_optimization = False
+        self.last_step_times: dict[PhaseStr, float] = {}
 
     def shared_step(
         self,
@@ -21,4 +25,12 @@ class NoOp(Algorithm):
         batch_index: int,
         phase: PhaseStr,
     ) -> StepOutputDict:
-        return {"loss": 0.0}
+        fake_loss = torch.rand(1)
+        self.log(f"{phase}/loss", fake_loss)
+        return {"loss": fake_loss}
+
+    def configure_callbacks(self) -> list[Callback]:
+        return super().configure_callbacks() + [MeasureSamplesPerSecondCallback()]
+
+    def configure_optimizers(self):
+        return torch.optim.SGD(self.parameters(), lr=0.123)

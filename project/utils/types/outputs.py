@@ -11,6 +11,7 @@ class StepOutputDict(TypedDict, total=False):
 
     log: dict[str, Tensor | Any]
     """Optional dictionary of things to log at each step."""
+    # TODO: Remove this `log` dict, perhaps it's better to use self.log of the pl module instead?
 
 
 class ClassificationOutputs(StepOutputDict):

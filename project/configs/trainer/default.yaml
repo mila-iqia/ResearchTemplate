@@ -2,7 +2,7 @@ _target_: lightning.Trainer
 
 logger: null
 accelerator: gpu
-strategy: auto
+strategy: null
 devices: 1
 
 min_epochs: 1

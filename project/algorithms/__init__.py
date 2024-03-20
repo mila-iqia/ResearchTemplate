@@ -1,5 +1,6 @@
-from hydra_zen import store
+from hydra_zen import builds, store
 
+from project.algorithms.no_op import NoOp
 from project.algorithms.ppo.ppo import PPO
 
 from .backprop import Backprop
@@ -20,6 +21,7 @@ algorithm_store(Backprop.HParams(), name="backprop")
 algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
 algorithm_store(ExampleRLAlgorithm.HParams(), name="rl_example")
 algorithm_store(PPO.HParams(), name="ppo")
+algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
 
 # from hydra.core.config_store import ConfigStore
 # cs = ConfigStore.instance()

@@ -1,18 +1,30 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Generic
 
-from lightning import LightningModule, Trainer
-from lightning.pytorch.callbacks import Callback
-from torch import Tensor
+from lightning import Callback, LightningModule, Trainer
+from torch import Tensor, nn
+from typing_extensions import TypeVar
 
-from project.utils.types import PhaseStr, StepOutputDict
+from project.datamodules.rl.rl_types import EpisodeBatch
+from project.utils.types import NestedMapping, PhaseStr, StepOutputDict
 from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import get_device
 
+StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, default=StepOutputDict)
 
-class Algorithm[NetworkType: Module, BatchType](LightningModule, ABC):
+NetworkType = TypeVar("NetworkType", bound=Module, default=nn.Module)
+
+BatchType = TypeVar(
+    "BatchType",
+    bound=Tensor | Sequence[Tensor] | NestedMapping[str, Tensor] | EpisodeBatch,
+)
+
+
+class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, NetworkType]):
     """Base class for a learning algorithm.
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
@@ -40,19 +52,19 @@ class Algorithm[NetworkType: Module, BatchType](LightningModule, ABC):
         self.hp = hp or self.HParams()
         self.trainer: Trainer
 
-    def training_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:
+    def training_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
         """Performs a training step."""
         return self.shared_step(batch=batch, batch_index=batch_index, phase="train")
 
-    def validation_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:
+    def validation_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
         """Performs a validation step."""
         return self.shared_step(batch=batch, batch_index=batch_index, phase="val")
 
-    def test_step(self, batch: BatchType, batch_index: int) -> StepOutputDict:
+    def test_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
         """Performs a test step."""
         return self.shared_step(batch=batch, batch_index=batch_index, phase="test")
 
-    def shared_step(self, batch: BatchType, batch_index: int, phase: PhaseStr) -> StepOutputDict:
+    def shared_step(self, batch: BatchType, batch_index: int, phase: PhaseStr) -> StepOutputType:
         """Performs a training/validation/test step.
 
         This must return a dictionary with at least the 'y' and 'logits' keys, and an optional
@@ -76,7 +88,9 @@ class Algorithm[NetworkType: Module, BatchType](LightningModule, ABC):
         """
         return self.network(x)
 
-    def configure_callbacks(self) -> list[Callback]:
+    def configure_callbacks(
+        self,
+    ) -> Sequence[Callback]:
         """Use this to add some callbacks that should always be included with the model."""
         if getattr(self.hp, "use_scheduler", False) and self.trainer and self.trainer.logger:
             from lightning.pytorch.callbacks.lr_monitor import LearningRateMonitor

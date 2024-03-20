@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import (
     Any,
     Literal,
@@ -39,6 +39,7 @@ Ts = TypeVarTuple("Ts", default=Unpack[tuple[Tensor, ...]])
 T = TypeVar("T", default=Tensor)
 
 type NestedDict[K, V] = dict[K, V | NestedDict[K, V]]
+type NestedMapping[K, V] = Mapping[K, V | NestedMapping[K, V]]
 
 
 def is_sequence_of[V](

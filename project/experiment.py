@@ -235,6 +235,12 @@ def instantiate_algorithm(
             )
         return algorithm
 
+    if hasattr(algo_config, "_target_"):
+        # A dataclass of some sort, with a _target_ attribute.
+        algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
+        assert isinstance(algorithm, Algorithm)
+        return algorithm
+
     if not isinstance(algo_config, Algorithm.HParams):
         raise NotImplementedError(
             f"For now the algorithm config can either have a _target_ set to an Algorithm class, "

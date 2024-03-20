@@ -27,6 +27,7 @@ def random_actor(observation: Any, action_space: Space[ActionT]) -> tuple[Action
     return action_space.sample(), {}
 
 
+# todo: make this generic w.r.t. obs / act types once we add envs with more complicated observations.
 class Episode(TypedDict, Generic[ActorOutput]):
     """An Episode where the contents have been stacked into tensors instead of kept in lists."""
 
