@@ -39,7 +39,11 @@
 					"**/CVS": true,
 					"**/.DS_Store": true,
 					"**/Thumbs.db": true,
-					".venv": true
+					".venv": true,
+					".pdm.toml": true,
+					".pdm-python": true,
+					".pdm-build": true,
+					".ruff_cache": true
 				}
 			},
 			// Add the IDs of extensions you want installed when the container is created.
