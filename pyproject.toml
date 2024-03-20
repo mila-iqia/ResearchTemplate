@@ -38,6 +38,7 @@ dev = [
     "pytest-skip-slow>=0.0.5",
     "pytest-env>=1.1.3",
     "pytest-xdist>=3.5.0",
+    "ruff>=0.3.3",
 ]
 [build-system]
 requires = ["setuptools>=61", "wheel"]
@@ -48,5 +49,10 @@ build-backend = "setuptools.build_meta"
 line-length = 99
 indent-width = 4
 # Add the pyupgrade and isort options in addition to the defaults.
-select = ["E4", "E7", "E9", "F", "I", "UP"]
+lint.select = ["E4", "E7", "E9", "F", "I", "UP"]
 
+[[tool.pdm.source]]
+name = "jax"
+url = "https://storage.googleapis.com/jax-releases/jax_cuda_releases.html"
+verify_ssl = true
+type = "find_links"

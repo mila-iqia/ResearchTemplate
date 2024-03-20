@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from logging import getLogger as get_logger
-from typing import Iterable
 
 import numpy as np
 import torch

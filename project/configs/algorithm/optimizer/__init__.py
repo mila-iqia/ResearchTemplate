@@ -1,14 +1,15 @@
 import functools
-from typing import Any, Callable, Protocol, TypeVar, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 import torch
 from hydra_zen import hydrated_dataclass, instantiate
 
-OptimizerType = TypeVar("OptimizerType", bound=torch.optim.Optimizer, covariant=True)
+# OptimizerType = TypeVar("OptimizerType", bound=torch.optim.Optimizer, covariant=True)
 
 
 @runtime_checkable
-class OptimizerConfig(Protocol[OptimizerType]):
+class OptimizerConfig[OptimizerType: torch.optim.Optimizer](Protocol):
     """Configuration for an optimizer.
 
     Returns a partial[OptimizerType] when instantiated.

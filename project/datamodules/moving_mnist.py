@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 
 import torch
 from torch import Tensor
@@ -9,7 +10,7 @@ from torchvision import transforms
 from torchvision.datasets import MovingMNIST, VisionDataset
 from typing_extensions import ParamSpec
 
-from .vision_datamodule import C, H, VisionDataModule, W
+from .bases.vision import C, H, VisionDataModule, W
 
 P = ParamSpec("P")
 
@@ -66,9 +67,7 @@ class MovingMnistDataModule(VisionDataModule[tuple[Tensor, Tensor]]):
     #     return torchvision.transforms.ToTensor()
 
     def prepare_data(self) -> None:
-        network_dataset_dir = Path(
-            "/network/datasets/movingmnist.var/movingmnist_torchvision"
-        )
+        network_dataset_dir = Path("/network/datasets/movingmnist.var/movingmnist_torchvision")
         if network_dataset_dir.exists():
             from project.configs.datamodule import SLURM_TMPDIR
 

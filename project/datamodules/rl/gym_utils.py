@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from logging import getLogger as get_logger
-from typing import Any, Sequence, SupportsFloat
+from typing import Any, SupportsFloat
 
 import gym
 import gym.spaces

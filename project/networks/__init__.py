@@ -1,7 +1,9 @@
-from hydra.core.config_store import ConfigStore
-from torchvision.models import resnet18
 from dataclasses import field
+
+from hydra.core.config_store import ConfigStore
 from hydra_zen import hydrated_dataclass
+from torchvision.models import resnet18
+
 from project.utils.hydra_utils import interpolated_field
 
 from .fcnet import FcNet

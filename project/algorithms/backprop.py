@@ -5,6 +5,7 @@ Uses regular backprop.
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 from dataclasses import dataclass
 from logging import getLogger
@@ -13,29 +14,29 @@ from typing import Any
 import torch
 from hydra_zen import instantiate
 from lightning.pytorch.callbacks import Callback, EarlyStopping
-from torch import Tensor, nn
+from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
-from torchmetrics.classification import MulticlassAccuracy
 
-from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.utils.types import PhaseStr, StepOutputDict
+from project.utils.types.protocols import Module
 
 logger = getLogger(__name__)
 
 
-class Backprop(Algorithm):
+class Backprop(ImageClassificationAlgorithm):
     """Baseline model that uses normal backpropagation."""
 
     # TODO: Make this less specific to Image classification once we add other supervised learning
     # settings.
 
     @dataclass
-    class HParams(Algorithm.HParams):
+    class HParams(ImageClassificationAlgorithm.HParams):
         """Hyper-Parameters of the baseline model."""
 
         # Arguments to be passed to the LR scheduler.
@@ -63,40 +64,19 @@ class Backprop(Algorithm):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: nn.Module,
-        hp: HParams | None = None,
+        network: Module[[Tensor], Tensor],
+        hp: Backprop.HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, hp=hp)
+        super().__init__(datamodule=datamodule, network=network, hp=hp)
         self.datamodule: ImageClassificationDataModule
-        self.hp = hp
-        # NOTE: Setting this property allows PL to infer the shapes and number of params.
-        # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
-        # If possible, we'd like to remove any reference to the device from the algorithm.
-        # device = get_device(self.network)
-        self.example_input_array = torch.rand(
-            [datamodule.batch_size, *datamodule.dims],
-            # device=device,
-        )
-        num_classes: int = datamodule.num_classes
-
-        # IDEA: Could use a dict of metrics from torchmetrics instead of just accuracy:
-        # self.supervised_metrics: dist[str, Metrics]
-        # NOTE: Need to have one per phase! Not 100% sure that I'm not forgetting a phase here.
-        self.train_accuracy = MulticlassAccuracy(num_classes=num_classes)
-        self.val_accuracy = MulticlassAccuracy(num_classes=num_classes)
-        self.test_accuracy = MulticlassAccuracy(num_classes=num_classes)
-        self.train_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
-        self.val_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
-        self.test_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
-
         self.hp: Backprop.HParams
         self.automatic_optimization = True
 
         # Initialize any lazy weights.
         _ = self.network(self.example_input_array)
-
-        # TODO: Check that this works with the dataclasses.
-        self.save_hyperparameters({"network_type": type(network), "hp": self.hp})
+        self.save_hyperparameters(
+            {"network_type": type(network), "hp": dataclasses.asdict(self.hp)}
+        )
 
     def forward(self, input: Tensor) -> Tensor:  # type: ignore
         # Dummy forward pass, not used in practice. We just implement it so that PL can

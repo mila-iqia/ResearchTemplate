@@ -1,28 +1,10 @@
-from typing import Callable
+from collections.abc import Callable
 
-import torch
-from torch import Tensor
 from torchvision import transforms
 
 
 def imagenet_normalization() -> Callable:
     return transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
-
-
-def cifar10_normalization() -> Callable:
-    return transforms.Normalize(
-        mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
-        std=[x / 255.0 for x in [63.0, 62.1, 66.7]],
-    )
-
-
-def cifar10_unnormalization(x: Tensor) -> Tensor:
-    mean = torch.as_tensor([x / 255.0 for x in [125.3, 123.0, 113.9]], device=x.device).view(
-        [1, 1, 3]
-    )
-    std = torch.as_tensor([x / 255.0 for x in [63.0, 62.1, 66.7]], device=x.device).view([1, 1, 3])
-    assert x.shape[-3:] == (32, 32, 3), x.shape
-    return (x * std) + mean
 
 
 def stl10_normalization() -> Callable:

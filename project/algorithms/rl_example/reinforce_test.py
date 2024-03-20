@@ -4,50 +4,68 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from hydra_zen import instantiate
+from hydra import compose, initialize_config_module
+from omegaconf import OmegaConf
+from torch import nn
 
-from project.algorithms.bases.algorithm_test import (
-    AlgorithmTests,
-    get_all_datamodule_names,
-    get_all_network_names,
-    get_experiment_config,
-)
+from project.algorithms.bases.algorithm_test import AlgorithmTests
 from project.algorithms.rl_example.reinforce import ExampleRLAlgorithm
-from project.algorithms.rl_example.rl_datamodule import RlDataModule
 from project.configs.config import Config
-from project.experiment import setup_experiment
+from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.experiment import instantiate_datamodule, setup_experiment
 from project.main import run
+from project.networks.fcnet import FcNet
+from project.utils.types import DataModule
+
+
+def get_experiment_config(command_line_overrides: list[str]) -> Config:
+    print(f"overrides: {' '.join(command_line_overrides)}")
+    with initialize_config_module("beyond_backprop.configs"):
+        config = compose(
+            config_name="config",
+            overrides=command_line_overrides,
+        )
+
+    config = OmegaConf.to_object(config)
+    assert isinstance(config, Config)
+    return config
 
 
 class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
     algorithm_type: type[ExampleRLAlgorithm] = ExampleRLAlgorithm
-    algorithm_name: ClassVar[str] = "rl_example"
+    algorithm_name: ClassVar[str] = "reinforce_rl"
 
-    unsupported_datamodule_names: ClassVar[list[str]] = list(
-        set(get_all_datamodule_names()) - {"rl", "cartpole"}
-    )
-    unsupported_network_names: ClassVar[list[str]] = list(set(get_all_network_names()) - {"fcnet"})
+    metric_name: ClassVar[str] = "train/avg_episode_return"
+    lower_is_better: ClassVar[bool] = False
+
+    # --------------------------
+
+    _supported_datamodule_types: ClassVar[list[type[DataModule]]] = [RlDataModule]
+    # TODO: This isn't actually true: we could use pretty much an arbitrary network with this algo.
+    _supported_network_types: ClassVar[list[type[nn.Module]]] = [FcNet]
 
     @pytest.fixture(scope="class")
-    def datamodule(self, hydra_options: Config) -> RlDataModule:
-        datamodule = instantiate(hydra_options.datamodule)
+    def datamodule(self, experiment_config: Config) -> RlDataModule:
+        datamodule = instantiate_datamodule(experiment_config)
         assert isinstance(datamodule, RlDataModule)
         # assert isinstance(datamodule, DataModule)
         return datamodule
 
-    @pytest.fixture
+    @pytest.fixture(scope="function")
     def algorithm(self, algorithm_kwargs: dict, datamodule: RlDataModule) -> ExampleRLAlgorithm:
         algo = self.algorithm_cls(**algorithm_kwargs)
         assert algo.datamodule is datamodule
         return algo
 
+    # TODO:
+    @pytest.mark.skip(
+        reason=(
+            "TODO: Double-check this, but I think thhe 'test overfit one batch' test already "
+            "does pretty much the same thing as this here."
+        )
+    )
     @pytest.mark.parametrize(
-        (
-            "rl_datamodule_name",
-            "initial_state_seed",
-            "num_training_iterations",
-            "expected_reward",
-        ),
+        ("rl_datamodule_name", "initial_state_seed", "num_training_iterations", "expected_reward"),
         [
             (
                 "pendulum",
@@ -114,7 +132,7 @@ class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
         assert config.trainer["max_epochs"] == num_training_iterations
 
         experiment = setup_experiment(config)
-        _, metrics = run(experiment)
+        _, _, metrics = run(experiment)
         # Get the validation metric if present, else the training metric.
         average_episode_reward = metrics.get(
             "val/avg_episode_reward", metrics.get("train/avg_episode_reward")
