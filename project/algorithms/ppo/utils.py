@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from typing import TypedDict
+
 import numpy as np
 import torch
 from torch import Tensor
 
-from project.algorithms.rl_example.rl_datamodule import EpisodeBatch
-from project.algorithms.rl_example.types import ActorOutput
+from project.datamodules.rl.rl_datamodule import EpisodeBatch
 
 
-class PPOActorOutput(ActorOutput):
+class PPOActorOutput(TypedDict):
     """Additional outputs of the Actor (besides the actions to take) at a given step in the env.
 
     This should be used to store whatever is needed to train the model later (e.g. the action log-

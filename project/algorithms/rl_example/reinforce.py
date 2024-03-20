@@ -25,6 +25,7 @@ from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.datamodules.rl.rl_types import EpisodeBatch
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
+from project.utils.types.protocols import Module
 
 logger = get_logger(__name__)
 # torch.set_float32_matmul_precision("high")
@@ -54,7 +55,9 @@ This just means "EpisodeBatch objects where the actor outputs are of type Exampl
 """
 
 
-class ExampleRLAlgorithm(Algorithm[FcNet, EpisodeBatch], LightningModule):
+class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
+    Algorithm[ModuleType, EpisodeBatch], LightningModule
+):
     """Example of a Reinforcement Learning algorithm: Reinforce.
 
     TODO: Figure out how to make this algorithm applicable in Supervised Learning as desired.
@@ -67,8 +70,8 @@ class ExampleRLAlgorithm(Algorithm[FcNet, EpisodeBatch], LightningModule):
 
     def __init__(
         self,
-        datamodule: RlDataModule[ExampleActorOutput],
-        network: FcNet,
+        datamodule: RlDataModule,
+        network: ModuleType,
         hp: ExampleRLAlgorithm.HParams | None = None,
     ):
         """
@@ -188,10 +191,24 @@ class ExampleRLAlgorithm(Algorithm[FcNet, EpisodeBatch], LightningModule):
             avg_episode_length = sum(episode_lengths) / batch_size
             avg_episode_reward = episode_total_rewards.mean(0)
             avg_episode_return = sum(returns.select(dim=1, index=0)) / batch_size
-            log_kwargs = dict(prog_bar=True, batch_size=batch_size)
-            self.log(f"{phase}/avg_episode_length", avg_episode_length, **log_kwargs)
-            self.log(f"{phase}/avg_episode_reward", avg_episode_reward, **log_kwargs)
-            self.log(f"{phase}/avg_episode_return", avg_episode_return, **log_kwargs)
+            self.log(
+                f"{phase}/avg_episode_length",
+                avg_episode_length,
+                prog_bar=True,
+                batch_size=batch_size,
+            )
+            self.log(
+                f"{phase}/avg_episode_reward",
+                avg_episode_reward,
+                prog_bar=True,
+                batch_size=batch_size,
+            )
+            self.log(
+                f"{phase}/avg_episode_return",
+                avg_episode_return,
+                prog_bar=True,
+                batch_size=batch_size,
+            )
 
         return {"loss": policy_loss}
 
@@ -208,9 +225,9 @@ class ExampleRLAlgorithm(Algorithm[FcNet, EpisodeBatch], LightningModule):
             len(self.datamodule.train_wrappers) == 0
             or self.datamodule.train_wrappers[-1] is not RecordEpisodeStatistics
         )
-        self.datamodule.train_wrappers.extend(self.gym_wrappers_to_add(videos_subdir="train"))
-        self.datamodule.valid_wrappers.extend(self.gym_wrappers_to_add(videos_subdir="valid"))
-        self.datamodule.test_wrappers.extend(self.gym_wrappers_to_add(videos_subdir="test"))
+        self.datamodule.train_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="train"))
+        self.datamodule.valid_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="valid"))
+        self.datamodule.test_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="test"))
 
     def gym_wrappers_to_add(self, videos_subdir: str) -> list[Callable[[gym.Env], gym.Env]]:
         video_folder = str(self.log_dir / "videos" / videos_subdir)
@@ -334,8 +351,9 @@ def main():
     # env = wrappers.TorchWrapper(env, device=torch.device("cuda"))
 
     network = FcNet(
+        # todo: change to `input_dims` and pass flatdim(observation_space) instead.
         input_shape=datamodule.env.observation_space.shape,
-        output_shape=datamodule.env.action_space.shape,
+        output_dims=gym.spaces.flatdim(datamodule.env.action_space),
     )
 
     algorithm = ExampleRLAlgorithm(datamodule=datamodule, network=network)
