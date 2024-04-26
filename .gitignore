@@ -166,3 +166,4 @@ cython_debug/
 wandb
 logs
 lightning_logs
+.vscode

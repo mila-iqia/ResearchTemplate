@@ -30,6 +30,7 @@
 						"source.organizeImports.ruff": "explicit"
 					},
 					"editor.defaultFormatter": "charliermarsh.ruff",
+					"defaultInterpreterPath": ".venv/bin/python",
 					"editor.formatOnType": true
 				},
 				"files.exclude": {
@@ -70,7 +71,8 @@
 
 	"runArgs": [
 		"--gpus",
-		"all"
+		"all",
+		"--ipc=host"
 	],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
@@ -79,8 +81,8 @@
 		// "pdm-pep-582": "pdm --pep582 >> ~/.bash_profile",
 		"pdm": "pdm sync",
 		"pre-commit": "pre-commit install --install-hooks"
+		// "activate_venv": "source .venv/bin/activate"
 	}
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
