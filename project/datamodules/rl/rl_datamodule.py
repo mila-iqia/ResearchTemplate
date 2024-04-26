@@ -92,19 +92,11 @@ class RlDataModule(
         self.valid_dataset: RlDataset[ActorOutput] | None = None
         self.test_dataset: RlDataset[ActorOutput] | None = None
 
-        self._train_wrappers: tuple = tuple(train_wrappers or ())
-        self._valid_wrappers: tuple = tuple(valid_wrappers or ())
-        self._test_wrappers: tuple = tuple(test_wrappers or ())
+        self._train_wrappers = tuple(train_wrappers or ())
+        self._valid_wrappers = tuple(valid_wrappers or ())
+        self._test_wrappers = tuple(test_wrappers or ())
 
-        self.train_dataloader_wrappers: (
-            list[
-                Callable[
-                    [Iterable[EpisodeBatch[ActorOutput]]],
-                    Iterable[EpisodeBatch[ActorOutput]],
-                ]
-            ]
-            | None
-        ) = train_dataloader_wrappers
+        self.train_dataloader_wrappers = train_dataloader_wrappers
 
         self.train_actor = actor
         self.valid_actor = actor
@@ -172,6 +164,70 @@ class RlDataModule(
             creating = "Recreating" if self.test_env is not None else "Creating"
             logger.debug(f"{creating} testing environment with wrappers {self.test_wrappers}")
             self.test_env = self._make_env(wrappers=self.test_wrappers)
+
+    def train_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
+        if self.train_actor is None:
+            # warn("No actor was set, using a random policy.", color="red")
+            # self.train_actor = random_actor
+            raise _error_actor_required(self, "train")
+        self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
+        self.train_dataset = RlDataset(
+            self.train_env,
+            actor=self.train_actor,
+            episodes_per_epoch=self.episodes_per_epoch,
+            seed=self.train_seed,
+        )
+        dataloader: Iterable[EpisodeBatch[ActorOutput]] = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=custom_collate_fn,
+        )
+        for dataloader_wrapper in self.train_dataloader_wrappers or []:
+            logger.debug(f"Applying dataloader wrapper {dataloader_wrapper}")
+            dataloader = dataloader_wrapper(dataloader)
+        return dataloader
+
+    def val_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
+        if self.valid_actor is None:
+            raise _error_actor_required(self, "valid")
+
+        self.valid_env = self.valid_env or self._make_env(wrappers=self.valid_wrappers)
+        self.valid_dataset = RlDataset(
+            self.valid_env,
+            actor=self.valid_actor,
+            episodes_per_epoch=self.episodes_per_epoch,
+            seed=self.valid_seed,
+        )
+        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
+            self.valid_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=custom_collate_fn,
+        )
+        return dataloader
+
+    def test_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
+        if self.test_actor is None:
+            raise _error_actor_required(self, "test")
+
+        self.test_env = self.test_env or self._make_env(wrappers=self.test_wrappers)
+        self.test_dataset = RlDataset(
+            self.test_env,
+            actor=self.test_actor,
+            episodes_per_epoch=self.episodes_per_epoch,
+            seed=self.test_seed,
+        )
+        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=custom_collate_fn,
+        )
+        return dataloader
 
     @property
     def train_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
@@ -249,73 +305,8 @@ class RlDataModule(
                 f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
             )
         # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
-        # TODO: There should be a wrapper to give back np.float32 instead of np.float64.
         env = ToTensorsWrapper(env, device=self.device)
         return env
-
-    def train_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
-        if self.train_actor is None:
-            # warn("No actor was set, using a random policy.", color="red")
-            # self.train_actor = random_actor
-            raise _error_actor_required(self, "train")
-        self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
-        self.train_dataset = RlDataset(
-            self.train_env,
-            actor=self.train_actor,
-            episodes_per_epoch=self.episodes_per_epoch,
-            seed=self.train_seed,
-        )
-        dataloader: Iterable[EpisodeBatch[ActorOutput]] = DataLoader(
-            self.train_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=custom_collate_fn,
-        )
-        for dataloader_wrapper in self.train_dataloader_wrappers or []:
-            logger.debug(f"Applying dataloader wrapper {dataloader_wrapper}")
-            dataloader = dataloader_wrapper(dataloader)
-        return dataloader
-
-    def val_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
-        if self.valid_actor is None:
-            raise _error_actor_required(self, "valid")
-
-        self.valid_env = self.valid_env or self._make_env(wrappers=self.valid_wrappers)
-        self.valid_dataset = RlDataset(
-            self.valid_env,
-            actor=self.valid_actor,
-            episodes_per_epoch=self.episodes_per_epoch,
-            seed=self.valid_seed,
-        )
-        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
-            self.valid_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=custom_collate_fn,
-        )
-        return dataloader
-
-    def test_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
-        if self.test_actor is None:
-            raise _error_actor_required(self, "test")
-
-        self.test_env = self.test_env or self._make_env(wrappers=self.test_wrappers)
-        self.test_dataset = RlDataset(
-            self.test_env,
-            actor=self.test_actor,
-            episodes_per_epoch=self.episodes_per_epoch,
-            seed=self.test_seed,
-        )
-        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
-            self.test_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=custom_collate_fn,
-        )
-        return dataloader
 
     @property
     def device(self) -> torch.device:

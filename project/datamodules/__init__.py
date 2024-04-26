@@ -1,10 +1,10 @@
+from .bases.image_classification import ImageClassificationDataModule
 from .bases.vision import VisionDataModule
-from .cifar10 import CIFAR10DataModule, cifar10_normalization
-from .fashion_mnist import FashionMNISTDataModule
-from .image_classification import ImageClassificationDataModule
-from .imagenet32 import ImageNet32DataModule, imagenet32_normalization
-from .mnist import MNISTDataModule
 from .rl.rl_datamodule import RlDataModule
+from .vision.cifar10 import CIFAR10DataModule, cifar10_normalization
+from .vision.fashion_mnist import FashionMNISTDataModule
+from .vision.imagenet32 import ImageNet32DataModule, imagenet32_normalization
+from .vision.mnist import MNISTDataModule
 
 __all__ = [
     "cifar10_normalization",

@@ -10,7 +10,7 @@ from torchvision import transforms
 from torchvision.datasets import MovingMNIST, VisionDataset
 from typing_extensions import ParamSpec
 
-from .bases.vision import C, H, VisionDataModule, W
+from ..bases.vision import C, H, VisionDataModule, W
 
 P = ParamSpec("P")
 

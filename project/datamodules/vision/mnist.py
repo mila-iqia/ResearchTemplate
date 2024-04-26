@@ -10,7 +10,7 @@ from torchvision.transforms import v2 as transforms
 
 from project.utils.types import C, H, W
 
-from .bases.vision import VisionDataModule
+from ..bases.vision import VisionDataModule
 
 
 def mnist_train_transforms():

@@ -4,7 +4,7 @@ from lightning import Trainer
 from torch import Tensor, nn
 
 from project.algorithms.bases.algorithm import Algorithm, BatchType
-from project.algorithms.common.callback import Callback
+from project.algorithms.callbacks.callback import Callback
 from project.algorithms.ppo.utils import get_episode_lengths
 from project.utils.types import PhaseStr, StepOutputDict, is_sequence_of
 
