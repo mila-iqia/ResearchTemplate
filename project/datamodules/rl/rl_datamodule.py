@@ -249,6 +249,7 @@ class RlDataModule(
                 f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
             )
         # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
+        # TODO: There should be a wrapper to give back np.float32 instead of np.float64.
         env = ToTensorsWrapper(env, device=self.device)
         return env
 

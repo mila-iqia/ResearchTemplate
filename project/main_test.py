@@ -53,7 +53,7 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=example_rl"], ExampleRLAlgorithm.HParams),
+        (["algorithm=rl_example"], ExampleRLAlgorithm.HParams),
         (["algorithm=backprop"], Backprop.HParams),
     ],
     ids=_ids,

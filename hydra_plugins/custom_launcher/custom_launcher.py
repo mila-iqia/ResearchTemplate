@@ -111,7 +111,7 @@ class CustomSlurmQueueConf(SlurmQueueConf):
     exclude: str | None = None
     gres: str | None = None
     cpus_per_gpu: int | None = None
-    gpus_per_task: int | str | None = None
+    gpus_per_task: str | None = None
     mem_per_gpu: str | None = None
     mem_per_cpu: str | None = None
     account: str | None = None

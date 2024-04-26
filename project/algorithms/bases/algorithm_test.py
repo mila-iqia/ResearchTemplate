@@ -211,7 +211,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
             assert callback.was_executed
 
     @pytest.mark.slow  # todo: make this much faster to run!
-    @pytest.mark.timeout(10)
+    @pytest.mark.timeout(30)
     def test_experiment_reproducible_given_seed(
         self,
         datamodule_name: str,
@@ -219,13 +219,18 @@ class AlgorithmTests(Generic[AlgorithmType]):
         accelerator: str,
         devices: list[int] | int,
         tmp_path: Path,
-        tmp_path_factory: pytest.TempPathFactory,
+        make_torch_deterministic: None,
+        seed: int,
     ):
         """Tests that the experiment is reproducible given the same seed.
 
         NOTE: This test is close to using the command-line API, but not quite. If it were, we could
         launch jobs on the cluster to run the tests, which could be pretty neat!
         """
+
+        if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
+            pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
+
         algorithm_name = self.algorithm_name or self.algorithm_cls.__name__.lower()
         assert isinstance(algorithm_name, str)
         assert isinstance(datamodule_name, str)

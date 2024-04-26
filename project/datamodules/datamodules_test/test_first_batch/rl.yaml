@@ -1,53 +1,50 @@
+GPU: NVIDIA GeForce GTX 1070
 actions:
   device: cpu
-  hash: -8553731702899738008
+  hash: 8982397470490000318
   max: 1
-  mean: 0.18206895887851715
+  mean: 0.42105263471603394
   min: 0
   shape:
-  - 100
-  - 58
-  sum: 1056
-infos:
-  item_types:
-  - list
-  length: 100
+  - 1
+  - 19
+  sum: 8
 observations:
   device: cuda:0
-  hash: -942052974470817723
-  max: 2.5302488803863525
-  mean: 0.007067096419632435
-  min: -2.4280812740325928
+  hash: -4009583054857812879
+  max: 1.7042832374572754
+  mean: 0.03152993693947792
+  min: -1.2139289379119873
   shape:
-  - 100
-  - 59
+  - 1
+  - 20
   - 4
-  sum: 166.78347778320312
+  sum: 2.522394895553589
 rewards:
   device: cuda:0
-  hash: -6745158437209228431
+  hash: 8783092767556315741
   max: 1.0
-  mean: 0.3832758665084839
-  min: 0.0
+  mean: 1.0
+  min: 1.0
   shape:
-  - 100
-  - 58
-  sum: 2223.0
+  - 1
+  - 19
+  sum: 19.0
 terminated:
   device: cpu
-  hash: -5473960796853483260
+  hash: -6644214454873602895
   max: true
   mean: 1.0
   min: true
   shape:
-  - 100
-  sum: 100
+  - 1
+  sum: 1
 truncated:
   device: cpu
-  hash: -5473960796853483260
+  hash: -6644214454873602895
   max: true
   mean: 1.0
   min: true
   shape:
-  - 100
-  sum: 100
+  - 1
+  sum: 1

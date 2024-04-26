@@ -23,6 +23,8 @@ algorithm_store(ExampleRLAlgorithm.HParams(), name="rl_example")
 algorithm_store(PPO.HParams(), name="ppo")
 algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
 
+algorithm_store.add_to_hydra_store()
+
 # from hydra.core.config_store import ConfigStore
 # cs = ConfigStore.instance()
 # cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
