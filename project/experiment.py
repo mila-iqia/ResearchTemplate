@@ -20,7 +20,7 @@ from torch import nn
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
-from project.datamodules.image_classification import (
+from project.datamodules.bases.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.rl.rl_datamodule import RlDataModule

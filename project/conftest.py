@@ -27,8 +27,8 @@ from project.algorithms.common.hooks import (
 )
 from project.configs.config import Config
 from project.configs.datamodule import DATA_DIR
+from project.datamodules.bases.image_classification import ImageClassificationDataModule
 from project.datamodules.bases.vision import VisionDataModule, num_cpus_on_node
-from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,

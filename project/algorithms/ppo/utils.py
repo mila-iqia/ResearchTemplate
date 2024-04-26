@@ -60,7 +60,6 @@ def discount_cumsum(x: Tensor, discount: float, dim: int = -1) -> Tensor:
     returns_list = []
     for reward_at_that_step in reversed(rewards_at_each_step):
         discounted_future_values = reward_at_that_step + discount * discounted_future_values
-        # TODO: This is perhaps slower, but doesn't assume that dim=0
         returns_list.append(discounted_future_values)
         # returns[step] = discounted_future_values
 
