@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Sequence
 from logging import getLogger as get_logger
 from typing import Any, SupportsFloat
@@ -108,7 +109,9 @@ class ToTensorsWrapper(ObservationWrapper, ActionWrapper, gym.Env[Tensor, Tensor
         return self.observation(observation), reward, terminated, truncated, info
 
     def observation(self, observation: np.ndarray) -> Tensor:
-        return torch.as_tensor(observation, device=self.device)
+        return torch.as_tensor(
+            observation, dtype=self.observation_space.torch_dtype, device=self.device
+        )
 
     def action(self, action: Tensor) -> np.ndarray:
         return action.detach().cpu().numpy()
@@ -156,9 +159,21 @@ class TensorBox(gym.spaces.Box, gym.spaces.Space[TensorType]):
         assert isinstance(self.torch_dtype, torch.dtype)
         self.low_tensor = torch.as_tensor(self.low, dtype=self.torch_dtype, device=self.device)
         self.high_tensor = torch.as_tensor(self.high, dtype=self.torch_dtype, device=self.device)
+        # todo: Can we let the dtype be a torch dtype instead?
+        self.dtype = self.torch_dtype
+
+    @contextlib.contextmanager
+    def _use_np_dtype(self):
+        dtype_before = self.dtype
+        self.dtype = self.np_dtype
+        yield
+        self.dtype = dtype_before
 
     def sample(self, mask: None = None) -> Tensor:
-        return torch.as_tensor(super().sample(mask), dtype=self.torch_dtype, device=self.device)
+        with self._use_np_dtype():
+            return torch.as_tensor(
+                super().sample(mask), dtype=self.torch_dtype, device=self.device
+            )
 
     def contains(self, x) -> bool:
         if isinstance(x, Tensor):

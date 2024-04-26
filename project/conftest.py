@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import os
 import random
 import sys
@@ -16,7 +15,6 @@ import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize_config_module
-from hydra.core.global_hydra import GlobalHydra
 from lightning import seed_everything
 from omegaconf import DictConfig, open_dict
 from pytest_regressions.data_regression import DataRegressionFixture
@@ -316,12 +314,10 @@ def setup_hydra_for_tests_and_compose(
     tmp_path_factory: pytest.TempPathFactory | None = None,
     tmp_path: Path | None = None,
 ):
-    with (
-        contextlib.nullcontext()
-        if GlobalHydra().is_initialized()
-        else initialize_config_module(
-            config_module="project.configs", job_name="test", version_base="1.2"
-        )
+    with initialize_config_module(
+        config_module="project.configs",
+        job_name="test",
+        version_base="1.2",
     ):
         config = compose(
             config_name="config",

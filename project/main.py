@@ -13,7 +13,6 @@ import wandb
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 
-from project.algorithms import algorithm_store
 from project.configs.config import Config
 from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.experiment import Experiment, setup_experiment
@@ -26,8 +25,6 @@ if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
 logger = get_logger(__name__)
 
 project_name = Path(__file__).parent.name
-
-algorithm_store.add_to_hydra_store()
 
 
 @hydra.main(
@@ -87,7 +84,7 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
     # exp.trainer.logger.log_hyperparams()
     # When overfitting on a single batch or only training, we return the train error.
     if (experiment.trainer.limit_val_batches == experiment.trainer.limit_test_batches == 0) or (
-        experiment.trainer.overfit_batches == 1
+        experiment.trainer.overfit_batches == 1  # type: ignore
     ):
         # We want to report the training error.
         metrics = {

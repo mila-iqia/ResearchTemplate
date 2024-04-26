@@ -30,12 +30,16 @@ def test_first_batch(
 
         assert datamodule.train_seed is not None
         datamodule.set_actor(random_actor)
+        # todo: doesn't quote work yet with the `info` dict.
 
     datamodule.prepare_data()
     datamodule.setup("fit")
 
     batch = next(iter(datamodule.train_dataloader()))
     if isinstance(batch, dict):
+        if "infos" in batch:
+            # todo: fix this, unsupported because of `object` dtype.
+            batch.pop("infos")
         tensor_regression.check(batch)
     else:
         assert is_sequence_of(batch, Tensor)

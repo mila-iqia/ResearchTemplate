@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
 
-import torch
 from hydra_zen import instantiate
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor
@@ -23,7 +22,8 @@ from project.algorithms.bases.image_classification import ImageClassificationAlg
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
-from project.utils.types import PhaseStr, StepOutputDict
+from project.utils.types import PhaseStr
+from project.utils.types.outputs import ClassificationOutputs
 from project.utils.types.protocols import Module
 
 logger = getLogger(__name__)
@@ -87,9 +87,9 @@ class Backprop(ImageClassificationAlgorithm):
     def shared_step(
         self,
         batch: tuple[Tensor, Tensor],
-        batch_index: int,
+        batch_idx: int,
         phase: PhaseStr,
-    ) -> StepOutputDict:
+    ) -> ClassificationOutputs:
         x, y = batch
         logits = self(x)
         # NOTE: There's an issue with PyTorch-Lightning's precision plugin, it assumes that the
@@ -104,17 +104,17 @@ class Backprop(ImageClassificationAlgorithm):
         loss = total_loss.mean()
         self.log(f"{phase}/loss", loss, rank_zero_only=True)
 
-        probs = torch.softmax(logits, -1)
-        accuracy = getattr(self, f"{phase}_accuracy")
-        top5_accuracy = getattr(self, f"{phase}_top5_accuracy")
+        # probs = torch.softmax(logits, -1)
+        # accuracy = getattr(self, f"{phase}_accuracy")
+        # top5_accuracy = getattr(self, f"{phase}_top5_accuracy")
 
-        # TODO: It's a bit confusing, not sure if this is the right way to use this:
-        accuracy(probs, y)
-        top5_accuracy(probs, y)
-        prog_bar = phase == "train"
-        self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
-        self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
-        return {"loss": loss}
+        # # TODO: It's a bit confusing, not sure if this is the right way to use this:
+        # accuracy(probs, y)
+        # top5_accuracy(probs, y)
+        # prog_bar = phase == "train"
+        # self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
+        # self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
+        return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self) -> dict:
         """Creates the optimizers and the LR schedulers (if needed)."""

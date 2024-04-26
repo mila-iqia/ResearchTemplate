@@ -123,7 +123,7 @@ class PPO(Algorithm):
         (Always between 0 and 1, close to 1.)
         """
 
-        total_timesteps: int = 1000000
+        total_timesteps: int = 1_000_000
         """Total timesteps of the experiments."""
         num_envs: int = 1
         """The number of parallel game environments."""
@@ -173,9 +173,7 @@ class PPO(Algorithm):
         super().__init__(datamodule, network, hp=hp)
         self.hp: PPO.HParams
         self.network: FcNet
-        self.datamodule: RlDataModule[PPOActorOutput] = self.datamodule.set_actor(
-            actor=self.forward
-        )
+        self.datamodule: RlDataModule[PPOActorOutput] = self.datamodule.set_actor(actor=self)
         assert isinstance(self.datamodule, RlDataModule)
 
         # NOTE: assuming continuous actions for now.
@@ -189,6 +187,11 @@ class PPO(Algorithm):
         action_dims = flatdim(self.datamodule.action_space)
 
         assert isinstance(network, FcNet), "Assuming a fully connected network for now"
+
+        if any(isinstance(p, nn.UninitializedParameter) for p in network.parameters()):
+            sample = self.datamodule.observation_space.sample()
+            _ = network(sample)
+
         if network.output_dims != action_dims:
             last_layer = network[-1]
             assert isinstance(last_layer, nn.Linear)

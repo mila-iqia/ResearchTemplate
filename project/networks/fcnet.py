@@ -91,10 +91,9 @@ class FcNet(nn.Sequential):
             else:
                 block_layers.append(nn.Linear(in_dims, out_dims, bias=self.hparams.use_bias))
 
-            if self.hparams.dropout_rate != 0.0:
-                block_layers.append(nn.Dropout(p=self.hparams.dropout_rate))
-
             if block_index != len(self.hparams.hidden_dims):
+                if self.hparams.dropout_rate != 0.0:
+                    block_layers.append(nn.Dropout(p=self.hparams.dropout_rate))
                 block_layers.append(self.hparams.activation_class())
 
             block = nn.Sequential(*block_layers)

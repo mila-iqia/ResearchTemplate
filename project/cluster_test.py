@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import os
+import shutil
 import subprocess
 import warnings
 from collections.abc import Callable, Mapping
@@ -32,6 +33,7 @@ from project.utils.types import Dataclass
 PROJECT_NAME = "project"  # TODO: Change this to the name of your project.
 TEST_JOB_NAME = "cluster_test"
 
+# TODO: get output of savail instead.
 gpu_types = [
     "1g.10gb",  # MIG-ed A100 GPU
     "2g.20gb",  # MIG-ed A100 GPU
@@ -48,20 +50,27 @@ gpu_types = [
         ],
     ),
 ]
+gpu_types = [None]
+
+pytestmark = pytest.mark.skipif(
+    not shutil.which("sbatch"), reason="Needs to be run on a SLURM cluster."
+)
 
 
 @pytest.fixture(autouse=True, scope="session")
 def scancel_jobs_after_tests():
     yield
-    username = os.environ["USER"]
-    subprocess.check_call(["scancel", "-u", username, "--name", TEST_JOB_NAME])
+    # TODO: run scancel over ssh to the cluster if running locally.
+    if shutil.which("scancel"):
+        username = os.environ["USER"]
+        subprocess.check_call(["scancel", "-u", username, "--name", TEST_JOB_NAME])
 
 
 @pytest.mark.skipif("SLURM_JOB_ID" not in os.environ, reason="Not running on a SLURM cluster")
 @pytest.mark.parametrize("nodes", [1])
 @pytest.mark.parametrize("gpus", [1, 2])
 @pytest.mark.parametrize("gpu_type", gpu_types)
-def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
+def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str | None) -> None:
     """Test that we can auto-pack multiple jobs on a single GPU."""
 
     jobs_per_gpu = 2
@@ -94,6 +103,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
         f"hydra.launcher.nodes={nodes}",
         f"hydra.launcher.tasks_per_node={gpus_per_node * jobs_per_gpu}",  # a.k.a. ntasks_per_node
         f"hydra.launcher.cpus_per_task={min(1, cpus_per_gpu // jobs_per_gpu)}",
+        "hydra.launcher.gres=" + (f"gpu:{gpu_type}:1" if gpu_type is not None else "gpu:1"),
         f"hydra.launcher.gres=gpu:{gpu_type}:1",
         f"hydra.launcher.mem_per_gpu={mem_per_gpu_gb}G",
         # f"hydra.launcher.mem_gb={mem_gb}",
@@ -112,7 +122,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
 
     # Run the job directly on the current node:
     # output = main(config)
-
+    config_path = "configs"
     output = launch(
         Config,
         task_function=main,
@@ -120,7 +130,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
         multirun=True,
         config_name="config",
         job_name=TEST_JOB_NAME,
-        config_path=f"{PROJECT_NAME}/configs",
+        config_path=config_path,
         caller_stack_depth=2,
     )
     job_outputs = output
@@ -134,18 +144,21 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str) -> None:
     # options = OmegaConf.to_object(config)
 
 
-def test_packing_runs_in_one_jobs() -> None:
+def test_packing_runs_in_one_job() -> None:
     """Test that we can pack multiple runs in a single job (on one GPU)."""
+    config_path = "configs"
+
     nodes = 1
     gpus = 1
-    gpu_type = "1g.10gb"
+    # gpu_type = "1g.10gb"
+    gpu_type = None
     cpus_per_gpu = 2
     mem_per_node_gb = 16
     assert gpus % nodes == 0
     gpus_per_node = gpus // nodes
     mem_per_gpu_gb = max(1, math.floor(mem_per_node_gb / gpus_per_node))
 
-    if gpus > 1 and "." in gpu_type:
+    if gpus > 1 and gpu_type and "." in gpu_type:
         # NOTE: Is it possible that this would actually work?
         pytest.skip("Not launching multi-gpu jobs using MIG.")
 
@@ -167,7 +180,7 @@ def test_packing_runs_in_one_jobs() -> None:
         f"hydra.launcher.nodes={nodes}",
         f"hydra.launcher.tasks_per_node={gpus_per_node}",  # a.k.a. ntasks_per_node
         f"hydra.launcher.cpus_per_task={cpus_per_gpu}",
-        f"hydra.launcher.gpus_per_task={gpu_type}:1",
+        "hydra.launcher.gpus_per_task=" + (f"{gpu_type}:1" if gpu_type is not None else "1"),
         f"hydra.launcher.mem_per_gpu={mem_per_gpu_gb}G",
         # f"hydra.launcher.mem_gb={mem_gb}",
         f"trainer.devices={gpus}",
@@ -193,7 +206,7 @@ def test_packing_runs_in_one_jobs() -> None:
         multirun=True,
         config_name="config",
         job_name=TEST_JOB_NAME,
-        config_path=f"{PROJECT_NAME}/configs",
+        config_path=config_path,
         caller_stack_depth=2,
     )
     job_outputs = output
@@ -249,7 +262,7 @@ def launch(
     config: Dataclass | type[Dataclass] | Mapping[str, Any],
     task_function: Callable[[Any], Any],
     overrides: list[str] | None = None,
-    version_base: str | type[_NotSet] | None = _NotSet,
+    version_base: str | type[_NotSet] | None = "1.2",
     to_dictconfig: bool = False,
     config_name: str = "zen_launch",
     job_name: str = "zen_launch",
