@@ -1,8 +1,0 @@
-{
-    "files.exclude": {
-        ".venv": true
-    },
-    "editor.codeActionsOnSave": {
-        "source.fixAll": "always"
-    }
-}
