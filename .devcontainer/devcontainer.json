@@ -30,7 +30,6 @@
 						"source.organizeImports.ruff": "explicit"
 					},
 					"editor.defaultFormatter": "charliermarsh.ruff",
-					"defaultInterpreterPath": ".venv/bin/python",
 					"editor.formatOnType": true
 				},
 				"files.exclude": {
@@ -54,7 +53,8 @@
 				"charliermarsh.ruff",
 				"GitHub.copilot",
 				"knowsuchagency.pdm-task-provider",
-				"GitHub.copilot-chat"
+				"GitHub.copilot-chat",
+				"mutantdino.resourcemonitor"
 			]
 		}
 	},
@@ -69,7 +69,6 @@
 		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
 		"source=${localEnv:NETWORK_DIR:/network},target=/network,type=bind,readonly"
 	],
-
 	"runArgs": [
 		"--gpus",
 		"all",
