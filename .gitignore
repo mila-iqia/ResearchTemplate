@@ -9,3 +9,4 @@ wandb
 logs
 checkpoints
 slurm_logs
+.pdm-python
