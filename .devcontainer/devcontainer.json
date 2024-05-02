@@ -65,6 +65,7 @@
 	// Mount /network to use this to mount a "$SCRATCH" directory in the host to ~/scratch in the container.
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
+		"source=${localEnv:HOME}/.cache/pdm,target=/home/vscode/.pdm_install_cache,type=bind,consistency=cached",
 		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
 		"source=${localEnv:NETWORK_DIR:/network},target=/network,type=bind,readonly"
 	],
@@ -74,12 +75,20 @@
 		"all",
 		"--ipc=host"
 	],
+	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
+	// doesn't fail.
+	"initializeCommand": "mkdir -p ~/.cache/pdm",
+	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pdm to
+	// .cache/pdm in the container. Therefore, here I'm making a symlink from ~/.cache/pdm to
+	// ~/.pdm_install_cache so the ~/.cache directory is writeable by the container.
+	"onCreateCommand": "mkdir -p ~/.cache && ln -s /home/vscode/.pdm_install_cache /home/vscode/.cache/pdm",
+	"updateContentCommand": "",
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "pip3 install --user -r requirements.txt",
 	"postCreateCommand": {
 		// "pdm-pep-582": "pdm --pep582 >> ~/.bash_profile",
-		"pdm": "pdm sync",
+		"pdm": "pdm config install.cache true && pdm config venv.in_project false && pdm install",
 		"pre-commit": "pre-commit install --install-hooks"
 		// "activate_venv": "source .venv/bin/activate"
 	}
