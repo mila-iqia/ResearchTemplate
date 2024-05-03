@@ -1,20 +1,35 @@
 from __future__ import annotations
 
+import collections
+import collections.abc
 import contextlib
+import functools
 from collections.abc import Sequence
 from logging import getLogger as get_logger
 from typing import Any, SupportsFloat
 
+import brax.envs.wrappers.gym
 import gym
 import gym.spaces
+import gymnasium.spaces
+import gymnax
+import gymnax.wrappers
+import jax
 import numpy as np
 import torch
-from gym import spaces
-from gym.core import ActionWrapper, Env, ObservationWrapper
+from brax.io.torch import torch_to_jax
+from gymnasium import RewardWrapper, spaces
+from gymnasium.core import ActionWrapper, Env, ObservationWrapper
+from gymnasium.wrappers.compatibility import EnvCompatibility
 from numpy import ndarray
 from torch import LongTensor, Tensor
 
 from .rl_types import TensorType
+
+type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
+type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
+_BoxSpace = gym.spaces.Box | gymnasium.spaces.Box
+_DiscreteSpace = gym.spaces.Discrete | gymnasium.spaces.Discrete
 
 logger = get_logger(__name__)
 
@@ -25,7 +40,7 @@ class NormalizeBoxActionWrapper(ActionWrapper):
     TAKEN FROM (https://github.com/google-research/google-research/blob/master/algae_dice/wrappers/normalize_action_wrapper.py)
     """
 
-    def __init__(self, env: gym.Env[Any, np.ndarray]):
+    def __init__(self, env: _Env[Any, np.ndarray]):
         if not isinstance(env.action_space, spaces.Box):
             raise ValueError(f"env {env} doesn't have a Box action space.")
         super().__init__(env)
@@ -64,13 +79,77 @@ def check_and_normalize_box_actions(env: gym.Env) -> gym.Env:
     return env
 
 
-class ToTensorsWrapper(ObservationWrapper, ActionWrapper, gym.Env[Tensor, Tensor]):
+@functools.singledispatch
+def to_tensor(
+    value: Any, *, dtype: torch.dtype | None = None, device: torch.device | None = None
+) -> Any:
+    raise NotImplementedError(f"No handler for values of type {type(value)}")
+
+
+@to_tensor.register(torch.Tensor | np.ndarray | int | float | bool)
+def _to_tensor(
+    value: Any, *, dtype: torch.dtype | None = None, device: torch.device | None = None
+) -> Tensor:
+    return torch.as_tensor(value, dtype=dtype, device=device)
+
+
+@to_tensor.register(type(None))
+def _no_op[T](
+    value: T, *, dtype: torch.dtype | None = None, device: torch.device | None = None
+) -> T:
+    return value
+
+
+@to_tensor.register(collections.abc.Mapping)
+def dict_to_torch(
+    value: dict[str, Any], *, dtype: torch.dtype | None = None, device: torch.device | None = None
+) -> dict[str, torch.Tensor | Any]:
+    """Converts a dict of jax.Arrays into a dict of PyTorch tensors."""
+    return type(value)(**{k: to_tensor(v, dtype=dtype, device=device) for k, v in value.items()})  # type: ignore
+
+
+# def tuple_to_torch(
+#     value: dict[str, Any], dtype: torch.dtype | None = None, device: torch.device | None = None
+# ) -> tuple[torch.Tensor | Any, ...]:
+#     """Converts a dict of jax.Arrays into a dict of PyTorch tensors."""
+#     return type(value)(to_tensor(v, dtype=dtype, device=device) for v in value)  # type: ignore
+
+
+def wrapped_env_is_jax(env: _Env) -> bool:
+    if isinstance(env, gym.Wrapper | gymnasium.Wrapper):
+        env = env.unwrapped
+    if isinstance(env, EnvCompatibility):
+        # For some reason EnvCompatibility doesn't allow `unwrapped` to get to the base legacy env.
+        env = env.env  # type: ignore
+    if isinstance(env, gym.Wrapper | gymnasium.Wrapper):
+        env = env.unwrapped
+    return isinstance(
+        env,
+        gymnax.wrappers.GymnaxToGymWrapper
+        | gymnax.wrappers.GymnaxToVectorGymWrapper
+        | brax.envs.wrappers.gym.GymWrapper,
+    )
+
+
+class ToTensorsWrapper[ObsType: torch.Tensor, ActType: torch.Tensor](
+    ObservationWrapper, ActionWrapper, RewardWrapper, gym.Env[ObsType, ActType]
+):
+    """TODO: Unclear if this wrapper should be from numpy to Torch only, or also include jax to torch.."""
+
     def __init__(
-        self, env: Env[np.ndarray, int] | Env[np.ndarray, np.ndarray], device: torch.device
+        self,
+        env: Env[np.ndarray, int] | Env[np.ndarray, np.ndarray],
+        device: torch.device,
+        from_jax: bool | None = None,
     ):
         super().__init__(env)
+        self.wrapped_env_is_jax = from_jax if from_jax is not None else wrapped_env_is_jax(env)
         self.device = device
-        assert isinstance(env.observation_space, gym.spaces.Box)
+        assert isinstance(env.observation_space, _BoxSpace), (
+            env.observation_space,
+            type(env.observation_space),
+        )
+
         self.observation_space = TensorBox(
             low=env.observation_space.low,
             high=env.observation_space.high,
@@ -78,7 +157,7 @@ class ToTensorsWrapper(ObservationWrapper, ActionWrapper, gym.Env[Tensor, Tensor
             device=device,
             # seed=env.seed,
         )
-        if isinstance(env.action_space, gym.spaces.Box):
+        if isinstance(env.action_space, _BoxSpace):
             self.action_space = TensorBox(
                 low=env.action_space.low,
                 high=env.action_space.high,
@@ -87,34 +166,68 @@ class ToTensorsWrapper(ObservationWrapper, ActionWrapper, gym.Env[Tensor, Tensor
                 # seed=env.seed,
             )
         else:
-            assert isinstance(env.action_space, gym.spaces.Discrete)
+            assert isinstance(env.action_space, _DiscreteSpace)
             self.action_space = TensorDiscrete(
                 n=env.action_space.n,
                 start=env.action_space.start,
+                dtype=env.action_space.dtype,
                 # seed=env.seed,
             )
 
     def reset(
         self, seed: int | None = None, options: dict | None = None, **kwargs
-    ) -> tuple[Tensor, dict]:
+    ) -> tuple[ObsType, dict]:
         """Resets the environment, returning a modified observation using
         :meth:`self.observation`."""
-        obs, info = self.env.reset(seed=seed, options=options, **kwargs)
-        return self.observation(obs), info
+        if isinstance(self.env, brax.envs.wrappers.gym.GymWrapper):
+            # Need to slightly adjust the reset of the wrapped brax env to take in a seed.
+            # Here is the code of the `GymWrapper.reset` at the time of writing:
+            # def reset(self):
+            #     self._state, obs, self._key = self._reset(self._key)
+            #     # We return device arrays for pytorch users.
+            #     return obs
+            if seed is not None:
+                key = jax.random.PRNGKey(seed)  # set the initial seed to use
+            else:
+                key = self.env._key  # use the current RNG key
+            self.env._state, obs, self.env._key = self.env._reset(key)
+            info = {**self.env._state.metrics, **self.env._state.info}
+        else:
+            obs, info = self.env.reset(seed=seed, options=options, **kwargs)
+        return self.observation(obs), self.info(info)
 
-    def step(self, action: Tensor) -> tuple[Tensor, float, bool, bool, dict]:
+    def step(
+        self, action: ActType
+    ) -> tuple[ObsType, SupportsFloat, torch.BoolTensor, torch.BoolTensor, dict]:
         """Returns a modified observation using :meth:`self.observation` after calling
         :meth:`env.step`."""
-        observation, reward, terminated, truncated, info = self.env.step(self.action(action))
-        return self.observation(observation), reward, terminated, truncated, info
+        np_action = self.action(action)
+        observation, reward, terminated, truncated, info = self.env.step(np_action)
+        observation = self.observation(observation)
+        reward = self.reward(reward)
+        terminated = to_tensor(terminated, dtype=torch.bool, device=self.device)
+        truncated = to_tensor(truncated, dtype=torch.bool, device=self.device)
+        info = self.info(info)
+        return observation, reward, terminated, truncated, info
 
-    def observation(self, observation: np.ndarray) -> Tensor:
-        return torch.as_tensor(
-            observation, dtype=self.observation_space.torch_dtype, device=self.device
-        )
+    # if typing.TYPE_CHECKING:
+    #     observation_space: TensorDiscrete | TensorBox
 
-    def action(self, action: Tensor) -> np.ndarray:
+    def observation(self, observation: np.ndarray) -> ObsType:
+        return to_tensor(observation, dtype=self.observation_space.torch_dtype, device=self.device)  # type: ignore
+
+    def info(self, info: dict[str, Any]) -> dict[str, Tensor | Any]:
+        if self.wrapped_env_is_jax:
+            return dict_to_torch(info, device=self.device)
+        return info
+
+    def action(self, action: ActType) -> np.ndarray | jax.numpy.ndarray:
+        if self.wrapped_env_is_jax:
+            return torch_to_jax(action)
         return action.detach().cpu().numpy()
+
+    def reward(self, reward: SupportsFloat) -> SupportsFloat:
+        return to_tensor(reward, dtype=torch.float32, device=self.device)
 
 
 class TensorDiscrete(gym.spaces.Discrete, gym.spaces.Space[LongTensor]):
@@ -123,13 +236,15 @@ class TensorDiscrete(gym.spaces.Discrete, gym.spaces.Space[LongTensor]):
         n: int,
         seed: int | np.random.Generator | None = None,
         start: int = 0,
+        dtype: np.dtype | type = np.int32,
         device: torch.device = torch.device("cpu"),
     ):
         super().__init__(n, seed, start)
         self.device = device
+        self.np_dtype, self.torch_dtype = get_numpy_and_torch_dtypes(dtype)
 
     def sample(self, mask: ndarray | None = None) -> Tensor:
-        return torch.as_tensor(super().sample(mask), device=self.device)
+        return to_tensor(super().sample(mask), device=self.device, dtype=self.torch_dtype)
 
     def contains(self, x) -> bool:
         if isinstance(x, Tensor):
@@ -153,6 +268,7 @@ class TensorBox(gym.spaces.Box, gym.spaces.Space[TensorType]):
         seed: int | np.random.Generator | None = None,
         device: torch.device = torch.device("cpu"),
     ):
+        self.torch_dtype: torch.dtype
         self.np_dtype, self.torch_dtype = get_numpy_and_torch_dtypes(dtype)
         super().__init__(low=low, high=high, shape=shape, dtype=self.np_dtype, seed=seed)
         self.device = device
