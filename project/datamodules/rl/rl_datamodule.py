@@ -7,6 +7,7 @@ from logging import getLogger as get_logger
 from typing import Any, Generic, Literal
 
 import gym
+import gym.vector
 import torch
 from gym.spaces.utils import flatdim
 from gym.utils.colorize import colorize
@@ -47,6 +48,8 @@ class RlDataModule(
         self,
         env: str | Callable[[], gym.Env],
         actor: Actor[Tensor, Tensor, ActorOutput] | None = None,
+        num_parallel_envs: int | None = None,
+        # todo: also add `steps_per_epoch` (mutually exclusive with episodes_per_epoch).
         episodes_per_epoch: int = 100,
         batch_size: int = 1,
         train_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
@@ -74,7 +77,11 @@ class RlDataModule(
         """
         super().__init__()
         self.env_fn = (
-            functools.partial(gym.make, env, render_mode="rgb_array")
+            functools.partial(
+                gym.vector.make, env, num_envs=num_parallel_envs, render_mode="rgb_array"
+            )
+            if isinstance(env, str) and num_parallel_envs is not None
+            else functools.partial(gym.make, env, render_mode="rgb_array")
             if isinstance(env, str)
             else env
         )
