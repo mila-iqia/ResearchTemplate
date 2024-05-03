@@ -1,12 +1,23 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Generic, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
+import gym
+import gym.spaces
+import gymnasium.spaces
 import numpy as np
 from gym import Space
+from numpy.typing import NDArray
 from torch import Tensor
-from typing_extensions import TypeVar
+from typing_extensions import Generic, TypeVar  # noqa
+
+type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
+type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
+
+BoxSpace = gym.spaces.Box | gymnasium.spaces.Box
+DiscreteSpace = gym.spaces.Discrete | gymnasium.spaces.Discrete
+
 
 TensorType = TypeVar("TensorType", bound=Tensor, default=Tensor)
 ObservationT = TypeVar("ObservationT", default=np.ndarray)
@@ -20,6 +31,68 @@ Actor = Callable[[ObservationT, Space[ActionT]], tuple[ActionT, ActorOutput]]
 
 It can also output other stuff that will be used to train the model later.
 """
+
+WrapperObsType = TypeVar("WrapperObsType")
+WrapperActType = TypeVar("WrapperActType")
+
+
+### Typing fixes for gymnasium.
+
+# TODO: annoying typing thing with gymnasium.Env.[observation|action]_space: The type is always
+# Space[ActType], even if you manually set it to something else, because of the property (which in
+# itself is useless!)
+
+
+# gym.Env subclasses typing.Generic which atm doesn't allow default typevars
+class Env[ObsType, ActType](gym.Env[ObsType, ActType]):
+    observation_space: Space[ObsType]
+    action_space: Space[ActType]
+
+
+# VectorEnv doesn't have type hints in current gymnasium.
+class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, Env[ObsType, ActType]):
+    def step(
+        self, actions: ActType
+    ) -> tuple[ObsType, NDArray[Any], NDArray[Any], NDArray[Any], dict]:
+        return super().step(actions)
+
+    def reset(
+        self, *, seed: int | list[int] | None = None, options: dict | None = None
+    ) -> tuple[ObsType, dict]:
+        return super().reset(seed=seed, options=options)
+
+    # could also perhaps add this render method?
+    # def render[RenderFrame](self) -> RenderFrame | list[RenderFrame] | None:
+    #     return self.call("render")
+
+
+# Optional types for the last two typevars in Wrapper and VectorEnvWrapper.
+WrappedObsType = TypeVar("WrappedObsType", default=Any)
+WrappedActType = TypeVar("WrappedActType", default=Any)
+
+
+# gymnasium.Wrapper doesn't have default types for the ObsType and ActType which makes it more difficult to use.
+class Wrapper(
+    gymnasium.Wrapper[WrapperObsType, WrapperActType, WrappedObsType, WrappedActType],
+    Generic[WrapperObsType, WrapperActType, WrappedObsType, WrappedActType],
+):
+    def __init__(self, env: gymnasium.Env[WrappedObsType, WrappedActType]):
+        super().__init__(env)
+        # Also, for some reason, it has a @property for these? but getattr/setattr already works fine.
+        self.observation_space: Space[WrapperObsType]
+        self.action_space: Space[WrapperActType]
+
+
+# gymnasium.vector.VectorEnvWrapper doesn't have type hints in current gymnasium.
+class VectorEnvWrapper(
+    gymnasium.vector.VectorEnvWrapper,
+    VectorEnv[WrapperObsType, WrapperActType],
+    Generic[WrapperObsType, WrapperActType, WrappedObsType, WrappedActType],
+):
+    def __init__(self, env: VectorEnv[WrappedObsType, WrappedActType]):
+        super().__init__(env)
+        self.observation_space: Space[WrapperObsType]
+        self.action_space: Space[WrapperActType]
 
 
 def random_actor(observation: Any, action_space: Space[ActionT]) -> tuple[ActionT, dict]:
