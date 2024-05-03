@@ -18,7 +18,6 @@ from torch.utils.data import DataLoader
 from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
 
-from .gym_utils import ToTensorsWrapper
 from .rl_dataset import RlDataset
 from .rl_types import (
     Actor,
@@ -26,6 +25,7 @@ from .rl_types import (
     Episode,
     EpisodeBatch,
 )
+from .wrappers.to_tensor import ToTorchWrapper
 
 logger = get_logger(__name__)
 
@@ -312,7 +312,7 @@ class RlDataModule(
                 f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
             )
         # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
-        env = ToTensorsWrapper(env, device=self.device)
+        env = ToTorchWrapper(env, device=self.device)
         return env
 
     @property
