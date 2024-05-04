@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any, NotRequired, TypedDict
+import dataclasses
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any, Generic, NotRequired, TypedDict
 
 import gym
 import gym.spaces
 import gymnasium.spaces
 import numpy as np
-from gym import Space
+from gymnasium import Space
 from numpy.typing import NDArray
 from torch import Tensor
-from typing_extensions import Generic, TypeVar  # noqa
+from typing_extensions import TypeVar
+
+from project.utils.types import NestedDict, NestedMapping  # noqa
 
 type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
 type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
@@ -24,7 +28,9 @@ ObservationT = TypeVar("ObservationT", default=np.ndarray)
 ActionT = TypeVar("ActionT", default=int)
 # TypeVars for the observations and action types for a gym environment.
 
-ActorOutput = TypeVar("ActorOutput", default=dict, covariant=True)
+ActorOutput = TypeVar(
+    "ActorOutput", bound=NestedMapping[str, Tensor], default=dict, covariant=True
+)
 
 Actor = Callable[[ObservationT, Space[ActionT]], tuple[ActionT, ActorOutput]]
 """An "Actor" is given an observation and action space, and asked to produce the next action.
@@ -51,6 +57,9 @@ class Env[ObsType, ActType](gym.Env[ObsType, ActType]):
 
 # VectorEnv doesn't have type hints in current gymnasium.
 class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, Env[ObsType, ActType]):
+    observation_space: Space[ObsType]
+    action_space: Space[ActType]
+
     def step(
         self, actions: ActType
     ) -> tuple[ObsType, NDArray[Any], NDArray[Any], NDArray[Any], dict]:
@@ -100,8 +109,36 @@ def random_actor(observation: Any, action_space: Space[ActionT]) -> tuple[Action
     return action_space.sample(), {}
 
 
+V = TypeVar("V", default=Any)
+
+
+class MappingMixin(Mapping[str, V]):
+    """Makes a dataclass usable like a Mapping."""
+
+    def __iter__(self) -> Iterable[str]:
+        return iter(self.keys())
+
+    def __len__(self) -> int:
+        return len(self.keys())
+
+    def __getitem__(self, key: str) -> V:
+        return getattr(self, key)
+
+    def keys(self):
+        assert dataclasses.is_dataclass(self)
+        return tuple(f.name for f in dataclasses.fields(self))
+
+    def values(self) -> tuple[V, ...]:
+        return tuple(v for _, v in self.items())
+
+    def items(self) -> Sequence[tuple[str, V]]:
+        assert dataclasses.is_dataclass(self)
+        return {k: getattr(self, k) for k in self.keys()}.items()  # type: ignore
+
+
 # todo: make this generic w.r.t. obs / act types once we add envs with more complicated observations.
-class Episode(TypedDict, Generic[ActorOutput]):
+@dataclass(frozen=True)
+class Episode(MappingMixin, Generic[ActorOutput]):
     """An Episode where the contents have been stacked into tensors instead of kept in lists."""
 
     observations: Tensor
@@ -113,7 +150,7 @@ class Episode(TypedDict, Generic[ActorOutput]):
     actor_outputs: ActorOutput
 
 
-class UnstackedEpisode(TypedDict, Generic[ActorOutput]):
+class UnstackedEpisodeDict(TypedDict, Generic[ActorOutput]):
     """Data of a (possibly on-going) episode, where the contents haven't yet been stacked."""
 
     observations: list[Tensor]
@@ -134,7 +171,8 @@ class UnstackedEpisode(TypedDict, Generic[ActorOutput]):
     """
 
 
-class EpisodeBatch(TypedDict, Generic[ActorOutput]):
+@dataclass(frozen=True)
+class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     """Object that contains a batch of episodes, stored as nested tensors.
 
     A [nested tensor](https://pytorch.org/docs/stable/nested.html#module-torch.nested) is basically

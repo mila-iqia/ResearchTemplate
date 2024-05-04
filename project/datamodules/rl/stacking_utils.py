@@ -8,7 +8,7 @@ from torch import Tensor
 
 from project.utils.types import is_sequence_of
 
-from .rl_types import ActorOutput, Episode, UnstackedEpisode
+from .rl_types import ActorOutput, Episode, UnstackedEpisodeDict
 
 
 @overload
@@ -59,7 +59,7 @@ def stack_dicts[**P, T: Tensor, V](
 
 
 def stack_episode(
-    **episode: Unpack[UnstackedEpisode[ActorOutput]],
+    **episode: Unpack[UnstackedEpisodeDict[ActorOutput]],
 ) -> Episode[ActorOutput]:
     """Stacks the lists of items at each step into an Episode dict containing tensors."""
     device = _get_device(episode)

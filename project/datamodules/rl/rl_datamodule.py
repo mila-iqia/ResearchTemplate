@@ -365,6 +365,10 @@ class RlDataModule(
 def custom_collate_fn(episodes: list[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
     """Collates a list of episodes into an EpisodeBatch object containing nested tensors."""
 
+    # note: assuming simple tensor observations for now, even though the code below is meant to
+    # also support nested dicts observations and actions
+    device = episodes[0].observations.device
+
     def _stack(tensors: list[torch.Tensor]) -> torch.Tensor:
         """Stacks tensors using torch.stack if all the sequences have the same length, otherwise
         uses torch.nested.as_nested_tensor."""
@@ -379,8 +383,8 @@ def custom_collate_fn(episodes: list[Episode[ActorOutput]]) -> EpisodeBatch[Acto
         # TODO: Could perhaps stack the infos so it mimics what the RecordEpisodeStatistics wrapper
         # does for VectorEnvs.
         infos=[ep["infos"] for ep in episodes],
-        terminated=torch.as_tensor([ep["terminated"] for ep in episodes]),
-        truncated=torch.as_tensor([ep["terminated"] for ep in episodes]),
+        terminated=torch.as_tensor([ep["terminated"] for ep in episodes], device=device),
+        truncated=torch.as_tensor([ep["terminated"] for ep in episodes], device=device),
         actor_outputs=type(episodes[0]["actor_outputs"])(
             **{
                 key: _stack([ep["actor_outputs"][key] for ep in episodes])

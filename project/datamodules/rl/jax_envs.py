@@ -156,11 +156,12 @@ class VectorGymnasiumWrapper(VectorEnv[jax.Array, jax.Array]):
         self._key = jax.random.PRNGKey(seed)
 
     def render(self):
-        if self.render_mode == "rgb_array":
-            sys, state = self._env.sys, self._state
-            if state is None:
-                raise RuntimeError("must call reset or step before rendering")
-            assert state.pipeline_state is not None
-            return brax.io.image.render_array(sys, state.pipeline_state.take(0), 256, 256)
-        else:
-            return super().render()  # just raise an exception
+        assert self.render_mode == "rgb_array"
+        sys, state = self._env.sys, self._state
+        if state is None:
+            raise RuntimeError("must call reset or step before rendering")
+        # TODO: take a look at the `self._env.render()`
+        # self._env.render(trajectory=[state.pipeline_state)
+        # return brax.io.image.render_array(sys, state.pipeline_state.take(0), 256, 256)
+        assert state.pipeline_state is not None
+        return brax.io.image.render_array(sys, state.pipeline_state.take(0), 256, 256)

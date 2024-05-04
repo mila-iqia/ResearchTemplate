@@ -16,7 +16,6 @@ import numpy as np
 import torch
 from brax.generalized.base import State
 from brax.io.torch import torch_to_jax
-from gymnasium.vector import VectorEnvWrapper
 from gymnasium.wrappers.compatibility import EnvCompatibility
 from jax import dlpack as jax_dlpack
 from torch import Tensor
@@ -26,7 +25,7 @@ from typing_extensions import Generic, TypeVar  # noqa
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete
 from project.utils.types import NestedDict
 
-from ..rl_types import BoxSpace, DiscreteSpace, VectorEnv, Wrapper, _Env
+from ..rl_types import BoxSpace, DiscreteSpace, VectorEnv, VectorEnvWrapper, Wrapper, _Env
 
 
 @functools.singledispatch
@@ -202,8 +201,10 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
         return to_torch(reward, dtype=torch.float32, device=self.device)
 
 
-class ToTorchVectorEnvWrapper(ToTorchWrapper, VectorEnvWrapper, VectorEnv[Tensor, Tensor]):
-    def __init__(self, env: VectorEnv, device: torch.device, from_jax: bool | None = None):
+class ToTorchVectorEnvWrapper(ToTorchWrapper, VectorEnvWrapper[Tensor, Tensor, Any, Any]):
+    def __init__(
+        self, env: VectorEnv[Any, Any], device: torch.device, from_jax: bool | None = None
+    ):
         super().__init__(env, device=device, from_jax=from_jax)
         self.single_observation_space = to_torch(env.single_observation_space, device=self.device)
         self.single_action_space = to_torch(env.single_action_space, device=self.device)
