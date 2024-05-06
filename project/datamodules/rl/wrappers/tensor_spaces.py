@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from logging import getLogger as get_logger
-from typing import Any, SupportsFloat
+from types import ModuleType
+from typing import Any, Self, SupportsFloat
 
 import gymnasium
 import gymnasium.spaces
@@ -8,13 +9,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import torch
-from numpy.typing import NDArray
 from torch import LongTensor, Tensor
-from typing_extensions import TypeVar
 
 from project.utils.device import default_device
-
-from ..rl_types import TensorType
 
 logger = get_logger(__name__)
 
@@ -35,13 +32,25 @@ def get_jax_dtype(torch_dtype: torch.dtype) -> jax.numpy.dtype:
     }[torch_dtype]
 
 
-ArrayType = TypeVar("ArrayType", bound=NDArray, default=NDArray)
+class TensorSpace(gymnasium.spaces.Space[torch.Tensor]):
+    def __init__(
+        self,
+        shape: Sequence[int] | None = None,
+        dtype: torch.dtype | None = None,
+        seed: int | None = None,
+        device: torch.device = torch.device("cpu"),
+    ):
+        self.device = device
+        self._rng: torch.Generator = torch.Generator(self.device)
+        # Note: passing `dtype=None` because super init doesn't handle torch dtypes (only numpy).
+        super().__init__(shape, dtype=None, seed=seed)
+        self.dtype: torch.dtype | None = dtype
+
+    def seed(self, seed: int) -> None:
+        self._rng = self._rng.manual_seed(seed)
 
 
-# todo: make this not a subclass of gymnasium.spaces.Box and instead make it "have a" instead of
-# "be a" Box. This would probably require us to register a few of the handlers for the Box spaces
-# to be used for TensorBox spaces in things like `gymnasium.vector.utils.batch_space` and such.
-class TensorBox(gymnasium.spaces.Space[TensorType]):
+class TensorBox(TensorSpace):
     def __init__(
         self,
         low: SupportsFloat | np.ndarray | Tensor,
@@ -66,13 +75,8 @@ class TensorBox(gymnasium.spaces.Space[TensorType]):
                 shape = high.shape
             else:
                 shape = ()
-
-        # needs to be set for super init to call self.seed
-        self.device = device
-        self._rng = torch.Generator(device=self.device)
         # not passing `dtype` because it assumes it's a numpy dtype.
-        super().__init__(shape=shape, dtype=None, seed=seed)
-        self.dtype = dtype
+        super().__init__(shape=shape, dtype=dtype, seed=seed, device=device)
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
         if self.shape and self.low.shape != self.shape:
@@ -81,6 +85,26 @@ class TensorBox(gymnasium.spaces.Space[TensorType]):
             self.high = self.high.expand(self.shape)
         assert self.low.shape == shape
         assert self.high.shape == shape
+
+    def to(self, device: torch.device) -> Self:
+        return type(self)(
+            low=self.low.to(device=device),
+            high=self.high.to(device=device),
+            shape=self.shape,
+            dtype=self.dtype,
+            seed=None,
+            device=device,
+        )
+
+    def cuda(self, index: int | None = None) -> Self:
+        if index:
+            device = torch.device("cuda", index=index)
+        else:
+            device = torch.device("cuda")
+        return self.to(device=device)
+
+    def cpu(self) -> Self:
+        return self.to(device=torch.device("cpu"))
 
     def seed(self, seed: int) -> None:
         self._rng.manual_seed(seed)
@@ -97,10 +121,8 @@ class TensorBox(gymnasium.spaces.Space[TensorType]):
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
             and (x.shape == self.shape)
-            and bool(
-                ((x_sametype := x.type_as(self.low)) >= self.low).all()
-                & (x_sametype <= self.high).all()
-            )
+            and (x.device == self.device)  # avoid unintentionally moving things between devices.
+            and bool((x >= self.low).all() & (x <= self.high).all())
         )
 
     def __repr__(self) -> str:
@@ -146,6 +168,7 @@ class TensorDiscrete(gymnasium.spaces.Space[LongTensor]):
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
             and (x.shape == self.shape)
+            and (x.device == self.device)  # avoid unintentionally moving things between devices.
             and bool((x >= self.start).all() & (x <= self.n).all())
         )
 
@@ -156,7 +179,7 @@ class TensorDiscrete(gymnasium.spaces.Space[LongTensor]):
         return f"{class_name}({self.n}, device={self.device})"
 
 
-def get_torch_dtype_from_numpy_dtype(dtype: np.dtype) -> torch.dtype:
+def get_torch_dtype(dtype: np.dtype | jnp.dtype, np: ModuleType = np) -> torch.dtype:
     if dtype == np.float32:
         # note: getitem doesn't work for np.float32?
         return torch.float32
@@ -173,6 +196,10 @@ def get_torch_dtype_from_numpy_dtype(dtype: np.dtype) -> torch.dtype:
         np.complex64: torch.complex64,
         np.complex128: torch.complex128,
     }[dtype]
+
+
+def get_torch_dtype_from_jax_dtype(dtype: jnp.dtype) -> torch.dtype:
+    return get_torch_dtype(dtype, np=jnp)
 
 
 # def get_numpy_and_torch_dtypes(dtype: np.dtype | type) -> tuple[np.dtype, torch.dtype]:
