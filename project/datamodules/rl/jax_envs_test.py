@@ -37,6 +37,34 @@ def vectorenv(env_id: str, seed: int, num_envs: int, device: torch.device):
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("env_id", ["Pendulum-v1", "halfcheetah"], indirect=True)
+def test_jax_env_reset(
+    env: Env[torch.Tensor, torch.Tensor],
+    seed: int,
+    device: torch.device,
+    tensor_regression: TensorRegressionFixture,
+):
+    observation_from_reset, info_from_reset = env.reset(seed=seed)
+
+    def _check_observation(obs: Any):
+        assert isinstance(obs, Tensor) and obs.device == device
+        assert obs in env.observation_space
+
+    def _check_dict(d: NestedDict[str, Tensor | Any]):
+        for k, value in d.items():
+            if isinstance(value, dict):
+                _check_dict(value)
+            elif value is not None:
+                assert isinstance(value, Tensor) and value.device == device, k
+
+    _check_observation(observation_from_reset)
+    _check_dict(info_from_reset)
+    tensor_regression.check(
+        {"obs_from_reset": observation_from_reset, "info_from_reset": info_from_reset}
+    )
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize("env_id", ["Pendulum-v1", "halfcheetah"], indirect=True)
 def test_jax_env(
     env: Env[torch.Tensor, torch.Tensor],
     seed: int,
