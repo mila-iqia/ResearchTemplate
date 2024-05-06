@@ -59,8 +59,13 @@ class TensorBox(TensorSpace):
                 shape = ()
         # not passing `dtype` because it assumes it's a numpy dtype.
         super().__init__(shape=shape, dtype=dtype, seed=seed, device=device)
+        self.dtype: torch.dtype
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
+
+        assert not self.low.isnan().any()
+        assert not self.high.isnan().any()
+
         if self.shape and self.low.shape != self.shape:
             self.low = self.low.expand(self.shape)
         if self.shape and self.high.shape != self.shape:
@@ -99,11 +104,13 @@ class TensorBox(TensorSpace):
         return self.low + rand * (self.high - self.low)
 
     def contains(self, x: Any) -> bool:
+        # BUG: doesn't work with `nan` values for low or high.
         return (
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
             and (x.shape == self.shape)
             and (x.device == self.device)  # avoid unintentionally moving things between devices.
+            and not bool(x.isnan().any())
             and bool((x >= self.low).all() & (x <= self.high).all())
         )
 
