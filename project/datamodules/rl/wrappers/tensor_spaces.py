@@ -63,9 +63,6 @@ class TensorBox(TensorSpace):
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
 
-        assert not self.low.isnan().any()
-        assert not self.high.isnan().any()
-
         if self.shape and self.low.shape != self.shape:
             self.low = self.low.expand(self.shape)
         if self.shape and self.high.shape != self.shape:
@@ -101,6 +98,11 @@ class TensorBox(TensorSpace):
         rand = torch.rand(
             size=self.low.shape, dtype=self.dtype, device=self.device, generator=self._rng
         )
+        # TODO: use `nan_to_num` or torch.clamp_min or similar to bound the result within some
+        # reasonable interval!
+        # bounded_above = ~self.high.isnan()
+        # bounded_below = ~self.low.isnan()
+        # torch.nan_to_num(self.low,
         return self.low + rand * (self.high - self.low)
 
     def contains(self, x: Any) -> bool:
@@ -111,7 +113,8 @@ class TensorBox(TensorSpace):
             and (x.shape == self.shape)
             and (x.device == self.device)  # avoid unintentionally moving things between devices.
             and not bool(x.isnan().any())
-            and bool((x >= self.low).all() & (x <= self.high).all())
+            and bool((~self.low.isnan() & (x >= self.low)).all())
+            and bool((~self.high.isnan() & (x <= self.high)).all())
         )
 
     def __repr__(self) -> str:
