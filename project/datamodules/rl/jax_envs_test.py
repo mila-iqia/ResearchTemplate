@@ -1,13 +1,11 @@
 from typing import Any
 
-import gym
-import gym.vector
 import pytest
 import torch
 from torch import Tensor
 
 from project.datamodules.rl.gym_utils import make_torch_env, make_torch_vectorenv
-from project.datamodules.rl.rl_types import VectorEnv
+from project.datamodules.rl.rl_types import Env, VectorEnv
 from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.types import NestedDict
 
@@ -40,7 +38,7 @@ def vectorenv(env_id: str, seed: int, num_envs: int, device: torch.device):
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("env_id", ["Pendulum-v1", "halfcheetah"], indirect=True)
 def test_jax_env(
-    env: gym.Env[torch.Tensor, torch.Tensor],
+    env: Env[torch.Tensor, torch.Tensor],
     seed: int,
     device: torch.device,
     tensor_regression: TensorRegressionFixture,

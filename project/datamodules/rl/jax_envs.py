@@ -28,7 +28,12 @@ def gymnax_env(env_id: str, device: torch.device = default_device(), seed: int =
     # Instantiate the environment & its settings.
     gymnax_env, env_params = gymnax.make(env_id)
     env = GymnaxToGymWrapper(gymnax_env, params=env_params, seed=seed)
+    # todo: The spaces are not seeded as they should!
+    env.observation_space.seed(seed)
+    env.action_space.seed(seed)
     env = ToTorchWrapper(env, device=device)
+    env.observation_space.seed(seed)
+    env.action_space.seed(seed)
     return env
 
 
