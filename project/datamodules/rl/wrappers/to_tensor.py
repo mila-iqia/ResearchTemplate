@@ -32,7 +32,7 @@ from project.datamodules.rl.wrappers import jax_torch_interop
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
     TensorDiscrete,
-    get_torch_dtype_from_numpy_dtype,
+    get_torch_dtype,
 )
 from project.utils.device import default_device
 from project.utils.types import NestedDict
@@ -95,7 +95,7 @@ def _box_space(
     return TensorBox(  # type: ignore
         low=value.low,
         high=value.high,
-        dtype=dtype if dtype is not None else get_torch_dtype_from_numpy_dtype(value.dtype),
+        dtype=dtype if dtype is not None else get_torch_dtype(value.dtype),
         device=device or default_device(),
     )
 
@@ -107,7 +107,7 @@ def _discrete_space(
     return TensorDiscrete(  # type: ignore
         n=int(value.n),
         start=int(value.start),
-        dtype=get_torch_dtype_from_numpy_dtype(value.dtype),
+        dtype=get_torch_dtype(value.dtype),
         # seed=env.seed,
     )
 
