@@ -102,7 +102,7 @@ def _check_episode_batch(
 
     def _check_episode_batch_tensor(
         v: Tensor,
-        single_space: TensorBox | TensorDiscrete | None = None,
+        single_space: TensorBox | TensorDiscrete | gymnasium.Space[Tensor] | None = None,
         dtype: torch.dtype | None = None,
     ):
         shape = get_shape_ish(v)

@@ -22,8 +22,13 @@ logger = get_logger(__name__)
 
 
 @functools.singledispatch
-def to_ndarray(v: Any) -> np.ndarray:
+def to_ndarray(v: Any) -> np.ndarray | None:
     return np.asarray(v)
+
+
+@to_ndarray.register(type(None))
+def _none_to_ndarray(v: None) -> None:
+    return None
 
 
 @to_ndarray.register(list)
@@ -265,7 +270,14 @@ class TensorRegressionFixture:
             assert isinstance(
                 key, str
             ), f"The dictionary keys must be strings. Found key with type '{str(type(key))}'"
-            array_dict[key] = to_ndarray(array)
+
+            ndarray_value = to_ndarray(array)
+            if ndarray_value is None:
+                logger.debug(
+                    f"Got a value of `None` for key {key} not including it in the saved dict."
+                )
+            else:
+                array_dict[key] = ndarray_value
         self.ndarrays_regression.check(
             array_dict,
             basename=basename,
@@ -317,6 +329,11 @@ def get_simple_attributes(value: Any):
     raise NotImplementedError(
         f"get_simple_attributes doesn't have a registered handler for values of type {type(value)}"
     )
+
+
+@get_simple_attributes.register(type(None))
+def _get_none_attributes(value: None):
+    return {"type": "None"}
 
 
 @get_simple_attributes.register(list)
