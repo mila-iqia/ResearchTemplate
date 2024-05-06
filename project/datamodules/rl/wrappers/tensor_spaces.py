@@ -9,27 +9,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import torch
-from torch import LongTensor, Tensor
-
-from project.utils.device import default_device
+from torch import Tensor
 
 logger = get_logger(__name__)
-
-
-def get_jax_dtype(torch_dtype: torch.dtype) -> jax.numpy.dtype:
-    return {
-        torch.bool: jnp.bool_,
-        torch.uint8: jnp.uint8,
-        torch.int8: jnp.int8,
-        torch.int16: jnp.int16,
-        torch.int32: jnp.int32,
-        torch.int64: jnp.int64,
-        torch.float16: jnp.float16,
-        torch.float32: jnp.float32,
-        torch.float64: jnp.float64,
-        torch.complex64: jnp.complex64,
-        torch.complex128: jnp.complex128,
-    }[torch_dtype]
 
 
 class TensorSpace(gymnasium.spaces.Space[torch.Tensor]):
@@ -58,7 +40,7 @@ class TensorBox(TensorSpace):
         shape: Sequence[int] | None = None,
         dtype: torch.dtype | None = None,
         seed: int | None = None,
-        device: torch.device = default_device(),
+        device: torch.device = torch.device("cpu"),
     ):
         if not dtype:
             if isinstance(low, Tensor):
@@ -133,25 +115,20 @@ class TensorBox(TensorSpace):
         )
 
 
-class TensorDiscrete(gymnasium.spaces.Space[LongTensor]):
+class TensorDiscrete(TensorSpace):
     def __init__(
         self,
         n: int,
         start: int = 0,
         dtype: torch.dtype = torch.int32,
         seed: int | None = None,
-        device: torch.device = default_device(),
+        device: torch.device = torch.device("cpu"),
     ):
+        super().__init__(shape=(), dtype=dtype, seed=seed, device=device)
         self.n = n
         self.start = start
-        self.device = device
-        self.dtype = dtype
-        self._rng = torch.Generator(device=self.device)
-        super().__init__(shape=(), dtype=None, seed=seed)
         self.shape: tuple[int, ...]
-
-    def seed(self, seed: int):
-        self._rng.manual_seed(seed)
+        self.dtype: torch.dtype
 
     def sample(self) -> Tensor:
         return torch.randint(
@@ -177,6 +154,22 @@ class TensorDiscrete(gymnasium.spaces.Space[LongTensor]):
         if self.start != 0:
             return f"{class_name}({self.n}, start={self.start}, device={self.device})"
         return f"{class_name}({self.n}, device={self.device})"
+
+
+def get_jax_dtype(torch_dtype: torch.dtype) -> jax.numpy.dtype:
+    return {
+        torch.bool: jnp.bool_,
+        torch.uint8: jnp.uint8,
+        torch.int8: jnp.int8,
+        torch.int16: jnp.int16,
+        torch.int32: jnp.int32,
+        torch.int64: jnp.int64,
+        torch.float16: jnp.float16,
+        torch.float32: jnp.float32,
+        torch.float64: jnp.float64,
+        torch.complex64: jnp.complex64,
+        torch.complex128: jnp.complex128,
+    }[torch_dtype]
 
 
 def get_torch_dtype(dtype: np.dtype | jnp.dtype, np: ModuleType = np) -> torch.dtype:
