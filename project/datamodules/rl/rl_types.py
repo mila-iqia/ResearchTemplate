@@ -45,12 +45,12 @@ WrapperActType = TypeVar("WrapperActType")
 ### Typing fixes for gymnasium.
 
 # TODO: annoying typing thing with gymnasium.Env.[observation|action]_space: The type is always
-# Space[ActType], even if you manually set it to something else, because of the property (which in
-# itself is useless!)
+# Space[ActType], even if you manually set it to something else in the env Init, because of the
+# property (which I don't see the utility of).
 
 
 # gym.Env subclasses typing.Generic which atm doesn't allow default typevars
-class Env[ObsType, ActType](gym.Env[ObsType, ActType]):
+class Env[ObsType, ActType](gymnasium.Env[ObsType, ActType]):
     observation_space: Space[ObsType]
     action_space: Space[ActType]
 
@@ -78,18 +78,6 @@ class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, Env[ObsType, ActTy
 # Optional types for the last two typevars in Wrapper and VectorEnvWrapper.
 WrappedObsType = TypeVar("WrappedObsType", default=Any)
 WrappedActType = TypeVar("WrappedActType", default=Any)
-
-
-# gymnasium.Wrapper doesn't have default types for the ObsType and ActType which makes it more difficult to use.
-class Wrapper(
-    gymnasium.Wrapper[WrapperObsType, WrapperActType, WrappedObsType, WrappedActType],
-    Generic[WrapperObsType, WrapperActType, WrappedObsType, WrappedActType],
-):
-    def __init__(self, env: gymnasium.Env[WrappedObsType, WrappedActType]):
-        super().__init__(env)
-        # Also, for some reason, it has a @property for these? but getattr/setattr already works fine.
-        self.observation_space: Space[WrapperObsType]
-        self.action_space: Space[WrapperActType]
 
 
 # gymnasium.vector.VectorEnvWrapper doesn't have type hints in current gymnasium.

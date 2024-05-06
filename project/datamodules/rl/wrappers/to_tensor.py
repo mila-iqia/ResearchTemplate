@@ -16,16 +16,26 @@ import numpy as np
 import torch
 from brax.generalized.base import State
 from brax.io.torch import torch_to_jax
+from gymnasium import Wrapper
 from gymnasium.wrappers.compatibility import EnvCompatibility
-from jax import dlpack as jax_dlpack
 from torch import Tensor
-from torch.utils import dlpack as torch_dlpack
 from typing_extensions import Generic, TypeVar  # noqa
 
-from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete
+from project.datamodules.rl.rl_types import (
+    BoxSpace,
+    DiscreteSpace,
+    VectorEnv,
+    VectorEnvWrapper,
+    _Env,
+)
+from project.datamodules.rl.wrappers import jax_torch_interop
+from project.datamodules.rl.wrappers.tensor_spaces import (
+    TensorBox,
+    TensorDiscrete,
+    get_torch_dtype_from_numpy_dtype,
+)
+from project.utils.device import default_device
 from project.utils.types import NestedDict
-
-from ..rl_types import BoxSpace, DiscreteSpace, VectorEnv, VectorEnvWrapper, Wrapper, _Env
 
 
 @functools.singledispatch
@@ -57,13 +67,16 @@ def dict_to_torch(
     return type(value)(**{k: to_torch(v, dtype=dtype, device=device) for k, v in value.items()})  # type: ignore
 
 
-@to_torch.register(jax.Array)
-def _jax_tensor_to_torch_tensor(
+def _jax_to_torch_with_dtype_and_device(
     value: jax.Array, *, dtype: torch.dtype | None = None, device: torch.device | None = None
-) -> Tensor:
-    dpack = jax_dlpack.to_dlpack(value)  # type: ignore
-    tensor = torch_dlpack.from_dlpack(dpack)
-    return torch.as_tensor(tensor, dtype=dtype, device=device)
+):
+    torch_val = jax_torch_interop.jax_array_to_torch_tensor(value)
+    # avoiding transferring between devices, should already be on the right device!
+    assert device is None or (torch_val.device == device)
+    return torch_val.to(dtype=dtype)
+
+
+to_torch.register(jax.Array, _jax_to_torch_with_dtype_and_device)
 
 
 @to_torch.register(State)
@@ -82,8 +95,8 @@ def _box_space(
     return TensorBox(  # type: ignore
         low=value.low,
         high=value.high,
-        dtype=dtype if dtype is not None else value.dtype,
-        device=device,
+        dtype=dtype if dtype is not None else get_torch_dtype_from_numpy_dtype(value.dtype),
+        device=device or default_device(),
     )
 
 
@@ -92,9 +105,9 @@ def _discrete_space(
     value: DiscreteSpace, *, dtype: torch.dtype | None = None, device: torch.device | None = None
 ) -> TensorDiscrete:
     return TensorDiscrete(  # type: ignore
-        n=value.n,
-        start=value.start,
-        dtype=value.dtype,
+        n=int(value.n),
+        start=int(value.start),
+        dtype=get_torch_dtype_from_numpy_dtype(value.dtype),
         # seed=env.seed,
     )
 
@@ -141,7 +154,6 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
             env.observation_space,
             type(env.observation_space),
         )
-
         self.observation_space = to_torch(env.observation_space, device=self.device)
         self.action_space = to_torch(env.action_space, device=self.device)
 
@@ -185,7 +197,7 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
     #     observation_space: TensorDiscrete | TensorBox
 
     def observation(self, observation: np.ndarray) -> TensorObsType:
-        return to_torch(observation, dtype=self.observation_space.torch_dtype, device=self.device)  # type: ignore
+        return to_torch(observation, dtype=self.observation_space.dtype, device=self.device)  # type: ignore
 
     def info(self, info: dict[str, Any]) -> dict[str, Tensor | Any]:
         if self.wrapped_env_is_jax:
