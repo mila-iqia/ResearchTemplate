@@ -108,14 +108,16 @@ class TensorBox(TensorSpace):
 
     def contains(self, x: Any) -> bool:
         # BUG: doesn't work with `nan` values for low or high.
+        min_value = torch.finfo(self.dtype).min
+        max_value = torch.finfo(self.dtype).max
         return (
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
             and (x.shape == self.shape)
             and (x.device == self.device)  # avoid unintentionally moving things between devices.
             and not bool(x.isnan().any())
-            and bool((~self.low.isnan() & (x >= self.low)).all())
-            and bool((~self.high.isnan() & (x <= self.high)).all())
+            and bool((x >= torch.nan_to_num(self.low, nan=min_value, neginf=min_value)).all())
+            and bool((x <= torch.nan_to_num(self.high, nan=max_value, posinf=max_value)).all())
         )
 
     def __repr__(self) -> str:
