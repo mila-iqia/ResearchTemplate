@@ -98,12 +98,13 @@ class TensorBox(TensorSpace):
         rand = torch.rand(
             size=self.low.shape, dtype=self.dtype, device=self.device, generator=self._rng
         )
-        # TODO: use `nan_to_num` or torch.clamp_min or similar to bound the result within some
-        # reasonable interval!
-        # bounded_above = ~self.high.isnan()
-        # bounded_below = ~self.low.isnan()
-        # torch.nan_to_num(self.low,
-        return self.low + rand * (self.high - self.low)
+        # TODO: Support unbounded intervals like gymnasium.spaces.Box.
+        assert not self.high.isnan().any()
+        assert not self.low.isnan().any()
+        val = self.low + rand * (self.high - self.low)
+        if val.isnan().any():
+            logger.warning(f"Sampled value has NaNs: {val}")
+        return val
 
     def contains(self, x: Any) -> bool:
         # BUG: doesn't work with `nan` values for low or high.

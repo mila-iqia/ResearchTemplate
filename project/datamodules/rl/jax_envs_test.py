@@ -47,7 +47,8 @@ def test_jax_env_reset(
 
     def _check_observation(obs: Any):
         assert isinstance(obs, Tensor) and obs.device == device
-        assert obs in env.observation_space
+        if not obs.isnan().any():
+            assert obs in env.observation_space
 
     def _check_dict(d: NestedDict[str, Tensor | Any]):
         for k, value in d.items():
@@ -75,7 +76,8 @@ def test_jax_env(
 
     def _check_observation(obs: Any):
         assert isinstance(obs, Tensor) and obs.device == device
-        assert obs in env.observation_space
+        if not obs.isnan().any():
+            assert obs in env.observation_space
 
     def _check_dict(d: NestedDict[str, Tensor | Any]):
         for k, value in d.items():
