@@ -167,6 +167,22 @@ class TensorDiscrete(TensorSpace):
         return f"{class_name}({self.n}, device={self.device})"
 
 
+@gymnasium.vector.utils.batch_space.register(TensorBox)
+def _batch_tensor_box_space(space: TensorBox, n: int = 1) -> TensorBox:
+    repeats = tuple([n] + [1] * space.low.ndim)
+    low, high = torch.tile(space.low, repeats), torch.tile(space.high, repeats)
+    rng_state = space._rng.get_state()
+    space = type(space)(low=low, high=high, dtype=space.dtype, seed=None, device=space.device)
+    space._rng.set_state(rng_state)
+    return space
+
+
+@gymnasium.vector.utils.batch_space.register(TensorDiscrete)
+def _batch_tensor_discrete_space(space: TensorDiscrete, n: int = 1) -> TensorBox:
+    # TODO: would need to implement something like MultiDiscrete? or what?
+    raise NotImplementedError(space, n)
+
+
 def get_jax_dtype(torch_dtype: torch.dtype) -> jax.numpy.dtype:
     return {
         torch.bool: jnp.bool_,
