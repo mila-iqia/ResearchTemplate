@@ -1,6 +1,5 @@
 import collections
 import collections.abc
-import dataclasses
 import functools
 from typing import Any, SupportsFloat
 
@@ -14,7 +13,6 @@ import gymnax.wrappers
 import jax
 import numpy as np
 import torch
-from brax.generalized.base import State
 from brax.io.torch import torch_to_jax
 from gymnasium import Wrapper
 from gymnasium.wrappers.compatibility import EnvCompatibility
@@ -23,18 +21,11 @@ from typing_extensions import Generic, TypeVar  # noqa
 
 from project.datamodules.rl.rl_types import (
     BoxSpace,
-    DiscreteSpace,
     VectorEnv,
     VectorEnvWrapper,
     _Env,
 )
 from project.datamodules.rl.wrappers import jax_torch_interop
-from project.datamodules.rl.wrappers.tensor_spaces import (
-    TensorBox,
-    TensorDiscrete,
-    get_torch_dtype,
-)
-from project.utils.device import default_device
 from project.utils.types import NestedDict
 
 
@@ -74,42 +65,6 @@ def _jax_to_torch_with_dtype_and_device(
     # avoiding transferring between devices, should already be on the right device!
     assert device is None or (torch_val.device == device)
     return torch_val.to(dtype=dtype)
-
-
-to_torch.register(jax.Array, _jax_to_torch_with_dtype_and_device)
-
-
-@to_torch.register(State)
-def _brax_state_to_torch(
-    value: State, *, dtype: torch.dtype | None = None, device: torch.device | None = None
-) -> dict[str, Tensor | Any]:
-    # NOTE: jax_to_torch returns None when it doesn't support a data type?!
-    # return jax_to_torch(value, device=device)
-    return to_torch(dataclasses.asdict(value), dtype=dtype, device=device)
-
-
-@to_torch.register(BoxSpace)
-def _box_space(
-    value: BoxSpace, *, dtype: torch.dtype | None = None, device: torch.device | None = None
-) -> TensorBox:
-    return TensorBox(  # type: ignore
-        low=value.low,
-        high=value.high,
-        dtype=dtype if dtype is not None else get_torch_dtype(value.dtype),
-        device=device or default_device(),
-    )
-
-
-@to_torch.register(DiscreteSpace)
-def _discrete_space(
-    value: DiscreteSpace, *, dtype: torch.dtype | None = None, device: torch.device | None = None
-) -> TensorDiscrete:
-    return TensorDiscrete(  # type: ignore
-        n=int(value.n),
-        start=int(value.start),
-        dtype=get_torch_dtype(value.dtype),
-        # seed=env.seed,
-    )
 
 
 def wrapped_env_is_jax(env: _Env) -> bool:

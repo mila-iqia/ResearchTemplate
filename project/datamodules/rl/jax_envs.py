@@ -2,6 +2,7 @@ import functools
 from collections.abc import Callable
 from typing import Any, ClassVar, Concatenate
 
+import brax.envs.base
 import brax.envs.wrappers.gym
 import brax.generalized.base
 import brax.io.image
@@ -20,7 +21,7 @@ from gymnasium.utils.step_api_compatibility import convert_to_terminated_truncat
 from gymnasium.wrappers.compatibility import EnvCompatibility
 from gymnax.wrappers.gym import GymnaxToGymWrapper, GymnaxToVectorGymWrapper
 
-from project.datamodules.rl.rl_types import VectorEnv
+from project.datamodules.rl.rl_types import VectorEnv, VectorEnvWrapper
 from project.datamodules.rl.wrappers.jax_torch_interop import (
     jax_to_torch,
     jax_to_torch_tensor,
@@ -29,6 +30,7 @@ from project.datamodules.rl.wrappers.jax_torch_interop import (
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
     TensorDiscrete,
+    TensorSpace,
     get_torch_dtype,
     get_torch_dtype_from_jax_dtype,
 )
@@ -65,8 +67,10 @@ def gymnax_vectorenv(
     # Instantiate the environment & its settings.
     gymnax_env, env_params = gymnax.make(env_id)
     env = GymnaxToVectorGymWrapper(gymnax_env, num_envs=num_envs, params=env_params, seed=seed)
-    env = ToTorchVectorEnvWrapper(env, device=device)
-    raise NotImplementedError("todo")
+    # Env should already be on the right device (for now).
+    assert get_torch_device_from_jax_array(env.reset(seed=123)[0]) == device
+    return GymnaxVectorEnvToTorchWrapper(env)
+    # env = ToTorchVectorEnvWrapper(env, device=device)
     return env
 
 
@@ -152,6 +156,119 @@ class GymnaxToTorchWrapper(JaxToTorchWrapper):
         return self.env.render()
 
 
+class JaxToTorchVectorEnvWrapper(
+    VectorEnvWrapper[torch.Tensor, torch.Tensor, jax.Array, jax.Array]
+):
+    def step(
+        self, action: torch.Tensor
+    ) -> tuple[
+        torch.Tensor, torch.FloatTensor, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]
+    ]:
+        jax_action = torch_to_jax_tensor(action)
+        obs, reward, terminated, truncated, info = self.env.step(jax_action)
+        torch_obs = jax_to_torch_tensor(obs)
+        assert isinstance(reward, jax.Array)
+        torch_reward = jax_to_torch_tensor(reward)
+        assert isinstance(terminated, jax.Array)
+        torch_terminated = jax_to_torch_tensor(terminated)
+        assert isinstance(truncated, jax.Array)
+        torch_truncated = jax_to_torch_tensor(truncated)
+        # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
+        if torch_terminated.dtype != torch.bool:
+            torch_terminated = torch_terminated.bool()
+        if torch_truncated.dtype != torch.bool:
+            torch_truncated = torch_truncated.bool()
+
+        torch_info = jax_to_torch(info)
+
+        # debug: checking that the devices are the same for everything, so that we don't have to
+        # move stuff.
+        jax_devices = jax_action.devices()
+        assert reward.devices() == jax_devices
+        assert terminated.devices() == jax_devices
+        assert truncated.devices() == jax_devices
+
+        return torch_obs, torch_reward, torch_terminated, torch_truncated, torch_info  # type: ignore
+
+    def reset(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, Any]:
+        obs, info = self.env.reset(seed=seed, options=options)
+        torch_obs = jax_to_torch_tensor(obs)
+        torch_info = jax_to_torch(info)
+        return torch_obs, torch_info
+
+
+class GymnaxVectorEnvToTorchWrapper(JaxToTorchVectorEnvWrapper):
+    def __init__(self, env: GymnaxToVectorGymWrapper):
+        super().__init__(env)  # type: ignore
+        self.env: GymnaxToVectorGymWrapper
+        jax_single_observation_space = self.env._env.observation_space(self.env.env_params)
+        jax_single_action_space = self.env._env.action_space(self.env.env_params)
+        torch_single_observation_space = gymnax_space_to_torch_space(jax_single_observation_space)
+        torch_single_action_space = gymnax_space_to_torch_space(jax_single_action_space)
+
+        self.single_observation_space = torch_single_observation_space
+        self.single_action_space = torch_single_action_space
+
+        # device = torch_single_observation_space.device
+        # NOTE: The Gymnax space is in Jax, but they wrap it into a regular Gymnasium space..
+        # Here we instead use a TensorSpace that returns torch tensors on the right device.
+        self.observation_space = gymnasium.vector.utils.batch_space(
+            torch_single_observation_space, self.env.num_envs
+        )
+        self.action_space = gymnasium.vector.utils.batch_space(
+            torch_single_action_space, self.env.num_envs
+        )
+
+
+@functools.singledispatch
+def gymnax_space_to_torch_space(
+    gymnax_space: gymnax.environments.spaces.Space, /, *, device: torch.device | None = None
+) -> TensorSpace:
+    raise NotImplementedError(f"No handler for gymnax spaces of type {type(gymnax_space)}")
+
+
+@gymnax_space_to_torch_space.register
+def _gymnax_box_to_torch_box(
+    gymnax_space: gymnax.environments.spaces.Box, /, *, device: torch.device | None = None
+) -> TensorBox:
+    if not device:
+        jax_array = gymnax_space.sample(jax.random.key(0))
+        assert isinstance(jax_array, jax.Array)
+        device = get_torch_device_from_jax_array(jax_array)
+    return TensorBox(
+        low=jax_to_torch_tensor(gymnax_space.low)
+        if isinstance(gymnax_space.low, jax.Array)
+        else gymnax_space.low,
+        high=jax_to_torch_tensor(gymnax_space.high)
+        if isinstance(gymnax_space.high, jax.Array)
+        else gymnax_space.high,
+        shape=gymnax_space.shape,
+        dtype=get_torch_dtype_from_jax_dtype(gymnax_space.dtype),
+        device=device,
+    )
+
+
+@gymnax_space_to_torch_space.register
+def _gymnax_discrete_to_torch_discrete(
+    gymnax_space: gymnax.environments.spaces.Discrete, /, *, device: torch.device | None = None
+) -> TensorDiscrete:
+    if not device:
+        jax_array = gymnax_space.sample(jax.random.key(0))
+        assert isinstance(jax_array, jax.Array)
+        device = get_torch_device_from_jax_array(jax_array)
+    return TensorDiscrete(
+        n=gymnax_space.n,
+        start=0,
+        dtype=get_torch_dtype_from_jax_dtype(gymnax_space.dtype),
+        device=device,
+    )
+
+
 class BraxToTorchWrapper(JaxToTorchWrapper):
     def __init__(
         self,
@@ -217,49 +334,9 @@ class BraxToTorchWrapper(JaxToTorchWrapper):
         return self.env.render()
 
 
-@functools.singledispatch
-def to_torch_space(
-    space: Any, /, *, device: torch.device | None = None
-) -> gymnasium.Space[torch.Tensor]:
-    raise NotImplementedError(f"No handler for values of type {type(space)}")
-
-
-@to_torch_space.register(gymnasium.spaces.Box)
-@to_torch_space.register(gym.spaces.Box)
-def _box_to_torch_box(
-    space: gymnasium.spaces.Box | gym.spaces.Box, /, *, device: torch.device | None = None
-) -> TensorBox:
-    return TensorBox(
-        low=space.low,
-        high=space.high,
-        shape=space.shape,
-        dtype=get_torch_dtype(space.dtype),
-        device=device or default_device(),
-    )
-
-
-@to_torch_space.register(gymnasium.spaces.Discrete)
-@to_torch_space.register(gym.spaces.Discrete)
-def _discrete_to_torch_discrete(
-    space: gymnasium.spaces.Discrete | gym.spaces.Discrete,
-    /,
-    *,
-    device: torch.device | None = None,
-) -> TensorDiscrete:
-    return TensorDiscrete(
-        n=int(space.n),
-        start=int(space.start),
-        dtype=get_torch_dtype(space.dtype),  # type: ignore
-        device=device or default_device(),
-    )
-
-
-@to_torch_space.register(gymnax.environments.spaces.Space)
-@functools.singledispatch
-def gymnax_space_to_torch_space(
-    gymnax_space: gymnax.environments.spaces.Space, /, *, device: torch.device | None = None
-) -> gymnasium.Space:
-    raise NotImplementedError(f"No handler for gymnax spaces of type {type(gymnax_space)}")
+class BraxVectorEnvToTorchWrapper(JaxToTorchVectorEnvWrapper):
+    def __init__(self, env: brax.envs.wrappers.gym.VectorGymWrapper):
+        super().__init__(env)  # type: ignore
 
 
 def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
@@ -272,43 +349,6 @@ def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
         assert index.isdigit()
         return torch.device(device_type, int(index))
     return torch.device("cpu")
-
-
-@gymnax_space_to_torch_space.register
-def _gymnax_box_to_torch_box(
-    gymnax_space: gymnax.environments.spaces.Box, /, *, device: torch.device | None = None
-) -> TensorBox:
-    if not device:
-        jax_array = gymnax_space.sample(jax.random.key(0))
-        assert isinstance(jax_array, jax.Array)
-        device = get_torch_device_from_jax_array(jax_array)
-    return TensorBox(
-        low=jax_to_torch_tensor(gymnax_space.low)
-        if isinstance(gymnax_space.low, jax.Array)
-        else gymnax_space.low,
-        high=jax_to_torch_tensor(gymnax_space.high)
-        if isinstance(gymnax_space.high, jax.Array)
-        else gymnax_space.high,
-        shape=gymnax_space.shape,
-        dtype=get_torch_dtype_from_jax_dtype(gymnax_space.dtype),
-        device=device,
-    )
-
-
-@gymnax_space_to_torch_space.register
-def _gymnax_discrete_to_torch_discrete(
-    gymnax_space: gymnax.environments.spaces.Discrete, /, *, device: torch.device | None = None
-) -> TensorDiscrete:
-    if not device:
-        jax_array = gymnax_space.sample(jax.random.key(0))
-        assert isinstance(jax_array, jax.Array)
-        device = get_torch_device_from_jax_array(jax_array)
-    return TensorDiscrete(
-        n=gymnax_space.n,
-        start=0,
-        dtype=get_torch_dtype_from_jax_dtype(gymnax_space.dtype),
-        device=device,
-    )
 
 
 def jit[C: Callable, **P](
