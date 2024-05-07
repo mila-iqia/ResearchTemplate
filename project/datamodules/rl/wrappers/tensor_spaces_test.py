@@ -1,3 +1,4 @@
+import random
 from typing import Any
 
 import pytest
@@ -21,10 +22,18 @@ def test_box_sample(box_space: TensorBox, tensor_regression: TensorRegressionFix
     tensor_regression.check({"sample_1": sample_1, "sample_2": sample_2})
 
 
-def test_box_contains(box_space: TensorBox):
+def test_box_contains(box_space: TensorBox, seed: int):
     sample = box_space.sample()
     assert box_space.contains(sample)
     assert sample in box_space
+
+    assert box_space.low in box_space
+    assert box_space.high in box_space
+    assert box_space.low + 0.5 * (box_space.high - box_space.low) in box_space
+    gen = random.Random(seed)
+
+    for _ in range(10):
+        assert box_space.low + gen.random() * (box_space.high - box_space.low) in box_space
 
 
 @pytest.mark.parametrize("value", ["Bob", 0, 1, 0.1, 0.22])
@@ -63,10 +72,25 @@ def test_discrete_sample(
     tensor_regression.check({"sample_1": sample_1, "sample_2": sample_2})
 
 
-def test_discrete_contains(discrete_space: TensorDiscrete):
+def test_discrete_contains(discrete_space: TensorDiscrete, seed: int):
     sample = discrete_space.sample()
     assert discrete_space.contains(sample)
     assert sample in discrete_space
+    start = torch.as_tensor(
+        discrete_space.start, device=discrete_space.device, dtype=discrete_space.dtype
+    )
+    n = torch.as_tensor(discrete_space.n, device=discrete_space.device, dtype=discrete_space.dtype)
+    end = start + n
+    assert start - 1 not in discrete_space
+    assert start in discrete_space
+    assert end - 1 in discrete_space
+    assert end not in discrete_space
+    rng = random.Random(seed)
+    for _ in range(10):
+        assert (
+            start + torch.empty_like(n).fill_(rng.randint(0, discrete_space.n - 1))
+            in discrete_space
+        )
 
 
 @pytest.mark.parametrize("value", ["Bob", 0, 1, 0.1, 0.22])

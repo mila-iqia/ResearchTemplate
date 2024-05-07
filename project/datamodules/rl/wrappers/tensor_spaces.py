@@ -156,7 +156,7 @@ class TensorDiscrete(TensorSpace):
             and torch.can_cast(x.dtype, self.dtype)
             and (x.shape == self.shape)
             and (x.device == self.device)  # avoid unintentionally moving things between devices.
-            and bool((x >= self.start).all() & (x <= self.n).all())
+            and bool((x >= self.start).all() & (x < (self.start + self.n)).all())
         )
 
     def __repr__(self) -> str:
