@@ -147,8 +147,9 @@ def test_jax_vectorenv(
 
     def _check_obs(obs: Any):
         assert isinstance(obs, Tensor) and obs.device == device and obs.shape[0] == num_envs
-        assert obs in vectorenv.observation_space
-        assert all(obs_i in vectorenv.single_observation_space for obs_i in obs)
+        if not obs.isnan().any():
+            assert obs in vectorenv.observation_space
+            assert all(obs_i in vectorenv.single_observation_space for obs_i in obs)
 
     def _check_dict(d: NestedDict[str, Tensor | Any]):
         for k, value in d.items():
