@@ -22,9 +22,9 @@ from gymnax.wrappers.gym import GymnaxToGymWrapper, GymnaxToVectorGymWrapper
 
 from project.datamodules.rl.rl_types import VectorEnv
 from project.datamodules.rl.wrappers.jax_torch_interop import (
-    jax_array_to_torch_tensor,
     jax_to_torch,
-    torch_tensor_to_jax_array,
+    jax_to_torch_tensor,
+    torch_to_jax_tensor,
 )
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
@@ -83,6 +83,7 @@ def brax_vectorenv(
     # todo: Not 100% sure that this EnvCompatibility wrapper can be used on a VectorEnv.
     # env = VectorEnvCompatibility(env)  # make the env compatible with the gymnasium api
     env = ToTorchVectorEnvWrapper(env, device=device, from_jax=True)
+    raise NotImplementedError("todo")
     return env
 
 
@@ -92,15 +93,21 @@ class JaxToTorchWrapper(gymnasium.Wrapper[torch.Tensor, torch.Tensor, jax.Array,
     ) -> tuple[
         torch.Tensor, torch.FloatTensor, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]
     ]:
-        jax_action = torch_tensor_to_jax_array(action)
+        jax_action = torch_to_jax_tensor(action)
         obs, reward, terminated, truncated, info = self.env.step(jax_action)
-        torch_obs = jax_array_to_torch_tensor(obs)
+        torch_obs = jax_to_torch_tensor(obs)
         assert isinstance(reward, jax.Array)
-        torch_reward = jax_array_to_torch_tensor(reward)
+        torch_reward = jax_to_torch_tensor(reward)
         assert isinstance(terminated, jax.Array)
-        torch_terminated = jax_array_to_torch_tensor(terminated)
+        torch_terminated = jax_to_torch_tensor(terminated)
         assert isinstance(truncated, jax.Array)
-        torch_truncated = jax_array_to_torch_tensor(truncated)
+        torch_truncated = jax_to_torch_tensor(truncated)
+        # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
+        if torch_terminated.dtype != torch.bool:
+            torch_terminated = torch_terminated.bool()
+        if torch_truncated.dtype != torch.bool:
+            torch_truncated = torch_truncated.bool()
+
         torch_info = jax_to_torch(info)
 
         # debug: checking that the devices are the same for everything, so that we don't have to
@@ -119,7 +126,7 @@ class JaxToTorchWrapper(gymnasium.Wrapper[torch.Tensor, torch.Tensor, jax.Array,
         options: dict[str, Any] | None = None,
     ) -> tuple[torch.Tensor, Any]:
         obs, info = self.env.reset(seed=seed, options=options)
-        torch_obs = jax_array_to_torch_tensor(obs)
+        torch_obs = jax_to_torch_tensor(obs)
         torch_info = jax_to_torch(info)
         return torch_obs, torch_info
 
@@ -162,25 +169,37 @@ class BraxToTorchWrapper(JaxToTorchWrapper):
         # BUG: The observation space uses np.nan, which is bad!
         # Seems like we could use the DoF to set the limits here:
         # https://github.com/google/brax/issues/360#issuecomment-1585227475
-        _min, _max = brax_wrapper._env.sys.dof.limit
         # TODO: Figure out how to use the sys info to get the observation space upper/lower limits.
-        assert _min.shape == _max.shape == _state.obs.shape, (
-            _min.shape,
-            _max.shape,
-            _state.obs.shape,
-        )
-        assert (_min <= _state.obs).all()
-        assert (_state.obs <= _max).all()
-
+        _min, _max = brax_wrapper._env.sys.dof.limit
+        # assert _min.shape == _max.shape == _state.obs.shape, (
+        #     _min.shape,
+        #     _max.shape,
+        #     _state.obs.shape,
+        # )
+        # assert (_min <= _state.obs).all()
+        # assert (_state.obs <= _max).all()
+        # assert not np.isnan(brax_wrapper.action_space.low).any()
+        # assert not np.isnan(brax_wrapper.action_space.high).any()
+        # self.observation_space = TensorBox(
+        #     low=(low := jax_array_to_torch_tensor(_min)),
+        #     high=jax_array_to_torch_tensor(_max),
+        #     shape=_state.obs.shape,
+        #     dtype=low.dtype,
+        #     device=device,
+        # )
         self.observation_space = TensorBox(
-            low=(low := jax_array_to_torch_tensor(_min)),
-            high=jax_array_to_torch_tensor(_max),
+            low=(
+                _low := torch.as_tensor(
+                    brax_wrapper.observation_space.low, dtype=torch.float32, device=device
+                )
+            ),
+            high=torch.as_tensor(
+                brax_wrapper.observation_space.high, dtype=_low.dtype, device=device
+            ),
             shape=_state.obs.shape,
-            dtype=low.dtype,
+            dtype=_low.dtype,
             device=device,
         )
-        assert not np.isnan(brax_wrapper.action_space.low).any()
-        assert not np.isnan(brax_wrapper.action_space.high).any()
         action_dtype = get_torch_dtype(brax_wrapper.action_space.dtype)
         self.action_space = TensorBox(
             low=torch.as_tensor(brax_wrapper.action_space.low, dtype=action_dtype, device=device),
@@ -264,10 +283,10 @@ def _gymnax_box_to_torch_box(
         assert isinstance(jax_array, jax.Array)
         device = get_torch_device_from_jax_array(jax_array)
     return TensorBox(
-        low=jax_array_to_torch_tensor(gymnax_space.low)
+        low=jax_to_torch_tensor(gymnax_space.low)
         if isinstance(gymnax_space.low, jax.Array)
         else gymnax_space.low,
-        high=jax_array_to_torch_tensor(gymnax_space.high)
+        high=jax_to_torch_tensor(gymnax_space.high)
         if isinstance(gymnax_space.high, jax.Array)
         else gymnax_space.high,
         shape=gymnax_space.shape,

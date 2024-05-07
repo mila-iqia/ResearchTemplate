@@ -70,7 +70,7 @@ def dict_to_torch(
 def _jax_to_torch_with_dtype_and_device(
     value: jax.Array, *, dtype: torch.dtype | None = None, device: torch.device | None = None
 ):
-    torch_val = jax_torch_interop.jax_array_to_torch_tensor(value)
+    torch_val = jax_torch_interop.jax_to_torch_tensor(value)
     # avoiding transferring between devices, should already be on the right device!
     assert device is None or (torch_val.device == device)
     return torch_val.to(dtype=dtype)
