@@ -132,10 +132,21 @@ class JaxToTorchMixin:
         torch_obs = jax_to_torch_tensor(obs)
         assert isinstance(reward, jax.Array)
         torch_reward = jax_to_torch_tensor(reward)
-        assert isinstance(terminated, jax.Array)
-        torch_terminated = jax_to_torch_tensor(terminated)
-        assert isinstance(truncated, jax.Array)
-        torch_truncated = jax_to_torch_tensor(truncated)
+
+        if isinstance(terminated, bool):
+            torch_terminated = torch.tensor(
+                terminated, dtype=torch.bool, device=torch_reward.device
+            )
+        else:
+            assert isinstance(terminated, jax.Array)
+            torch_terminated = jax_to_torch_tensor(terminated)
+
+        if isinstance(truncated, bool):
+            torch_truncated = torch.tensor(truncated, dtype=torch.bool, device=torch_reward.device)
+        else:
+            assert isinstance(truncated, jax.Array)
+            torch_truncated = jax_to_torch_tensor(truncated)
+
         # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
         if torch_terminated.dtype != torch.bool:
             torch_terminated = torch_terminated.bool()
@@ -143,14 +154,6 @@ class JaxToTorchMixin:
             torch_truncated = torch_truncated.bool()
 
         torch_info = jax_to_torch(info)
-
-        # debug: checking that the devices are the same for everything, so that we don't have to
-        # move stuff.
-        jax_devices = jax_action.devices()
-        assert reward.devices() == jax_devices
-        assert terminated.devices() == jax_devices
-        assert truncated.devices() == jax_devices
-
         return torch_obs, torch_reward, torch_terminated, torch_truncated, torch_info  # type: ignore
 
     def reset(
