@@ -69,8 +69,9 @@ class RlDataset(IterableDataset[Episode[ActorOutput]]):
         terminated = False
         truncated = False
 
-        self.env.action_space.seed(seed)
-        self.env.observation_space.seed(seed)
+        if seed is not None:
+            self.env.action_space.seed(seed)
+            self.env.observation_space.seed(seed)
         obs, info = self.env.reset(seed=seed)
 
         observations.append(obs)
