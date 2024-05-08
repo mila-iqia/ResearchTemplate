@@ -20,7 +20,10 @@ type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType,
 type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
 
 BoxSpace = gym.spaces.Box | gymnasium.spaces.Box
+"""A Box space, either from Gym or Gymnasium."""
+
 DiscreteSpace = gym.spaces.Discrete | gymnasium.spaces.Discrete
+"""A Discrete space, from either Gym or Gymnasium."""
 
 
 TensorType = TypeVar("TensorType", bound=Tensor, default=Tensor)
@@ -49,14 +52,16 @@ WrapperActType = TypeVar("WrapperActType")
 # property (which I don't see the utility of).
 
 
-# gym.Env subclasses typing.Generic which atm doesn't allow default typevars
-class Env[ObsType, ActType](gymnasium.Env[ObsType, ActType]):
-    observation_space: Space[ObsType]
-    action_space: Space[ActType]
+# gym.Env subclasses typing.Generic which atm doesn't allow default typevars (double check that this is indeed the problem.)
+type Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
+
+# class Env[ObsType, ActType](gymnasium.Env[ObsType, ActType]):
+#     observation_space: Space[ObsType]
+#     action_space: Space[ActType]
 
 
 # VectorEnv doesn't have type hints in current gymnasium.
-class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, Env[ObsType, ActType]):
+class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]):
     observation_space: Space[ObsType]
     action_space: Space[ActType]
 

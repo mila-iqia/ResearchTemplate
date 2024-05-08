@@ -92,18 +92,19 @@ TensorActType = TypeVar(
 
 
 class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
-    """TODO: Unclear if this wrapper should be from numpy to Torch only, or also include jax to torch.."""
+    """Wrapper that moves numpy arrays to torch tensors and vice versa.
+
+    Very bad, very sad. This is only useful because it moves stuff directly to GPU, but there's a
+    high performance cost to doing this a lot. Consider using an environment that natively runs on
+    the GPU.
+    """
 
     def __init__(
         self,
         env: gymnasium.Env[Any, Any],
         device: torch.device,
-        from_jax: bool | None = None,
     ):
         super().__init__(env)
-        if from_jax is None:
-            from_jax = wrapped_env_is_jax(env)
-        self.wrapped_env_is_jax = from_jax
         self.device = device
         assert isinstance(env.observation_space, BoxSpace), (
             env.observation_space,
@@ -118,20 +119,6 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
         """Resets the environment, returning a modified observation using
         :meth:`self.observation`."""
         obs, info = self.env.reset(seed=seed, options=options, **kwargs)
-        brax_env: brax.envs.wrappers.gym.GymWrapper | None = None
-        if isinstance(self.env, EnvCompatibility) and isinstance(
-            self.env.env, brax.envs.wrappers.gym.GymWrapper
-        ):
-            brax_env = self.env.env
-        elif isinstance(self.env, brax.envs.wrappers.gym.GymWrapper):
-            brax_env = self.env
-
-        if brax_env is not None and brax_env._state is not None:
-            # Need to slightly adjust the reset of the wrapped brax env to take in a seed.
-            # Here is the code of the `GymWrapper.reset` at the time of writing:
-            # Can actually get the reset info from the env:
-            info = {**brax_env._state.metrics, **brax_env._state.info}
-
         return self.observation(obs), self.info(info)
 
     def step(
@@ -148,15 +135,13 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
         info = self.info(info)
         return observation, reward, terminated, truncated, info
 
-    # if typing.TYPE_CHECKING:
-    #     observation_space: TensorDiscrete | TensorBox
-
     def observation(self, observation: np.ndarray) -> TensorObsType:
         return to_torch(observation, dtype=self.observation_space.dtype, device=self.device)  # type: ignore
 
     def info(self, info: dict[str, Any]) -> dict[str, Tensor | Any]:
-        if self.wrapped_env_is_jax:
-            return dict_to_torch(info, device=self.device)
+        # if self.wrapped_env_is_jax:
+        # return dict_to_torch(info, device=self.device)
+        # By default we don't do anything with the info dict.
         return info
 
     def action(self, action: TensorActType) -> np.ndarray | jax.numpy.ndarray:
@@ -169,9 +154,7 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
 
 
 class ToTorchVectorEnvWrapper(ToTorchWrapper, VectorEnvWrapper[Tensor, Tensor, Any, Any]):
-    def __init__(
-        self, env: VectorEnv[Any, Any], device: torch.device, from_jax: bool | None = None
-    ):
-        super().__init__(env, device=device, from_jax=from_jax)
+    def __init__(self, env: VectorEnv[Any, Any], device: torch.device):
+        super().__init__(env, device=device)
         self.single_observation_space = to_torch(env.single_observation_space, device=self.device)
         self.single_action_space = to_torch(env.single_action_space, device=self.device)

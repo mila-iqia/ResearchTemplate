@@ -1,27 +1,45 @@
 from typing import Any
 
+import gymnasium
 import numpy as np
-from gymnasium.core import ActionWrapper
+import torch
 
-from ..rl_types import BoxSpace, _Env
+from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
+
+from ..rl_types import BoxSpace
 
 
-class NormalizeBoxActionWrapper(ActionWrapper):
+def _ones_like[T: np.ndarray | torch.Tensor](v: T) -> T:
+    return np.ones_like(v) if isinstance(v, np.ndarray) else torch.ones_like(v)
+
+
+class NormalizeBoxActionWrapper[ObsType, ActionType: np.ndarray | torch.Tensor](
+    gymnasium.ActionWrapper[ObsType, ActionType, ActionType]
+):
     """Wrapper to normalize gym.spaces.Box actions in [-1, 1].
 
-    TAKEN FROM (https://github.com/google-research/google-research/blob/master/algae_dice/wrappers/normalize_action_wrapper.py)
+    Adapted from (https://github.com/google-research/google-research/blob/master/algae_dice/wrappers/normalize_action_wrapper.py)
     """
 
-    def __init__(self, env: _Env[Any, np.ndarray]):
-        if not isinstance(env.action_space, BoxSpace):
+    def __init__(self, env: gymnasium.Env[Any, ActionType]):
+        if not isinstance(env.action_space, BoxSpace | TensorBox):
             raise ValueError(f"env {env} doesn't have a Box action space.")
         super().__init__(env)
         self.orig_action_space = env.action_space
-        self.action_space = type(env.action_space)(
-            low=np.ones_like(env.action_space.low) * -1.0,
-            high=np.ones_like(env.action_space.high),
-            dtype=env.action_space.dtype,
-        )
+        if isinstance(env.action_space, BoxSpace):
+            action_space = gymnasium.spaces.Box(
+                low=_ones_like(env.action_space.low) * -1.0,
+                high=_ones_like(env.action_space.high),
+                dtype=env.action_space.dtype,
+            )
+        else:
+            action_space = TensorBox(
+                low=-_ones_like(env.action_space.low) * -1.0,
+                high=_ones_like(env.action_space.high),
+                dtype=env.action_space.dtype,
+                device=env.action_space.device,
+            )
+        self.action_space: BoxSpace | TensorBox = action_space
 
     def action(self, action: np.ndarray) -> np.ndarray:
         # rescale the action

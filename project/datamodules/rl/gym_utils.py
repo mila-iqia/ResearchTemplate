@@ -8,12 +8,12 @@ import gym.spaces
 import gymnasium
 import gymnax
 import gymnax.wrappers
-import numpy as np
 import torch
 
 from project.datamodules.rl.jax_envs import brax_env, brax_vectorenv, gymnax_env, gymnax_vectorenv
 from project.datamodules.rl.rl_types import BoxSpace, _Env
 from project.datamodules.rl.wrappers.normalize_actions import NormalizeBoxActionWrapper
+from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
 from project.datamodules.rl.wrappers.to_tensor import ToTorchWrapper
 
 logger = get_logger(__name__)
@@ -21,15 +21,11 @@ logger = get_logger(__name__)
 
 def check_and_normalize_box_actions(env: _Env) -> _Env:
     """Wrap env to normalize actions if [low, high] != [-1, 1]."""
-    if isinstance(env.action_space, BoxSpace):
+    if isinstance(env.action_space, BoxSpace | TensorBox):
         low, high = env.action_space.low, env.action_space.high
-        if (
-            np.abs(low + np.ones_like(low)).max() > 1e-6
-            or np.abs(high - np.ones_like(high)).max() > 1e-6
-        ):
+        if (low != -1).any() or (high != 1).any():
             logger.info("Normalizing environment actions.")
             return NormalizeBoxActionWrapper(env)
-
     # Environment does not need to be normalized.
     return env
 

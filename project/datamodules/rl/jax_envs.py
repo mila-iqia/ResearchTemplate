@@ -7,6 +7,7 @@ import brax.envs.wrappers.gym
 import brax.generalized.base
 import brax.io.image
 import gym.spaces
+import gym.vector
 import gymnasium
 import gymnasium.core
 import gymnasium.spaces.utils
@@ -35,28 +36,35 @@ from project.datamodules.rl.wrappers.tensor_spaces import (
     get_torch_dtype_from_jax_dtype,
 )
 from project.utils.device import default_device
+from project.utils.types import NestedDict
 
 
 def gymnax_env(env_id: str, device: torch.device = default_device(), seed: int = 123):
     # Instantiate the environment & its settings.
+    # todo: How to control on which device the brax / gymnax environment resides?
+    # For now we just have to assume that it's the same device as `device`, because otherwise we'd
+    # be moving stuff between the CPU and GPU!
     gymnax_env, env_params = gymnax.make(env_id)
     env = GymnaxToGymWrapper(gymnax_env, params=env_params, seed=seed)
     env = GymnaxToTorchWrapper(env, device=device)
     # NOTE: The spaces are also seeded here.
     env.observation_space.seed(seed)
     env.action_space.seed(seed)
-    # env = ToTorchWrapper(env, device=device)
-    # env.observation_space.seed(seed)
-    # env.action_space.seed(seed)
     return env
 
 
 def brax_env(env_id: str, device: torch.device = default_device(), seed: int = 123, **kwargs):
     # Instantiate the environment & its settings.
     brax_env = brax.envs.create(env_id, **kwargs)
-    env = GymWrapper(brax_env, seed=seed)
+    env = GymWrapper(
+        brax_env,  # type: ignore (bad type hint in the brax wrapper constructor)
+        seed=seed,
+    )
+    # todo: How to control on which device the brax / gymnax environment resides?
+    # For now we just have to assume that it's the same device as `device`, because otherwise we'd
+    # be moving stuff between the CPU and GPU!
     env = BraxToTorchWrapper(env)
-    # env = ToTorchWrapper(env, device=device, from_jax=True)
+    assert env.observation_space.device == device
     return env
 
 
@@ -90,6 +98,13 @@ def brax_vectorenv(
 
 
 class JaxToTorchMixin:
+    """A mixin that just implements the step and reset that convert jax arrays into torch tensors.
+
+    TODO: Eventually make this support dict / tuples observations and actions:
+    - use the generic `jax_to_torch` function.
+    - mark this class generic w.r.t. the type of observations and actions
+    """
+
     env: gymnasium.Env[jax.Array, jax.Array] | VectorEnv[jax.Array, jax.Array]
 
     def step(
@@ -136,7 +151,7 @@ class JaxToTorchMixin:
 
 
 class GymnaxToTorchWrapper(
-    gymnasium.Wrapper[torch.Tensor, torch.Tensor, jax.Array, jax.Array], JaxToTorchMixin
+    JaxToTorchMixin, gymnasium.Wrapper[torch.Tensor, torch.Tensor, jax.Array, jax.Array]
 ):
     def __init__(
         self,
@@ -227,7 +242,7 @@ def _gymnax_discrete_to_torch_discrete(
     )
 
 
-class BraxToTorchWrapper(gymnasium.Env[torch.Tensor, torch.Tensor], JaxToTorchMixin):
+class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tensor]):
     """Compatibility fixes for the the GymWrapper of brax.
 
     1. It subclasses gym.Env, we'd like to be a subclass of gymnasium.Env
@@ -239,13 +254,13 @@ class BraxToTorchWrapper(gymnasium.Env[torch.Tensor, torch.Tensor], JaxToTorchMi
         self,
         env: brax.envs.wrappers.gym.GymWrapper,
     ):
-        brax_wrapper = env
-        new_style_env = EnvCompatibility(env)  # make the env compatible with the newer Gym api
         super().__init__()
-        self.env = new_style_env
-        assert isinstance(brax_wrapper.observation_space, gym.spaces.Box)
-        assert isinstance(brax_wrapper.action_space, gym.spaces.Box)
-        _state = brax_wrapper._env.reset(jax.random.key(0))
+        self.brax_env = env
+        # make the env compatible with the newer Gym api
+        self.env = EnvCompatibility(env)  # type: ignore (expects a gymnasium.Env, gets gym.Env).
+        assert isinstance(self.brax_env.observation_space, gym.spaces.Box)
+        assert isinstance(self.brax_env.action_space, gym.spaces.Box)
+        _state = self.brax_env._env.reset(jax.random.key(0))
 
         device = get_torch_device_from_jax_array(_state.obs)
 
@@ -253,48 +268,45 @@ class BraxToTorchWrapper(gymnasium.Env[torch.Tensor, torch.Tensor], JaxToTorchMi
         # Seems like we could use the DoF to set the limits here:
         # https://github.com/google/brax/issues/360#issuecomment-1585227475
         # TODO: Figure out how to use the sys info to get the observation space upper/lower limits.
-        _min, _max = brax_wrapper._env.sys.dof.limit
-        # assert _min.shape == _max.shape == _state.obs.shape, (
-        #     _min.shape,
-        #     _max.shape,
-        #     _state.obs.shape,
-        # )
-        # assert (_min <= _state.obs).all()
-        # assert (_state.obs <= _max).all()
-        # assert not np.isnan(brax_wrapper.action_space.low).any()
-        # assert not np.isnan(brax_wrapper.action_space.high).any()
-        # self.observation_space = TensorBox(
-        #     low=(low := jax_array_to_torch_tensor(_min)),
-        #     high=jax_array_to_torch_tensor(_max),
-        #     shape=_state.obs.shape,
-        #     dtype=low.dtype,
-        #     device=device,
-        # )
-        self.observation_space = TensorBox(
+        _min, _max = self.brax_env._env.sys.dof.limit
+
+        self.observation_space: TensorBox = TensorBox(
             low=(
                 _low := torch.as_tensor(
-                    brax_wrapper.observation_space.low, dtype=torch.float32, device=device
+                    self.brax_env.observation_space.low, dtype=torch.float32, device=device
                 )
             ),
             high=torch.as_tensor(
-                brax_wrapper.observation_space.high, dtype=_low.dtype, device=device
+                self.brax_env.observation_space.high, dtype=_low.dtype, device=device
             ),
             shape=_state.obs.shape,
             dtype=_low.dtype,
             device=device,
-            seed=brax_wrapper.observation_space.np_random.integers(0, 2**32).item(),
+            seed=self.brax_env.observation_space.np_random.integers(0, 2**32).item(),
         )
-        action_dtype = get_torch_dtype(brax_wrapper.action_space.dtype)
-        self.action_space = TensorBox(
-            low=torch.as_tensor(brax_wrapper.action_space.low, dtype=action_dtype, device=device),
+        action_dtype = get_torch_dtype(self.brax_env.action_space.dtype)
+        self.action_space: TensorBox = TensorBox(
+            low=torch.as_tensor(self.brax_env.action_space.low, dtype=action_dtype, device=device),
             high=torch.as_tensor(
-                brax_wrapper.action_space.high, dtype=action_dtype, device=device
+                self.brax_env.action_space.high, dtype=action_dtype, device=device
             ),
-            shape=brax_wrapper.action_space.shape,
+            shape=self.brax_env.action_space.shape,
             dtype=action_dtype,
             device=device,
-            seed=brax_wrapper.observation_space.np_random.integers(0, 2**32).item(),
+            seed=self.brax_env.observation_space.np_random.integers(0, 2**32).item(),
         )
+
+    def reset(
+        self, *, seed: int | None = None, options: NestedDict[str, Any] | None = None
+    ) -> tuple[torch.Tensor, Any]:
+        obs, info = self.env.reset(seed=seed, options=options)
+        # the env doesn't return anything in info by default, but here I think it might be
+        # useful to include the same information that is normally present in `step`:
+        assert not info
+        info = {**self.brax_env._state.metrics, **self.brax_env._state.info}
+        torch_obs = jax_to_torch_tensor(obs)
+        torch_info = jax_to_torch(info)
+        return torch_obs, torch_info
 
     def render(self):
         assert self.env.render_mode == "rgb_array"
@@ -311,8 +323,17 @@ class BraxVectorEnvToTorchWrapper(JaxToTorchMixin, VectorEnv[torch.Tensor, torch
     3. It uses gym.spaces.Box for its obs / act spaces. We use gymnasium.spaces.Box.
     """
 
-    def __init__(self, env: brax.envs.wrappers.gym.VectorGymWrapper):
-        self.env = EnvCompatibility(env)  # type: ignore
+    env: brax.envs.wrappers.gym.VectorGymWrapper
+
+    def __init__(
+        self, env: brax.envs.wrappers.gym.VectorGymWrapper, render_mode: str | None = None
+    ):
+        self.env = env
+        self.metadata = env.metadata
+        self.render_mode = render_mode
+        self.reward_range = env.reward_range
+        self.spec = env.spec  # type: ignore (todo: would have to convert the EnvSpec from one to the other...)
+        # todo: would be better if we had a nicer way to know which device the env is running on.
         env.seed(123)
         _obs = env.reset()[0]
         device = get_torch_device_from_jax_array(_obs)
@@ -341,6 +362,7 @@ class BraxVectorEnvToTorchWrapper(JaxToTorchMixin, VectorEnv[torch.Tensor, torch
             device=device,
             seed=env.action_space.np_random.integers(0, 2**32).item(),
         )
+        # NOTE: This is done by `VectorEnv`.
         # self.observation_space = gymnasium.vector.utils.batch_space(
         #     self.single_observation_space, env.num_envs
         # )
@@ -353,6 +375,71 @@ class BraxVectorEnvToTorchWrapper(JaxToTorchMixin, VectorEnv[torch.Tensor, torch
             observation_space=single_observation_space,
             action_space=single_action_space,
         )
+
+    def step(
+        self, action: torch.Tensor
+    ) -> tuple[
+        torch.Tensor, torch.FloatTensor, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]
+    ]:
+        jax_action = torch_to_jax_tensor(action)
+        obs, reward, _dones, infos = self.env.step(jax_action)
+
+        # Extracted from  gymnasium.utils.step_api_compatibility.convert_to_terminated_truncated_step_api
+        if isinstance(infos, list):
+            _truncated = jax.numpy.array(
+                [info.pop("TimeLimit.truncated", False) for info in infos]
+            )
+            terminated = (jax.numpy.logical_and(_dones, np.logical_not(_truncated)),)
+            truncated = (jax.numpy.logical_and(_dones, _truncated),)
+        elif isinstance(infos, dict):
+            _num_envs = len(_dones)
+            _truncated = infos.pop("TimeLimit.truncated", jax.numpy.zeros(_num_envs, dtype=bool))
+            terminated = jax.numpy.logical_and(_dones, jax.numpy.logical_not(_truncated))
+            truncated = jax.numpy.logical_and(_dones, _truncated)
+
+        torch_obs = jax_to_torch_tensor(obs)
+        assert isinstance(reward, jax.Array)
+        torch_reward = jax_to_torch_tensor(reward)
+        assert isinstance(terminated, jax.Array), (terminated, type(terminated))
+        torch_terminated = jax_to_torch_tensor(terminated)
+        assert isinstance(truncated, jax.Array)
+        torch_truncated = jax_to_torch_tensor(truncated)
+        # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
+        if torch_terminated.dtype != torch.bool:
+            torch_terminated = torch_terminated.bool()
+        if torch_truncated.dtype != torch.bool:
+            torch_truncated = torch_truncated.bool()
+
+        torch_info = jax_to_torch(infos)
+
+        # debug: checking that the devices are the same for everything, so that we don't have to
+        # move stuff.
+        jax_devices = jax_action.devices()
+        assert reward.devices() == jax_devices
+        assert terminated.devices() == jax_devices
+        assert truncated.devices() == jax_devices
+
+        return torch_obs, torch_reward, torch_terminated, torch_truncated, torch_info  # type: ignore
+
+    def reset(
+        self, *, seed: int | None = None, options: NestedDict[str, Any] | None = None
+    ) -> tuple[torch.Tensor, dict]:
+        if seed is not None:
+            self.env.seed(seed)
+        assert not options  # don't know what to do with these..
+        obs = self.env.reset()
+        info = {}
+        torch_obs = jax_to_torch_tensor(obs)
+        torch_info = jax_to_torch(info)
+        return torch_obs, torch_info
+
+    def render(self) -> Any:
+        """Renders the environment.
+
+        Returns:
+            The rendering of the environment, depending on the render mode
+        """
+        return self.env.render(mode=self.render_mode)
 
 
 def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
