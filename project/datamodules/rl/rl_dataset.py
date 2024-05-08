@@ -6,6 +6,7 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Generic
 
+import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
 import numpy as np
 from torch import Tensor
@@ -13,7 +14,7 @@ from torch.utils.data import IterableDataset
 
 from project.utils.types import NestedDict, NestedMapping
 
-from .rl_types import Actor, ActorOutput, Env, Episode, EpisodeInfo, VectorEnv
+from .rl_types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv
 from .stacking_utils import stack_episode
 
 logger = get_logger(__name__)
@@ -25,7 +26,7 @@ jax.experimental.compilation_cache.compilation_cache.set_cache_dir(Path.home() /
 class RlDataset(IterableDataset[Episode[ActorOutput]]):
     def __init__(
         self,
-        env: Env[Tensor, Tensor],
+        env: gymnasium.Env[Tensor, Tensor],
         actor: Actor[Tensor, Tensor, ActorOutput],
         episodes_per_epoch: int,
         seed: int | None = None,
