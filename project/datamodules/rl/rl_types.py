@@ -95,6 +95,18 @@ class VectorEnvWrapper(
         super().__init__(env)
         self.observation_space: Space[WrapperObsType]
         self.action_space: Space[WrapperActType]
+        self.num_envs = env.num_envs
+
+    # implicitly forward all other methods and attributes to self.env
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(f"attempted to get missing private attribute '{name}'")
+        # Remove this annoying warning.
+        # logger.warn(
+        #     f"env.{name} to get variables from other wrappers is deprecated and will be removed in v1.0, "
+        #     f"to get this variable you can do `env.unwrapped.{name}` for environment variables."
+        # )
+        return getattr(self.env, name)
 
 
 def random_actor(observation: Any, action_space: Space[ActionT]) -> tuple[ActionT, dict]:

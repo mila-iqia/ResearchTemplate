@@ -46,8 +46,6 @@ def gymnax_vectorenv(
     # Env should already be on the right device (for now).
     assert get_torch_device_from_jax_array(env.reset(seed=123)[0]) == device
     return GymnaxVectorEnvToTorchWrapper(env)
-    # env = ToTorchVectorEnvWrapper(env, device=device)
-    return env
 
 
 class GymnaxToTorchWrapper(
