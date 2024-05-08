@@ -16,6 +16,7 @@ from gymnasium.wrappers.compatibility import EnvCompatibility
 from project.datamodules.rl.rl_types import VectorEnv
 from project.datamodules.rl.wrappers.jax_torch_interop import (
     JaxToTorchMixin,
+    get_backend_from_torch_device,
     get_torch_device_from_jax_array,
     jax_to_torch,
     jax_to_torch_tensor,
@@ -24,6 +25,20 @@ from project.datamodules.rl.wrappers.jax_torch_interop import (
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, get_torch_dtype
 from project.utils.device import default_device
 from project.utils.types import NestedDict
+
+
+def brax_env(env_id: str, device: torch.device = default_device(), seed: int = 123, **kwargs):
+    # Instantiate the environment & its settings.
+    brax_env = brax.envs.create(env_id, **kwargs)
+    env = GymWrapper(
+        brax_env,  # type: ignore (bad type hint in the brax wrapper constructor)
+        seed=seed,
+        backend=get_backend_from_torch_device(device),
+    )
+    env = BraxToTorchWrapper(env)
+    env.observation_space.seed(seed)
+    env.action_space.seed(seed)
+    return env
 
 
 class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tensor]):
@@ -54,6 +69,11 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
         # TODO: Figure out how to use the sys info to get the observation space upper/lower limits.
         _min, _max = self.brax_env._env.sys.dof.limit
 
+        def _seed_or_none(space: gym.spaces.Space) -> int | None:
+            if space._np_random is not None:
+                return space._np_random.integers(0, 2**32).item()
+            return None
+
         self.observation_space: TensorBox = TensorBox(
             low=(
                 _low := torch.as_tensor(
@@ -66,7 +86,7 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
             shape=_state.obs.shape,
             dtype=_low.dtype,
             device=device,
-            seed=self.brax_env.observation_space.np_random.integers(0, 2**32).item(),
+            seed=_seed_or_none(self.brax_env.observation_space),
         )
         action_dtype = get_torch_dtype(self.brax_env.action_space.dtype)
         self.action_space: TensorBox = TensorBox(
@@ -77,7 +97,7 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
             shape=self.brax_env.action_space.shape,
             dtype=action_dtype,
             device=device,
-            seed=self.brax_env.observation_space.np_random.integers(0, 2**32).item(),
+            seed=_seed_or_none(self.brax_env.action_space),
         )
 
     def reset(
@@ -97,21 +117,6 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
         assert self.env.render_mode == "rgb_array"
         # TODO: check what this actually returns.
         return self.env.render()
-
-
-def brax_env(env_id: str, device: torch.device = default_device(), seed: int = 123, **kwargs):
-    # Instantiate the environment & its settings.
-    brax_env = brax.envs.create(env_id, **kwargs)
-    env = GymWrapper(
-        brax_env,  # type: ignore (bad type hint in the brax wrapper constructor)
-        seed=seed,
-    )
-    # todo: How to control on which device the brax / gymnax environment resides?
-    # For now we just have to assume that it's the same device as `device`, because otherwise we'd
-    # be moving stuff between the CPU and GPU!
-    env = BraxToTorchWrapper(env)
-    assert env.observation_space.device == device
-    return env
 
 
 class BraxVectorEnvToTorchWrapper(JaxToTorchMixin, VectorEnv[torch.Tensor, torch.Tensor]):

@@ -91,28 +91,10 @@ class TensorBox(TensorSpace):
         self.bounded_above: jax.Array = self._jax_high < jax.numpy.finfo(self._jax_low.dtype).max
         self._jax_dtype = self._jax_low.dtype
 
-    # def to(self, device: torch.device) -> Self:
-    #     return type(self)(
-    #         low=self.low.to(device=device),
-    #         high=self.high.to(device=device),
-    #         shape=self.shape,
-    #         dtype=self.dtype,
-    #         seed=None,
-    #         device=device,
-    #     )
-
-    # def cuda(self, index: int | None = None) -> Self:
-    #     if index:
-    #         device = torch.device("cuda", index=index)
-    #     else:
-    #         device = torch.device("cuda")
-    #     return self.to(device=device)
-
-    # def cpu(self) -> Self:
-    #     return self.to(device=torch.device("cpu"))
-
-    def seed(self, seed: int) -> None:
-        self._rng.manual_seed(seed)
+    def seed(self, seed: int | torch.Tensor) -> None:
+        super().seed(seed)
+        if not isinstance(seed, int):
+            seed = int(torch.randint(0, 2**32, generator=self._rng).item())
         self._key = jax.random.key(seed)
 
     def sample(self) -> Tensor:

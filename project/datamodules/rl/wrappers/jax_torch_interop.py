@@ -175,3 +175,11 @@ def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
         assert index.isdigit()
         return torch.device(device_type, int(index))
     return torch.device("cpu")
+
+
+def get_backend_from_torch_device(device: torch.device) -> str:
+    if device.type == "cuda":
+        return "gpu"
+    if jax.default_backend() == "tpu":
+        return "tpu"
+    return "cpu"
