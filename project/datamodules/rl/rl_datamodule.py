@@ -363,7 +363,8 @@ class RlDataModule(
 
 
 def custom_collate_fn(episodes: list[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
-    """Collates a list of episodes into an EpisodeBatch object containing nested tensors."""
+    """Collates a list of episodes into an EpisodeBatch object containing (possibly nested)
+    tensors."""
 
     # note: assuming simple tensor observations for now, even though the code below is meant to
     # also support nested dicts observations and actions
