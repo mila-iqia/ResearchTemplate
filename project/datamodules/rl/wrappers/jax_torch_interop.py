@@ -3,12 +3,14 @@ import dataclasses
 import functools
 from typing import Any
 
+import gymnasium
 import jax
 import torch
 from jax import dlpack as jax_dlpack
 from torch import Tensor
 from torch.utils import dlpack as torch_dlpack
 
+from project.datamodules.rl.rl_types import VectorEnv
 from project.utils.types import NestedDict, NestedMapping
 from project.utils.types.protocols import Dataclass
 
@@ -108,3 +110,68 @@ def jax_dataclass_to_torch_dataclass(value: Dataclass, /) -> NestedDict[str, tor
 @torch_to_jax.register(_DataclassInstance)
 def torch_dataclass_to_jax_dataclass(value: Dataclass, /) -> NestedDict[str, jax.Array]:
     return torch_to_jax(dataclasses.asdict(value))
+
+
+class JaxToTorchMixin:
+    """A mixin that just implements the step and reset that convert jax arrays into torch tensors.
+
+    TODO: Eventually make this support dict / tuples observations and actions:
+    - use the generic `jax_to_torch` function.
+    - mark this class generic w.r.t. the type of observations and actions
+    """
+
+    env: gymnasium.Env[jax.Array, jax.Array] | VectorEnv[jax.Array, jax.Array]
+
+    def step(
+        self, action: torch.Tensor
+    ) -> tuple[
+        torch.Tensor, torch.FloatTensor, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]
+    ]:
+        jax_action = torch_to_jax_tensor(action)
+        obs, reward, terminated, truncated, info = self.env.step(jax_action)
+        torch_obs = jax_to_torch_tensor(obs)
+        assert isinstance(reward, jax.Array)
+        torch_reward = jax_to_torch_tensor(reward)
+        assert isinstance(terminated, jax.Array)
+        torch_terminated = jax_to_torch_tensor(terminated)
+        assert isinstance(truncated, jax.Array)
+        torch_truncated = jax_to_torch_tensor(truncated)
+        # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
+        if torch_terminated.dtype != torch.bool:
+            torch_terminated = torch_terminated.bool()
+        if torch_truncated.dtype != torch.bool:
+            torch_truncated = torch_truncated.bool()
+
+        torch_info = jax_to_torch(info)
+
+        # debug: checking that the devices are the same for everything, so that we don't have to
+        # move stuff.
+        jax_devices = jax_action.devices()
+        assert reward.devices() == jax_devices
+        assert terminated.devices() == jax_devices
+        assert truncated.devices() == jax_devices
+
+        return torch_obs, torch_reward, torch_terminated, torch_truncated, torch_info  # type: ignore
+
+    def reset(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, Any]:
+        obs, info = self.env.reset(seed=seed, options=options)
+        torch_obs = jax_to_torch_tensor(obs)
+        torch_info = jax_to_torch(info)
+        return torch_obs, torch_info
+
+
+def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
+    jax_device = array.devices()
+    assert len(jax_device) == 1
+    jax_device_str = str(jax_device.pop())
+    assert isinstance(jax_device_str, str), (jax_device_str, type(jax_device_str))
+    if jax_device_str.startswith("cuda"):
+        device_type, _, index = jax_device_str.partition(":")
+        assert index.isdigit()
+        return torch.device(device_type, int(index))
+    return torch.device("cpu")

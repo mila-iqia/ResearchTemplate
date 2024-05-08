@@ -9,7 +9,7 @@ import torch.utils.data
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from project.datamodules.rl.gym_utils import make_torch_env, make_torch_vectorenv
+from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.rl_datamodule import custom_collate_fn
 from project.datamodules.rl.rl_dataset import RlDataset, VectorEnvRlDataset
 from project.datamodules.rl.rl_types import (
