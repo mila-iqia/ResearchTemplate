@@ -5,7 +5,7 @@ import pytest
 import torch
 from torch import Tensor
 
-from project.datamodules.rl.gym_utils import make_torch_env, make_torch_vectorenv
+from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.rl_types import VectorEnv
 from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.types import NestedDict

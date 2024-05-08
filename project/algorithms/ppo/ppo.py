@@ -38,8 +38,8 @@ from project.algorithms.ppo.utils import (
     PPOActorOutput,
     discount_cumsum,
 )
-from project.datamodules.rl.gym_utils import check_and_normalize_box_actions
 from project.datamodules.rl.rl_datamodule import EpisodeBatch, RlDataModule
+from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
 

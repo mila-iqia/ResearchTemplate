@@ -95,8 +95,9 @@ class ToTorchWrapper(Wrapper[TensorObsType, TensorActType, Any, Any]):
     """Wrapper that moves numpy arrays to torch tensors and vice versa.
 
     Very bad, very sad. This is only useful because it moves stuff directly to GPU, but there's a
-    high performance cost to doing this a lot. Consider using an environment that natively runs on
-    the GPU.
+    high performance cost to doing this. Only use this if you were going to do this anyway because
+    your env is returning numpy arrays or similar. Consider using an environment that natively runs
+    on the GPU.
     """
 
     def __init__(

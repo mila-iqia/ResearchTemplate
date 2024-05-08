@@ -1,2 +1,0 @@
-# Ignore full tensor files, but not the files with tensor attributes and hashes.
-*.npz
