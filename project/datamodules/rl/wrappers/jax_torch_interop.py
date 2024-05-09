@@ -1,8 +1,10 @@
 import collections.abc
 import dataclasses
 import functools
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Concatenate
 
+import chex
 import gymnasium
 import jax
 import torch
@@ -50,7 +52,10 @@ def jax_to_torch(value: Any, /) -> Any:
 
 
 def torch_to_jax_tensor(value: torch.Tensor, /) -> jax.Array:
-    """Converts a PyTorch Tensor into a jax.Array."""
+    """Converts a PyTorch Tensor into a jax.Array.
+
+    NOTE: seems like torch.float64 tensors are implicitly converted to jax.float32 tensors?
+    """
     tensor = torch_dlpack.to_dlpack(value)  # type: ignore
     tensor = jax_dlpack.from_dlpack(tensor)  # type: ignore
     return tensor
@@ -186,3 +191,17 @@ def get_backend_from_torch_device(device: torch.device) -> str:
     if jax.default_backend() == "tpu":
         return "tpu"
     return "cpu"
+
+
+def jit[C: Callable, **P](
+    c: C, _fn: Callable[Concatenate[C, P], Any] = jax.jit, *args: P.args, **kwargs: P.kwargs
+) -> C:
+    # Fix `jax.jit` so it preserves the jit-ed function's signature and docstring.
+    return _fn(c, *args, **kwargs)
+
+
+def chexify[C: Callable, **P](
+    c: C, _fn: Callable[Concatenate[C, P], Any] = chex.chexify, *args: P.args, **kwargs: P.kwargs
+) -> C:
+    # Fix `chex.chexify` so it preserves the jit-ed function's signature and docstring.
+    return _fn(c, *args, **kwargs)

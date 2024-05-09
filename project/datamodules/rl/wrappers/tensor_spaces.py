@@ -10,12 +10,17 @@ import gymnasium.spaces.utils
 import jax
 import jax.numpy as jnp
 import numpy as np
+import numpy.core
+import numpy.core.numeric
+import numpy.core.numerictypes
 import numpy.typing
 import torch
 from torch import Tensor
 
 from project.datamodules.rl.wrappers.jax_torch_interop import (
+    chexify,
     jax_to_torch_tensor,
+    jit,
     torch_to_jax_tensor,
 )
 
@@ -87,98 +92,36 @@ class TensorBox(TensorSpace):
         assert self.high.shape == shape
         self._jax_high = torch_to_jax_tensor(self.high.contiguous())
         self._jax_low = torch_to_jax_tensor(self.low.contiguous())
-        assert not jax.numpy.isnan(self._jax_low).any()
-        assert not jax.numpy.isnan(self._jax_high).any()
-        self.bounded_below: jax.Array = self._jax_low > jax.numpy.finfo(self._jax_low.dtype).min
-        self.bounded_above: jax.Array = self._jax_high < jax.numpy.finfo(self._jax_low.dtype).max
         self._jax_dtype = self._jax_low.dtype
 
     def seed(self, seed: int | torch.Tensor) -> None:
         super().seed(seed)
         if not isinstance(seed, int):
+            # Make an int based on this `seed` tensor.
             seed = int(torch.randint(0, 2**32, generator=self._rng).item())
         self._key = jax.random.key(seed)
 
     def sample(self) -> Tensor:
         """Generates a single random sample inside the Box."""
-        # rand = torch.rand(
-        #     size=self.low.shape, dtype=self.dtype, device=self.device, generator=self._rng
-        # )
-        # TODO: Support unbounded intervals like gymnasium.spaces.Box.
-        # if self.low.isfinite().all() and self.high.isfinite().all():
-        #     return self.low + rand * (self.high - self.low)
-        self._key, jax_sample = self._sample(key=self._key)
-        return jax_to_torch_tensor(jax_sample)
-
-    def _sample(self, key: jax.Array) -> tuple[chex.PRNGKey, jax.Array]:
-        r"""In creating a sample of the box, each coordinate is sampled (independently) from a
-        distribution that is chosen according to the form of the interval:
-
-        * :math:`[a, b]` : uniform distribution
-        * :math:`[a, \infty)` : shifted exponential distribution
-        * :math:`(-\infty, b]` : shifted negative exponential distribution
-        * :math:`(-\infty, \infty)` : normal distribution
-
-
-        Returns:
-            the new random key and a sampled value from the Box
-        """
-
-        # Adapted from gymnasium.spaces.Box.sample
-        high = (
-            self._jax_high
-            if self._jax_high.dtype.kind == "f"
-            else self._jax_high.astype("int64") + 1
+        # Use the jit-ed function to sample from the box.
+        self._key, jax_sample = box_sample(
+            key=self._key,
+            low=self._jax_low,
+            high=self._jax_high,
         )
-        sample = jnp.zeros_like(self._jax_low)
-        # Masking arrays which classify the coordinates according to interval type
-        unbounded = ~self.bounded_below & ~self.bounded_above
-        upp_bounded = ~self.bounded_below & self.bounded_above
-        low_bounded = self.bounded_below & ~self.bounded_above
-        bounded = self.bounded_below & self.bounded_above
-        new_key, unbounded_key, low_bounded_key, upp_bounded_key, bounded_key = jax.random.split(
-            key, 5
-        )
-        # Vectorized sampling by interval type
-        sample = sample.at[unbounded].set(
-            jax.random.normal(
-                unbounded_key, shape=unbounded[unbounded].shape, dtype=self._jax_dtype
-            )
-        )
-
-        sample = sample.at[low_bounded].set(
-            jax.random.exponential(
-                low_bounded_key, shape=low_bounded[low_bounded].shape, dtype=self._jax_dtype
-            )
-            + self._jax_low[low_bounded]
-        )
-
-        sample = sample.at[upp_bounded].set(
-            -jax.random.exponential(
-                upp_bounded_key, shape=upp_bounded[upp_bounded].shape, dtype=self._jax_dtype
-            )
-            + high[upp_bounded]
-        )
-
-        sample = sample.at[bounded].set(
-            jax.random.uniform(
-                bounded_key,
-                minval=self._jax_low[bounded],
-                maxval=high[bounded],
-                shape=bounded[bounded].shape,
-                dtype=self._jax_dtype,
-            )
-        )
-
-        if self._jax_dtype.kind in ["i", "u", "b"]:
-            sample = jnp.floor(sample)
-
-        return new_key, sample.astype(self._jax_dtype)
+        chex.block_until_chexify_assertions_complete()
+        torch_tensor = jax_to_torch_tensor(jax_sample)
+        # Seems like the sample can be of dtype torch.float32 even if ours is torch.float64
+        return torch_tensor.to(dtype=self.dtype)
 
     def contains(self, x: Any) -> bool:
         # BUG: doesn't work with `nan` values for low or high.
-        min_value = torch.finfo(self.dtype).min
-        max_value = torch.finfo(self.dtype).max
+        if self.dtype.is_floating_point:
+            min_value = torch.finfo(self.dtype).min
+            max_value = torch.finfo(self.dtype).max
+        else:
+            min_value = torch.iinfo(self.dtype).min
+            max_value = torch.iinfo(self.dtype).max
         return (
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
@@ -195,6 +138,82 @@ class TensorBox(TensorSpace):
             f"{class_name}({self.low}, {self.high}, {self.shape}, {self.dtype}, "
             f"device={self.device})"
         )
+
+
+@chexify
+@jit
+def box_sample(
+    key: jax.Array,
+    low: jax.Array,
+    high: jax.Array,
+) -> tuple[chex.PRNGKey, jax.Array]:
+    r"""Adapted from gymnasium.spaces.Box.sample.
+
+    In creating a sample of the box, each coordinate is sampled (independently) from a
+    distribution that is chosen according to the form of the interval:
+
+    * :math:`[a, b]` : uniform distribution
+    * :math:`[a, \infty)` : shifted exponential distribution
+    * :math:`(-\infty, b]` : shifted negative exponential distribution
+    * :math:`(-\infty, \infty)` : normal distribution
+
+
+    Returns:
+        the new random key and a sampled value from the Box
+    """
+    chex.assert_equal_shape([low, high])
+    chex.assert_trees_all_equal_dtypes(low, high)
+    dtype = low.dtype
+
+    if dtype.kind in ["f", "c"]:
+        bounded_below: jax.Array = low > jax.numpy.finfo(dtype).min
+        bounded_above: jax.Array = high < jax.numpy.finfo(dtype).max
+    else:
+        bounded_below: jax.Array = low > jax.numpy.iinfo(dtype).min
+        bounded_above: jax.Array = high < jax.numpy.iinfo(dtype).max
+
+    high = high if high.dtype.kind == "f" else high.astype("int64") + 1
+
+    # Masking arrays which classify the coordinates according to interval type
+    # unbounded = ~bounded_below & ~bounded_above  # note: not used, see code below.
+    upp_bounded = ~bounded_below & bounded_above
+    low_bounded = bounded_below & ~bounded_above
+    bounded = bounded_below & bounded_above
+
+    new_key, normal_key, exponential_key, uniform_key = jax.random.split(key, 4)
+
+    # Vectorized sampling by interval type
+    # Seems like we need the shapes to be static for jit to work, so we sample more values than we
+    # need and then slice them up.
+
+    # NOTE: We can sample the exponential only once and use it twice without fear of having the
+    # same values because the masks don't overlap.
+    # todo: this needs to be a float dtype.
+    float_dtype = dtype if dtype.kind in ["f", "c"] else jnp.float32
+    normal_var = jax.random.normal(normal_key, shape=low.shape, dtype=float_dtype)
+    # values don't matter in the False case, so I'm adding a dummy 0 here just to avoid any
+    # potential issues with nans in the sampling.
+    exponential_var = jax.random.exponential(exponential_key, shape=low.shape, dtype=float_dtype)
+    uniform_var = jax.random.uniform(
+        uniform_key,
+        minval=jnp.where(bounded, low, jnp.zeros_like(low)),
+        maxval=jnp.where(bounded, high, jnp.ones_like(low)),
+        shape=low.shape,
+        dtype=float_dtype,
+    )
+    # note: Since the `sample` gets all filled, it could actually be one of the random variables,
+    # it wouldn't change anything, so we could actually save one step!
+    # sample = jnp.zeros_like(low)
+    # sample = jnp.where(unbounded, normal_var, sample)
+    sample = normal_var
+    sample = jnp.where(low_bounded, low + exponential_var, sample)
+    sample = jnp.where(upp_bounded, high - exponential_var, sample)
+    sample = jnp.where(bounded, uniform_var, sample)
+    chex.assert_tree_all_finite(sample)
+    if dtype.kind in ["i", "u", "b"]:
+        sample = jnp.floor(sample)
+
+    return new_key, sample.astype(low.dtype)
 
 
 gymnasium.spaces.utils.flatdim.register(

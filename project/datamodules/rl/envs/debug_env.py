@@ -41,11 +41,15 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         self.dtype = dtype
         self.rng = torch.Generator(device=self.device)
         # todo: make this a TensorBox(-1, 1) for a version with a continuous action space.
-        self.action_space = TensorDiscrete(n=3, start=-1, dtype=self.dtype, device=self.device)
+        self.action_space: TensorDiscrete = TensorDiscrete(
+            n=3, start=-1, dtype=self.dtype, device=self.device
+        )
         self.observation_space: TensorBox = TensorBox(
             low=-1, high=1, shape=(), dtype=self.dtype, device=self.device
         )
-        self._episode_length = torch.zeros(self.observation_space.shape, dtype=torch.int32)
+        self._episode_length = torch.zeros(
+            self.observation_space.shape, dtype=torch.int32, device=device
+        )
         self.reset(seed=seed)
 
     def reset(
@@ -53,16 +57,11 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         if seed:
             self.rng.manual_seed(seed)
+            self.observation_space.seed(seed)
+            self.action_space.seed(seed)
 
         if self.randomize_target:
-            self._target = torch.randint(
-                0,
-                self.max,
-                size=self.observation_space.shape,
-                dtype=self.observation_space.dtype,
-                device=self.device,
-                generator=self.rng,
-            )
+            self._target = self.observation_space.sample()
         else:
             self._target = (self.max // 2) * torch.ones(
                 size=self.observation_space.shape,
@@ -71,18 +70,11 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
             )
 
         if self.randomize_initial_state:
-            self._state = torch.randint(
-                0,
-                self.max,
-                size=self._target.shape,
-                dtype=torch.int32,
-                device=self.device,
-                generator=self.rng,
-            )
+            self._state = self.observation_space.sample()
         else:
             self._state = torch.zeros_like(self._target)
 
-        self._episode_length = self._episode_length.new_zeros()
+        self._episode_length = torch.zeros_like(self._episode_length)
         return (
             self._state,
             {"episode_length": self._episode_length, "target": self._target},
@@ -92,7 +84,19 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         self, action: torch.Tensor
     ) -> tuple[torch.Tensor, SupportsFloat, bool, bool, dict[str, Any]]:
         if action not in self.action_space:
-            raise RuntimeError(f"Invalid action: {action} not in {self.action_space}.")
+            raise RuntimeError(
+                f"Invalid action: {action} of type {type(action)} not in {self.action_space}."
+                + (
+                    f" (wrong device: {action.device}!={self.action_space.device})"
+                    if action.device != self.action_space.device
+                    else ""
+                )
+                + (
+                    f" (wrong dtype: {action.dtype} can't be casted to {self.action_space.dtype})"
+                    if not torch.can_cast(action.dtype, self.action_space.dtype)
+                    else ""
+                )
+            )
         assert action.dtype == self.action_space.dtype
 
         self._state += action

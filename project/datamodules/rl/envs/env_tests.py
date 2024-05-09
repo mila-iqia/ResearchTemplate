@@ -6,16 +6,12 @@ import torch
 import torch.utils
 import torch.utils.data
 from torch import Tensor
-from torch.utils.data import DataLoader
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
-from project.datamodules.rl.rl_datamodule import custom_collate_fn
-from project.datamodules.rl.rl_dataset import RlDataset, VectorEnvRlDataset
 from project.datamodules.rl.rl_types import (
     Episode,
     EpisodeBatch,
     VectorEnv,
-    random_actor,
 )
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete
 from project.utils.tensor_regression import TensorRegressionFixture
@@ -197,51 +193,6 @@ class EnvTests:
             }
         )
 
-    @pytest.mark.timeout(300)
-    def test_rl_dataset(self, env: gymnasium.Env[Tensor, Tensor], seed: int, device: torch.device):
-        episodes_per_epoch = 2
-        dataset = RlDataset(
-            env, actor=random_actor, episodes_per_epoch=episodes_per_epoch, seed=seed
-        )
-        for episode_index, episode in enumerate(dataset):
-            assert isinstance(episode, Episode)
-            _check_episode(episode, env=env, device=device)
-
-        assert episode_index == episodes_per_epoch - 1
-
-    @pytest.mark.timeout(300)
-    def test_vectorenv_rl_dataset(
-        self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device
-    ):
-        episodes_per_epoch = 3
-        dataset = VectorEnvRlDataset(
-            vectorenv, actor=random_actor, episodes_per_epoch=episodes_per_epoch, seed=seed
-        )
-        for episode_index, episode in enumerate(dataset):
-            assert isinstance(episode, Episode)
-            _check_episode(episode, env=vectorenv, device=device)
-            assert episode_index < episodes_per_epoch
-
-        assert episode_index == episodes_per_epoch - 1
-
-    @pytest.mark.timeout(600)
-    def test_vectorenv_rl_dataset_with_dataloader(
-        self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device
-    ):
-        episodes_per_epoch = 4
-        dataset = VectorEnvRlDataset(
-            vectorenv, actor=random_actor, episodes_per_epoch=episodes_per_epoch, seed=seed
-        )
-        batch_size = 2
-        dataloader = DataLoader(
-            dataset, batch_size=batch_size, num_workers=0, collate_fn=custom_collate_fn
-        )
-        for batch_index, episode_batch in enumerate(dataloader):
-            assert isinstance(episode_batch, EpisodeBatch)
-            _check_episode_batch(episode_batch, vectorenv, batch_size=batch_size, device=device)
-            assert batch_index < episodes_per_epoch // batch_size
-        assert batch_index == (episodes_per_epoch // batch_size) - 1
-
 
 pytest.register_assert_rewrite(__file__)
 
@@ -261,7 +212,7 @@ def _check_episode_tensor(
         assert v.dtype == dtype
 
 
-def _check_episode(episode: Episode, env: gymnasium.Env[Tensor, Any], device: torch.device):
+def check_episode(episode: Episode, env: gymnasium.Env[Tensor, Any], device: torch.device):
     assert episode["observations"] is episode.observations
 
     if isinstance(env, VectorEnv):
@@ -287,7 +238,7 @@ def _check_episode(episode: Episode, env: gymnasium.Env[Tensor, Any], device: to
     _check_episode_tensor(episode.truncated, device=device, dtype=torch.bool)
 
 
-def _check_episode_batch(
+def check_episode_batch(
     episode: EpisodeBatch, env: VectorEnv[Tensor, Any], batch_size: int, device: torch.device
 ):
     obs = episode.observations
