@@ -85,7 +85,8 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
     ) -> tuple[torch.Tensor, SupportsFloat, bool, bool, dict[str, Any]]:
         if action not in self.action_space:
             raise RuntimeError(
-                f"Invalid action: {action} of type {type(action)} not in {self.action_space}."
+                f"Invalid action: {action} of type {type(action)} , {action.dtype=}, {action.device=} "
+                f"is not in {self.action_space}."
                 + (
                     f" (wrong device: {action.device}!={self.action_space.device})"
                     if action.device != self.action_space.device
