@@ -1,7 +1,6 @@
 import dataclasses
-from collections.abc import Callable
 from logging import getLogger as get_logger
-from typing import Any, ClassVar, Concatenate
+from typing import Any, ClassVar
 
 import brax.envs
 import brax.envs.wrappers.gym
@@ -25,6 +24,7 @@ from project.datamodules.rl.wrappers.jax_torch_interop import (
     get_torch_device_from_jax_array,
     jax_to_torch,
     jax_to_torch_tensor,
+    jit,
     torch_to_jax_tensor,
 )
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, get_torch_dtype
@@ -286,13 +286,6 @@ def brax_vectorenv(
     # env = VectorEnvCompatibility(env)  # make the env compatible with the gymnasium api
     env = BraxVectorEnvToTorchWrapper(brax_env)
     return env
-
-
-def jit[C: Callable, **P](
-    c: C, _fn: Callable[Concatenate[C, P], Any] = jax.jit, *args: P.args, **kwargs: P.kwargs
-) -> C:
-    # Fix `jax.jit` so it preserves the jit-ed function's signature and docstring.
-    return _fn(c, *args, **kwargs)
 
 
 class VectorGymnasiumWrapper(VectorEnv[jax.Array, jax.Array]):
