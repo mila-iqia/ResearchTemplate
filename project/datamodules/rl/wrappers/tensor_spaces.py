@@ -52,6 +52,11 @@ class TensorSpace(gymnasium.spaces.Space[torch.Tensor]):
 
 # TODO: Make a PR to add this unbounded sampling to the gymnax Box space.
 class TensorBox(TensorSpace):
+    """Tensor version of gymnasium.spaces.Box.
+
+    Samples in the interval [low, high] (inclusive).
+    """
+
     def __init__(
         self,
         low: SupportsFloat | np.ndarray | Tensor,
@@ -83,11 +88,19 @@ class TensorBox(TensorSpace):
         self.shape: tuple[int, ...]
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
-
+        if self.dtype.is_floating_point:
+            min_value = torch.finfo(self.dtype).min
+            max_value = torch.finfo(self.dtype).max
+        else:
+            min_value = torch.iinfo(self.dtype).min
+            max_value = torch.iinfo(self.dtype).max
         if self.shape and self.low.shape != self.shape:
             self.low = self.low.expand(self.shape)
         if self.shape and self.high.shape != self.shape:
             self.high = self.high.expand(self.shape)
+        self.low = torch.nan_to_num(self.low, nan=min_value, neginf=min_value)
+        self.high = torch.nan_to_num(self.high, nan=max_value, posinf=max_value)
+
         assert self.low.shape == shape
         assert self.high.shape == shape
         self._jax_high = torch_to_jax_tensor(self.high.contiguous())
@@ -116,26 +129,20 @@ class TensorBox(TensorSpace):
 
     def contains(self, x: Any) -> bool:
         # BUG: doesn't work with `nan` values for low or high.
-        if self.dtype.is_floating_point:
-            min_value = torch.finfo(self.dtype).min
-            max_value = torch.finfo(self.dtype).max
-        else:
-            min_value = torch.iinfo(self.dtype).min
-            max_value = torch.iinfo(self.dtype).max
-        return (
+        return bool(
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
             and (x.shape == self.shape)
             and (x.device == self.device)  # avoid unintentionally moving things between devices.
             and not bool(x.isnan().any())
-            and bool((x >= torch.nan_to_num(self.low, nan=min_value, neginf=min_value)).all())
-            and bool((x <= torch.nan_to_num(self.high, nan=max_value, posinf=max_value)).all())
+            and (x >= self.low).all()
+            and (x <= self.high).all()
         )
 
     def __repr__(self) -> str:
         class_name = type(self).__name__
         return (
-            f"{class_name}({self.low}, {self.high}, {self.shape}, {self.dtype}, "
+            f"{class_name}(low={self.low}, high={self.high}, shape={self.shape}, dtype={self.dtype}, "
             f"device={self.device})"
         )
 
@@ -237,8 +244,7 @@ class TensorDiscrete(TensorSpace):
         self.dtype: torch.dtype
 
     def sample(self) -> Tensor:
-        return torch.randint(
-            low=self.start,
+        return self.start + torch.randint(
             high=self.n,
             size=self.shape,
             dtype=self.dtype,
@@ -258,7 +264,7 @@ class TensorDiscrete(TensorSpace):
     def __repr__(self) -> str:
         class_name = type(self).__name__
         if self.start != 0:
-            return f"{class_name}({self.n}, start={self.start}, device={self.device})"
+            return f"{class_name}({self.n}, start={self.start}, dtype={self.dtype}, device={self.device})"
         return f"{class_name}({self.n}, device={self.device})"
 
 

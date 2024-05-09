@@ -8,12 +8,14 @@ from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscr
 from project.utils.tensor_regression import TensorRegressionFixture
 
 
-@pytest.fixture(params=[torch.float32, torch.float64, torch.int32, torch.int64])
+@pytest.fixture(
+    params=[torch.float32, torch.float64, torch.int32, torch.int64], ids="dtype={}".format
+)
 def box_dtype(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture(params=[(), (3,), (3, 4), (3, 4, 5)])
+@pytest.fixture(params=[(), (3,), (3, 4), (3, 4, 5)], ids="shape={}".format)
 def box_shape(request: pytest.FixtureRequest):
     return request.param
 
@@ -86,9 +88,14 @@ def test_box_space_device(box_space: TensorSpace, device: torch.device):
     assert sample.to(device=other_device) not in space
 
 
+@pytest.fixture(params=[0, -1, 1], ids="start={}".format)
+def start(request: pytest.FixtureRequest) -> int:
+    return request.param
+
+
 @pytest.fixture
-def discrete_space(seed: int, device: torch.device):
-    return TensorDiscrete(n=10, start=0, seed=seed, device=device)
+def discrete_space(seed: int, start: int, device: torch.device):
+    return TensorDiscrete(n=10, start=start, seed=seed, device=device)
 
 
 def test_discrete_sample(
