@@ -146,6 +146,15 @@ class TensorBox(TensorSpace):
             f"device={self.device})"
         )
 
+    def __eq__(self, other: Any) -> bool:
+        return bool(
+            isinstance(other, type(self))
+            and other.dtype == self.dtype
+            and other.device == self.device
+            and other.low.equal(self.low)
+            and other.high.equal(self.high)
+        )
+
 
 @chexify
 @jit
@@ -267,6 +276,15 @@ class TensorDiscrete(TensorSpace):
             return f"{class_name}({self.n}, start={self.start}, dtype={self.dtype}, device={self.device})"
         return f"{class_name}({self.n}, device={self.device})"
 
+    def __eq__(self, other: Any) -> bool:
+        return bool(
+            isinstance(other, type(self))
+            and other.dtype == self.dtype
+            and other.device == self.device
+            and other.start == self.start
+            and other.n == self.n
+        )
+
 
 # Reuse the flatdim implementation for Discrete spaces.
 gymnasium.spaces.utils.flatdim.register(
@@ -370,6 +388,21 @@ class TensorMultiDiscrete(TensorSpace):
             and (x - self.start < self.nvec).all()
         )
 
+    def __repr__(self) -> str:
+        class_name = type(self).__name__
+        if (self.start != 0).any():
+            return f"{class_name}(start={self.start}, nvec={self.nvec}, dtype={self.dtype}, device={self.device})"
+        return f"{class_name}({self.nvec}, dtype={self.dtype}, device={self.device})"
+
+    def __eq__(self, other: Any) -> bool:
+        return bool(
+            isinstance(other, type(self))
+            and other.dtype == self.dtype
+            and other.device == self.device
+            and other.start.equal(self.start)
+            and other.nvec.equal(self.nvec)
+        )
+
 
 @gymnasium.spaces.utils.flatdim.register(TensorMultiDiscrete)
 def _flatdim_multidiscrete(space: TensorMultiDiscrete) -> int:
@@ -378,7 +411,13 @@ def _flatdim_multidiscrete(space: TensorMultiDiscrete) -> int:
 
 @gymnasium.vector.utils.batch_space.register(TensorDiscrete)
 def _batch_tensor_discrete_space(space: TensorDiscrete, n: int = 1) -> TensorMultiDiscrete:
-    # TODO: would need to implement something like MultiDiscrete? or what?
+    # Based on this from MultiDiscrete:
+    # MultiDiscrete(
+    #     np.full((n,), space.n, dtype=space.dtype),
+    #     dtype=space.dtype,
+    #     seed=deepcopy(space.np_random),
+    #     start=np.full((n,), space.start, dtype=space.dtype),
+    # )
     return TensorMultiDiscrete(
         nvec=torch.full((n,), space.n, dtype=space.dtype, device=space.device),
         dtype=space.dtype,

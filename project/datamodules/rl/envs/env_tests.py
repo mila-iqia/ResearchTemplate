@@ -18,6 +18,8 @@ from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.types import NestedDict
 from project.utils.utils import get_shape_ish
 
+pytest.register_assert_rewrite(__file__)
+
 
 class EnvTests:
     """Tests for the RL environments whose observations / actions are on the GPU."""
@@ -192,9 +194,6 @@ class EnvTests:
                 "info_from_step": info_from_step,
             }
         )
-
-
-pytest.register_assert_rewrite(__file__)
 
 
 def _check_episode_tensor(
