@@ -1,10 +1,15 @@
+import dataclasses
 from collections.abc import Callable
+from logging import getLogger as get_logger
 from typing import Any, ClassVar, Concatenate
 
 import brax.envs
 import brax.envs.wrappers.gym
+import brax.envs.wrappers.training
+import brax.training
 import gym.spaces
 import gymnasium
+import gymnasium.envs.registration
 import jax
 import numpy as np
 import torch
@@ -26,15 +31,24 @@ from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, get_torch_d
 from project.utils.device import default_device
 from project.utils.types import NestedDict
 
+logger = get_logger(__name__)
 
-def brax_env(env_id: str, device: torch.device = default_device(), seed: int = 123, **kwargs):
+
+def brax_env(
+    env_id: str,
+    device: torch.device = default_device(),
+    seed: int = 123,
+    max_episode_steps: int = 1_000,
+    **kwargs,
+):
     # Instantiate the environment & its settings.
-    brax_env = brax.envs.create(env_id, **kwargs)
+    brax_env = brax.envs.create(env_id, episode_length=max_episode_steps, **kwargs)
     env = GymWrapper(
         brax_env,  # type: ignore (bad type hint in the brax wrapper constructor)
         seed=seed,
         backend=get_backend_from_torch_device(device),
     )
+    env.spec.max_episode_steps = max_episode_steps
     env = BraxToTorchWrapper(env)
     env.observation_space.seed(seed)
     env.action_space.seed(seed)
@@ -55,6 +69,16 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
     ):
         super().__init__()
         self.brax_env = env
+        # BUG: fix this, causes issues at the moment.
+        max_episode_steps = env.spec.max_episode_steps
+        self.spec = gymnasium.envs.registration.EnvSpec(
+            **dataclasses.asdict(
+                dataclasses.replace(
+                    env.spec,
+                    max_episode_steps=max_episode_steps,
+                )
+            )
+        )
         # make the env compatible with the newer Gym api
         self.env = EnvCompatibility(env)  # type: ignore (expects a gymnasium.Env, gets gym.Env).
         assert isinstance(self.brax_env.observation_space, gym.spaces.Box)

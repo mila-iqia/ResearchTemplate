@@ -6,6 +6,7 @@ from typing import Any, SupportsFloat
 import chex
 import gymnasium
 import gymnasium.spaces
+import gymnasium.spaces.utils
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -74,6 +75,7 @@ class TensorBox(TensorSpace):
         self._key: jax.Array = jax.random.key(0)
         super().__init__(shape=shape, dtype=dtype, seed=seed, device=device)
         self.dtype: torch.dtype
+        self.shape: tuple[int, ...]
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
 
@@ -83,8 +85,8 @@ class TensorBox(TensorSpace):
             self.high = self.high.expand(self.shape)
         assert self.low.shape == shape
         assert self.high.shape == shape
-        self._jax_high = torch_to_jax_tensor(self.high)
-        self._jax_low = torch_to_jax_tensor(self.low)
+        self._jax_high = torch_to_jax_tensor(self.high.contiguous())
+        self._jax_low = torch_to_jax_tensor(self.low.contiguous())
         assert not jax.numpy.isnan(self._jax_low).any()
         assert not jax.numpy.isnan(self._jax_high).any()
         self.bounded_below: jax.Array = self._jax_low > jax.numpy.finfo(self._jax_low.dtype).min
@@ -195,6 +197,11 @@ class TensorBox(TensorSpace):
         )
 
 
+gymnasium.spaces.utils.flatdim.register(
+    TensorBox, gymnasium.spaces.utils.flatdim.dispatch(gymnasium.spaces.Box)
+)
+
+
 class TensorDiscrete(TensorSpace):
     def __init__(
         self,
@@ -234,6 +241,12 @@ class TensorDiscrete(TensorSpace):
         if self.start != 0:
             return f"{class_name}({self.n}, start={self.start}, device={self.device})"
         return f"{class_name}({self.n}, device={self.device})"
+
+
+# Reuse the flatdim implementation for Discrete spaces.
+gymnasium.spaces.utils.flatdim.register(
+    TensorDiscrete, gymnasium.spaces.utils.flatdim.dispatch(gymnasium.spaces.Discrete)
+)
 
 
 @gymnasium.vector.utils.batch_space.register(TensorBox)
@@ -331,6 +344,11 @@ class TensorMultiDiscrete(TensorSpace):
             and (self.start <= x).all()
             and (x - self.start < self.nvec).all()
         )
+
+
+@gymnasium.spaces.utils.flatdim.register(TensorMultiDiscrete)
+def _flatdim_multidiscrete(space: TensorMultiDiscrete) -> int:
+    return int(torch.sum(space.nvec).item())
 
 
 @gymnasium.vector.utils.batch_space.register(TensorDiscrete)
