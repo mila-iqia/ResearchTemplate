@@ -1,6 +1,7 @@
 from typing import Any, SupportsFloat
 
 import gymnasium
+import gymnasium.envs.registration
 import numpy as np
 import torch
 
@@ -23,9 +24,15 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         randomize_initial_state: bool = False,
         seed: int | None = None,
         device: torch.device = torch.device("cpu"),
-        dtype=torch.int32,
+        dtype: torch.dtype = torch.int32,
     ):
         super().__init__()
+        self.spec = gymnasium.envs.registration.EnvSpec(
+            id="DebugEnv-v0",
+            entry_point="project.datamodules.rl.envs.debug_env:DebugEnv",
+            max_episode_steps=max_episode_length,
+            vector_entry_point="project.datamodules.rl.envs.debug_env:DebugVectorEnv",
+        )
         self.max = max
         self.max_episode_length = max_episode_length
         self.randomize_target = randomize_target
@@ -35,10 +42,10 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         self.rng = torch.Generator(device=self.device)
         # todo: make this a TensorBox(-1, 1) for a version with a continuous action space.
         self.action_space = TensorDiscrete(n=3, start=-1, dtype=self.dtype, device=self.device)
-        self.observation_space: TensorDiscrete = TensorDiscrete(
-            n=self.max + 1, start=0, dtype=self.dtype, device=self.device
+        self.observation_space: TensorBox = TensorBox(
+            low=-1, high=1, shape=(), dtype=self.dtype, device=self.device
         )
-        self._episode_length = np.zeros(self.observation_space.shape, dtype=int)
+        self._episode_length = torch.zeros(self.observation_space.shape, dtype=torch.int32)
         self.reset(seed=seed)
 
     def reset(
@@ -75,7 +82,7 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         else:
             self._state = torch.zeros_like(self._target)
 
-        self._episode_length.fill(0)
+        self._episode_length = self._episode_length.new_zeros()
         return (
             self._state,
             {"episode_length": self._episode_length, "target": self._target},

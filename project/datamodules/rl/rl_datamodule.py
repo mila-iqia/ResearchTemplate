@@ -4,17 +4,19 @@ import functools
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
-from typing import Any, Generic, Literal
+from typing import Any, Generic, Literal, Protocol
 
-import gym
-import gym.vector
+import gymnasium
 import torch
-from gym.spaces.utils import flatdim
-from gym.utils.colorize import colorize
+from gymnasium.spaces.utils import flatdim
+from gymnasium.utils.colorize import colorize
 from lightning import LightningDataModule
 from torch import Tensor
 from torch.utils.data import DataLoader
 
+from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
+from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
+from project.utils.device import default_device
 from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
 
@@ -28,6 +30,12 @@ from .rl_types import (
 from .wrappers.to_tensor import ToTorchWrapper
 
 logger = get_logger(__name__)
+
+type TensorEnv = gymnasium.Env[Tensor, Tensor]
+
+
+class _EnvFn(Protocol):
+    def __call__(self, seed: int) -> TensorEnv: ...
 
 
 class RlDataModule(
@@ -46,15 +54,15 @@ class RlDataModule(
 
     def __init__(
         self,
-        env: str | Callable[[], gym.Env],
+        env: str | _EnvFn,
         actor: Actor[Tensor, Tensor, ActorOutput] | None = None,
         num_parallel_envs: int | None = None,
         # todo: also add `steps_per_epoch` (mutually exclusive with episodes_per_epoch).
         episodes_per_epoch: int = 100,
         batch_size: int = 1,
-        train_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
-        valid_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
-        test_wrappers: list[Callable[[gym.Env], gym.Env]] | None = None,
+        train_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
+        valid_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
+        test_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
         train_dataloader_wrappers: list[
             Callable[
                 [Iterable[EpisodeBatch[ActorOutput]]],
@@ -76,24 +84,30 @@ class RlDataModule(
         device: Device to put the tensors on.
         """
         super().__init__()
-        self.env_fn = (
+
+        self.env_fn: _EnvFn = (
             functools.partial(
-                gym.vector.make, env, num_envs=num_parallel_envs, render_mode="rgb_array"
+                make_torch_vectorenv, env_id=env, num_envs=num_parallel_envs, device=self.device
             )
             if isinstance(env, str) and num_parallel_envs is not None
-            else functools.partial(gym.make, env, render_mode="rgb_array")
+            else functools.partial(
+                make_torch_env,
+                env,
+                device=self.device,
+            )
             if isinstance(env, str)
             else env
         )
-        self.env: gym.Env = self.env_fn()
+        # todo: remove this, only use it to get the observation and action spaces.
+        self.env: TensorEnv = self.env_fn(seed=0)
         self.episodes_per_epoch = episodes_per_epoch
         self.batch_size = batch_size
 
         self.actor: Actor[Tensor, Tensor, ActorOutput] | None = actor
 
-        self.train_env: gym.Env | None = None
-        self.valid_env: gym.Env | None = None
-        self.test_env: gym.Env | None = None
+        self.train_env: TensorEnv | None = None
+        self.valid_env: TensorEnv | None = None
+        self.test_env: TensorEnv | None = None
 
         self.train_dataset: RlDataset[ActorOutput] | None = None
         self.valid_dataset: RlDataset[ActorOutput] | None = None
@@ -140,8 +154,8 @@ class RlDataModule(
         assert self.test_actor is not None
         assert self.valid_actor is not None
 
-        # TODO: Do we allow changing the actor while the dataset is still "live"?
-        # Should we end on-going episode(s)?
+        # TODO: notify the dataset that the actor changed so the iterator resets the envs and clears
+        # the buffers.
         if self.train_dataset is not None:
             self.train_dataset.actor = self.train_actor
         if self.valid_dataset is not None:
@@ -162,15 +176,15 @@ class RlDataModule(
         if stage in ["fit", None]:
             creating = "Recreating" if self.train_env is not None else "Creating"
             logger.debug(f"{creating} training environment with wrappers {self.train_wrappers}")
-            self.train_env = self._make_env(wrappers=self.train_wrappers)
+            self.train_env = self._make_env(wrappers=self.train_wrappers, seed=self.train_seed)
         if stage in ["validate", None]:
             creating = "Recreating" if self.valid_env is not None else "Creating"
             logger.debug(f"{creating} validation environment with wrappers {self.valid_wrappers}")
-            self.valid_env = self._make_env(wrappers=self.valid_wrappers)
+            self.valid_env = self._make_env(wrappers=self.valid_wrappers, seed=self.valid_seed)
         if stage in ["test", None]:
             creating = "Recreating" if self.test_env is not None else "Creating"
             logger.debug(f"{creating} testing environment with wrappers {self.test_wrappers}")
-            self.test_env = self._make_env(wrappers=self.test_wrappers)
+            self.test_env = self._make_env(wrappers=self.test_wrappers, seed=self.test_seed)
 
     def train_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
         if self.train_actor is None:
@@ -237,11 +251,11 @@ class RlDataModule(
         return dataloader
 
     @property
-    def train_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+    def train_wrappers(self) -> tuple[Callable[[TensorEnv], TensorEnv], ...]:
         return self._train_wrappers
 
     @train_wrappers.setter
-    def train_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+    def train_wrappers(self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]) -> None:
         wrappers = tuple(wrappers)
         if self.train_env is not None and wrappers != self._train_wrappers:
             logger.warn("Training wrappers changed, closing the previous environment.")
@@ -250,11 +264,11 @@ class RlDataModule(
         self._train_wrappers = wrappers
 
     @property
-    def valid_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+    def valid_wrappers(self) -> tuple[Callable[[TensorEnv], TensorEnv], ...]:
         return self._valid_wrappers
 
     @valid_wrappers.setter
-    def valid_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+    def valid_wrappers(self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]) -> None:
         wrappers = tuple(wrappers)
         if self.valid_env is not None and wrappers != self._valid_wrappers:
             logger.warn("validation wrappers changed, closing the previous environment.")
@@ -263,11 +277,11 @@ class RlDataModule(
         self._valid_wrappers = wrappers
 
     @property
-    def test_wrappers(self) -> tuple[Callable[[gym.Env], gym.Env], ...]:
+    def test_wrappers(self) -> tuple[Callable[[TensorEnv], TensorEnv], ...]:
         return self._test_wrappers
 
     @test_wrappers.setter
-    def test_wrappers(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> None:
+    def test_wrappers(self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]) -> None:
         wrappers = tuple(wrappers)
         if self.test_env is not None and wrappers != self._test_wrappers:
             logger.warn("testing wrappers changed, closing the previous environment.")
@@ -286,33 +300,47 @@ class RlDataModule(
         return flatdim(self.action_space)
 
     @property
-    def observation_space(self) -> gym.Space:
+    def observation_space(self) -> TensorSpace:
         if self.train_env is None:
             self.prepare_data()
             self.setup(stage="fit")
         assert self.train_env is not None
+        assert isinstance(self.train_env.observation_space, TensorSpace)
         return self.train_env.observation_space
 
     @property
-    def action_space(self) -> gym.Space:
+    def action_space(self) -> TensorSpace:
         if self.train_env is None:
             self.prepare_data()
             self.setup(stage="fit")
         assert self.train_env is not None
+        assert isinstance(self.train_env.action_space, TensorSpace)
         return self.train_env.action_space
 
-    def _make_env(self, wrappers: Sequence[Callable[[gym.Env], gym.Env]]) -> gym.Env:
+    def _make_env(
+        self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]], seed: int
+    ) -> TensorEnv:
         # TODO: Use gym.vector.make for vector envs, and pass the single-env wrappers to
         # gym.vector.make.
         logger.debug(f"Creating a new environment with {len(wrappers)} wrappers:")
-        env = self.env_fn()
+        env = self.env_fn(seed=seed)
         for i, wrapper in enumerate(wrappers):
             env = wrapper(env)
             logger.debug(
                 f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
             )
         # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
-        env = ToTorchWrapper(env, device=self.device)
+        if isinstance(env.observation_space, TensorSpace) and isinstance(
+            env.action_space, TensorSpace
+        ):
+            assert env.observation_space.device == self.device
+            assert env.action_space.device == self.device
+            logger.debug("Env is already on the right device.")
+        else:
+            logger.debug(
+                f"Add a {ToTorchWrapper.__name__} wrapper to move the numpy arrays to GPU. This isn't ideal!"
+            )
+            env = ToTorchWrapper(env, device=self.device)
         return env
 
     @property
@@ -320,7 +348,7 @@ class RlDataModule(
         from lightning.pytorch.accelerators.cuda import CUDAAccelerator
 
         if self.trainer is None:
-            return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            return default_device()
         return torch.device(
             f"cuda:{self.trainer.local_rank}"  # TODO: Debug this with a multi-GPU job.
             if isinstance(self.trainer.accelerator, CUDAAccelerator)
@@ -344,7 +372,7 @@ class RlDataModule(
     def _close(
         self,
         dataset: RlDataset[Any] | None,
-        env: gym.Env | None,
+        env: TensorEnv | None,
         name: Literal["train", "valid", "test"],
     ) -> None:
         assert getattr(self, f"{name}_env") is env

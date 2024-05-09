@@ -9,22 +9,20 @@ from functools import partial
 from logging import getLogger as get_logger
 from pathlib import Path
 
-import gym
-import gym.wrappers
 import lightning
 import numpy as np
 import torch
-from gym import spaces
-from gym.spaces import flatdim
-from gym.wrappers import (
+from gymnasium import spaces
+from gymnasium.spaces.utils import flatdim
+from gymnasium.wrappers import (
     clip_action,
     flatten_observation,
     normalize,
     transform_observation,
     transform_reward,
 )
-from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
-from gym.wrappers.record_video import RecordVideo
+from gymnasium.wrappers.record_episode_statistics import RecordEpisodeStatistics
+from gymnasium.wrappers.record_video import RecordVideo
 from lightning import LightningModule
 from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
 from torch import Tensor, nn
@@ -38,8 +36,9 @@ from project.algorithms.ppo.utils import (
     PPOActorOutput,
     discount_cumsum,
 )
-from project.datamodules.rl.rl_datamodule import EpisodeBatch, RlDataModule
+from project.datamodules.rl.rl_datamodule import EpisodeBatch, RlDataModule, TensorEnv
 from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
+from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
 
@@ -177,12 +176,12 @@ class PPO(Algorithm):
         assert isinstance(self.datamodule, RlDataModule)
 
         # NOTE: assuming continuous actions for now.
-        assert isinstance(self.datamodule.observation_space, spaces.Box)
-        assert isinstance(self.datamodule.action_space, spaces.Box)
+        assert isinstance(self.datamodule.observation_space, TensorBox)
+        assert isinstance(self.datamodule.action_space, TensorBox)
 
         # NOTE: We later add a wrapper that normalizes the action space to [-1, 1]
-        self._action_space: spaces.Box = spaces.Box(
-            -1, 1, shape=self.datamodule.action_space.shape
+        self._action_space: TensorBox = TensorBox(
+            -1, 1, shape=self.datamodule.action_space.shape, device=self.device
         )
         action_dims = flatdim(self.datamodule.action_space)
 
@@ -229,6 +228,7 @@ class PPO(Algorithm):
         assert isinstance(last_value_layer, nn.Linear)
         init_linear_layer(last_value_layer, std=1.0)
 
+        assert self.datamodule.env.spec is not None, self.datamodule.env
         max_episode_length = self.datamodule.env.spec.max_episode_steps
         assert max_episode_length is not None, "TODO: assumed for now to simplify the code a bit."
         assert self.hp.num_envs == 1, "TODO: Only support running on a single env atm."
@@ -279,7 +279,7 @@ class PPO(Algorithm):
         self.datamodule.valid_wrappers = self.gym_wrappers_to_add(videos_subdir="valid")
         self.datamodule.test_wrappers = self.gym_wrappers_to_add(videos_subdir="test")
 
-    def gym_wrappers_to_add(self, videos_subdir: str) -> list[Callable[[gym.Env], gym.Env]]:
+    def gym_wrappers_to_add(self, videos_subdir: str) -> list[Callable[[TensorEnv], TensorEnv]]:
         # TODO: make this better: also show the change in the obs space.
         clip_function = partial(np.clip, a_min=-10, a_max=10)
         video_folder = str(self.log_dir / "videos" / videos_subdir)
