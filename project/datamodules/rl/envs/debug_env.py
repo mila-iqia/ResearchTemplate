@@ -186,6 +186,7 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
         randomize_target: bool = False,
         randomize_initial_state: bool = False,
         wrap_around_state: bool = False,
+        seed: int | None = None,
         device: torch.device = torch.device("cpu"),
         dtype: torch.dtype = torch.int32,
     ):
@@ -200,6 +201,7 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
             randomize_initial_state=randomize_initial_state,
             wrap_around_state=wrap_around_state,
             device=device,
+            seed=seed,
             dtype=dtype,
         )
         single_observation_space = self.observation_space
@@ -234,6 +236,12 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
             expected_action_space,
             self.action_space,
         )
+        if seed is not None:
+            self.single_observation_space.seed(seed)
+            self.single_action_space.seed(seed)
+            self.observation_space.seed(seed)
+            self.action_space.seed(seed)
+
         self._episode_length = self._episode_length.expand((self.num_envs,))
         self._state = self._state.expand(self.observation_space.shape)
         self._target = self._target.expand(self.observation_space.shape)
@@ -259,29 +267,35 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
                 self._state[env_done] = self._initial_state.clone()[env_done]
             obs = self._state.clone()
 
-            old_target = info["target"]
+            old_target = self._target.clone()
             if self.randomize_target:
                 # Set a new target for the next episode.
                 self._target[env_done] = self.observation_space.sample()[env_done]
-            new_target = self._target
 
-            old_episode_length = info["episode_length"].clone()
+            old_episode_length = self._episode_length.clone()
             self._episode_length[env_done] = 0
-            new_episode_length = self._episode_length
 
             old_info: DebugEnvInfo = {
-                "episode_length": torch.where(env_done, new_episode_length, old_episode_length),
-                "target": torch.where(env_done, new_target, old_target),
+                "episode_length": torch.where(env_done, old_episode_length, self._episode_length),
+                "target": torch.where(env_done, old_target, self._target),
             }
             # We have to try to match gymnasium.vector.VectorEnv, so the final observations should be a
             # list (or numpy array of objects).
             info: DebugVectorEnvInfo = {
-                "episode_length": self._episode_length,
-                "target": self._target,
+                "episode_length": self._episode_length.clone(),
+                "target": self._target.clone(),
+                # NOTE: We're not actually able to use a np.ndarray here to perfectly match the
+                # VectorEnv, because it would try to convert the cuda tensors to numpy arrays.
+                # We'll just keep this as a list for now.
                 "final_observation": [
                     old_observation_i if env_done[i] else None
                     for i, old_observation_i in enumerate(old_observation)
                 ],
+                # dtype=object,
+                # copy=False,
+                # Todo: Look at the `like` argument of `np.asarray`, could be very interesting
+                # to start using it in gym so the ndarrays created can actually be jax Arrays
+                # ),
                 "_final_observation": env_done,
                 "final_info": np.array(
                     [
