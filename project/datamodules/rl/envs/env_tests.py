@@ -1,6 +1,7 @@
 from typing import Any
 
 import gymnasium
+import numpy as np
 import pytest
 import torch
 import torch.utils
@@ -131,9 +132,10 @@ class EnvTests:
 
         def _check_obs(obs: Any):
             assert isinstance(obs, Tensor) and obs.device == device and obs.shape[0] == num_envs
-            if not obs.isnan().any():
-                assert obs in vectorenv.observation_space
-                assert all(obs_i in vectorenv.single_observation_space for obs_i in obs)
+            assert obs.dtype == vectorenv.observation_space.dtype
+            assert obs.shape == vectorenv.observation_space.shape
+            assert obs in vectorenv.observation_space, (obs, vectorenv.observation_space)
+            assert all(obs_i in vectorenv.single_observation_space for obs_i in obs)
 
         def _check_dict(d: NestedDict[str, Tensor | Any]):
             for k, value in d.items():
@@ -194,6 +196,48 @@ class EnvTests:
                 "info_from_step": info_from_step,
             }
         )
+
+    def test_vectorenv_info_on_episode_end(
+        self, vectorenv: VectorEnv[torch.Tensor, torch.Tensor], seed: int
+    ):
+        env = vectorenv
+        n = vectorenv.num_envs
+        env.observation_space.seed(seed)
+        env.action_space.seed(seed)
+        obs, infos = env.reset()
+        print(obs, infos)
+        episode_step = 0
+        max_episode_steps = 2000
+        while "final_observation" not in infos:
+            obs, reward, terminated, truncated, infos = env.step(env.action_space.sample())
+            episode_step += 1
+            assert episode_step < max_episode_steps
+
+            print(obs, reward, terminated, truncated, infos)
+            # Ah HA! Every step gives these extra values in the info dict, not just the last one!
+            regular_keys = sorted(k for k in infos.keys() if f"_{k}" in infos)
+            mask_keys = sorted(infos.keys() - set(regular_keys))
+
+            assert len(regular_keys) == len(mask_keys), (regular_keys, mask_keys)
+
+            for mask_key, key in zip(mask_keys, regular_keys):
+                assert mask_key == f"_{key}"
+                mask = infos[mask_key]
+                info = infos[key]
+                assert isinstance(mask, np.ndarray) and mask.dtype == bool and mask.shape == (n,)
+                assert isinstance(info, np.ndarray) and info.dtype == object and info.shape == (n,)
+                for mask_i, info_i in zip(mask, info):
+                    if mask_i:
+                        if key == "final_observation":
+                            assert info_i in env.single_observation_space
+                        else:
+                            assert info_i is not None
+                    else:
+                        assert info_i is None
+        assert "_final_observation" in infos
+        assert "final_observation" in infos
+        assert "_final_info" in infos
+        assert "final_info" in infos
 
 
 def _check_episode_tensor(

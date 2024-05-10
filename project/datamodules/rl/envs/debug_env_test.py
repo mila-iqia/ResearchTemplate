@@ -131,11 +131,21 @@ def test_action_affects_vectorenv_state(seed: int, device: torch.device):
         wrap_around_state=True,
     )
 
+    def _to_list(v):
+        if isinstance(v, list):
+            return list(map(_to_list, v))
+        if isinstance(v, np.ndarray):
+            return v.tolist()
+        if isinstance(v, torch.Tensor):
+            return v.cpu().tolist()
+        assert isinstance(v, dict)
+        return {k: _to_list(v_i) for k, v_i in v.items()}
+
     def _reset(seed: int):
         obs, info = env.reset(seed=seed)
         return (
-            obs.cpu().tolist(),
-            {k: v.cpu().tolist() for k, v in info.items()},
+            _to_list(obs),
+            {k: _to_list(v) for k, v in info.items()},
         )
 
     def _action(v: list[int]):
@@ -144,23 +154,13 @@ def test_action_affects_vectorenv_state(seed: int, device: torch.device):
     def _step(action: list[int]):
         obs, reward, terminated, truncated, info = env.step(_action(action))
 
-        def _to_list(v):
-            if isinstance(v, list):
-                return list(map(_to_list, v))
-            if isinstance(v, np.ndarray):
-                return v.tolist()
-            if isinstance(v, torch.Tensor):
-                return v.cpu().tolist()
-            assert isinstance(v, dict)
-            return {k: _to_list(v_i) for k, v_i in v.items()}
-
         assert isinstance(reward, torch.Tensor)
         return (
-            obs.cpu().tolist(),
-            reward.cpu().tolist(),
-            terminated.cpu().tolist(),
-            truncated.cpu().tolist(),
-            _to_list(info),
+            _to_list(obs),
+            _to_list(reward),
+            _to_list(terminated),
+            _to_list(truncated),
+            {k: _to_list(v) for k, v in info.items()},
         )
 
     assert _reset(seed=seed) == (

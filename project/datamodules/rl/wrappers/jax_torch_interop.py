@@ -177,9 +177,13 @@ def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
     jax_device = array.devices()
     assert len(jax_device) == 1
     jax_device_str = str(jax_device.pop())
-    assert isinstance(jax_device_str, str), (jax_device_str, type(jax_device_str))
-    if jax_device_str.startswith("cuda"):
-        device_type, _, index = jax_device_str.partition(":")
+    return get_torch_device_from_jax_device(jax_device_str)
+
+
+def get_torch_device_from_jax_device(jax_device: str | jax.Device) -> torch.device:
+    jax_device = str(jax_device)
+    if jax_device.startswith("cuda"):
+        device_type, _, index = jax_device.partition(":")
         assert index.isdigit()
         return torch.device(device_type, int(index))
     return torch.device("cpu")

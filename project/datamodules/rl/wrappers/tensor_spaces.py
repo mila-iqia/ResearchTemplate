@@ -69,15 +69,19 @@ class TensorBox(TensorSpace):
         if not dtype:
             if isinstance(low, Tensor):
                 dtype = low.dtype
+            elif isinstance(low, jax.Array):
+                dtype = get_torch_dtype_from_jax_dtype(low.dtype)
             elif isinstance(high, Tensor):
                 dtype = high.dtype
+            elif isinstance(high, jax.Array):
+                dtype = get_torch_dtype_from_jax_dtype(high.dtype)
             else:
                 dtype = torch.float32
 
         if not shape:
-            if isinstance(low, Tensor | np.ndarray):
+            if isinstance(low, Tensor | np.ndarray | jax.Array):
                 shape = low.shape
-            elif isinstance(high, Tensor | np.ndarray):
+            elif isinstance(high, Tensor | np.ndarray | jax.Array):
                 shape = high.shape
             else:
                 shape = ()
@@ -86,6 +90,10 @@ class TensorBox(TensorSpace):
         super().__init__(shape=shape, dtype=dtype, seed=seed, device=device)
         self.dtype: torch.dtype
         self.shape: tuple[int, ...]
+        if isinstance(low, jax.Array):
+            low = jax_to_torch_tensor(low)
+        if isinstance(high, jax.Array):
+            high = jax_to_torch_tensor(high)
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
         if self.dtype.is_floating_point:
