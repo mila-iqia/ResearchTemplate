@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from typing import Any, SupportsFloat, TypedDict
 
 import gymnasium
 import gymnasium.envs.registration
+import numpy as np
 import torch
 
 from project.datamodules.rl.rl_types import VectorEnv
@@ -36,6 +38,7 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         wrap_around_state: bool = False,
         device: torch.device = torch.device("cpu"),
         dtype: torch.dtype = torch.int32,
+        seed: int | None = None,
     ):
         # Don't call super().__init__ because it would cause an error below.
         # super().__init__()
@@ -50,7 +53,6 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         self.wrap_around_state = wrap_around_state
         self.device = device
         self.dtype = dtype
-        self.rng = torch.Generator(device=self.device)
         self.observation_space: TensorBox = TensorBox(
             low=self.min, high=self.max, shape=(), dtype=self.dtype, device=self.device
         )
@@ -75,6 +77,11 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
             max_episode_steps=max_episode_length,
             vector_entry_point="project.datamodules.rl.envs.debug_env:DebugVectorEnv",
         )
+        self.rng = torch.Generator(device=self.device)
+        if seed is not None:
+            self.rng.manual_seed(seed)
+            self.observation_space.seed(seed)
+            self.action_space.seed(seed)
 
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
@@ -126,7 +133,14 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         self._state += action
         # Two options: Either we wrap around, or we clamp to the range.
         if self.wrap_around_state:
-            self._state %= self.max
+            # -11 -> 9
+            self._state = torch.where(
+                self._state < self.min, self.max + (self.min - self._state), self._state
+            )
+            # 11 -> -9
+            self._state = torch.where(
+                self._state > self.max, self.min + (self._state - self.max), self._state
+            )
         else:
             self._state = torch.clamp(
                 self._state,
@@ -141,12 +155,21 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         terminated: torch.BoolTensor = episode_ended & at_target  # type: ignore
         truncated: torch.BoolTensor = episode_ended & ~at_target  # type: ignore
         return (
-            self._state,
+            self._state.clone(),
             reward,
             terminated,
             truncated,
-            {"episode_length": self._episode_length, "target": self._target},
+            {"episode_length": self._episode_length.clone(), "target": self._target.clone()},
         )
+
+
+class DebugVectorEnvInfo(TypedDict):
+    episode_length: torch.Tensor
+    target: torch.Tensor
+    final_observation: np.ndarray | Sequence[torch.Tensor | None]
+    _final_observation: torch.BoolTensor
+    final_info: np.ndarray | Sequence[DebugEnvInfo | None]
+    _final_info: torch.BoolTensor
 
 
 class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
@@ -215,3 +238,58 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
         self._state = self._state.expand(self.observation_space.shape)
         self._target = self._target.expand(self.observation_space.shape)
         self._initial_state = self._initial_state.expand(self.observation_space.shape)
+
+    def step(
+        self, action: torch.Tensor
+    ) -> tuple[
+        torch.Tensor,
+        SupportsFloat,
+        torch.BoolTensor,
+        torch.BoolTensor,
+        DebugVectorEnvInfo | DebugEnvInfo,
+    ]:
+        obs, reward, terminated, truncated, info = super().step(action)
+        env_done: torch.BoolTensor = terminated | truncated  # type: ignore
+
+        if env_done.any():
+            old_observation = obs
+            if self.randomize_initial_state:
+                self._state[env_done] = self.observation_space.sample()[env_done]
+            else:
+                self._state[env_done] = self._initial_state.clone()[env_done]
+            obs = self._state.clone()
+
+            old_target = info["target"]
+            if self.randomize_target:
+                # Set a new target for the next episode.
+                self._target[env_done] = self.observation_space.sample()[env_done]
+            new_target = self._target
+
+            old_episode_length = info["episode_length"].clone()
+            self._episode_length[env_done] = 0
+            new_episode_length = self._episode_length
+
+            old_info: DebugEnvInfo = {
+                "episode_length": torch.where(env_done, new_episode_length, old_episode_length),
+                "target": torch.where(env_done, new_target, old_target),
+            }
+            # We have to try to match gymnasium.vector.VectorEnv, so the final observations should be a
+            # list (or numpy array of objects).
+            info: DebugVectorEnvInfo = {
+                "episode_length": self._episode_length,
+                "target": self._target,
+                "final_observation": [
+                    old_observation_i if env_done[i] else None
+                    for i, old_observation_i in enumerate(old_observation)
+                ],
+                "_final_observation": env_done,
+                "final_info": np.array(
+                    [
+                        {k: v[i] for k, v in old_info.items()} if env_done_i else None
+                        for i, env_done_i in enumerate(env_done)
+                    ],
+                    dtype=object,
+                ),
+                "_final_info": env_done,
+            }
+        return obs, reward, terminated, truncated, info
