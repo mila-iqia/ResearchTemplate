@@ -215,12 +215,20 @@ class EnvTests:
 
             print(obs, reward, terminated, truncated, infos)
             # Ah HA! Every step gives these extra values in the info dict, not just the last one!
-            regular_keys = sorted(k for k in infos.keys() if f"_{k}" in infos)
-            mask_keys = sorted(infos.keys() - set(regular_keys))
+            keys_with_mask = sorted(k for k in infos.keys() if f"_{k}" in infos)
+            mask_keys = [f"_{k}" for k in keys_with_mask]
 
-            assert len(regular_keys) == len(mask_keys), (regular_keys, mask_keys)
+            # IF some info is spawned inside an individual environment but maybe not in all envs,
+            # then we should have a mask (following the SyncVectorEnv way of doing things).
+            # If we don't find a mask for a particular entry, then we can assume it's already
+            # vectorized and is present in all envs.
+            regular_keys = set(infos.keys()) - set(mask_keys) - set(keys_with_mask)
+            for key in regular_keys:
+                _value = infos[key]
+                # value should be either a tensor or a nested dict of tensors (or maybe None?)
+                # assert isinstance(value, torch.Tensor)
 
-            for mask_key, key in zip(mask_keys, regular_keys):
+            for mask_key, key in zip(mask_keys, keys_with_mask):
                 assert mask_key == f"_{key}"
                 mask = infos[mask_key]
                 info = infos[key]

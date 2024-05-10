@@ -86,7 +86,7 @@ def _no_op(v: Any, /) -> Any:
 
 
 @jax_to_torch.register(collections.abc.Mapping)
-def _jax_dict_to_torch(value: dict[str, jax.Array | Any], /) -> dict[str, torch.Tensor | Any]:
+def jax_to_torch_dict(value: dict[str, jax.Array | Any], /) -> dict[str, torch.Tensor | Any]:
     """Converts a dict of Jax arrays into a dict of PyTorch tensors ."""
     return type(value)(**{k: jax_to_torch(v) for k, v in value.items()})  # type: ignore
 

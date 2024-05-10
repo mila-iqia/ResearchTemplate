@@ -20,4 +20,4 @@ class TestBraxEnv(EnvTests):
         reason="It seems almost impossible to get the final observation and info from the brax envs."
     )
     def test_vectorenv_info_on_episode_end(self, vectorenv: BraxToTorchVectorEnv, seed: int):
-        super().test_vectorenv_info_on_episode_end(vectorenv=vectorenv)
+        super().test_vectorenv_info_on_episode_end(vectorenv=vectorenv, seed=seed)

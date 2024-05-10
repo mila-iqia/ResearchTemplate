@@ -238,6 +238,14 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
         self._state, obs, info, self._rng_key = env_reset(self._env, self._rng_key)
         torch_obs = jax_to_torch_tensor(obs)
         torch_info = jax_to_torch(info)
+
+        # NOTE: We could try to match the same interface as `SyncVectorEnv` here by adding some dummy
+        # boolean masks, but it seems impossible to get the final observation, we'd have to check
+        # if the state will be done on this step manually before passing it down to self._env.step,
+        # otherwise the AutoReset wrapper from brax will overwrite the pipeline state and the obs.
+        bool_mask = torch.ones(self.num_envs, dtype=torch.bool, device=torch_obs.device)
+        added_boolean_masks = {f"_{key}": bool_mask for key in torch_info.keys()}
+        torch_info = {**torch_info, **added_boolean_masks}
         return torch_obs, torch_info
 
     def step(
