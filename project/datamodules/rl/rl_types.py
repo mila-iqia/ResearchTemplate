@@ -154,26 +154,12 @@ class Episode(MappingMixin, Generic[ActorOutput]):
     terminated: bool
     actor_outputs: ActorOutput
 
+    final_observation: Tensor | None = None
+    final_info: EpisodeInfo | None = None
 
-class UnstackedEpisodeDict(TypedDict, Generic[ActorOutput]):
-    """Data of a (possibly on-going) episode, where the contents haven't yet been stacked."""
-
-    observations: list[Tensor]
-    actions: list[Tensor]
-    rewards: list[float]
-    infos: list[EpisodeInfo]
-
-    truncated: bool
-    """Whether the episode was truncated (i.e. a maximum number of steps was reached)."""
-    terminated: bool
-    """Whether the episode ended "normally"."""
-
-    actor_outputs: list[ActorOutput]
-    """Additional outputs of the Actor (besides the action to take) for each step in the episode.
-
-    This should be used to store whatever is needed to train the model later (e.g. the action log-
-    probabilities, activations, etc.)
-    """
+    @property
+    def length(self) -> int:
+        return self.rewards.size(0)
 
 
 @dataclass(frozen=True)

@@ -132,7 +132,9 @@ class JaxToTorchMixin:
     ) -> tuple[
         torch.Tensor, torch.FloatTensor, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]
     ]:
-        jax_action = torch_to_jax_tensor(action)
+        jax_action = torch_to_jax_tensor(
+            action.contiguous() if not action.is_contiguous() else action
+        )
         obs, reward, terminated, truncated, info = self.env.step(jax_action)
         torch_obs = jax_to_torch_tensor(obs)
         assert isinstance(reward, jax.Array)
