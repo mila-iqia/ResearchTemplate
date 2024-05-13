@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import itertools
 from collections.abc import Iterable, Mapping
 from logging import getLogger as get_logger
@@ -120,6 +121,12 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
         self.seed = seed
 
         self.num_envs = env.num_envs
+        # TODO: Need to call a method on the iterator to reset the envs when the actor is updated.
+        self._iterator: Iterable[Episode[ActorOutput]] | None = None
+
+    def on_actor_update(self) -> None:
+        """Call this when the actor neural net has its weights updated so the iterator resets the
+        envs (to prevent having a mix of old and new actions in any given episode)"""
 
     def __str__(self) -> str:
         return (
@@ -146,112 +153,124 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
         return self.episodes_per_epoch
 
 
-def VectorEnvEpisodeIterator(
+def VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
     env: VectorEnv[Tensor, Tensor],
     actor: Actor[Tensor, Tensor, ActorOutput],
     initial_seed: int | list[int] | None = None,
     max_episodes: int | None = None,
     max_steps: int | None = None,
-):
+) -> Iterable[Episode[ActorOutput]]:
     """Iterator that yields one episode at a time from a VectorEnv."""
     logger.debug(f"Making a new iterator for {env=}.")
     num_envs = env.num_envs
 
     observations: list[list[Tensor]] = [[] for _ in range(num_envs)]
     actions: list[list[Tensor]] = [[] for _ in range(num_envs)]
-    rewards: list[list[float]] = [[] for _ in range(num_envs)]
+    rewards: list[list[Tensor]] = [[] for _ in range(num_envs)]
     infos: list[list[EpisodeInfo]] = [[] for _ in range(num_envs)]
     actor_outputs: list[list[ActorOutput]] = [[] for _ in range(num_envs)]
-    _episodes: int = 0
-    _steps: int = 0
 
     obs_batch, info_batch = env.reset(seed=initial_seed)
+
+    # Note: not really used atm since we assume the env gives back tensors (not dicts)
+    # if isinstance(obs_batch, Mapping):
+    #     obs_batch = list(sliced_dict(obs_batch, n_slices=num_envs))
     for i, env_obs in enumerate(obs_batch):
         observations[i].append(env_obs)
-    for i, env_info in enumerate(sliced_dict(info_batch, n_slices=num_envs)):
-        infos[i].append(env_info)
+
+    info_batch = list(sliced_dict(info_batch, n_slices=num_envs))
+    for i, env_info in enumerate(info_batch):
+        infos[i].append(env_info)  # type: ignore
+
+    _steps: int = 0
+    _episodes: int = 0
 
     should_stop = False
-
     while not should_stop:
         action_batch, actor_output_batch = actor(obs_batch, env.action_space)
         logger.debug(
             f"Step {_steps}: # episode lengths in each env: {[len(obs) for obs in observations]}"
         )
 
-        obs_batch, reward_batch, done_batch, truncated_batch, info_batch = env.step(action_batch)
+        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(
+            action_batch
+        )
+        env_infos = list(sliced_dict(info_batch, n_slices=num_envs))
+        env_actor_outputs = list(sliced_dict(actor_output_batch, n_slices=num_envs))
 
-        for (
-            env_index,
-            env_info,
-            env_actor_output,
-        ) in itertools.zip_longest(
-            range(num_envs),
-            sliced_dict(info_batch, n_slices=num_envs),
-            sliced_dict(actor_output_batch, n_slices=num_envs),
-            fillvalue=None,
-        ):
-            assert env_index is not None
-            assert env_info is not None
-            assert env_actor_output is not None
-
+        for env_index in range(num_envs):
+            _steps += 1
             env_obs = obs_batch[env_index]
             env_reward = reward_batch[env_index]
-            env_done = done_batch[env_index]
+            env_terminated = terminated_batch[env_index]
             env_truncated = truncated_batch[env_index]
+            env_info: EpisodeInfo = env_infos[env_index]  # type: ignore
             env_action = action_batch[env_index]
+            env_actor_output = env_actor_outputs[env_index]
 
-            if env_done:
+            if env_terminated | env_truncated:
+                _episodes += 1
+
+                # The observation and info are of the first step of the next episode.
+                # The action and reward are from the last step of the previous episode.
+                rewards[env_index].append(env_reward)
+                actions[env_index].append(env_action)
+                actor_outputs[env_index].append(env_actor_output)
+
+                # We don't really use these as far as I can tell (the jax envs don't produce them).
+                final_observation: Tensor | None = env_info.get("old_observation")
+                final_info: EpisodeInfo | None = env_info.get("final_info")
+
                 episode = stack_episode(
                     observations=observations[env_index],
                     actions=actions[env_index],
                     rewards=rewards[env_index],
-                    infos=infos[env_index],
-                    terminated=env_done,
+                    infos=infos[env_index].copy(),
+                    terminated=env_terminated,
                     truncated=env_truncated,
                     actor_outputs=actor_outputs[env_index],
+                    final_observation=final_observation,
+                    final_info=final_info,
                 )
-                # TODO: turn back down to debug level after testing is done.
-                logger.info(
+                logger.debug(
                     f"Episode {_episodes} is done (contains {episode.observations.shape[0]} steps)"
                 )
                 yield episode
 
                 observations[env_index].clear()
-                actions[env_index].clear()
                 rewards[env_index].clear()
                 infos[env_index].clear()
+                actions[env_index].clear()
                 actor_outputs[env_index].clear()
 
-                _episodes += 1
-                if _episodes == max_episodes:
-                    _steps += 1  # so we exit the outer loop with the right number of total steps.
-                    should_stop = True  # so we exit the outer loop.
-                    break
+                # The observation and info are of the first step of the next episode.
+                observations[env_index].append(env_obs)
+                infos[env_index].append(env_info)
 
-            # note: This is done after the episode yielding so that we yield the right number of
-            # episodes.
-            _steps += 1
-            # todo: test for off-by-1 errors. For example, if the episode length is fixed to 200,
-            # then if the max steps is 799, we expect to see 3 episodes, not 4.
-            if max_steps and _steps == max_steps - 1:
-                should_stop = True  # so we exit the outer loop.
+                if _episodes == max_episodes:
+                    # Break now, so we return the right number of episodes even if multiple envs
+                    # finished at the same time on the last step.
+                    logger.info(f"Reached episode limit ({max_episodes}), exiting.")
+                    should_stop = True  # exit outer loop
+                    break  # exit inner loop
+            else:
+                observations[env_index].append(env_obs)
+                rewards[env_index].append(env_reward)
+                infos[env_index].append(env_info)
+                actions[env_index].append(env_action)
+                actor_outputs[env_index].append(env_actor_output)
+
+            if _steps == max_steps:
+                logger.info(f"Reached limit on the total number of steps ({max_steps}), exiting.")
+                should_stop = True  # exit outer loop.
                 break
 
-            # todo: double check that the obs is the first of the new episode, and not the last
-            # of the previous one. Also check the timing of the action so it fits in the right
-            # episode.
-            observations[env_index].append(env_obs)
-            actions[env_index].append(env_action)
-            rewards[env_index].append(env_reward)
-            infos[env_index].append(env_info)  # type: ignore
-            actor_outputs[env_index].append(env_actor_output)  # type: ignore
     logger.info(f"Finished an epoch after {_steps} steps and {_episodes} episodes.")
 
 
-def sliced_dict(
-    d: NestedMapping[str, Tensor | None], n_slices: int | None = None
-) -> Iterable[NestedDict[str, Tensor | None]]:
+def sliced_dict[M: NestedMapping[str, Tensor | None]](
+    d: M, n_slices: int | None = None
+) -> Iterable[M]:
     """Slice a dict of sequences (tensors) into a sequence of dicts with the values at the same
     index in the 0th dimension."""
     if not d:
@@ -287,8 +306,19 @@ def sliced_dict(
                 result[k] = _sliced(v, index)
             elif v is None:
                 result[k] = None
-            else:
+            elif (
+                isinstance(v, collections.abc.Sequence | Tensor | np.ndarray)
+                and len(v) == n_slices
+            ):
                 result[k] = v[index]
+            elif isinstance(v, int | float | bool | str):
+                # Copy the value at every index, for instance if the actor returns a single int for
+                # a batch of observations
+                result[k] = v
+            else:
+                raise NotImplementedError(
+                    f"Don't know how to slice value {v} at key {k} from the actor output dict {d}"
+                )
         return result
 
     for i in range(n_slices):

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Concatenate, TypeGuard, Unpack, overload
+from typing import Any, Concatenate, TypeGuard, overload
 
 import torch
 from torch import Tensor
 
 from project.utils.types import is_sequence_of
 
-from .rl_types import ActorOutput, Episode, UnstackedEpisodeDict
+from .rl_types import ActorOutput, Episode, EpisodeInfo
 
 
 @overload
@@ -19,12 +19,20 @@ def stack(values: list[Tensor], **kwargs) -> Tensor: ...
 def stack(values: list[ActorOutput], **kwargs) -> ActorOutput: ...
 
 
-def stack(values: list[Tensor] | list[ActorOutput], **kwargs) -> Tensor | ActorOutput:
+def stack(
+    values: list[float] | list[int] | list[Tensor] | list[ActorOutput], **kwargs
+) -> Tensor | ActorOutput:
     """Stack lists of tensors into a Tensor or dicts of tensors into a dict of stacked tensors."""
     if isinstance(values[0], dict):
         # NOTE: weird bug in the type checker? Doesn't understand that `values` is a list[Tensor].
         return stack_dicts(values, **kwargs)  # type: ignore
-    assert isinstance(values[0], Tensor)
+
+    if isinstance(values[0], int | float | bool):
+        assert all(isinstance(v, type(values[0])) for v in values)
+        # idea: return a np.ndarray to emphasize that we won't move stuff between devices.
+        return torch.as_tensor(values)
+
+    assert isinstance(values[0], Tensor), values[0]
     if contains_only_tensors(values) and any(
         isinstance(v, Tensor) and (v.is_nested or v.shape != values[0].shape) for v in values
     ):
@@ -59,18 +67,28 @@ def stack_dicts[**P, T: Tensor, V](
 
 
 def stack_episode(
-    **episode: Unpack[UnstackedEpisodeDict[ActorOutput]],
+    observations: list[Tensor],
+    actions: list[Tensor],
+    rewards: list[Tensor],
+    infos: list[EpisodeInfo],
+    truncated: bool,
+    terminated: bool,
+    actor_outputs: list[ActorOutput],
+    final_observation: Tensor | None = None,
+    final_info: EpisodeInfo | None = None,
 ) -> Episode[ActorOutput]:
     """Stacks the lists of items at each step into an Episode dict containing tensors."""
-    device = _get_device(episode)
+
     return Episode(
-        observations=stack(episode["observations"]),
-        actions=stack(episode["actions"]),
-        rewards=torch.as_tensor(episode["rewards"], device=device),
-        infos=episode["infos"],
-        truncated=episode["truncated"],
-        terminated=episode["terminated"],
-        actor_outputs=stack(episode["actor_outputs"]),
+        observations=stack(observations),
+        actions=stack(actions),
+        rewards=stack(rewards),
+        infos=infos,  # todo: do we want to stack episode info dicts?
+        truncated=truncated,
+        terminated=terminated,
+        actor_outputs=stack(actor_outputs),
+        final_observation=final_observation,
+        final_info=final_info,
     )
 
 
