@@ -201,9 +201,9 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         self.max_steps = max_steps
 
         self.observations: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
-        self.actions: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
         self.rewards: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
         self.infos: list[list[dict]] = [[] for _ in range(self.num_envs)]
+        self.actions: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
         self.actor_outputs: list[list[ActorOutput]] = [[] for _ in range(self.num_envs)]
 
         self._yielded_steps: int = 0
@@ -222,12 +222,14 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         # if not any([self.observations, self.actions, self.rewards, self.infos, self.actor_outputs]):
         #     # Envs were already reset?
         #     ...
-
+        logger.info(
+            f"Resetting envs. # of wasted env steps: {sum(self.episode_lengths())} ({self.episode_lengths()})"
+        )
         # Clear the buffers
         self.observations = [[] for _ in range(self.num_envs)]
-        self.actions = [[] for _ in range(self.num_envs)]
         self.rewards = [[] for _ in range(self.num_envs)]
         self.infos = [[] for _ in range(self.num_envs)]
+        self.actions = [[] for _ in range(self.num_envs)]
         self.actor_outputs = [[] for _ in range(self.num_envs)]
 
         # Reset all the environments.
@@ -243,6 +245,8 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
         for i, env_info in enumerate(env_infos):
             self.infos[i].append(env_info)  # type: ignore
+
+        assert self.episode_lengths() == [1 for _ in range(self.num_envs)]
 
     @property
     def _should_stop(self) -> bool:
@@ -288,7 +292,6 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
             self._last_observation, self.env.action_space
         )
         logger.debug(f"{self.episode_lengths()=}")
-
         obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = self.env.step(
             action_batch
         )
@@ -296,6 +299,8 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         self._last_info = info_batch
         env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
         env_actor_outputs = list(sliced_dict(actor_output_batch, n_slices=self.num_envs))
+
+        episodes_at_this_step: list[Episode[ActorOutput]] = []
 
         for env_index in range(self.num_envs):
             env_obs = obs_batch[env_index]
@@ -328,9 +333,9 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
                     actor_outputs=self.actor_outputs[env_index],
                     final_observation=final_observation,
                     final_info=final_info,
+                    environment_index=env_index,
                 )
-
-                yield episode
+                episodes_at_this_step.append(episode)
 
                 self.observations[env_index].clear()
                 self.rewards[env_index].clear()
@@ -349,6 +354,8 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
                 self.infos[env_index].append(env_info)
                 self.actions[env_index].append(env_action)
                 self.actor_outputs[env_index].append(env_actor_output)
+
+        yield from episodes_at_this_step
 
 
 def sliced_dict[M: NestedMapping[str, Tensor | None]](

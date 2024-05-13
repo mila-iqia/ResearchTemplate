@@ -76,6 +76,7 @@ def stack_episode(
     actor_outputs: list[ActorOutput],
     final_observation: Tensor | None = None,
     final_info: EpisodeInfo | None = None,
+    environment_index: int | None = None,
 ) -> Episode[ActorOutput]:
     """Stacks the lists of items at each step into an Episode dict containing tensors."""
 
@@ -89,6 +90,7 @@ def stack_episode(
         actor_outputs=stack(actor_outputs),
         final_observation=final_observation,
         final_info=final_info,
+        environment_index=environment_index,
     )
 
 
