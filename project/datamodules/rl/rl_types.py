@@ -157,6 +157,9 @@ class Episode(MappingMixin, Generic[ActorOutput]):
     final_observation: Tensor | None = None
     final_info: EpisodeInfo | None = None
 
+    environment_index: int | None = None
+    """The environment index (when in a vectorenv) that this episode was generated from."""
+
     @property
     def length(self) -> int:
         return self.rewards.size(0)
