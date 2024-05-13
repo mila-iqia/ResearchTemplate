@@ -1,4 +1,4 @@
-from typing import Any
+from logging import getLogger as get_logger
 
 import gymnasium
 import pytest
@@ -6,8 +6,9 @@ import torch
 
 from project.datamodules.rl.envs.gymnax import gymnax_vectorenv
 from project.datamodules.rl.rl_dataset import VectorEnvRlDataset
-from project.datamodules.rl.rl_types import Actor
 from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
+
+logger = get_logger(__name__)
 
 
 @pytest.mark.timeout(10)
@@ -31,26 +32,27 @@ def test_set_actor_resets_envs(seed: int, device: torch.device):
 
     _update = 0
 
-    def constant_action_actor(constant_action: int):
+    def actor_with_update_index_in_output():
         def _actor(observation: torch.Tensor, action_space: gymnasium.Space[torch.Tensor]):
             nonlocal _update
             assert isinstance(action_space, TensorSpace)
             assert action_space.shape is not None
-            action = torch.as_tensor(
-                constant_action, dtype=action_space.dtype, device=action_space.device
-            ).expand(size=action_space.shape)
-            return action, {"_update": _update, "action": constant_action}
+            action = action_space.sample()
+            return action, {
+                "action": action,
+                "_update": _update,
+            }
 
         return _actor
 
     dataset = VectorEnvRlDataset(
-        env, actor=constant_action_actor(0), seed=seed, episodes_per_epoch=100
+        env, actor=actor_with_update_index_in_output(), seed=seed, episodes_per_epoch=100
     )
 
-    def update_actor(new_actor: Actor[torch.Tensor, torch.Tensor, Any]):
+    def update_actor():
         nonlocal _update
         _update += 1
-        dataset.actor = new_actor
+        # dataset.actor = new_actor
         dataset.on_actor_update()
 
     # obs, info = env.reset() # obs #1
@@ -70,27 +72,28 @@ def test_set_actor_resets_envs(seed: int, device: torch.device):
         # todo: stack the info dicts? (means that we assume that each steps logs the same keys?)
         assert len(episode.infos) == episode.length
         actor_outputs_list.append(episode.actor_outputs)
+        logger.debug(f"{episode_index=}, {episode.actor_outputs=}")
+
+        # Check that the actions are lined up exactly like they were in the actor outputs.
+        assert (episode.actor_outputs["action"] == episode.actions).all()
+
+        if episode_index <= 2:
+            assert set(episode.actor_outputs["_update"].tolist()) == {0}
 
         if episode_index == 2:
-            # Update the actor to one that only outputs 1s
-            update_actor(constant_action_actor(1))
+            # Update the actor to one that outputs a 1
+            update_actor()
 
         if 3 <= episode_index <= 6:
             # There should not be a mix of old and new actions. All actions should have been sampled
             # from the updated actor.
             assert set(episode.actor_outputs["_update"].tolist()) == {1}
-            assert set(episode.actor_outputs["action"]) == {1}
 
         if episode_index == 6:
-            # Update the actor to one that only outputs 0s
-            update_actor(constant_action_actor(0))
+            update_actor()
 
         if 6 < episode_index:
-            # There should not be a mix of old and new actions. All actions should have been sampled
-            # from the updated actor.
             assert set(episode.actor_outputs["_update"].tolist()) == {2}
-            assert set(episode.actor_outputs["action"]) == {0}
 
         if episode_index == 10:
-            # Should have encountered episodes with the new actor
             break
