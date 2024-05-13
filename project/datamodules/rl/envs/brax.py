@@ -186,8 +186,10 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
         }
         assert self._env.env.batch_size is not None
         self.num_envs = self._env.env.batch_size
+
         self._rng_key = jax.random.key(seed)
         self._state = None
+
         obs = jnp.inf * jnp.ones(self._env.observation_size, dtype=jnp.float32)
         torch_device = get_torch_device_from_jax_array(obs)
         self.single_observation_space: TensorBox = TensorBox(
@@ -226,15 +228,15 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
             device=torch_device,
         )
 
-    def reset(
+    def reset_wait(
         self, seed: int | list[int] | None = None, options: dict[str, Any] | None = None
     ) -> tuple[torch.Tensor, dict]:
         if isinstance(seed, int):
             self._rng_key = jax.random.key(seed)
-        if isinstance(seed, list):
+        elif seed is not None:
             # todo: maybe it could, but we'd have to bypass the VmapWrapper, which splits a single
             # rng into num_envs..
-            raise NotImplementedError("This doesn't work with a list of int seeds.")
+            raise NotImplementedError("This doesn't work with a list of seeds.")
         self._state, obs, info, self._rng_key = env_reset(self._env, self._rng_key)
         torch_obs = jax_to_torch_tensor(obs)
         torch_info = jax_to_torch(info)
@@ -274,12 +276,8 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
         if any(terminated | truncated):
             # Seems way too hard to actually get the final observation and info, it might not
             # actually be worth it...
-            assert False, info
-
+            pass
         return torch_obs, torch_reward, torch_terminated, torch_truncated, torch_info
-
-    def seed(self, seed: int = 0):
-        self._key = jax.random.PRNGKey(seed)
 
     def render(self):
         if self.render_mode == "rgb_array":
@@ -289,6 +287,24 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
             return brax.io.image.render_array(sys, state.pipeline_state.take(0), 256, 256)
         else:
             return super().render()  # just raise an exception
+
+    # Just in case someone somewhere is actually using this async gym VectorEnv API.
+    _actions: torch.Tensor | None = None
+
+    def step_async(self, actions: torch.Tensor) -> None:
+        self._actions = actions
+
+    def step_wait(
+        self,
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.BoolTensor,
+        torch.BoolTensor,
+        NestedDict[str, torch.Tensor | None],
+    ]:
+        assert self._actions is not None
+        return self.step(self._actions)
 
 
 @functools.partial(jax.jit, static_argnums=(0,))

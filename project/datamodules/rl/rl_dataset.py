@@ -115,18 +115,41 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
     ):
         super().__init__()
         self.env = env
-        self.actor = actor
+        self._actor = actor
         self.episodes_per_epoch = episodes_per_epoch
         self.steps_per_epoch = steps_per_epoch
         self.seed = seed
 
         self.num_envs = env.num_envs
         # TODO: Need to call a method on the iterator to reset the envs when the actor is updated.
-        self._iterator: Iterable[Episode[ActorOutput]] | None = None
+        self._iterator: VectorEnvEpisodeIterator[ActorOutput] | None = None
+
+    @property
+    def actor(self) -> Actor[Tensor, Tensor, ActorOutput]:
+        return self._actor
+
+    @actor.setter
+    def actor(self, value: Actor[Tensor, Tensor, ActorOutput]) -> None:
+        self._actor = value
+        self.on_actor_update()
 
     def on_actor_update(self) -> None:
-        """Call this when the actor neural net has its weights updated so the iterator resets the
-        envs (to prevent having a mix of old and new actions in any given episode)"""
+        """Call this after updating the weights of the actor neural net, so the env iterator can
+        reset the environments.
+
+        This is done to prevent having a mix of old and new actions in any given episode, which
+        would cause errors when backpropagating.
+        """
+        if self._iterator is None:
+            logger.warning("The actor has been updated before starting to iterate on the env?")
+            return
+
+        logger.debug(
+            f"The actor has been updated at step {self._iterator._yielded_steps} "
+            f"(episode {self._iterator._yielded_episodes}). Resetting the envs."
+        )
+        self._iterator.actor = self.actor
+        self._iterator.reset_envs()
 
     def __str__(self) -> str:
         return (
@@ -140,13 +163,15 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
 
     def __iter__(self) -> Iterable[Episode[ActorOutput]]:
         # Reset the env RNG at each epoch start? or only on the first epoch?
-        yield from VectorEnvEpisodeIterator(
-            env=self.env,
-            actor=self.actor,
-            initial_seed=self.seed,
-            max_episodes=self.episodes_per_epoch,
-            max_steps=self.steps_per_epoch,
-        )
+        if self._iterator is None:
+            self._iterator = VectorEnvEpisodeIterator(
+                env=self.env,
+                actor=self.actor,
+                initial_seed=self.seed,
+                max_episodes=self.episodes_per_epoch,
+                max_steps=self.steps_per_epoch,
+            )
+        yield from iter(self._iterator)
 
     def __len__(self) -> int:
         assert self.episodes_per_epoch is not None
@@ -191,13 +216,21 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
 
         self.reset_envs(seed=initial_seed)
 
-    def reset_envs(self, seed: int | list[int] | None) -> None:
+    def reset_envs(self, seed: int | list[int] | None = None) -> None:
+        # TODO: Check if the envs were already just reset (with this seed?) and if so, don't reset
+        # again.
+        # if not any([self.observations, self.actions, self.rewards, self.infos, self.actor_outputs]):
+        #     # Envs were already reset?
+        #     ...
+
+        # Clear the buffers
         self.observations = [[] for _ in range(self.num_envs)]
         self.actions = [[] for _ in range(self.num_envs)]
         self.rewards = [[] for _ in range(self.num_envs)]
         self.infos = [[] for _ in range(self.num_envs)]
         self.actor_outputs = [[] for _ in range(self.num_envs)]
 
+        # Reset all the environments.
         obs_batch, info_batch = self.env.reset(seed=seed)
         self._last_observation = obs_batch
         self._last_info = info_batch
@@ -240,6 +273,13 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
             f"{self._yielded_steps} environment steps."
         )
 
+    def episode_lengths(self) -> list[int]:
+        """Returns the number of steps in each currently ongoing episode.
+
+        Used mainly for debugging.
+        """
+        return [len(obs) for obs in self.observations]
+
     def step_and_yield_completed_episodes(self) -> Iterable[Episode[ActorOutput]]:
         """Do one step in the vectorenv and yield any episodes that just finished at that step."""
         assert self._last_observation is not None
@@ -247,9 +287,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         action_batch, actor_output_batch = self.actor(
             self._last_observation, self.env.action_space
         )
-
-        _lengths = [len(obs) for obs in self.observations]
-        logger.debug(f"Step {self._yielded_steps}: # episode length in each env: {_lengths}")
+        logger.debug(f"{self.episode_lengths()=}")
 
         obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = self.env.step(
             action_batch
