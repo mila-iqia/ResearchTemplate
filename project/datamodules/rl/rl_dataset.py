@@ -153,119 +153,164 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
         return self.episodes_per_epoch
 
 
-def VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
-    env: VectorEnv[Tensor, Tensor],
-    actor: Actor[Tensor, Tensor, ActorOutput],
-    initial_seed: int | list[int] | None = None,
-    max_episodes: int | None = None,
-    max_steps: int | None = None,
-) -> Iterable[Episode[ActorOutput]]:
-    """Iterator that yields one episode at a time from a VectorEnv."""
-    logger.debug(f"Making a new iterator for {env=}.")
-    num_envs = env.num_envs
+class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
+    Iterable[Episode[ActorOutput]]
+):
+    """Yields one episode at a time from interacting with a vectorized environment."""
 
-    observations: list[list[Tensor]] = [[] for _ in range(num_envs)]
-    actions: list[list[Tensor]] = [[] for _ in range(num_envs)]
-    rewards: list[list[Tensor]] = [[] for _ in range(num_envs)]
-    infos: list[list[EpisodeInfo]] = [[] for _ in range(num_envs)]
-    actor_outputs: list[list[ActorOutput]] = [[] for _ in range(num_envs)]
+    def __init__(
+        self,
+        env: VectorEnv[Tensor, Tensor],
+        actor: Actor[Tensor, Tensor, ActorOutput],
+        initial_seed: int | list[int] | None = None,
+        max_episodes: int | None = None,
+        max_steps: int | None = None,
+    ) -> None:
+        """Iterator that yields one episode at a time from a VectorEnv."""
+        logger.debug(f"Making a new iterator for {env=}.")
+        self.num_envs = env.num_envs
+        self.env = env
+        self.initial_seed = initial_seed
+        self.actor = actor
+        self.max_episodes = max_episodes
+        self.max_steps = max_steps
 
-    obs_batch, info_batch = env.reset(seed=initial_seed)
+        self.observations: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
+        self.actions: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
+        self.rewards: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
+        self.infos: list[list[dict]] = [[] for _ in range(self.num_envs)]
+        self.actor_outputs: list[list[ActorOutput]] = [[] for _ in range(self.num_envs)]
 
-    # Note: not really used atm since we assume the env gives back tensors (not dicts)
-    # if isinstance(obs_batch, Mapping):
-    #     obs_batch = list(sliced_dict(obs_batch, n_slices=num_envs))
-    for i, env_obs in enumerate(obs_batch):
-        observations[i].append(env_obs)
+        self._yielded_steps: int = 0
+        self._yielded_episodes: int = 0
 
-    info_batch = list(sliced_dict(info_batch, n_slices=num_envs))
-    for i, env_info in enumerate(info_batch):
-        infos[i].append(env_info)  # type: ignore
+        # The last observation and info from the env. The last observation is fed to the actor and
+        # updated at each step.
+        self._last_observation: Tensor | None = None
+        self._last_info: dict | None = None
 
-    _steps: int = 0
-    _episodes: int = 0
+        self.reset_envs(seed=initial_seed)
 
-    should_stop = False
-    while not should_stop:
-        action_batch, actor_output_batch = actor(obs_batch, env.action_space)
-        logger.debug(
-            f"Step {_steps}: # episode lengths in each env: {[len(obs) for obs in observations]}"
+    def reset_envs(self, seed: int | list[int] | None) -> None:
+        self.observations = [[] for _ in range(self.num_envs)]
+        self.actions = [[] for _ in range(self.num_envs)]
+        self.rewards = [[] for _ in range(self.num_envs)]
+        self.infos = [[] for _ in range(self.num_envs)]
+        self.actor_outputs = [[] for _ in range(self.num_envs)]
+
+        obs_batch, info_batch = self.env.reset(seed=seed)
+        self._last_observation = obs_batch
+        self._last_info = info_batch
+        # Note: not really used atm since we assume the env gives back tensors (not dicts)
+        # if isinstance(obs_batch, Mapping):
+        #     obs_batch = list(sliced_dict(obs_batch, n_slices=num_envs))
+        for i, env_obs in enumerate(obs_batch):
+            self.observations[i].append(env_obs)
+
+        env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
+        for i, env_info in enumerate(env_infos):
+            self.infos[i].append(env_info)  # type: ignore
+
+    @property
+    def _should_stop(self) -> bool:
+        if self.max_episodes and self._yielded_episodes >= self.max_episodes:
+            return True
+        if self.max_steps and self._yielded_steps >= self.max_steps:
+            return True
+        return False
+
+    def __iter__(self):
+        while not self._should_stop:
+            for episode in self.step_and_yield_completed_episodes():
+                yield episode
+                self._yielded_episodes += 1
+                self._yielded_steps += episode.length
+
+                if self._should_stop:
+                    if self._yielded_episodes == self.max_episodes:
+                        logger.info(f"Reached limit of {self.max_episodes} episodes.")
+                    if self.max_steps and self._yielded_steps >= self.max_steps:
+                        logger.info(f"Reached limit of {self.max_steps} steps.")
+
+                    # Break now, so we return the right number of episodes even if multiple envs
+                    # finished at the same time on the last step.
+                    break
+        logger.info(
+            f"Finished an epoch after yielding {self._yielded_episodes} episodes and a total of "
+            f"{self._yielded_steps} environment steps."
         )
 
-        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(
+    def step_and_yield_completed_episodes(self) -> Iterable[Episode[ActorOutput]]:
+        """Do one step in the vectorenv and yield any episodes that just finished at that step."""
+        assert self._last_observation is not None
+        # note: Could pass the info to the actor as well?
+        action_batch, actor_output_batch = self.actor(
+            self._last_observation, self.env.action_space
+        )
+
+        _lengths = [len(obs) for obs in self.observations]
+        logger.debug(f"Step {self._yielded_steps}: # episode length in each env: {_lengths}")
+
+        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = self.env.step(
             action_batch
         )
-        env_infos = list(sliced_dict(info_batch, n_slices=num_envs))
-        env_actor_outputs = list(sliced_dict(actor_output_batch, n_slices=num_envs))
+        self._last_observation = obs_batch
+        self._last_info = info_batch
+        env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
+        env_actor_outputs = list(sliced_dict(actor_output_batch, n_slices=self.num_envs))
 
-        for env_index in range(num_envs):
-            _steps += 1
+        for env_index in range(self.num_envs):
             env_obs = obs_batch[env_index]
             env_reward = reward_batch[env_index]
             env_terminated = terminated_batch[env_index]
             env_truncated = truncated_batch[env_index]
-            env_info: EpisodeInfo = env_infos[env_index]  # type: ignore
+            env_info = env_infos[env_index]
             env_action = action_batch[env_index]
             env_actor_output = env_actor_outputs[env_index]
 
             if env_terminated | env_truncated:
-                _episodes += 1
-
                 # The observation and info are of the first step of the next episode.
                 # The action and reward are from the last step of the previous episode.
-                rewards[env_index].append(env_reward)
-                actions[env_index].append(env_action)
-                actor_outputs[env_index].append(env_actor_output)
+                self.rewards[env_index].append(env_reward)
+                self.actions[env_index].append(env_action)
+                self.actor_outputs[env_index].append(env_actor_output)
 
                 # We don't really use these as far as I can tell (the jax envs don't produce them).
                 final_observation: Tensor | None = env_info.get("old_observation")
                 final_info: EpisodeInfo | None = env_info.get("final_info")
 
                 episode = stack_episode(
-                    observations=observations[env_index],
-                    actions=actions[env_index],
-                    rewards=rewards[env_index],
-                    infos=infos[env_index].copy(),
+                    observations=self.observations[env_index],
+                    actions=self.actions[env_index],
+                    rewards=self.rewards[env_index],
+                    # todo: fix the type here, info is more general than this.
+                    infos=self.infos[env_index].copy(),
                     terminated=env_terminated,
                     truncated=env_truncated,
-                    actor_outputs=actor_outputs[env_index],
+                    actor_outputs=self.actor_outputs[env_index],
                     final_observation=final_observation,
                     final_info=final_info,
                 )
-                logger.debug(
-                    f"Episode {_episodes} is done (contains {episode.observations.shape[0]} steps)"
-                )
+
                 yield episode
 
-                observations[env_index].clear()
-                rewards[env_index].clear()
-                infos[env_index].clear()
-                actions[env_index].clear()
-                actor_outputs[env_index].clear()
+                self.observations[env_index].clear()
+                self.rewards[env_index].clear()
+                self.infos[env_index].clear()
+                self.actions[env_index].clear()
+                self.actor_outputs[env_index].clear()
 
                 # The observation and info are of the first step of the next episode.
-                observations[env_index].append(env_obs)
-                infos[env_index].append(env_info)
+                self.observations[env_index].append(env_obs)
+                self.infos[env_index].append(env_info)
 
-                if _episodes == max_episodes:
-                    # Break now, so we return the right number of episodes even if multiple envs
-                    # finished at the same time on the last step.
-                    logger.info(f"Reached episode limit ({max_episodes}), exiting.")
-                    should_stop = True  # exit outer loop
-                    break  # exit inner loop
             else:
-                observations[env_index].append(env_obs)
-                rewards[env_index].append(env_reward)
-                infos[env_index].append(env_info)
-                actions[env_index].append(env_action)
-                actor_outputs[env_index].append(env_actor_output)
-
-            if _steps == max_steps:
-                logger.info(f"Reached limit on the total number of steps ({max_steps}), exiting.")
-                should_stop = True  # exit outer loop.
-                break
-
-    logger.info(f"Finished an epoch after {_steps} steps and {_episodes} episodes.")
+                # Ongoing episode. Add the step data to the buffers.
+                self.observations[env_index].append(env_obs)
+                self.rewards[env_index].append(env_reward)
+                self.infos[env_index].append(env_info)
+                self.actions[env_index].append(env_action)
+                self.actor_outputs[env_index].append(env_actor_output)
 
 
 def sliced_dict[M: NestedMapping[str, Tensor | None]](
