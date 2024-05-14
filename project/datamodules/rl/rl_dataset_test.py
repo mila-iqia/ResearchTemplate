@@ -16,7 +16,11 @@ from .rl_dataset import RlDataset, VectorEnvRlDataset
 logger = get_logger(__name__)
 
 
-@pytest.mark.parametrize("env_id", ["debug", "CartPole-v1", "halfcheetah"], indirect=True)
+@pytest.mark.parametrize(
+    "env_id",
+    ["debug", "CartPole-v1", pytest.param("halfcheetah", marks=pytest.mark.slow)],
+    indirect=True,
+)
 class TestRlDataset:
     @pytest.fixture(scope="class")
     def env_id(self, request: pytest.FixtureRequest):
@@ -40,7 +44,6 @@ class TestRlDataset:
         # return DebugVectorEnv(num_envs=num_envs, seed=seed, device=device)
         return make_torch_vectorenv(env_id, num_envs=num_envs, seed=seed, device=device)
 
-    @pytest.mark.timeout(300)
     def test_rl_dataset(self, env: gymnasium.Env[Tensor, Tensor], seed: int, device: torch.device):
         episodes_per_epoch = 2
         dataset = RlDataset(
@@ -52,7 +55,6 @@ class TestRlDataset:
 
         assert episode_index == episodes_per_epoch - 1
 
-    @pytest.mark.timeout(300)
     def test_vectorenv_rl_dataset(
         self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device
     ):
@@ -67,7 +69,6 @@ class TestRlDataset:
 
         assert episode_index == episodes_per_epoch - 1
 
-    @pytest.mark.timeout(600)
     def test_vectorenv_rl_dataset_with_dataloader(
         self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device
     ):
@@ -86,7 +87,6 @@ class TestRlDataset:
         assert batch_index == (episodes_per_epoch // batch_size) - 1
 
     # For halfcheetah this takes a very very long time!
-    @pytest.mark.timeout(60)
     def test_set_actor_resets_envs(
         self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device, num_envs: int
     ):
