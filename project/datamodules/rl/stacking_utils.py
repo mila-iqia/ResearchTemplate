@@ -83,7 +83,7 @@ def stack_episode(
     return Episode(
         observations=stack(observations),
         actions=stack(actions),
-        rewards=stack(rewards),
+        rewards=stack(rewards),  # RecordEpisodeStatistics wrapper needs np.ndarray rewards.
         infos=infos,  # todo: do we want to stack episode info dicts?
         truncated=truncated,
         terminated=terminated,

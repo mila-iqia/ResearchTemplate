@@ -13,6 +13,7 @@ from torch import Tensor
 from torch.utils import dlpack as torch_dlpack
 
 from project.datamodules.rl.rl_types import VectorEnv
+from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
 from project.utils.types import NestedDict, NestedMapping
 from project.utils.types.protocols import Dataclass
 
@@ -126,30 +127,30 @@ class JaxToTorchMixin:
     """
 
     env: gymnasium.Env[jax.Array, jax.Array] | VectorEnv[jax.Array, jax.Array]
+    observation_space: TensorSpace
+    action_space: TensorSpace
 
     def step(
         self, action: torch.Tensor
-    ) -> tuple[
-        torch.Tensor, torch.FloatTensor, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]
-    ]:
+    ) -> tuple[torch.Tensor, jax.Array, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]]:
         jax_action = torch_to_jax_tensor(
             action.contiguous() if not action.is_contiguous() else action
         )
         obs, reward, terminated, truncated, info = self.env.step(jax_action)
         torch_obs = jax_to_torch_tensor(obs)
-        assert isinstance(reward, jax.Array)
-        torch_reward = jax_to_torch_tensor(reward)
 
+        # IDEA: Keep the rewards as jax arrays, since most envs / wrappers of Gymnasium assume a jax array.
+        assert isinstance(reward, jax.Array)
+        # torch_reward = jax_to_torch_tensor(reward)
+        device = self.observation_space.device
         if isinstance(terminated, bool):
-            torch_terminated = torch.tensor(
-                terminated, dtype=torch.bool, device=torch_reward.device
-            )
+            torch_terminated = torch.tensor(terminated, dtype=torch.bool, device=device)
         else:
             assert isinstance(terminated, jax.Array)
             torch_terminated = jax_to_torch_tensor(terminated)
 
         if isinstance(truncated, bool):
-            torch_truncated = torch.tensor(truncated, dtype=torch.bool, device=torch_reward.device)
+            torch_truncated = torch.tensor(truncated, dtype=torch.bool, device=device)
         else:
             assert isinstance(truncated, jax.Array)
             torch_truncated = jax_to_torch_tensor(truncated)
@@ -161,7 +162,7 @@ class JaxToTorchMixin:
             torch_truncated = torch_truncated.bool()
 
         torch_info = jax_to_torch(info)
-        return torch_obs, torch_reward, torch_terminated, torch_truncated, torch_info  # type: ignore
+        return torch_obs, reward, torch_terminated, torch_truncated, torch_info  # type: ignore
 
     def reset(
         self,

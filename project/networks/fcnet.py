@@ -17,7 +17,7 @@ class Flatten(nn.Flatten):
     def forward(self, input: Tensor):
         # NOTE: The input Should have at least 2 dimensions for `nn.Flatten` to work, but it isn't
         # the case with a single observation from a single env.
-        if input.ndim == 1:
+        if input.ndim <= 1:
             return input
         if input.is_nested:
             # NOTE: This makes 2d inputs 3d on purpose so they can be used with a nn.Flatten.
@@ -26,7 +26,7 @@ class Flatten(nn.Flatten):
             )
         if input.ndim == 3:
             # FIXME: Hacky: don't collapse the `sequence length` dimension here.
-            # TOOD: Perhaps use a named dimension to detect this case?
+            # TODO: Perhaps use a named dimension to detect this case?
             return input.reshape([input.shape[0], input.shape[1], -1])
         return super().forward(input)
 

@@ -27,6 +27,7 @@ from .rl_types import (
     Episode,
     EpisodeBatch,
 )
+from .wrappers.tensor_spaces import TensorBox, TensorDiscrete, TensorSpace  # noqa
 from .wrappers.to_torch import ToTorchWrapper
 
 logger = get_logger(__name__)
@@ -43,7 +44,7 @@ class EnvDataLoader(DataLoader):
 
     def __init__(
         self,
-        dataset: RlEpisodeDataset[ActorOutput] | RlEpisodeDataset[ActorOutput],
+        dataset: RlEpisodeDataset[ActorOutput],
         batch_size: int,
     ):
         super().__init__(
@@ -246,19 +247,19 @@ class RlDataModule(
         if self.valid_actor is None:
             raise _error_actor_required(self, "valid")
 
-        self.valid_env = self.valid_env or self._make_env(wrappers=self.valid_wrappers)
+        self.valid_env = self.valid_env or self._make_env(
+            wrappers=self.valid_wrappers, seed=self.valid_seed
+        )
         self.valid_dataset = RlEpisodeDataset(
             self.valid_env,
             actor=self.valid_actor,
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.valid_seed,
         )
-        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
+        assert self.valid_dataset is not None
+        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = EnvDataLoader(
             self.valid_dataset,
             batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=custom_collate_fn,
         )
         return dataloader
 
@@ -266,19 +267,18 @@ class RlDataModule(
         if self.test_actor is None:
             raise _error_actor_required(self, "test")
 
-        self.test_env = self.test_env or self._make_env(wrappers=self.test_wrappers)
+        self.test_env = self.test_env or self._make_env(
+            wrappers=self.test_wrappers, seed=self.test_seed
+        )
         self.test_dataset = RlEpisodeDataset(
             self.test_env,
             actor=self.test_actor,
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.test_seed,
         )
-        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = DataLoader(  # type: ignore
+        dataloader: DataLoader[EpisodeBatch[ActorOutput]] = EnvDataLoader(  # type: ignore
             self.test_dataset,
             batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=custom_collate_fn,
         )
         return dataloader
 
