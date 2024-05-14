@@ -85,6 +85,7 @@ class TestRlDataset:
             assert batch_index < episodes_per_epoch // batch_size
         assert batch_index == (episodes_per_epoch // batch_size) - 1
 
+    # For halfcheetah this takes a very very long time!
     @pytest.mark.timeout(60)
     def test_set_actor_resets_envs(
         self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device, num_envs: int
