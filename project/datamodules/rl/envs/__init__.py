@@ -2,7 +2,7 @@ import gymnasium
 import torch
 
 from project.datamodules.rl.envs.debug_env import DebugEnv, DebugVectorEnv
-from project.datamodules.rl.wrappers.to_tensor import ToTorchWrapper
+from project.datamodules.rl.wrappers.to_torch import ToTorchWrapper
 
 from .brax import brax_env, brax_vectorenv
 from .gymnax import gymnax_env, gymnax_vectorenv
