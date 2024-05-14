@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections.abc
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
+from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Generic
@@ -10,6 +11,7 @@ from typing import Generic
 import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
 import numpy as np
+import torch
 from torch import Tensor
 from torch.utils.data import IterableDataset
 
@@ -24,117 +26,40 @@ eps = np.finfo(np.float32).eps.item()
 jax.experimental.compilation_cache.compilation_cache.set_cache_dir(Path.home() / ".cache/jax")
 
 
-class RlDataset(IterableDataset[Episode[ActorOutput]]):
-    def __init__(
-        self,
-        env: gymnasium.Env[Tensor, Tensor],
-        actor: Actor[Tensor, Tensor, ActorOutput],
-        episodes_per_epoch: int,
-        seed: int | None = None,
-    ):
+@dataclass
+class RlEpisodeDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutput]):
+    """An IterableDataset that uses an actor in an environment and yields episodes."""
+
+    env: gymnasium.Env[Tensor, Tensor] | VectorEnv[Tensor, Tensor]
+    actor: Actor[Tensor, Tensor, ActorOutput]
+    episodes_per_epoch: int | None = None
+    steps_per_epoch: int | None = None
+    seed: int | list[int] | None = None
+
+    def __post_init__(self):
         super().__init__()
-        self.env = env
-        self.actor = actor
-        self.episodes_per_epoch = episodes_per_epoch
-        self.seed = seed
-        self._episode_index = 0
+        # self.env = env
+        # self._actor = actor
+        # self.episodes_per_epoch = episodes_per_epoch
+        # self.steps_per_epoch = steps_per_epoch
+        # self.seed = seed
 
-    def __str__(self) -> str:
-        return f"{type(self).__name__}({self.env})"
-
-    # def __next__(self) -> Episode[ObsType, ActType, ActorOutputType]:
-    #     self._episode_index += 1
-    #     if self._episode_index == self.episodes_per_epoch:
-    #         raise StopIteration
-    #     return self.collect_one_episode()
-
-    def on_actor_update(self) -> None:
-        pass  # do nothing, no buffers to clear or anything like that, really.
-
-    def __len__(self) -> int:
-        return self.episodes_per_epoch
-
-    def __iter__(self) -> Iterable[Episode[ActorOutput]]:
-        for _episode_index in range(self.episodes_per_epoch):
-            episode = self.collect_one_episode(seed=self.seed if _episode_index == 0 else None)
-            logger.info(
-                f"Finished episode {_episode_index} which lasted {episode.observations.shape[0]} steps."
-            )
-            logger.debug("Total rewards: %d", episode.rewards.sum())
-            yield episode
-
-    def collect_one_episode(self, seed: int | None = None) -> Episode[ActorOutput]:
-        # logger.debug(f"Starting episode {self._episode_index}.")
-        observations: list[Tensor] = []
-        actions: list[Tensor] = []
-        rewards = []
-        infos = []
-        actor_outputs: list[ActorOutput] = []
-        terminated = False
-        truncated = False
-
-        if seed is not None:
-            self.env.action_space.seed(seed)
-            self.env.observation_space.seed(seed)
-        obs, info = self.env.reset(seed=seed)
-
-        observations.append(obs)
-        infos.append(info)
-
-        # note: assuming a TimeLimit wrapper is present, otherwise the episode could last forever.
-        for _episode_step in itertools.count():
-            action, actor_output = self.actor(obs, self.env.action_space)
-            obs, reward, terminated, truncated, info = self.env.step(action)
-            logger.debug(f"step {_episode_step}, %s", terminated)
-
-            actions.append(action)
-            actor_outputs.append(actor_output)
-            observations.append(obs)
-            rewards.append(reward)
-            infos.append(info)
-
-            if terminated or truncated:
-                break
-
-        return stack_episode(
-            observations=observations,
-            actions=actions,
-            rewards=rewards,
-            infos=infos,
-            truncated=truncated,
-            terminated=terminated,
-            actor_outputs=actor_outputs,
+        self.num_envs: int | None = (
+            self.env.num_envs if isinstance(self.env, gymnasium.vector.VectorEnv) else None
         )
-
-
-class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutput]):
-    def __init__(
-        self,
-        env: VectorEnv[Tensor, Tensor],
-        actor: Actor[Tensor, Tensor, ActorOutput],
-        episodes_per_epoch: int | None = None,
-        steps_per_epoch: int | None = None,
-        seed: int | list[int] | None = None,
-    ):
-        super().__init__()
-        self.env = env
-        self._actor = actor
-        self.episodes_per_epoch = episodes_per_epoch
-        self.steps_per_epoch = steps_per_epoch
-        self.seed = seed
-
-        self.num_envs = env.num_envs
         # TODO: Need to call a method on the iterator to reset the envs when the actor is updated.
-        self._iterator: VectorEnvEpisodeIterator[ActorOutput] | None = None
+        self._iterator: (
+            VectorEnvEpisodeIterator[ActorOutput] | EnvEpisodeIterator[ActorOutput] | None
+        ) = None
 
-    @property
-    def actor(self) -> Actor[Tensor, Tensor, ActorOutput]:
-        return self._actor
+    # @property
+    # def actor(self) -> Actor[Tensor, Tensor, ActorOutput]:
+    #     return self._actor
 
-    @actor.setter
-    def actor(self, value: Actor[Tensor, Tensor, ActorOutput]) -> None:
-        self._actor = value
-        self.on_actor_update()
+    # @actor.setter
+    # def actor(self, value: Actor[Tensor, Tensor, ActorOutput]) -> None:
+    #     self._actor = value
+    #     self.on_actor_update()
 
     def on_actor_update(self) -> None:
         """Call this after updating the weights of the actor neural net, so the env iterator can
@@ -152,33 +77,134 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
             f"(episode {self._iterator._yielded_episodes}). Resetting the envs."
         )
         self._iterator.actor = self.actor
-        self._iterator.reset_envs()
-
-    def __str__(self) -> str:
-        return (
-            f"{type(self).__name__}("
-            f"env={self.env}, "
-            f"actor={self.actor}, "
-            f"episodes_per_epoch={self.episodes_per_epoch}, "
-            f"seed={self.seed}"
-            f")"
-        )
+        if isinstance(self._iterator, VectorEnvEpisodeIterator):
+            self._iterator.reset_envs()
 
     def __iter__(self) -> Iterable[Episode[ActorOutput]]:
         # Reset the env RNG at each epoch start? or only on the first epoch?
         if self._iterator is None:
-            self._iterator = VectorEnvEpisodeIterator(
-                env=self.env,
-                actor=self.actor,
-                initial_seed=self.seed,
-                max_episodes=self.episodes_per_epoch,
-                max_steps=self.steps_per_epoch,
-            )
-        yield from iter(self._iterator)
+            if isinstance(self.env, gymnasium.vector.VectorEnv):
+                # The env might not be a subclass our `VectorEnv` which just has type hint fixes
+                # for `VectorEnv`
+                self._iterator = VectorEnvEpisodeIterator(
+                    env=self.env,  # type: ignore
+                    actor=self.actor,
+                    initial_seed=self.seed,
+                    max_episodes=self.episodes_per_epoch,
+                    max_steps=self.steps_per_epoch,
+                )
+            else:
+                assert self.seed is None or isinstance(self.seed, int)
+                self._iterator = EnvEpisodeIterator(
+                    env=self.env,
+                    actor=self.actor,
+                    initial_seed=self.seed,
+                    max_episodes=self.episodes_per_epoch,
+                    max_steps=self.steps_per_epoch,
+                )
+        yield from self._iterator
 
     def __len__(self) -> int:
         assert self.episodes_per_epoch is not None
         return self.episodes_per_epoch
+
+
+class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
+    """Iterator for a single environment."""
+
+    def __init__(
+        self,
+        env: gymnasium.Env[Tensor, Tensor],
+        actor: Actor[Tensor, Tensor, ActorOutput],
+        max_episodes: int | None = None,
+        max_steps: int | None = None,
+        initial_seed: int | None = None,
+    ):
+        self.env = env
+        self.actor = actor
+        self.max_episodes = max_episodes
+        self.max_steps = max_steps
+        self.initial_seed = initial_seed
+        self._yielded_steps = 0
+        self._yielded_episodes = 0
+
+    def on_actor_update(self) -> None:
+        pass  # do nothing, no buffers to clear or anything like that, really.
+
+    def __next__(self) -> Episode[ActorOutput]:
+        if self._should_stop:
+            raise StopIteration
+
+        episode = self.collect_one_episode(
+            seed=self.initial_seed if self._yielded_episodes == 0 else None
+        )
+        self._yielded_episodes += 1
+        self._yielded_steps += episode.length
+        return episode
+
+    def __iter__(self) -> Iterator[Episode[ActorOutput]]:
+        return self
+
+    @property
+    def _should_stop(self) -> bool:
+        if self.max_episodes and self._yielded_episodes >= self.max_episodes:
+            return True
+        if self.max_steps and self._yielded_steps >= self.max_steps:
+            return True
+        return False
+
+    def collect_one_episode(self, seed: int | None = None) -> Episode[ActorOutput]:
+        # logger.debug(f"Starting episode {self._episode_index}.")
+        observations: list[Tensor] = []
+        actions: list[Tensor] = []
+        rewards: list[Tensor] = []
+        infos: list[dict] = []
+        actor_outputs: list[ActorOutput] = []
+        terminated = False
+        truncated = False
+        final_observation: Tensor
+        final_info: dict
+
+        if seed is not None:
+            self.env.action_space.seed(seed)
+            self.env.observation_space.seed(seed)
+        obs, info = self.env.reset(seed=seed)
+
+        observations.append(obs)
+        infos.append(info)
+
+        # note: assuming a TimeLimit wrapper is present, otherwise the episode could last forever.
+        for _episode_step in itertools.count():
+            action, actor_output = self.actor(obs, self.env.action_space)
+            obs, reward, terminated, truncated, info = self.env.step(action)
+            logger.debug(f"step {_episode_step}, %s", terminated)
+
+            if not isinstance(reward, Tensor):  # note: shouldn't really happen.
+                reward = torch.as_tensor(reward)
+
+            actions.append(action)
+            actor_outputs.append(actor_output)
+            rewards.append(reward)
+
+            if terminated or truncated:
+                final_observation = obs
+                final_info = info
+                break
+            else:
+                observations.append(obs)
+                infos.append(info)
+
+        return stack_episode(
+            observations=observations,
+            actions=actions,
+            rewards=rewards,
+            infos=infos,
+            truncated=truncated,
+            terminated=terminated,
+            actor_outputs=actor_outputs,
+            final_observation=final_observation,
+            final_info=final_info,
+        )
 
 
 class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](

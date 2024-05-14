@@ -8,7 +8,7 @@ from torch import Tensor
 
 from project.utils.types import is_sequence_of
 
-from .rl_types import ActorOutput, Episode, EpisodeInfo
+from .rl_types import ActorOutput, Episode
 
 
 @overload
@@ -70,12 +70,12 @@ def stack_episode(
     observations: list[Tensor],
     actions: list[Tensor],
     rewards: list[Tensor],
-    infos: list[EpisodeInfo],
+    infos: list[dict],
     truncated: bool,
     terminated: bool,
     actor_outputs: list[ActorOutput],
     final_observation: Tensor | None = None,
-    final_info: EpisodeInfo | None = None,
+    final_info: dict | None = None,
     environment_index: int | None = None,
 ) -> Episode[ActorOutput]:
     """Stacks the lists of items at each step into an Episode dict containing tensors."""

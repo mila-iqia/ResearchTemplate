@@ -10,7 +10,7 @@ from rich.console import Console
 from torch.utils.data import DataLoader
 from tqdm.rich import tqdm_rich
 
-from project.datamodules.rl.rl_dataset import RlDataset
+from project.datamodules.rl.rl_dataset import RlEpisodeDataset
 
 from .utils import (
     PpoEpisodeBatch,
@@ -69,7 +69,7 @@ class PpoDataLoaderWrapper(Iterable[PpoEpisodeBatch]):
             self.episode_generator, "dataset"
         ):
             dataset = getattr(self.episode_generator, "dataset")
-            if isinstance(dataset, RlDataset):
+            if isinstance(dataset, RlEpisodeDataset):
                 self._max_episode_steps = dataset.env.spec.max_episode_steps
 
         # Setting these attributes because they can be checked by Pytorch-Lightning to know how to
