@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, NotRequired, TypedDict
+from typing import Any, ClassVar, Generic, NotRequired, TypedDict
 
 import gym
 import gym.spaces
@@ -150,7 +150,58 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     @property
     def length(self) -> int:
-        return self.rewards.size(0)
+        size = self.rewards.size(0)
+        assert self.observations.size(0) == self.actions.size(0) == len(self.infos) == size
+        return size
+
+    def as_transitions(self):
+        """Convert the episode into a sequence of `Transition`s."""
+        return tuple(
+            MiddleTransition(
+                observation=self.observations[i],
+                info=self.infos[i],
+                action=self.actions[i],
+                reward=self.rewards[i],
+                next_observation=self.observations[i + 1],
+                next_info=self.infos[i + 1],
+            )
+            for i in range(self.length - 1)
+        ) + (
+            FinalTransition(
+                observation=self.observations[-1],
+                info=self.infos[-1],
+                action=self.actions[-1],
+                reward=self.rewards[-1],
+                terminated=self.terminated,
+                truncated=self.truncated,
+                final_observation=self.final_observation,
+                final_info=self.final_info,
+            ),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class Transition:
+    observation: Tensor
+    info: dict
+    action: Tensor
+    reward: Tensor
+
+
+@dataclasses.dataclass(frozen=True)
+class MiddleTransition(Transition):
+    next_observation: Tensor
+    next_info: dict
+    is_terminal: ClassVar[bool] = False
+
+
+@dataclasses.dataclass(frozen=True)
+class FinalTransition(Transition):
+    terminated: bool
+    truncated: bool
+    final_observation: Tensor | None = None
+    final_info: dict | None = None
+    is_terminal: ClassVar[bool] = True
 
 
 @dataclass(frozen=True)
