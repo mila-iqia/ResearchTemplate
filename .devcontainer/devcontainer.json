@@ -80,15 +80,24 @@
 	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pdm to
 	// .cache/pdm in the container. Therefore, here I'm making a symlink from ~/.cache/pdm to
 	// ~/.pdm_install_cache so the ~/.cache directory is writeable by the container.
-	"onCreateCommand": "mkdir -p ~/.cache && ln -s /home/vscode/.pdm_install_cache /home/vscode/.cache/pdm",
-	"updateContentCommand": "",
+	"onCreateCommand": {
+		"setup_pdm_install_cache": "mkdir -p ~/.cache && ln -s /home/vscode/.pdm_install_cache /home/vscode/.cache/pdm",
+		"pre-commit": "pre-commit install --install-hooks",
+		"setup_pdm_config": "pdm config install.cache true && pdm config venv.with_pip true && pdm config venv.in_project false"
+	},
+	"updateContentCommand": {
+		"pdm_install": "pdm install"
+	},
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "pip3 install --user -r requirements.txt",
 	"postCreateCommand": {
+		// NOTE: This sets up the python interpreter correctly, but the shell doesn't show the
+		// environment name, which isn't a big deal.
+		"setup_venv_shell": "pdm venv activate >> ~/.bash_aliases && chmod +x ~/.bash_aliases",
 		// "pdm-pep-582": "pdm --pep582 >> ~/.bash_profile",
-		"pdm": "pdm config install.cache true && pdm config venv.in_project false && pdm install",
-		"pre-commit": "pre-commit install --install-hooks"
+		// "pdm": "pdm config install.cache false && pdm config venv.in_project false && pdm install",
+		// "pre-commit": "pre-commit install --install-hooks"
 		// "activate_venv": "source .venv/bin/activate"
 	}
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
