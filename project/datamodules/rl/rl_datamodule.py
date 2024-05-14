@@ -20,7 +20,7 @@ from project.utils.device import default_device
 from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
 
-from .rl_dataset import RlDataset
+from .rl_dataset import RlDataset, VectorEnvRlDataset
 from .rl_types import (
     Actor,
     ActorOutput,
@@ -36,6 +36,21 @@ type TensorEnv = gymnasium.Env[Tensor, Tensor]
 
 class _EnvFn(Protocol):
     def __call__(self, seed: int) -> TensorEnv: ...
+
+
+class VectorEnvDataLoader(DataLoader):
+    def __init__(self, dataset: RlDataset | VectorEnvRlDataset, batch_size: int):
+        super().__init__(
+            dataset,
+            batch_size=batch_size,
+            num_workers=0,
+            collate_fn=custom_collate_fn,
+            shuffle=False,
+        )
+        self.env = dataset
+
+    def on_actor_update(self) -> None:
+        self.env.on_actor_update()
 
 
 class RlDataModule(

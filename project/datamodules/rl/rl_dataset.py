@@ -48,6 +48,9 @@ class RlDataset(IterableDataset[Episode[ActorOutput]]):
     #         raise StopIteration
     #     return self.collect_one_episode()
 
+    def on_actor_update(self) -> None:
+        pass  # do nothing, no buffers to clear or anything like that, really.
+
     def __len__(self) -> int:
         return self.episodes_per_epoch
 
@@ -230,7 +233,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         # episodes, not the steps in the environment.
         while not self._episodes_to_yield_at_this_step:
             # Take a step and store the completed episodes (if any).
-            self._episodes_to_yield_at_this_step = list(self.step_and_yield_completed_episodes())
+            self._episodes_to_yield_at_this_step = self.step_and_yield_completed_episodes()
         episode = self._episodes_to_yield_at_this_step.pop(0)
         self._yielded_episodes += 1
         self._yielded_steps += episode.length
@@ -311,7 +314,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         """
         return [len(obs) for obs in self.observations]
 
-    def step_and_yield_completed_episodes(self) -> Iterable[Episode[ActorOutput]]:
+    def step_and_yield_completed_episodes(self) -> list[Episode[ActorOutput]]:
         """Do one step in the vectorenv and yield any episodes that just finished at that step."""
         assert self._last_observation is not None, "end should have been reset before stepping!"
         # note: Could pass the info to the actor as well?
@@ -382,7 +385,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
                 self.actions[env_index].append(env_action)
                 self.actor_outputs[env_index].append(env_actor_output)
 
-        yield from episodes_at_this_step
+        return episodes_at_this_step
 
 
 def sliced_dict[M: NestedMapping[str, Tensor | None]](
