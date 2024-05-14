@@ -27,7 +27,7 @@ from .rl_types import (
     Episode,
     EpisodeBatch,
 )
-from .wrappers.to_tensor import ToTorchWrapper
+from .wrappers.to_torch import ToTorchWrapper
 
 logger = get_logger(__name__)
 
