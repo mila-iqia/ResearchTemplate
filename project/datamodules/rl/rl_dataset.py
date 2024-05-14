@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections.abc
 import itertools
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Generic
@@ -57,7 +57,7 @@ class RlDataset(IterableDataset[Episode[ActorOutput]]):
             logger.info(
                 f"Finished episode {_episode_index} which lasted {episode.observations.shape[0]} steps."
             )
-            logger.debug("Total rewards: {}", episode.rewards.sum())
+            logger.debug("Total rewards: %d", episode.rewards.sum())
             yield episode
 
     def collect_one_episode(self, seed: int | None = None) -> Episode[ActorOutput]:
@@ -82,7 +82,7 @@ class RlDataset(IterableDataset[Episode[ActorOutput]]):
         for _episode_step in itertools.count():
             action, actor_output = self.actor(obs, self.env.action_space)
             obs, reward, terminated, truncated, info = self.env.step(action)
-            logger.debug(f"step {_episode_step}, {{}}", terminated)
+            logger.debug(f"step {_episode_step}, %s", terminated)
 
             actions.append(action)
             actor_outputs.append(actor_output)
@@ -179,7 +179,7 @@ class VectorEnvRlDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOut
 
 
 class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
-    Iterable[Episode[ActorOutput]]
+    Iterator[Episode[ActorOutput]]
 ):
     """Yields one episode at a time from interacting with a vectorized environment."""
 
@@ -213,8 +213,47 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         # updated at each step.
         self._last_observation: Tensor | None = None
         self._last_info: dict | None = None
+        self._episodes_to_yield_at_this_step: list[Episode[ActorOutput]] = []
 
         self.reset_envs(seed=initial_seed)
+
+    def __next__(self) -> Episode[ActorOutput]:
+        """Fetch the next completed episode, possibly taking multiple steps in the environment."""
+        if self._should_stop:
+            if self._yielded_episodes == self.max_episodes:
+                logger.info(f"Reached limit of {self.max_episodes} episodes.")
+            if self.max_steps and self._yielded_steps >= self.max_steps:
+                logger.info(f"Reached limit of {self.max_steps} steps.")
+            raise StopIteration
+
+        # Note: no need to check `self._should_stop` here since we only count the yielded steps and
+        # episodes, not the steps in the environment.
+        while not self._episodes_to_yield_at_this_step:
+            # Take a step and store the completed episodes (if any).
+            self._episodes_to_yield_at_this_step = list(self.step_and_yield_completed_episodes())
+        episode = self._episodes_to_yield_at_this_step.pop(0)
+        self._yielded_episodes += 1
+        self._yielded_steps += episode.length
+        return episode
+
+    def __iter__(self):
+        return self
+
+        # while not self._should_stop:
+        #     for episode in self.step_and_yield_completed_episodes():
+        #         yield episode
+        #         self._yielded_episodes += 1
+        #         self._yielded_steps += episode.length
+
+        #         if self._should_stop:
+        #             if self._yielded_episodes == self.max_episodes:
+        #                 logger.info(f"Reached limit of {self.max_episodes} episodes.")
+        #             if self.max_steps and self._yielded_steps >= self.max_steps:
+        #                 logger.info(f"Reached limit of {self.max_steps} steps.")
+
+        #             # Break now, so we return the right number of episodes even if multiple envs
+        #             # finished at the same time on the last step.
+        #             break
 
     def reset_envs(self, seed: int | list[int] | None = None) -> None:
         # TODO: Check if the envs were already just reset (with this seed?) and if so, don't reset
@@ -225,6 +264,15 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         logger.info(
             f"Resetting envs. # of wasted env steps: {sum(self.episode_lengths())} ({self.episode_lengths()})"
         )
+        if self._episodes_to_yield_at_this_step:
+            n_wasted_episodes = len(self._episodes_to_yield_at_this_step)
+            n_wasted_steps = sum(ep.length for ep in self._episodes_to_yield_at_this_step)
+            logger.warning(
+                f"Wasting {n_wasted_episodes} episodes that just completed at this step with "
+                f"previous actor but had not yet been yielded (total of {n_wasted_steps} steps)."
+            )
+            self._episodes_to_yield_at_this_step.clear()
+
         # Clear the buffers
         self.observations = [[] for _ in range(self.num_envs)]
         self.rewards = [[] for _ in range(self.num_envs)]
@@ -256,27 +304,6 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
             return True
         return False
 
-    def __iter__(self):
-        while not self._should_stop:
-            for episode in self.step_and_yield_completed_episodes():
-                yield episode
-                self._yielded_episodes += 1
-                self._yielded_steps += episode.length
-
-                if self._should_stop:
-                    if self._yielded_episodes == self.max_episodes:
-                        logger.info(f"Reached limit of {self.max_episodes} episodes.")
-                    if self.max_steps and self._yielded_steps >= self.max_steps:
-                        logger.info(f"Reached limit of {self.max_steps} steps.")
-
-                    # Break now, so we return the right number of episodes even if multiple envs
-                    # finished at the same time on the last step.
-                    break
-        logger.info(
-            f"Finished an epoch after yielding {self._yielded_episodes} episodes and a total of "
-            f"{self._yielded_steps} environment steps."
-        )
-
     def episode_lengths(self) -> list[int]:
         """Returns the number of steps in each currently ongoing episode.
 
@@ -286,7 +313,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
 
     def step_and_yield_completed_episodes(self) -> Iterable[Episode[ActorOutput]]:
         """Do one step in the vectorenv and yield any episodes that just finished at that step."""
-        assert self._last_observation is not None
+        assert self._last_observation is not None, "end should have been reset before stepping!"
         # note: Could pass the info to the actor as well?
         action_batch, actor_output_batch = self.actor(
             self._last_observation, self.env.action_space

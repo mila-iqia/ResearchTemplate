@@ -44,7 +44,10 @@ def gymnax_vectorenv(
     gymnax_env, env_params = gymnax.make(env_id)
     env = GymnaxToVectorGymWrapper(gymnax_env, num_envs=num_envs, params=env_params, seed=seed)
     # Env should already be on the right device (for now).
-    assert get_torch_device_from_jax_array(env.reset(seed=123)[0]) == device
+    # obs = env.reset(seed=123)[0]
+    # jax_device = jax.devices("gpu")[0]
+    # obs = jax.device_put(obs, )
+    # assert get_torch_device_from_jax_array() == device
     return GymnaxVectorEnvToTorchWrapper(env)
 
 
