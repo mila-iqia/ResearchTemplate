@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from logging import getLogger as get_logger
 from typing import Any, Generic, Literal, Protocol
 
@@ -20,7 +20,7 @@ from project.utils.device import default_device
 from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
 
-from .rl_dataset import RlDataset, VectorEnvRlDataset
+from .rl_dataset import RlEpisodeDataset
 from .rl_types import (
     Actor,
     ActorOutput,
@@ -38,8 +38,14 @@ class _EnvFn(Protocol):
     def __call__(self, seed: int) -> TensorEnv: ...
 
 
-class VectorEnvDataLoader(DataLoader):
-    def __init__(self, dataset: RlDataset | VectorEnvRlDataset, batch_size: int):
+class EnvDataLoader(DataLoader):
+    """Yields batches of episodes."""
+
+    def __init__(
+        self,
+        dataset: RlEpisodeDataset[ActorOutput] | RlEpisodeDataset[ActorOutput],
+        batch_size: int,
+    ):
         super().__init__(
             dataset,
             batch_size=batch_size,
@@ -48,9 +54,20 @@ class VectorEnvDataLoader(DataLoader):
             shuffle=False,
         )
         self.env = dataset
+        self._iterator: Iterator[EpisodeBatch[ActorOutput]] | None = None
+
+    def __next__(self) -> EpisodeBatch[ActorOutput]:
+        if self._iterator is None:
+            self._iterator = super().__iter__()
+        return next(self._iterator)
+
+    def __iter__(self):
+        return self
 
     def on_actor_update(self) -> None:
         self.env.on_actor_update()
+        # force re-creation of the iterator, to prevent different actors in the same batch.
+        self._iterator = None
 
 
 class RlDataModule(
@@ -124,9 +141,9 @@ class RlDataModule(
         self.valid_env: TensorEnv | None = None
         self.test_env: TensorEnv | None = None
 
-        self.train_dataset: RlDataset[ActorOutput] | None = None
-        self.valid_dataset: RlDataset[ActorOutput] | None = None
-        self.test_dataset: RlDataset[ActorOutput] | None = None
+        self.train_dataset: RlEpisodeDataset[ActorOutput] | None = None
+        self.valid_dataset: RlEpisodeDataset[ActorOutput] | None = None
+        self.test_dataset: RlEpisodeDataset[ActorOutput] | None = None
 
         self._train_wrappers = tuple(train_wrappers or ())
         self._valid_wrappers = tuple(valid_wrappers or ())
@@ -207,7 +224,7 @@ class RlDataModule(
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
         self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
-        self.train_dataset = RlDataset(
+        self.train_dataset = RlEpisodeDataset(
             self.train_env,
             actor=self.train_actor,
             episodes_per_epoch=self.episodes_per_epoch,
@@ -230,7 +247,7 @@ class RlDataModule(
             raise _error_actor_required(self, "valid")
 
         self.valid_env = self.valid_env or self._make_env(wrappers=self.valid_wrappers)
-        self.valid_dataset = RlDataset(
+        self.valid_dataset = RlEpisodeDataset(
             self.valid_env,
             actor=self.valid_actor,
             episodes_per_epoch=self.episodes_per_epoch,
@@ -250,7 +267,7 @@ class RlDataModule(
             raise _error_actor_required(self, "test")
 
         self.test_env = self.test_env or self._make_env(wrappers=self.test_wrappers)
-        self.test_dataset = RlDataset(
+        self.test_dataset = RlEpisodeDataset(
             self.test_env,
             actor=self.test_actor,
             episodes_per_epoch=self.episodes_per_epoch,
@@ -386,7 +403,7 @@ class RlDataModule(
 
     def _close(
         self,
-        dataset: RlDataset[Any] | None,
+        dataset: RlEpisodeDataset[Any] | None,
         env: TensorEnv | None,
         name: Literal["train", "valid", "test"],
     ) -> None:

@@ -47,18 +47,6 @@ WrapperActType = TypeVar("WrapperActType")
 
 ### Typing fixes for gymnasium.
 
-# TODO: annoying typing thing with gymnasium.Env.[observation|action]_space: The type is always
-# Space[ActType], even if you manually set it to something else in the env Init, because of the
-# property (which I don't see the utility of).
-
-
-# gym.Env subclasses typing.Generic which atm doesn't allow default typevars (double check that this is indeed the problem.)
-type Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
-
-# class Env[ObsType, ActType](gymnasium.Env[ObsType, ActType]):
-#     observation_space: Space[ObsType]
-#     action_space: Space[ActType]
-
 
 # VectorEnv doesn't have type hints in current gymnasium.
 class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]):
@@ -149,13 +137,13 @@ class Episode(MappingMixin, Generic[ActorOutput]):
     observations: Tensor
     actions: Tensor
     rewards: Tensor
-    infos: list[EpisodeInfo]
+    infos: list[dict]
     truncated: bool
     terminated: bool
     actor_outputs: ActorOutput
 
     final_observation: Tensor | None = None
-    final_info: EpisodeInfo | None = None
+    final_info: dict | None = None
 
     environment_index: int | None = None
     """The environment index (when in a vectorenv) that this episode was generated from."""
