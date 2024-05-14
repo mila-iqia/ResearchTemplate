@@ -7,7 +7,7 @@ from .backprop import Backprop
 from .bases.algorithm import Algorithm
 from .bases.image_classification import ImageClassificationAlgorithm
 from .manual_optimization_example import ManualGradientsExample
-from .rl_example.reinforce import ExampleRLAlgorithm
+from .rl_example.reinforce import Reinforce
 
 # NOTE: This works the same way as creating config files for each algorithm under
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
@@ -19,7 +19,7 @@ from .rl_example.reinforce import ExampleRLAlgorithm
 algorithm_store = store(group="algorithm")
 algorithm_store(Backprop.HParams(), name="backprop")
 algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
-algorithm_store(ExampleRLAlgorithm.HParams(), name="rl_example")
+algorithm_store(Reinforce.HParams(), name="reinforce")
 algorithm_store(PPO.HParams(), name="ppo")
 algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
 
@@ -29,7 +29,7 @@ algorithm_store.add_to_hydra_store()
 # cs = ConfigStore.instance()
 # cs.store(group="algorithm", name="backprop", node=Backprop.HParams())
 # cs.store(group="algorithm", name="manual_optimization", node=ManualGradientsExample.HParams())
-# cs.store(group="algorithm", name="rl_example", node=ExampleRLAlgorithm.HParams())
+# cs.store(group="algorithm", name="rl_example", node=Reinforce.HParams())
 # cs.store(group="algorithm", name="ppo", node=PPO.HParams())
 # Store the different configuration options.
 
@@ -57,7 +57,7 @@ algorithm_store.add_to_hydra_store()
 __all__ = [
     "Algorithm",
     "Backprop",
-    "ExampleRLAlgorithm",
+    "Reinforce",
     "ImageClassificationAlgorithm",
     "ManualGradientsExample",
 ]

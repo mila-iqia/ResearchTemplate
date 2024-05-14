@@ -40,6 +40,9 @@ def gymnax_env(env_id: str, device: torch.device = default_device(), seed: int =
 def gymnax_vectorenv(
     env_id: str, num_envs: int = 4096, device: torch.device = default_device(), seed: int = 123
 ):
+    # TODO: Could maybe instead use gymnax.wrappers.brax.GymnaxToBraxWrapper and reuse the same
+    # stuff as for Brax. (Would be missing the wrappers from the `create` function of brax though.)
+
     # Instantiate the environment & its settings.
     gymnax_env, env_params = gymnax.make(env_id)
     env = GymnaxToVectorGymWrapper(gymnax_env, num_envs=num_envs, params=env_params, seed=seed)

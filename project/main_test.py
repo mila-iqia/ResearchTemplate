@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from project.algorithms import Algorithm, Backprop
-from project.algorithms.rl_example.reinforce import ExampleRLAlgorithm
+from project.algorithms.rl_example.reinforce import Reinforce
 from project.configs.config import Config
 from project.configs.datamodule import CIFAR10DataModuleConfig
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
@@ -54,7 +54,7 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=rl_example"], ExampleRLAlgorithm.HParams),
+        (["algorithm=rl_example"], Reinforce.HParams),
         (["algorithm=backprop"], Backprop.HParams),
     ],
     ids=_ids,

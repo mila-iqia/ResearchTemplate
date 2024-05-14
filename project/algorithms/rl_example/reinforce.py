@@ -7,21 +7,27 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, TypedDict
 
-import gym
-import gym.spaces
+import gymnasium
+import gymnasium.spaces
 import lightning
 import numpy as np
 import torch
-from gym import spaces
-from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
-from gym.wrappers.record_video import RecordVideo
+from gymnasium import spaces
+from gymnasium.wrappers.record_video import RecordVideo
 from torch import Tensor
 from torch.distributions import Categorical, Normal
 
 from project.algorithms.bases.algorithm import Algorithm
 from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.datamodules.rl.rl_types import EpisodeBatch
+from project.datamodules.rl.wrappers.episode_statistics import RecordEpisodeStatistics
 from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
+from project.datamodules.rl.wrappers.tensor_spaces import (
+    TensorBox,
+    TensorDiscrete,
+    TensorMultiDiscrete,
+    TensorSpace,
+)
 from project.networks.fcnet import FcNet
 from project.utils.types import PhaseStr, StepOutputDict
 from project.utils.types.protocols import Module
@@ -31,7 +37,7 @@ logger = get_logger(__name__)
 eps = np.finfo(np.float32).eps.item()
 
 
-class ExampleActorOutput(TypedDict):
+class ReinforceActorOutput(TypedDict):
     """Additional outputs of the Actor (besides the action to take) for a single step in the env.
 
     This should be used to store whatever is needed to train the model later (e.g. the action log-
@@ -47,14 +53,7 @@ class ExampleActorOutput(TypedDict):
     """The log-probability of the selected action at that step."""
 
 
-Episodes = EpisodeBatch[ExampleActorOutput]
-"""The type of episodes that are received in the `training_step`, `validation_step`, etc. methods.
-
-This just means "EpisodeBatch objects where the actor outputs are of type ExampleActorOutput".
-"""
-
-
-class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
+class Reinforce[ModuleType: Module[[Tensor], Tensor]](
     Algorithm[EpisodeBatch, StepOutputDict, ModuleType]
 ):
     """Example of a Reinforcement Learning algorithm: Reinforce.
@@ -72,7 +71,7 @@ class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
         self,
         datamodule: RlDataModule,
         network: ModuleType,
-        hp: ExampleRLAlgorithm.HParams | None = None,
+        hp: Reinforce.HParams | None = None,
     ):
         """
         Parameters
@@ -82,11 +81,9 @@ class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
         - gamma: Discount rate.
         """
         super().__init__(datamodule=datamodule, network=network, hp=hp)
-        self.network: FcNet
-        self.hp: ExampleRLAlgorithm.HParams
-        self.datamodule: RlDataModule[ExampleActorOutput]
-
-        # if isinstance(datamodule.env.action_space, spaces.Box):
+        self.network: ModuleType
+        self.hp: Reinforce.HParams
+        self.datamodule: RlDataModule
 
     def configure_optimizers(self) -> Any:
         return torch.optim.Adam(self.parameters(), lr=self.hp.learning_rate)
@@ -95,11 +92,11 @@ class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
         self,
         observations: Tensor,
         action_space: spaces.Discrete | spaces.Box,
-    ) -> tuple[Tensor, ExampleActorOutput]:
+    ) -> tuple[Tensor, ReinforceActorOutput]:
         # NOTE: Would be nice to be able to do this:
         # assert observations.shape == self.network.input_space.shape
-        # assert action_space.n == self.network.output_space.shape[0]
-        network_outputs = self.network(observations)
+
+        network_outputs = self.network(observations.to(torch.float32))
 
         if not observations.is_nested:
             # Either a single observation or a batch of observations.
@@ -122,25 +119,21 @@ class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
             action_log_probabilities = torch.nested.as_nested_tensor(
                 [dist.log_prob(a).sum(0) for dist, a in zip(distributions, actions.unbind())]
             )
-        actor_outputs_to_save_in_episode: ExampleActorOutput = {
+        actor_outputs_to_save_in_episode: ReinforceActorOutput = {
             "logits": network_outputs,
             "action_log_probability": action_log_probabilities,
         }
         return actions, actor_outputs_to_save_in_episode
 
-    def training_step(self, batch: EpisodeBatch[ExampleActorOutput]) -> StepOutputDict:
+    def training_step(self, batch: EpisodeBatch) -> StepOutputDict:
         return self.shared_step(batch, phase="train")
 
     # NOTE: For some reason PL requires us to have a second positional argument for the batch_index
     # even if it isn't used, but the training step doesn't need it.
-    def validation_step(
-        self, batch: EpisodeBatch[ExampleActorOutput], batch_index: int
-    ) -> StepOutputDict:
+    def validation_step(self, batch: EpisodeBatch, batch_index: int) -> StepOutputDict:
         return self.shared_step(batch, phase="val")
 
-    def shared_step(
-        self, batch: EpisodeBatch[ExampleActorOutput], phase: PhaseStr
-    ) -> StepOutputDict:
+    def shared_step(self, batch: EpisodeBatch, phase: PhaseStr) -> StepOutputDict:
         """Perform a single step of training or validation.
 
         The input is a batch of episodes, and the output is a dictionary with the loss and metrics.
@@ -229,15 +222,19 @@ class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
         self.datamodule.valid_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="valid"))
         self.datamodule.test_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="test"))
 
-    def gym_wrappers_to_add(self, videos_subdir: str) -> list[Callable[[gym.Env], gym.Env]]:
+    def gym_wrappers_to_add(
+        self, videos_subdir: str
+    ) -> list[Callable[[gymnasium.Env], gymnasium.Env]]:
         video_folder = str(self.log_dir / "videos" / videos_subdir)
-        return [
+        wrappers = [
             check_and_normalize_box_actions,
             # NOTE: The functools.partial below is Equivalent to the following:
             # lambda env: RecordVideo(env, video_folder=str(log_dir / "videos/train")),
-            functools.partial(RecordVideo, video_folder=video_folder),
             RecordEpisodeStatistics,
         ]
+        if self.datamodule.env.render_mode is not None:
+            wrappers.append(functools.partial(RecordVideo, video_folder=video_folder))
+        return wrappers
 
     @property
     def log_dir(self) -> Path:
@@ -254,20 +251,20 @@ class ExampleRLAlgorithm[ModuleType: Module[[Tensor], Tensor]](
     def get_action_distribution(
         self,
         network_outputs: Tensor,
-        action_space: spaces.Discrete | spaces.Box,
+        action_space: TensorDiscrete | TensorBox | TensorMultiDiscrete,
     ) -> Categorical | Normal:
         """Creates an action distribution based on the network outputs."""
         # TODO: Once we can work with batched environments, should `action_space` here always be
         # the single action space?
-        assert isinstance(action_space, spaces.Discrete | spaces.Box)
+        assert isinstance(action_space, TensorSpace), action_space
 
-        if isinstance(action_space, spaces.Discrete):
+        if isinstance(action_space, TensorDiscrete | TensorMultiDiscrete):
             return Categorical(logits=network_outputs)
 
         # NOTE: The environment has a wrapper applied to it that normalizes the continuous action
         # space to be in the [-1, 1] range, and the actions outside that range will be clipped by
         # that wrapper.
-        assert isinstance(action_space, spaces.Box)
+        assert isinstance(action_space, TensorBox)
         assert (action_space.low == -1).all() and (action_space.high == 1).all(), action_space
         d = action_space.shape[-1]
         assert network_outputs.size(-1) == d * 2
@@ -336,7 +333,9 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
 
 
 def main():
-    datamodule = RlDataModule(env="CartPole-v1", actor=None, episodes_per_epoch=100, batch_size=10)
+    datamodule = RlDataModule(
+        env="CartPole-v1", num_parallel_envs=128, actor=None, episodes_per_epoch=100, batch_size=10
+    )
 
     # TODO: Test out if we can make this stuff work with Brax envs:
     # from brax import envs
@@ -352,11 +351,10 @@ def main():
 
     network = FcNet(
         # todo: change to `input_dims` and pass flatdim(observation_space) instead.
-        input_shape=datamodule.env.observation_space.shape,
-        output_dims=gym.spaces.flatdim(datamodule.env.action_space),
+        output_dims=gymnasium.spaces.flatdim(datamodule.env.action_space),
     )
 
-    algorithm = ExampleRLAlgorithm(datamodule=datamodule, network=network)
+    algorithm = Reinforce(datamodule=datamodule, network=network)
 
     datamodule.set_actor(algorithm)
 

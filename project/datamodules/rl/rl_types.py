@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Generic, NotRequired, TypedDict
 import gym
 import gym.spaces
 import gymnasium.spaces
+import jax
 import numpy as np
 from gymnasium import Space
 from numpy.typing import NDArray
@@ -136,7 +137,9 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     observations: Tensor
     actions: Tensor
-    rewards: Tensor
+    rewards: (
+        Tensor | np.ndarray | jax.Array
+    )  # todo: wrappers assume that rewards is a numpy array for now. Might be easy to use jax Arrays instead.
     infos: list[dict]
     truncated: bool
     terminated: bool

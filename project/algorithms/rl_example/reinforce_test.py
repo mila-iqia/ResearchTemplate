@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 from torch import nn
 
 from project.algorithms.bases.algorithm_test import AlgorithmTests
-from project.algorithms.rl_example.reinforce import ExampleRLAlgorithm
+from project.algorithms.rl_example.reinforce import Reinforce
 from project.configs.config import Config
 from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.experiment import instantiate_datamodule, setup_experiment
@@ -31,8 +31,8 @@ def get_experiment_config(command_line_overrides: list[str]) -> Config:
     return config
 
 
-class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
-    algorithm_type: type[ExampleRLAlgorithm] = ExampleRLAlgorithm
+class TestReinforce(AlgorithmTests[Reinforce]):
+    algorithm_type: type[Reinforce] = Reinforce
     algorithm_name: ClassVar[str] = "rl_example"
 
     metric_name: ClassVar[str] = "train/avg_episode_return"
@@ -52,7 +52,7 @@ class TestReinforce(AlgorithmTests[ExampleRLAlgorithm]):
         return datamodule
 
     @pytest.fixture(scope="function")
-    def algorithm(self, algorithm_kwargs: dict, datamodule: RlDataModule) -> ExampleRLAlgorithm:
+    def algorithm(self, algorithm_kwargs: dict, datamodule: RlDataModule) -> Reinforce:
         algo = self.algorithm_cls(**algorithm_kwargs)
         assert algo.datamodule is datamodule
         return algo
