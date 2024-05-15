@@ -12,7 +12,6 @@ import gymnasium.spaces
 import lightning
 import numpy as np
 import torch
-from gymnasium import spaces
 from gymnasium.wrappers.record_video import RecordVideo
 from torch import Tensor
 from torch.distributions import Categorical, Normal
@@ -91,7 +90,7 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
     def forward(
         self,
         observations: Tensor,
-        action_space: spaces.Discrete | spaces.Box,
+        action_space: TensorBox | TensorDiscrete | TensorMultiDiscrete,
     ) -> tuple[Tensor, ReinforceActorOutput]:
         # NOTE: Would be nice to be able to do this:
         # assert observations.shape == self.network.input_space.shape
@@ -349,7 +348,7 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
 
 def main():
     datamodule = RlDataModule(
-        env="CartPole-v1", num_parallel_envs=128, actor=None, episodes_per_epoch=100, batch_size=10
+        env="CartPole-v1", num_parallel_envs=1, actor=None, episodes_per_epoch=100, batch_size=100
     )
 
     # TODO: Test out if we can make this stuff work with Brax envs:
