@@ -23,7 +23,7 @@ from project.configs.config import Config
 from project.datamodules.bases.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.datamodules.rl.datamodule import RlDataModule
 from project.networks.fcnet import FcNet
 from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass

@@ -11,7 +11,7 @@ from torch import nn
 from project.algorithms.bases.algorithm_test import AlgorithmTests
 from project.algorithms.rl_example.reinforce import Reinforce
 from project.configs.config import Config
-from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.datamodules.rl.datamodule import RlDataModule
 from project.experiment import instantiate_datamodule, setup_experiment
 from project.main import run
 from project.networks.fcnet import FcNet

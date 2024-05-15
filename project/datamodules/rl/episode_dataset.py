@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
@@ -10,13 +11,14 @@ from typing import Generic
 import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
 import numpy as np
+import torch
 from torch import Tensor
 from torch.utils.data import IterableDataset
 
 from project.utils.types import NestedDict, NestedMapping
 
-from .rl_types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv
 from .stacking_utils import stack_episode
+from .types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv
 
 logger = get_logger(__name__)
 eps = np.finfo(np.float32).eps.item()
@@ -25,7 +27,7 @@ jax.experimental.compilation_cache.compilation_cache.set_cache_dir(Path.home() /
 
 
 @dataclass
-class RlEpisodeDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutput]):
+class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutput]):
     """An IterableDataset that uses an actor in an environment and yields episodes."""
 
     env: gymnasium.Env[Tensor, Tensor] | VectorEnv[Tensor, Tensor]
@@ -113,24 +115,18 @@ class RlEpisodeDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutpu
         return self.episodes_per_epoch
 
 
+@dataclasses.dataclass
 class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
     """Iterator for a single environment."""
 
-    def __init__(
-        self,
-        env: gymnasium.Env[Tensor, Tensor],
-        actor: Actor[Tensor, Tensor, ActorOutput],
-        max_episodes: int | None = None,
-        max_steps: int | None = None,
-        initial_seed: int | None = None,
-    ):
-        self.env = env
-        self.actor = actor
-        self.max_episodes = max_episodes
-        self.max_steps = max_steps
-        self.initial_seed = initial_seed
-        self._yielded_steps = 0
-        self._yielded_episodes = 0
+    env: gymnasium.Env[Tensor, Tensor]
+    actor: Actor[Tensor, Tensor, ActorOutput]
+    max_episodes: int | None = None
+    max_steps: int | None = None
+    initial_seed: int | None = None
+
+    _yielded_steps: int = dataclasses.field(default=0, init=False)
+    _yielded_episodes: int = dataclasses.field(default=0, init=False)
 
     def on_actor_update(self) -> None:
         pass  # do nothing, no buffers to clear or anything like that, really.
@@ -183,7 +179,7 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             obs, reward, terminated, truncated, info = self.env.step(action)
             logger.debug(f"step {_episode_step}, %s", terminated)
 
-            assert isinstance(reward, jax.Array), reward
+            assert isinstance(reward, jax.Array | torch.Tensor), reward
 
             actions.append(action)
             actor_outputs.append(actor_output)
@@ -454,6 +450,8 @@ def sliced_dict[M: NestedMapping[str, Tensor | None]](
                 result[k] = _sliced(v, index)
             elif v is None:
                 result[k] = None
+            elif isinstance(v, list) and len(v) == n_slices:
+                result[k] = v[index]
             elif isinstance(v, Tensor | np.ndarray | jax.Array):
                 if v.shape and v.shape[0] == n_slices:
                     result[k] = v[index]
@@ -466,7 +464,7 @@ def sliced_dict[M: NestedMapping[str, Tensor | None]](
                 result[k] = v
             else:
                 raise NotImplementedError(
-                    f"Don't know how to slice value {v} at key {k} from the actor output dict {d}"
+                    f"Don't know how to slice value at key {k} of type {type(v)} (with a value of {v}) from the actor dict {d}"
                 )
         return result
 

@@ -10,7 +10,7 @@ import torch
 from gymnasium import Wrapper
 from torch import Tensor
 
-from project.datamodules.rl.rl_types import (
+from project.datamodules.rl.types import (
     BoxSpace,
     VectorEnv,
     VectorEnvWrapper,

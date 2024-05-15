@@ -10,6 +10,7 @@ import gym.spaces
 import gymnasium.spaces
 import jax
 import numpy as np
+import torch
 from gymnasium import Space
 from numpy.typing import NDArray
 from torch import Tensor
@@ -137,12 +138,13 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     observations: Tensor
     actions: Tensor
-    rewards: (
-        Tensor | np.ndarray | jax.Array
-    )  # todo: wrappers assume that rewards is a numpy array for now. Might be easy to use jax Arrays instead.
+
+    rewards: Tensor | np.ndarray | jax.Array
+    # todo: wrappers assume that rewards is a numpy array for now. Might be easy to use jax Arrays instead of torch Tensors here.
+
     infos: list[dict]
-    truncated: bool
-    terminated: bool
+    truncated: bool | jax.numpy.bool_ | torch.BoolTensor
+    terminated: bool | jax.numpy.bool_ | torch.BoolTensor
     actor_outputs: ActorOutput
 
     final_observation: Tensor | None = None
@@ -153,7 +155,7 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     @property
     def length(self) -> int:
-        size = self.rewards.size(0)
+        size = self.rewards.shape[0]
         assert self.observations.size(0) == self.actions.size(0) == len(self.infos) == size
         return size
 
@@ -188,7 +190,7 @@ class Transition:
     observation: Tensor
     info: dict
     action: Tensor
-    reward: Tensor
+    reward: Tensor | jax.Array
 
 
 @dataclasses.dataclass(frozen=True)

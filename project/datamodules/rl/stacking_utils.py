@@ -10,7 +10,7 @@ from torch import Tensor
 
 from project.utils.types import is_sequence_of
 
-from .rl_types import ActorOutput, Episode
+from .types import ActorOutput, Episode
 
 
 @overload

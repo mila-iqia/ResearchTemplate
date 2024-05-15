@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pytest
 from torch import Tensor
 
-from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.datamodules.rl.datamodule import RlDataModule
 from project.utils.tensor_regression import (
     TensorRegressionFixture,
     get_test_source_and_temp_file_paths,
@@ -26,7 +26,7 @@ def test_first_batch(
     datadir: Path,
 ):
     if isinstance(datamodule, RlDataModule):
-        from project.datamodules.rl.rl_types import random_actor
+        from project.datamodules.rl.types import random_actor
 
         assert datamodule.train_seed is not None
         datamodule.set_actor(random_actor)

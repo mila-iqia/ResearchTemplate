@@ -7,7 +7,7 @@ import torch
 
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
 
-from ..rl_types import BoxSpace
+from ..types import BoxSpace
 
 logger = get_logger(__name__)
 

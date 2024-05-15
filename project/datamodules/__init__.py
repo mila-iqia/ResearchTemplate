@@ -1,6 +1,6 @@
 from .bases.image_classification import ImageClassificationDataModule
 from .bases.vision import VisionDataModule
-from .rl.rl_datamodule import RlDataModule
+from .rl.datamodule import RlDataModule
 from .vision.cifar10 import CIFAR10DataModule, cifar10_normalization
 from .vision.fashion_mnist import FashionMNISTDataModule
 from .vision.imagenet32 import ImageNet32DataModule, imagenet32_normalization
