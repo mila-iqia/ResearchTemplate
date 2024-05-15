@@ -42,10 +42,16 @@ type NestedDict[K, V] = dict[K, V | NestedDict[K, V]]
 type NestedMapping[K, V] = Mapping[K, V | NestedMapping[K, V]]
 
 
+def is_list_of[V](object: Any, item_type: type[V] | tuple[type[V], ...]) -> TypeGuard[list[V]]:
+    """Used to check (and tell the type checker) that `object` is a list of items of this type."""
+    return is_sequence_of(object, item_type) and isinstance(object, list)
+
+
 def is_sequence_of[V](
     object: Any, item_type: type[V] | tuple[type[V], ...]
 ) -> TypeGuard[Sequence[V]]:
-    """Used to tell the type checker that all items in the sequence are of the given type."""
+    """Used to check (and tell the type checker) that `object` is a sequence of items of this
+    type."""
     try:
         return all(isinstance(value, item_type) for value in object)
     except TypeError:
