@@ -1,6 +1,7 @@
 from typing import Any
 
 import gymnasium
+import jax
 import numpy as np
 import pytest
 import torch
@@ -9,11 +10,12 @@ import torch.utils.data
 from torch import Tensor
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
-from project.datamodules.rl.rl_types import (
+from project.datamodules.rl.types import (
     Episode,
     EpisodeBatch,
     VectorEnv,
 )
+from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch_tensor
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete
 from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.types import NestedDict
@@ -249,12 +251,15 @@ class EnvTests:
 
 
 def _check_episode_tensor(
-    v: Any,
+    v: torch.Tensor | jax.Array,
     device: torch.device,
     space: gymnasium.Space[Tensor] | None = None,
     nested: bool = False,
     dtype: torch.dtype | None = None,
 ):
+    if isinstance(v, jax.Array):
+        v = jax_to_torch_tensor(v)
+
     assert isinstance(v, Tensor) and v.device == device
     assert not v.is_nested
     if space:
@@ -280,9 +285,14 @@ def check_episode(episode: Episode, env: gymnasium.Env[Tensor, Any], device: tor
     _check_episode_tensor(episode.actions, device=device, space=action_space)
 
     assert episode["rewards"] is episode.rewards
-    _check_episode_tensor(episode.rewards, device=device, dtype=torch.float32)
+    assert isinstance(episode.rewards, jax.Array | torch.Tensor)
+    rewards = episode.rewards
+    if isinstance(rewards, jax.Array):
+        rewards = jax_to_torch_tensor(rewards)
+    _check_episode_tensor(rewards, device=device, dtype=torch.float32)
 
     assert episode["terminated"] is episode.terminated
+    assert isinstance(episode.terminated, bool), episode.terminated
     _check_episode_tensor(episode.terminated, device=device, dtype=torch.bool)
 
     assert episode["truncated"] is episode.truncated

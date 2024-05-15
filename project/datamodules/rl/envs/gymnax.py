@@ -8,7 +8,7 @@ import jax
 import torch
 from gymnax.wrappers.gym import GymnaxToGymWrapper, GymnaxToVectorGymWrapper
 
-from project.datamodules.rl.rl_types import VectorEnvWrapper
+from project.datamodules.rl.types import VectorEnvWrapper
 from project.datamodules.rl.wrappers.jax_torch_interop import (
     JaxToTorchMixin,
     get_torch_device_from_jax_array,

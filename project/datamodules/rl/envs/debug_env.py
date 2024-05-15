@@ -6,7 +6,7 @@ import gymnasium.envs.registration
 import numpy as np
 import torch
 
-from project.datamodules.rl.rl_types import VectorEnv
+from project.datamodules.rl.types import VectorEnv
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
     TensorDiscrete,

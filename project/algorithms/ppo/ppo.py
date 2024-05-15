@@ -36,7 +36,7 @@ from project.algorithms.ppo.utils import (
     PPOActorOutput,
     discount_cumsum,
 )
-from project.datamodules.rl.rl_datamodule import EpisodeBatch, RlDataModule, TensorEnv
+from project.datamodules.rl.datamodule import EpisodeBatch, RlDataModule, TensorEnv
 from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
 from project.networks.fcnet import FcNet

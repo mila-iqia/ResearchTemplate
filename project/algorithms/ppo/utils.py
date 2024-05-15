@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from project.datamodules.rl.rl_datamodule import EpisodeBatch
+from project.datamodules.rl.datamodule import EpisodeBatch
 
 
 class PPOActorOutput(TypedDict):

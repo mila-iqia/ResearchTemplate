@@ -15,7 +15,7 @@ from project.algorithms.bases.algorithm_test import (
 )
 from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.datamodules.bases.image_classification import ImageClassificationDataModule
-from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.datamodules.rl.datamodule import RlDataModule
 from project.datamodules.vision.moving_mnist import MovingMnistDataModule
 from project.utils.types import DataModule
 

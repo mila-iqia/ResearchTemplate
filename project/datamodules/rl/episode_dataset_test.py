@@ -7,11 +7,11 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
-from project.datamodules.rl.rl_types import Episode, EpisodeBatch, VectorEnv, random_actor
+from project.datamodules.rl.types import Episode, EpisodeBatch, VectorEnv, random_actor
 
+from .datamodule import custom_collate_fn
 from .envs.env_tests import check_episode, check_episode_batch
-from .rl_datamodule import custom_collate_fn
-from .rl_dataset import RlEpisodeDataset
+from .episode_dataset import EpisodeIterableDataset
 
 logger = get_logger(__name__)
 
@@ -46,7 +46,7 @@ class TestRlDataset:
 
     def test_rl_dataset(self, env: gymnasium.Env[Tensor, Tensor], seed: int, device: torch.device):
         episodes_per_epoch = 2
-        dataset = RlEpisodeDataset(
+        dataset = EpisodeIterableDataset(
             env, actor=random_actor, episodes_per_epoch=episodes_per_epoch, seed=seed
         )
         for episode_index, episode in enumerate(dataset):
@@ -59,7 +59,7 @@ class TestRlDataset:
         self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device
     ):
         episodes_per_epoch = 3
-        dataset = RlEpisodeDataset(
+        dataset = EpisodeIterableDataset(
             vectorenv, actor=random_actor, episodes_per_epoch=episodes_per_epoch, seed=seed
         )
         for episode_index, episode in enumerate(dataset):
@@ -73,7 +73,7 @@ class TestRlDataset:
         self, vectorenv: VectorEnv[Tensor, Tensor], seed: int, device: torch.device
     ):
         episodes_per_epoch = 4
-        dataset = RlEpisodeDataset(
+        dataset = EpisodeIterableDataset(
             vectorenv, actor=random_actor, episodes_per_epoch=episodes_per_epoch, seed=seed
         )
         batch_size = 2
@@ -138,7 +138,7 @@ class TestRlDataset:
 
             return _actor
 
-        dataset = RlEpisodeDataset(
+        dataset = EpisodeIterableDataset(
             env, actor=actor_with_update_index_in_output(), seed=seed, episodes_per_epoch=100
         )
 

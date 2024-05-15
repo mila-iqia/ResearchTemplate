@@ -16,7 +16,7 @@ from jax import dlpack as jax_dlpack
 from torch import Tensor
 from torch.utils import dlpack as torch_dlpack
 
-from project.datamodules.rl.rl_types import VectorEnv
+from project.datamodules.rl.types import VectorEnv
 from project.utils.types import NestedDict, NestedMapping
 from project.utils.types.protocols import Dataclass
 

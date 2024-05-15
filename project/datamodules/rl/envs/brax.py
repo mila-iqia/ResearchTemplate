@@ -17,7 +17,7 @@ import torch
 from brax.envs.wrappers.gym import GymWrapper
 from gymnasium.wrappers.compatibility import EnvCompatibility
 
-from project.datamodules.rl.rl_types import VectorEnv
+from project.datamodules.rl.types import VectorEnv
 from project.datamodules.rl.wrappers.jax_torch_interop import (
     JaxToTorchMixin,
     get_backend_from_torch_device,

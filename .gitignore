@@ -167,3 +167,4 @@ wandb
 logs
 lightning_logs
 .vscode
+**.npz

@@ -9,7 +9,7 @@ from gym.spaces.utils import flatdim
 from torch import Tensor, nn
 
 from project.datamodules.bases.image_classification import ImageClassificationDataModule
-from project.datamodules.rl.rl_datamodule import RlDataModule
+from project.datamodules.rl.datamodule import RlDataModule
 from project.utils.types.protocols import DataModule
 
 

@@ -20,8 +20,8 @@ from project.utils.device import default_device
 from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
 
-from .rl_dataset import RlEpisodeDataset
-from .rl_types import (
+from .episode_dataset import EpisodeIterableDataset
+from .types import (
     Actor,
     ActorOutput,
     Episode,
@@ -44,7 +44,7 @@ class EnvDataLoader(DataLoader):
 
     def __init__(
         self,
-        dataset: RlEpisodeDataset[ActorOutput],
+        dataset: EpisodeIterableDataset[ActorOutput],
         batch_size: int,
     ):
         super().__init__(
@@ -74,15 +74,18 @@ class EnvDataLoader(DataLoader):
 class RlDataModule(
     LightningDataModule, DataModule[EpisodeBatch[ActorOutput]], Generic[ActorOutput]
 ):
-    """A LightningDataModule for RL environments whose DataLoaders yield `EpisodeBatch` objects.
+    """A LightningDataModule for RL environments whose DataLoaders yields batches of episodes.
+
+    These episode batches are `EpisodeBatch` objects, which are able to stack multiple episodes of
+    potentially different lengths in a single nested tensor, which allows for very efficient
+    forward passes over for example all observations in all episodes in the batch.
 
     This DataModule needs to be passed an actor using either the `actor` argument of the
     constructor or the `set_actor` method, otherwise a random policy is used by default.
 
-    TODO: We might want to actually give the algorithm the opportunity to add wrappers on top
-    of the environment. How do we go about doing that in a clean way?
-    - @lebrice: I added the `[train/valid/test]_wrappers` arguments and properties. This should be
-    enough for now I think.
+    The `[train/valid/test]_wrappers` arguments can be used to add wrappers on top
+    of the training/validation/testing environments. An Algorithm can use the properties with the
+    same names to add custom wrappers to be used in each environment, as needed.
     """
 
     def __init__(
@@ -142,9 +145,9 @@ class RlDataModule(
         self.valid_env: TensorEnv | None = None
         self.test_env: TensorEnv | None = None
 
-        self.train_dataset: RlEpisodeDataset[ActorOutput] | None = None
-        self.valid_dataset: RlEpisodeDataset[ActorOutput] | None = None
-        self.test_dataset: RlEpisodeDataset[ActorOutput] | None = None
+        self.train_dataset: EpisodeIterableDataset[ActorOutput] | None = None
+        self.valid_dataset: EpisodeIterableDataset[ActorOutput] | None = None
+        self.test_dataset: EpisodeIterableDataset[ActorOutput] | None = None
 
         self._train_wrappers = tuple(train_wrappers or ())
         self._valid_wrappers = tuple(valid_wrappers or ())
@@ -225,7 +228,7 @@ class RlDataModule(
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
         self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
-        self.train_dataset = RlEpisodeDataset(
+        self.train_dataset = EpisodeIterableDataset(
             self.train_env,
             actor=self.train_actor,
             episodes_per_epoch=self.episodes_per_epoch,
@@ -250,7 +253,7 @@ class RlDataModule(
         self.valid_env = self.valid_env or self._make_env(
             wrappers=self.valid_wrappers, seed=self.valid_seed
         )
-        self.valid_dataset = RlEpisodeDataset(
+        self.valid_dataset = EpisodeIterableDataset(
             self.valid_env,
             actor=self.valid_actor,
             episodes_per_epoch=self.episodes_per_epoch,
@@ -270,7 +273,7 @@ class RlDataModule(
         self.test_env = self.test_env or self._make_env(
             wrappers=self.test_wrappers, seed=self.test_seed
         )
-        self.test_dataset = RlEpisodeDataset(
+        self.test_dataset = EpisodeIterableDataset(
             self.test_env,
             actor=self.test_actor,
             episodes_per_epoch=self.episodes_per_epoch,
@@ -403,7 +406,7 @@ class RlDataModule(
 
     def _close(
         self,
-        dataset: RlEpisodeDataset[Any] | None,
+        dataset: EpisodeIterableDataset[Any] | None,
         env: TensorEnv | None,
         name: Literal["train", "valid", "test"],
     ) -> None:

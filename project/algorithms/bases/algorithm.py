@@ -9,7 +9,7 @@ from lightning import Callback, LightningModule, Trainer
 from torch import Tensor, nn
 from typing_extensions import TypeVar
 
-from project.datamodules.rl.rl_types import EpisodeBatch
+from project.datamodules.rl.types import EpisodeBatch
 from project.utils.types import NestedMapping, PhaseStr, StepOutputDict
 from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import get_device
