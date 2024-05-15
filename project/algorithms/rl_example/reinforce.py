@@ -142,7 +142,7 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
         """
         rewards = batch["rewards"]
         # Retrieve the outputs that we saved at each step:
-        actor_outputs = batch["actor_outputs"]
+        actor_outputs: ReinforceActorOutput = batch["actor_outputs"]
         batch_size = rewards.size(0)
 
         # Nested Tensor of shape [n_envs, <episode_len>] where episode_len varies between tensors.
@@ -154,7 +154,9 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
                 [(ret - ret.mean()) / (ret.std() + eps) for ret in returns.unbind()]
             )
         else:
-            normalized_returns = (returns - returns.mean(dim=1)) / (returns.std(dim=1) + eps)
+            normalized_returns = (returns - returns.mean(dim=1, keepdim=True)) / (
+                returns.std(dim=1, keepdim=True) + eps
+            )
 
         # NOTE: In this particular case here, the actions are "live" tensors with grad_fns.
         # For Off-policy-style algorithms like DQN, this could be sampled from a replay buffer, and
@@ -166,7 +168,9 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
         policy_loss_per_step = -action_log_probs * normalized_returns
 
         # Sum across episode steps
-        policy_loss_per_episode = policy_loss_per_step.to_padded_tensor(0.0).sum(dim=1)
+        if policy_loss_per_step.is_nested:
+            policy_loss_per_step = policy_loss_per_step.to_padded_tensor(0.0)
+        policy_loss_per_episode = policy_loss_per_step.sum(dim=1)
         # Average across episodes
         policy_loss = policy_loss_per_episode.mean(dim=0)
         self.log(f"{phase}/loss", policy_loss, prog_bar=True)
@@ -303,7 +307,18 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
     # _batch_size, ep_len = rewards.shape
 
     # NOTE: `rewards` has shape [batch_size, <ep_length>] atm.
-    assert rewards_batch.is_nested
+    if not rewards_batch.is_nested:
+        # use a better, vectorized implementation in the case of a non-nested tensor.
+        returns = torch.zeros_like(rewards_batch)
+        discounted_future_rewards = torch.zeros_like(rewards_batch[0])
+        ep_len = rewards_batch.size(1)
+        # todo: probably a way to vectorize this and get rid of the for-loop.
+        for step in reversed(range(ep_len)):
+            reward_at_that_step = rewards_batch[step]
+            discounted_future_rewards = reward_at_that_step + gamma * discounted_future_rewards
+            returns[step] = discounted_future_rewards
+        return returns
+
     returns_batch: list[Tensor] = []
 
     for rewards in rewards_batch.unbind():

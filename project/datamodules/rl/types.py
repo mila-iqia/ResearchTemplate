@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, ClassVar, Generic, NotRequired, TypedDict
+from typing import Any, ClassVar, Generic, NotRequired, Self, TypedDict
 
 import gym
 import gym.spaces
@@ -250,6 +250,18 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     This should be used to store whatever is needed to train the model later (e.g. the action log-
     probabilities, activations, etc.)
     """
+
+    def to(self, device: torch.device) -> Self:
+        def _move(v: Any, device: torch.device):
+            if isinstance(v, Tensor):
+                return v.to(device=device)
+            if isinstance(v, list):
+                return [_move(v_i, device) for v_i in v]
+            if isinstance(v, dict):
+                return {k: _move(v_i, device) for k, v_i in v.items()}
+            return v
+
+        return type(self)(**{k: _move(v, device) for k, v in self.items()})
 
     @classmethod
     def from_episodes(cls, episodes: Sequence[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
