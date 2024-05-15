@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from logging import getLogger as get_logger
 from typing import Any, overload
 
 import jax
@@ -8,9 +9,32 @@ import numpy as np
 import torch
 from torch import Tensor
 
+from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch_tensor
 from project.utils.types import is_sequence_of
 
 from .types import ActorOutput, Episode
+
+logger = get_logger(__name__)
+
+
+_stacking_fns: dict[type, Callable] = {
+    np.ndarray: np.stack,
+    # For scalars we return a np.ndarray to emphasize that we won't move stuff between devices unless
+    # necessary.
+    int: np.array,
+    float: np.array,
+    bool: np.array,
+    type(None): np.array,
+}
+"""Mapping from item type to the function to use to stack these items."""
+
+
+def register_stacking_fn[T](item_type: type[T]):
+    def _wrapper[C: Callable[[Sequence], Any]](fn: C) -> C:
+        _stacking_fns[item_type] = fn
+        return fn
+
+    return _wrapper
 
 
 @overload
@@ -26,7 +50,7 @@ def stack(values: list[np.ndarray]) -> np.ndarray: ...
 
 
 @overload
-def stack(values: list[dict]) -> dict: ...
+def stack[M: Mapping](values: list[M]) -> M: ...
 
 
 @overload
@@ -37,43 +61,48 @@ def stack(
     values: list[Tensor]
     | list[jax.Array]
     | list[np.ndarray]
-    | list[dict]
+    | list[Mapping]
     | list[int]
     | list[float]
     | list[bool],
-) -> Tensor | jax.Array | np.ndarray | dict:
+) -> Tensor | jax.Array | np.ndarray | Mapping:
     """Generic function for stacking lists of values into tensors or arrays.
 
     Also supports stacking dictionaries. This avoids creating new tensors, and keeps the return
     types as close to the input types as possible, to avoid unintentionally moving data between
     devices.
     """
-    if is_sequence_of(values, dict):
-        # NOTE: weird bug in the type checker? Doesn't understand that `values` is a list[Tensor].
-        return stack_dicts(values)
+    # Sort the functions so that the narrowest type that fits is used first.
+    for item_type, function in sorted(
+        _stacking_fns.items(), key=lambda x: len(x[0].mro()), reverse=True
+    ):
+        if is_sequence_of(values, item_type):
+            return function(values)
 
-    if is_sequence_of(values, jax.Array):
-        return jax.numpy.stack(values)
-
-    if is_sequence_of(values, np.ndarray):
-        return np.stack(values)
-
-    # Stack a list of tensors with different shapes in a single dimension:
-    if is_sequence_of(values, Tensor):
-        if not isinstance(values, list):
-            values = list(values)
-        if any(v.is_nested or v.shape != values[0].shape for v in values):
-            return torch.nested.as_nested_tensor(values)
-        return torch.stack(values)
-
-    if is_sequence_of(values, (int, float, bool)):
-        # idea: return a np.ndarray to emphasize that we won't move stuff between devices unless
-        # necessary. For now though we return a CPU tensor.
-        return np.array(values)
     raise NotImplementedError(f"Don't know how to stack these values: {values}")
 
 
-def stack_dicts[M: Mapping](values: Sequence[M]) -> M:
+@register_stacking_fn(torch.Tensor)
+def stack_tensors(values: Sequence[torch.Tensor]) -> torch.Tensor:
+    """Stack a tensors with a possibly different length in a single dimension."""
+    if not isinstance(values, list):
+        values = list(values)
+    if any(v.is_nested or v.shape != values[0].shape for v in values):
+        return torch.nested.as_nested_tensor(values)
+    return torch.stack(values)
+
+
+@register_stacking_fn(jax.Array)
+def stack_jax_arrays(values: Sequence[jax.Array]) -> torch.Tensor | jax.Array:
+    """Stack jax arrays into a single jax array if they have the same shape, otherwise returns a
+    Torch nested tensor."""
+    if all(value.shape == values[0].shape for value in values):
+        return jax.numpy.stack(values)
+    return torch.nested.as_nested_tensor([jax_to_torch_tensor(value) for value in values])
+
+
+@register_stacking_fn(Mapping)
+def stack_mappings[M: Mapping](values: Sequence[M]) -> M:
     if not isinstance(values, list):
         values = list(values)
     all_keys = set().union(*[v.keys() for v in values])
@@ -84,7 +113,7 @@ def stack_dicts[M: Mapping](values: Sequence[M]) -> M:
         item_values = [v[key] for v in values]
         if isinstance(item_values[0], dict):
             assert is_sequence_of(item_values, dict)
-            items[key] = stack_dicts(item_values)
+            items[key] = stack_mappings(item_values)
         else:
             items[key] = stack(item_values)
     result = return_type(**items)

@@ -16,12 +16,11 @@ from jax import dlpack as jax_dlpack
 from torch import Tensor
 from torch.utils import dlpack as torch_dlpack
 
-from project.datamodules.rl.types import VectorEnv
-from project.utils.types import NestedDict, NestedMapping
-from project.utils.types.protocols import Dataclass
-
 if typing.TYPE_CHECKING:
+    from project.datamodules.rl.types import VectorEnv
     from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
+    from project.utils.types import NestedDict, NestedMapping
+    from project.utils.types.protocols import Dataclass
 
 
 @functools.singledispatch
@@ -58,7 +57,7 @@ def jax_to_torch(value: Any, /) -> Any:
     )
 
 
-def torch_to_jax_tensor(value: torch.Tensor, /) -> jax.Array:
+def torch_to_jax_tensor(value: torch.Tensor) -> jax.Array:
     """Converts a PyTorch Tensor into a jax.Array.
 
     NOTE: seems like torch.float64 tensors are implicitly converted to jax.float32 tensors?
@@ -68,19 +67,19 @@ def torch_to_jax_tensor(value: torch.Tensor, /) -> jax.Array:
     return tensor
 
 
-def jax_to_torch_tensor(value: jax.Array, /) -> Tensor:
+def jax_to_torch_tensor(value: jax.Array) -> Tensor:
     dpack = jax_dlpack.to_dlpack(value)  # type: ignore
     return torch_dlpack.from_dlpack(dpack)
 
 
-# Register it like this so the type hints are preserved on `torch_tensor_to_jax_array` (which is
-# also called directly in some places).
+# Register it like this so the type hints are preserved on the functions (which are also called
+# directly in some places).
 torch_to_jax.register(torch.Tensor, torch_to_jax_tensor)
 jax_to_torch.register(jax.Array, jax_to_torch_tensor)
 
 
 @torch_to_jax.register(collections.abc.Mapping)
-def torch_to_jax_dict[K](value: NestedMapping[K, Tensor], /) -> NestedMapping[K, jax.Array]:
+def torch_to_jax_dict[K](value: NestedMapping[K, Tensor]) -> NestedMapping[K, jax.Array]:
     """Converts a dict of PyTorch tensors into a dict of jax.Arrays."""
     return type(value)(**{k: torch_to_jax(v) for k, v in value.items()})  # type: ignore
 
@@ -88,12 +87,12 @@ def torch_to_jax_dict[K](value: NestedMapping[K, Tensor], /) -> NestedMapping[K,
 # Keep `None`s the same.
 @jax_to_torch.register(type(None))
 @torch_to_jax.register(type(None))
-def _no_op(v: Any, /) -> Any:
+def _no_op(v: Any) -> Any:
     return v
 
 
 @jax_to_torch.register(collections.abc.Mapping)
-def jax_to_torch_dict(value: dict[str, jax.Array | Any], /) -> dict[str, torch.Tensor | Any]:
+def jax_to_torch_dict(value: dict[str, jax.Array | Any]) -> dict[str, torch.Tensor | Any]:
     """Converts a dict of Jax arrays into a dict of PyTorch tensors ."""
     return type(value)(**{k: jax_to_torch(v) for k, v in value.items()})  # type: ignore
 
@@ -115,12 +114,12 @@ class _DataclassInstance(metaclass=_DataclassMeta): ...
 
 
 @jax_to_torch.register(_DataclassInstance)
-def jax_dataclass_to_torch_dataclass(value: Dataclass, /) -> NestedDict[str, torch.Tensor]:
+def jax_dataclass_to_torch_dataclass(value: Dataclass) -> NestedDict[str, torch.Tensor]:
     return jax_to_torch(dataclasses.asdict(value))
 
 
 @torch_to_jax.register(_DataclassInstance)
-def torch_dataclass_to_jax_dataclass(value: Dataclass, /) -> NestedDict[str, jax.Array]:
+def torch_dataclass_to_jax_dataclass(value: Dataclass) -> NestedDict[str, jax.Array]:
     return torch_to_jax(dataclasses.asdict(value))
 
 
@@ -138,7 +137,13 @@ class JaxToTorchMixin:
 
     def step(
         self, action: torch.Tensor
-    ) -> tuple[torch.Tensor, jax.Array, torch.BoolTensor, torch.BoolTensor, dict[Any, Any]]:
+    ) -> tuple[
+        torch.Tensor,
+        jax.Array,
+        bool | jax.Array | torch.Tensor,
+        bool | jax.Array | torch.Tensor,
+        dict[Any, Any],
+    ]:
         jax_action = torch_to_jax_tensor(
             action.contiguous() if not action.is_contiguous() else action
         )
@@ -147,8 +152,8 @@ class JaxToTorchMixin:
 
         # IDEA: Keep the rewards as jax arrays, since most envs / wrappers of Gymnasium assume a jax array.
         assert isinstance(reward, jax.Array)
-        assert isinstance(terminated, jax.Array)
-        assert isinstance(truncated, jax.Array)
+        assert isinstance(terminated, jax.Array | bool), terminated
+        assert isinstance(truncated, jax.Array | bool), truncated
         # torch_reward = jax_to_torch_tensor(reward)
         # device = self.observation_space.device
         # if isinstance(terminated, bool):
@@ -164,13 +169,14 @@ class JaxToTorchMixin:
         #     torch_truncated = jax_to_torch_tensor(truncated)
 
         # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
-        if terminated.dtype != jnp.bool:
+        if isinstance(terminated, jax.Array) and terminated.dtype != jnp.bool:
             terminated = terminated.astype(jnp.bool)
-        if truncated.dtype != jnp.bool:
+
+        if isinstance(truncated, jax.Array) and truncated.dtype != jnp.bool:
             truncated = truncated.astype(jnp.bool)
 
         torch_info = jax_to_torch(info)
-        return torch_obs, reward, terminated, truncated, torch_info  # type: ignore
+        return torch_obs, reward, terminated, truncated, torch_info
 
     def reset(
         self,

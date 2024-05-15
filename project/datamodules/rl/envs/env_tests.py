@@ -260,7 +260,7 @@ def _check_episode_tensor(
     if isinstance(v, jax.Array):
         v = jax_to_torch_tensor(v)
 
-    assert isinstance(v, Tensor) and v.device == device
+    assert isinstance(v, Tensor) and v.device == device, v
     assert not v.is_nested
     if space:
         assert all(v_i in space for v_i in v), (len(v), v[0], space)
@@ -292,11 +292,20 @@ def check_episode(episode: Episode, env: gymnasium.Env[Tensor, Any], device: tor
     _check_episode_tensor(rewards, device=device, dtype=torch.float32)
 
     assert episode["terminated"] is episode.terminated
-    assert isinstance(episode.terminated, bool), episode.terminated
-    _check_episode_tensor(episode.terminated, device=device, dtype=torch.bool)
+    assert isinstance(episode.terminated, bool | torch.Tensor | jax.Array), episode.terminated
+    if isinstance(episode.terminated, torch.Tensor | jax.Array):
+        assert not episode.terminated.shape
+    if isinstance(episode.terminated, torch.Tensor):
+        assert episode.terminated.device == device
+        assert episode.terminated.dtype == torch.bool
 
     assert episode["truncated"] is episode.truncated
-    _check_episode_tensor(episode.truncated, device=device, dtype=torch.bool)
+    assert isinstance(episode.truncated, bool | torch.Tensor | jax.Array), episode.truncated
+    if isinstance(episode.truncated, torch.Tensor | jax.Array):
+        assert not episode.truncated.shape
+    if isinstance(episode.truncated, torch.Tensor):
+        assert episode.truncated.device == device
+        assert episode.truncated.dtype == torch.bool
 
 
 def check_episode_batch(

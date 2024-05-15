@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.types import Episode, EpisodeBatch, VectorEnv, random_actor
 
-from .datamodule import custom_collate_fn
 from .envs.env_tests import check_episode, check_episode_batch
 from .episode_dataset import EpisodeIterableDataset
 
@@ -78,7 +77,7 @@ class TestRlDataset:
         )
         batch_size = 2
         dataloader = DataLoader(
-            dataset, batch_size=batch_size, num_workers=0, collate_fn=custom_collate_fn
+            dataset, batch_size=batch_size, num_workers=0, collate_fn=EpisodeBatch.from_episodes
         )
         for batch_index, episode_batch in enumerate(dataloader):
             assert isinstance(episode_batch, EpisodeBatch)

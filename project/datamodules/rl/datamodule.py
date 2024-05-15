@@ -24,10 +24,8 @@ from .episode_dataset import EpisodeIterableDataset
 from .types import (
     Actor,
     ActorOutput,
-    Episode,
     EpisodeBatch,
 )
-from .wrappers.tensor_spaces import TensorBox, TensorDiscrete, TensorSpace  # noqa
 from .wrappers.to_torch import ToTorchWrapper
 
 logger = get_logger(__name__)
@@ -39,7 +37,7 @@ class _EnvFn(Protocol):
     def __call__(self, seed: int) -> TensorEnv: ...
 
 
-class EnvDataLoader(DataLoader):
+class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
     """Yields batches of episodes."""
 
     def __init__(
@@ -51,7 +49,7 @@ class EnvDataLoader(DataLoader):
             dataset,
             batch_size=batch_size,
             num_workers=0,
-            collate_fn=custom_collate_fn,
+            collate_fn=EpisodeBatch.stack_episodes,
             shuffle=False,
         )
         self.env = dataset
@@ -234,12 +232,9 @@ class RlDataModule(
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.train_seed,
         )
-        dataloader: Iterable[EpisodeBatch[ActorOutput]] = DataLoader(
+        dataloader: Iterable[EpisodeBatch[ActorOutput]] = EnvDataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=custom_collate_fn,
         )
         for dataloader_wrapper in self.train_dataloader_wrappers or []:
             logger.debug(f"Applying dataloader wrapper {dataloader_wrapper}")
@@ -423,39 +418,6 @@ class RlDataModule(
             # The env was created (.setup() was called), but no dataloader methods were used.
             env.close()
             setattr(self, f"{name}_env", None)
-
-
-def custom_collate_fn(episodes: list[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
-    """Collates a list of episodes into an EpisodeBatch object containing (possibly nested)
-    tensors."""
-
-    # note: assuming simple tensor observations for now, even though the code below is meant to
-    # also support nested dicts observations and actions
-    device = episodes[0].observations.device
-
-    def _stack(tensors: list[torch.Tensor]) -> torch.Tensor:
-        """Stacks tensors using torch.stack if all the sequences have the same length, otherwise
-        uses torch.nested.as_nested_tensor."""
-        if all(t_i.shape == tensors[0].shape for t_i in tensors):
-            return torch.stack(tensors)
-        return torch.nested.as_nested_tensor(tensors)
-
-    return EpisodeBatch(
-        observations=_stack([ep["observations"] for ep in episodes]),
-        actions=_stack([ep["actions"] for ep in episodes]),
-        rewards=_stack([ep["rewards"] for ep in episodes]),
-        # TODO: Could perhaps stack the infos so it mimics what the RecordEpisodeStatistics wrapper
-        # does for VectorEnvs.
-        infos=[ep["infos"] for ep in episodes],
-        terminated=torch.as_tensor([ep["terminated"] for ep in episodes], device=device),
-        truncated=torch.as_tensor([ep["terminated"] for ep in episodes], device=device),
-        actor_outputs=type(episodes[0]["actor_outputs"])(
-            **{
-                key: _stack([ep["actor_outputs"][key] for ep in episodes])
-                for key in episodes[0]["actor_outputs"].keys()
-            }
-        ),
-    )
 
 
 def _error_actor_required(dm: RlDataModule[Any], name: Literal["train", "valid", "test"]):

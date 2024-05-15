@@ -5,9 +5,8 @@ import gymnasium
 import numpy as np
 import torch
 
+from project.datamodules.rl.types import BoxSpace
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
-
-from ..types import BoxSpace
 
 logger = get_logger(__name__)
 

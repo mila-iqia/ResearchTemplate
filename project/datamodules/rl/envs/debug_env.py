@@ -109,7 +109,13 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
 
     def step(
         self, action: torch.Tensor
-    ) -> tuple[torch.Tensor, SupportsFloat, torch.BoolTensor, torch.BoolTensor, DebugEnvInfo]:
+    ) -> tuple[torch.Tensor, SupportsFloat, bool, bool, DebugEnvInfo]:
+        obs, reward, terminated, truncated, info = self._step(action)
+        return obs, reward, bool(terminated), bool(truncated), info
+
+    def _step(
+        self, action: torch.Tensor
+    ) -> tuple[torch.Tensor, SupportsFloat, torch.Tensor, torch.Tensor, DebugEnvInfo]:
         if action not in self.action_space:
             raise RuntimeError(
                 f"Invalid action: {action} of type {type(action)} , {action.dtype=}, {action.device=} "
@@ -152,8 +158,8 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         self._episode_length += 1
         episode_ended = self._episode_length == self.max_episode_length
         at_target = self._state == self._target
-        terminated: torch.BoolTensor = episode_ended & at_target  # type: ignore
-        truncated: torch.BoolTensor = episode_ended & ~at_target  # type: ignore
+        terminated = episode_ended & at_target
+        truncated = episode_ended & ~at_target
         return (
             self._state.clone(),
             reward,
@@ -175,9 +181,9 @@ class DebugVectorEnvInfo(TypedDict):
 
 class DebugVectorEnvInfoAtFinalStep(DebugVectorEnvInfo):
     final_observation: np.ndarray | Sequence[torch.Tensor | None]
-    _final_observation: np.ndarray
+    _final_observation: bool_mask | torch.Tensor
     final_info: np.ndarray | Sequence[DebugEnvInfo | None]
-    _final_info: np.ndarray
+    _final_info: bool_mask | torch.Tensor
 
 
 class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
@@ -260,21 +266,19 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
     ) -> tuple[
         torch.Tensor,
         SupportsFloat,
-        torch.BoolTensor,
-        torch.BoolTensor,
+        torch.Tensor,
+        torch.Tensor,
         DebugVectorEnvInfo | DebugVectorEnvInfoAtFinalStep,
     ]:
-        obs, reward, terminated, truncated, _info = super().step(action)
-        env_done: torch.BoolTensor = terminated | truncated  # type: ignore
-
-        # mask = np.ones(self.num_envs, dtype=bool)
+        obs, reward, terminated, truncated, info = super()._step(action)
+        env_done = terminated | truncated
 
         info: DebugVectorEnvInfo | DebugVectorEnvInfoAtFinalStep
 
         if not env_done.any():
             info = DebugVectorEnvInfo(
-                episode_length=_info["episode_length"],
-                target=_info["target"],
+                episode_length=info["episode_length"],
+                target=info["target"],
                 # _episode_length=mask,
                 # _target=mask,
             )
