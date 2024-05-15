@@ -49,7 +49,7 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
             dataset,
             batch_size=batch_size,
             num_workers=0,
-            collate_fn=EpisodeBatch.stack_episodes,
+            collate_fn=EpisodeBatch.from_episodes,
             shuffle=False,
         )
         self.env = dataset
@@ -225,7 +225,9 @@ class RlDataModule(
             # warn("No actor was set, using a random policy.", color="red")
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
-        self.train_env = self.train_env or self._make_env(wrappers=self.train_wrappers)
+        self.train_env = self.train_env or self._make_env(
+            wrappers=self.train_wrappers, seed=self.train_seed
+        )
         self.train_dataset = EpisodeIterableDataset(
             self.train_env,
             actor=self.train_actor,
