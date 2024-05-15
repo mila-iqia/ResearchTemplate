@@ -16,7 +16,7 @@ from numpy.typing import NDArray
 from torch import Tensor
 from typing_extensions import TypeVar
 
-from project.utils.types import NestedDict, NestedMapping  # noqa
+from project.utils.types import NestedMapping
 
 type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
 type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
@@ -138,13 +138,21 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     observations: Tensor
     actions: Tensor
-
-    rewards: Tensor | np.ndarray | jax.Array
-    # todo: wrappers assume that rewards is a numpy array for now. Might be easy to use jax Arrays instead of torch Tensors here.
+    rewards: Tensor | jax.Array
+    # todo: Gymnasium wrappers assume that rewards is a numpy array for now. Might be easier to
+    # use jax Arrays instead of torch Tensors here.
 
     infos: list[dict]
-    truncated: bool | jax.numpy.bool_ | torch.BoolTensor
-    terminated: bool | jax.numpy.bool_ | torch.BoolTensor
+    """Info dicts at each step.
+
+    Not stacked, since there might be different keys at every step.
+    """
+
+    # Should we even allow these to be on the GPU (jax or Torch tensors?) Or should they be forced
+    # to be plain bools?
+    truncated: bool
+    terminated: bool
+
     actor_outputs: ActorOutput
 
     final_observation: Tensor | None = None
@@ -202,8 +210,8 @@ class MiddleTransition(Transition):
 
 @dataclasses.dataclass(frozen=True)
 class FinalTransition(Transition):
-    terminated: bool
-    truncated: bool
+    terminated: bool | torch.BoolTensor | jax.Array
+    truncated: bool | torch.BoolTensor | jax.Array
     final_observation: Tensor | None = None
     final_info: dict | None = None
     is_terminal: ClassVar[bool] = True
@@ -223,24 +231,66 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     See https://pytorch.org/docs/stable/nested.html#module-torch.nested for more info.
     """
 
-    observations: Tensor  # [num_envs (a.k.a. batch_size), <episode_length>, *<observation_shape>]
-    actions: Tensor  # [num_envs (a.k.a. batch_size), <episode_length>, *<action_shape>]
-    rewards: Tensor  # [num_envs (a.k.a. batch_size), <episode_length>]
+    observations: Tensor  # [B, <episode_lengths>, *observation_shape]
+    actions: Tensor  # [B, <episode_lengths>, *action_shape]
+    rewards: Tensor  # [B, <episode_lengths>]
 
-    infos: list[list[EpisodeInfo]]
-    """List of the `info` dictionaries at each step, for each episode in the batch."""
+    infos: list[list[EpisodeInfo]]  # [B, <episode_lengths>]
+    """List of the `info` dictionaries in each episode."""
 
-    truncated: Tensor
-    """Whether the episode was truncated (i.e. a maximum number of steps was reached)."""
-    terminated: Tensor
-    """Whether the episode ended "normally"."""
+    truncated: Tensor  # [B]
+    """Whether each episodes was truncated (for example if a maximum number of steps was
+    reached)."""
+    terminated: Tensor  # [B]
+    """Whether each episodes ended "normally"."""
 
-    actor_outputs: ActorOutput
-    """Additional outputs of the Actor (besides the action to take) for each step in the episode.
+    actor_outputs: ActorOutput  # Each value will have shape [B, <episode_lengths>]
+    """Additional outputs of the Actor (besides the action to take) in each episode.
 
     This should be used to store whatever is needed to train the model later (e.g. the action log-
     probabilities, activations, etc.)
     """
+
+    @classmethod
+    def from_episodes(cls, episodes: Sequence[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
+        """Collates a list of episodes into an EpisodeBatch object containing (possibly nested)
+        tensors."""
+        rewards = [ep.rewards for ep in episodes]
+        from project.datamodules.rl.stacking_utils import stack
+        from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch_tensor
+
+        stacked_rewards = stack(rewards)  # type: ignore
+        assert isinstance(stacked_rewards, np.ndarray | jax.Array | torch.Tensor)
+        if isinstance(stacked_rewards, jax.Array):
+            stacked_rewards = jax_to_torch_tensor(stacked_rewards)
+        if isinstance(stacked_rewards, np.ndarray):
+            stacked_rewards = torch.as_tensor(stacked_rewards)
+
+        terminated = stack([ep.terminated for ep in episodes])
+        truncated = stack([ep.terminated for ep in episodes])
+        assert isinstance(terminated, torch.Tensor | jax.Array | np.ndarray), terminated
+        assert isinstance(truncated, torch.Tensor | jax.Array | np.ndarray), truncated
+        if isinstance(terminated, jax.Array):
+            terminated = jax_to_torch_tensor(terminated)
+        if isinstance(terminated, np.ndarray):
+            terminated = torch.as_tensor(terminated, dtype=torch.bool)
+
+        if isinstance(truncated, jax.Array):
+            truncated = jax_to_torch_tensor(truncated)
+        if isinstance(truncated, np.ndarray):
+            truncated = torch.as_tensor(truncated, dtype=torch.bool)
+
+        return EpisodeBatch(
+            observations=stack([ep.observations for ep in episodes]),
+            actions=stack([ep.actions for ep in episodes]),
+            rewards=stacked_rewards,
+            # TODO: Could perhaps stack the infos so it mimics what the RecordEpisodeStatistics wrapper
+            # does for VectorEnvs.
+            infos=[ep.infos for ep in episodes],
+            terminated=terminated,
+            truncated=truncated,
+            actor_outputs=stack([ep.actor_outputs for ep in episodes]),
+        )
 
 
 class EpisodeInfo(TypedDict):

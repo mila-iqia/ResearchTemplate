@@ -78,7 +78,7 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
     """Compatibility fixes for the the GymWrapper of brax.
 
     1. It subclasses gym.Env, we'd like to be a subclass of gymnasium.Env
-    2. It uses gym.spaces.Box for its obs / act spaces. We use gymnasium.spaces.Box.
+    2. It uses gym.spaces.Box for its obs / act spaces. We use TensorBox.
     3. It follows the good old step API. We want to try to adopt the new gymnasium API.
     """
 
@@ -255,8 +255,8 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
     ) -> tuple[
         torch.Tensor,
         torch.Tensor,
-        torch.BoolTensor,
-        torch.BoolTensor,
+        torch.Tensor,
+        torch.Tensor,
         NestedDict[str, torch.Tensor | None],
     ]:
         assert self._state is not None
@@ -267,8 +267,8 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
         )
         torch_obs = jax_to_torch_tensor(obs)
         torch_reward = jax_to_torch_tensor(reward)
-        torch_terminated: torch.BoolTensor = jax_to_torch_tensor(terminated).bool()  # type: ignore
-        torch_truncated: torch.BoolTensor = jax_to_torch_tensor(truncated).bool()  # type: ignore
+        torch_terminated = jax_to_torch_tensor(terminated).bool()
+        torch_truncated = jax_to_torch_tensor(truncated).bool()
         torch_info = jax_to_torch(info)
         # TODO: Figure out which indices were truncated by inspecting stuff in the EpisodeWrapper.
         # Need to figure out where the first obs of the next episode is, and where the last obs of
