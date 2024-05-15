@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections.abc
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
@@ -11,7 +10,6 @@ from typing import Generic
 import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
 import numpy as np
-import torch
 from torch import Tensor
 from torch.utils.data import IterableDataset
 
@@ -45,8 +43,14 @@ class RlEpisodeDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutpu
         # self.seed = seed
 
         self.num_envs: int | None = (
-            self.env.num_envs if isinstance(self.env, gymnasium.vector.VectorEnv) else None
+            self.env.unwrapped.num_envs
+            if isinstance(self.env.unwrapped, gymnasium.vector.VectorEnv)
+            else None
         )
+        if self.num_envs:
+            logger.info(f"The environment is vectorized (num_envs={self.num_envs})")
+        else:
+            logger.info("The environment is NOT vectorized (num_envs is None)")
         # TODO: Need to call a method on the iterator to reset the envs when the actor is updated.
         self._iterator: (
             VectorEnvEpisodeIterator[ActorOutput] | EnvEpisodeIterator[ActorOutput] | None
@@ -83,10 +87,10 @@ class RlEpisodeDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutpu
     def __iter__(self) -> Iterable[Episode[ActorOutput]]:
         # Reset the env RNG at each epoch start? or only on the first epoch?
         if self._iterator is None:
-            if isinstance(self.env, gymnasium.vector.VectorEnv):
-                # The env might not be a subclass our `VectorEnv` which just has type hint fixes
-                # for `VectorEnv`
+            if isinstance(self.env.unwrapped, gymnasium.vector.VectorEnv):
                 self._iterator = VectorEnvEpisodeIterator(
+                    # The env might not be a subclass our `VectorEnv` which just has type hint fixes
+                    # for `VectorEnv`
                     env=self.env,  # type: ignore
                     actor=self.actor,
                     initial_seed=self.seed,
@@ -157,7 +161,7 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
         # logger.debug(f"Starting episode {self._episode_index}.")
         observations: list[Tensor] = []
         actions: list[Tensor] = []
-        rewards: list[Tensor] = []
+        rewards: list[jax.Array] = []
         infos: list[dict] = []
         actor_outputs: list[ActorOutput] = []
         terminated = False
@@ -179,13 +183,11 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             obs, reward, terminated, truncated, info = self.env.step(action)
             logger.debug(f"step {_episode_step}, %s", terminated)
 
-            if not isinstance(reward, Tensor):  # note: shouldn't really happen.
-                reward = torch.as_tensor(reward)
+            assert isinstance(reward, jax.Array), reward
 
             actions.append(action)
             actor_outputs.append(actor_output)
             rewards.append(reward)
-
             if terminated or truncated:
                 final_observation = obs
                 final_info = info
@@ -452,11 +454,12 @@ def sliced_dict[M: NestedMapping[str, Tensor | None]](
                 result[k] = _sliced(v, index)
             elif v is None:
                 result[k] = None
-            elif (
-                isinstance(v, collections.abc.Sequence | Tensor | np.ndarray)
-                and len(v) == n_slices
-            ):
-                result[k] = v[index]
+            elif isinstance(v, Tensor | np.ndarray | jax.Array):
+                if v.shape and v.shape[0] == n_slices:
+                    result[k] = v[index]
+                else:
+                    # duplicate the value.
+                    result[k] = v
             elif isinstance(v, int | float | bool | str):
                 # Copy the value at every index, for instance if the actor returns a single int for
                 # a batch of observations

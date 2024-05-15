@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Concatenate, TypeGuard, overload
+from collections.abc import Mapping, Sequence
+from typing import Any, overload
 
+import jax
+import numpy as np
 import torch
 from torch import Tensor
 
@@ -12,56 +14,79 @@ from .rl_types import ActorOutput, Episode
 
 
 @overload
-def stack(values: list[Tensor], **kwargs) -> Tensor: ...
+def stack(values: list[Tensor]) -> Tensor: ...
 
 
 @overload
-def stack(values: list[ActorOutput], **kwargs) -> ActorOutput: ...
+def stack(values: list[jax.Array]) -> jax.Array: ...
+
+
+@overload
+def stack(values: list[np.ndarray]) -> np.ndarray: ...
+
+
+@overload
+def stack(values: list[dict]) -> dict: ...
+
+
+@overload
+def stack(values: list[int] | list[float] | list[bool]) -> np.ndarray: ...
 
 
 def stack(
-    values: list[float] | list[int] | list[Tensor] | list[ActorOutput], **kwargs
-) -> Tensor | ActorOutput:
-    """Stack lists of tensors into a Tensor or dicts of tensors into a dict of stacked tensors."""
-    if isinstance(values[0], dict):
+    values: list[Tensor]
+    | list[jax.Array]
+    | list[np.ndarray]
+    | list[dict]
+    | list[int]
+    | list[float]
+    | list[bool],
+) -> Tensor | jax.Array | np.ndarray | dict:
+    """Generic function for stacking lists of values into tensors or arrays.
+
+    Also supports stacking dictionaries. This avoids creating new tensors, and keeps the return
+    types as close to the input types as possible, to avoid unintentionally moving data between
+    devices.
+    """
+    if is_sequence_of(values, dict):
         # NOTE: weird bug in the type checker? Doesn't understand that `values` is a list[Tensor].
-        return stack_dicts(values, **kwargs)  # type: ignore
+        return stack_dicts(values)
 
-    if isinstance(values[0], int | float | bool):
-        assert all(isinstance(v, type(values[0])) for v in values)
-        # idea: return a np.ndarray to emphasize that we won't move stuff between devices.
-        return torch.as_tensor(values)
+    if is_sequence_of(values, jax.Array):
+        return jax.numpy.stack(values)
 
-    assert isinstance(values[0], Tensor), values[0]
-    if contains_only_tensors(values) and any(
-        isinstance(v, Tensor) and (v.is_nested or v.shape != values[0].shape) for v in values
-    ):
-        return torch.nested.as_nested_tensor(values)
-    return torch.stack(values, **kwargs)  # type: ignore
+    if is_sequence_of(values, np.ndarray):
+        return np.stack(values)
+
+    # Stack a list of tensors with different shapes in a single dimension:
+    if is_sequence_of(values, Tensor):
+        if not isinstance(values, list):
+            values = list(values)
+        if any(v.is_nested or v.shape != values[0].shape for v in values):
+            return torch.nested.as_nested_tensor(values)
+        return torch.stack(values)
+
+    if is_sequence_of(values, (int, float, bool)):
+        # idea: return a np.ndarray to emphasize that we won't move stuff between devices unless
+        # necessary. For now though we return a CPU tensor.
+        return np.array(values)
+    raise NotImplementedError(f"Don't know how to stack these values: {values}")
 
 
-def contains_only_tensors(values: list[Any]) -> TypeGuard[list[Tensor]]:
-    return all(isinstance(v, Tensor) for v in values)
-
-
-def stack_dicts[**P, T: Tensor, V](
-    values: Sequence[Mapping[str, T]],
-    stack_fn: Callable[Concatenate[list[T], P], V] = stack,
-    *args: P.args,
-    **kwargs: P.kwargs,
-) -> Mapping[str, V]:
-    values = list(values)
+def stack_dicts[M: Mapping](values: Sequence[M]) -> M:
+    if not isinstance(values, list):
+        values = list(values)
     all_keys = set().union(*[v.keys() for v in values])
-    return_type: type[Mapping[str, V]] = type(values[0])  # type: ignore
+    return_type = type(values[0])
 
     items = {}
     for key in all_keys:
         item_values = [v[key] for v in values]
         if isinstance(item_values[0], dict):
             assert is_sequence_of(item_values, dict)
-            items[key] = stack_dicts(item_values, stack_fn, *args, **kwargs)
+            items[key] = stack_dicts(item_values)
         else:
-            items[key] = stack_fn(item_values, *args, **kwargs)
+            items[key] = stack(item_values)
     result = return_type(**items)
     return result
 

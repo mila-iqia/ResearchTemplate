@@ -1,21 +1,27 @@
+from __future__ import annotations
+
 import collections.abc
 import dataclasses
 import functools
+import typing
 from collections.abc import Callable
 from typing import Any, Concatenate
 
 import chex
 import gymnasium
 import jax
+import jax.numpy as jnp
 import torch
 from jax import dlpack as jax_dlpack
 from torch import Tensor
 from torch.utils import dlpack as torch_dlpack
 
 from project.datamodules.rl.rl_types import VectorEnv
-from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
 from project.utils.types import NestedDict, NestedMapping
 from project.utils.types.protocols import Dataclass
+
+if typing.TYPE_CHECKING:
+    from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
 
 
 @functools.singledispatch
@@ -141,28 +147,30 @@ class JaxToTorchMixin:
 
         # IDEA: Keep the rewards as jax arrays, since most envs / wrappers of Gymnasium assume a jax array.
         assert isinstance(reward, jax.Array)
+        assert isinstance(terminated, jax.Array)
+        assert isinstance(truncated, jax.Array)
         # torch_reward = jax_to_torch_tensor(reward)
-        device = self.observation_space.device
-        if isinstance(terminated, bool):
-            torch_terminated = torch.tensor(terminated, dtype=torch.bool, device=device)
-        else:
-            assert isinstance(terminated, jax.Array)
-            torch_terminated = jax_to_torch_tensor(terminated)
+        # device = self.observation_space.device
+        # if isinstance(terminated, bool):
+        #     torch_terminated = torch.tensor(terminated, dtype=torch.bool, device=device)
+        # else:
+        #     assert isinstance(terminated, jax.Array)
+        #     torch_terminated = jax_to_torch_tensor(terminated)
 
-        if isinstance(truncated, bool):
-            torch_truncated = torch.tensor(truncated, dtype=torch.bool, device=device)
-        else:
-            assert isinstance(truncated, jax.Array)
-            torch_truncated = jax_to_torch_tensor(truncated)
+        # if isinstance(truncated, bool):
+        #     torch_truncated = torch.tensor(truncated, dtype=torch.bool, device=device)
+        # else:
+        #     assert isinstance(truncated, jax.Array)
+        #     torch_truncated = jax_to_torch_tensor(truncated)
 
         # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
-        if torch_terminated.dtype != torch.bool:
-            torch_terminated = torch_terminated.bool()
-        if torch_truncated.dtype != torch.bool:
-            torch_truncated = torch_truncated.bool()
+        if terminated.dtype != jnp.bool:
+            terminated = terminated.astype(jnp.bool)
+        if truncated.dtype != jnp.bool:
+            truncated = truncated.astype(jnp.bool)
 
         torch_info = jax_to_torch(info)
-        return torch_obs, reward, torch_terminated, torch_truncated, torch_info  # type: ignore
+        return torch_obs, reward, terminated, truncated, torch_info  # type: ignore
 
     def reset(
         self,

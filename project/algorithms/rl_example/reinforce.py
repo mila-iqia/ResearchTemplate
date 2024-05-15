@@ -20,8 +20,8 @@ from torch.distributions import Categorical, Normal
 from project.algorithms.bases.algorithm import Algorithm
 from project.datamodules.rl.rl_datamodule import RlDataModule
 from project.datamodules.rl.rl_types import EpisodeBatch
-from project.datamodules.rl.wrappers.episode_statistics import RecordEpisodeStatistics
 from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
+from project.datamodules.rl.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
     TensorDiscrete,
