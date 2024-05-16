@@ -81,7 +81,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str | None) -> N
     gpus_per_node = gpus // nodes
     mem_per_gpu_gb = max(1, math.floor(mem_per_node_gb / gpus_per_node))
 
-    if gpus > 1 and "." in gpu_type:
+    if gpus > 1 and gpu_type and "." in gpu_type:
         # NOTE: Is it possible that this would actually work?
         pytest.skip("Not launching multi-gpu jobs using MIG.")
 
