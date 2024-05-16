@@ -174,25 +174,28 @@ class EnvTests:
             action_from_space
         )
         _check_obs(obs_from_step)
-        assert (
-            isinstance(reward, torch.Tensor)
-            and reward.device == device
-            and reward.dtype == torch.float32
-            and reward.shape == (num_envs,)
-        )
 
-        assert (
-            isinstance(terminated, torch.Tensor)
-            and terminated.device == device
-            and terminated.dtype == torch.bool
-            and terminated.shape == (num_envs,)
-        )
-        assert (
-            isinstance(truncated, torch.Tensor)
-            and truncated.device == device
-            and truncated.dtype == torch.bool
-            and truncated.shape == (num_envs,)
-        )
+        assert isinstance(reward, torch.Tensor | jax.Array), reward
+        if isinstance(reward, jax.Array):
+            reward = jax_to_torch_tensor(reward)
+        assert reward.shape == (num_envs,)
+        assert reward.device == device
+        assert reward.dtype == torch.float32
+
+        assert isinstance(terminated, torch.Tensor | jax.Array), terminated
+        assert terminated.shape == (num_envs,)
+        if isinstance(terminated, jax.Array):
+            terminated = jax_to_torch_tensor(terminated)
+        assert terminated.device == device
+        assert terminated.dtype == torch.bool
+
+        assert isinstance(truncated, torch.Tensor | jax.Array), truncated
+        assert truncated.shape == (num_envs,)
+        if isinstance(truncated, jax.Array):
+            truncated = jax_to_torch_tensor(truncated)
+        assert truncated.device == device
+        assert truncated.dtype == torch.bool
+
         _check_dict(info_from_step)
 
         tensor_regression.check(
@@ -217,7 +220,7 @@ class EnvTests:
         env.observation_space.seed(seed)
         env.action_space.seed(seed)
         obs, infos = env.reset()
-        print(obs, infos)
+        # print(obs, infos)
         episode_step = 0
         max_episode_steps = 2000
         while "final_observation" not in infos:
@@ -225,7 +228,7 @@ class EnvTests:
             episode_step += 1
             assert episode_step < max_episode_steps
 
-            print(obs, reward, terminated, truncated, infos)
+            # print(obs, reward, terminated, truncated, infos)
             # Ah HA! Every step gives these extra values in the info dict, not just the last one!
             keys_with_mask = sorted(k for k in infos.keys() if f"_{k}" in infos)
             mask_keys = [f"_{k}" for k in keys_with_mask]
@@ -250,11 +253,15 @@ class EnvTests:
                     and mask.dtype == jax.numpy.bool
                     and mask.shape == (n,)
                 ), (mask, str(mask.device()))
-                assert isinstance(info, np.ndarray | jax.Array), info
+                assert isinstance(info, np.ndarray | jax.Array | list), info
                 for mask_i, info_i in zip(mask, info):
                     if mask_i:
                         if key == "final_observation":
-                            assert info_i in env.single_observation_space
+                            assert info_i in env.single_observation_space, (
+                                info_i,
+                                type(info_i),
+                                env.single_observation_space,
+                            )
                         else:
                             assert info_i is not None
                     else:
