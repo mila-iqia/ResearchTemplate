@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Generic, NotRequired, Self, TypedDict
+from typing import Any, Generic, NotRequired, Self, TypedDict
 
 import gym
 import gym.spaces
@@ -16,7 +16,6 @@ from numpy.typing import NDArray
 from torch import Tensor
 from typing_extensions import TypeVar
 
-from project.datamodules.rl.episode_dataset import sliced_dict
 from project.utils.types import NestedMapping
 
 type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
@@ -170,6 +169,8 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     def as_transitions(self):
         """Convert the episode into a sequence of `Transition`s."""
+        from project.datamodules.rl.episode_dataset import sliced_dict
+
         sliced_actor_outputs = list(sliced_dict(self.actor_outputs, n_slices=self.length))
         return tuple(
             MiddleTransition(
@@ -202,7 +203,7 @@ class Episode(MappingMixin, Generic[ActorOutput]):
         return full_transitions + [dataclasses.replace(last_full_transition, is_terminal=True)]
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class Transition[ActorOutput]:
     observation: Tensor
     info: dict
@@ -212,20 +213,20 @@ class Transition[ActorOutput]:
     is_terminal: bool
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class MiddleTransition(Transition[ActorOutput]):
     next_observation: Tensor
     next_info: dict
     is_terminal: bool = False
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class FinalTransition(Transition[ActorOutput]):
     terminated: bool | torch.BoolTensor | jax.Array
     truncated: bool | torch.BoolTensor | jax.Array
     final_observation: Tensor | None = None
     final_info: dict | None = None
-    is_terminal: Final[bool] = True
+    is_terminal: bool = True
 
 
 type Tree[K, V] = Mapping[K, V | list[V] | Tree[K, V] | list[Tree[K, V]]]
