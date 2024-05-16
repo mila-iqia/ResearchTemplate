@@ -325,7 +325,7 @@ def get_test_source_and_temp_file_paths(
 
 
 @functools.singledispatch
-def get_simple_attributes(value: Any):
+def get_simple_attributes(value: Any) -> Any:
     raise NotImplementedError(
         f"get_simple_attributes doesn't have a registered handler for values of type {type(value)}"
     )
@@ -334,6 +334,12 @@ def get_simple_attributes(value: Any):
 @get_simple_attributes.register(type(None))
 def _get_none_attributes(value: None):
     return {"type": "None"}
+
+
+@get_simple_attributes.register(bool)
+@get_simple_attributes.register(int | float | str)
+def _get_bool_attributes(value: Any):
+    return {"value": value, "type": type(value).__name__}
 
 
 @get_simple_attributes.register(list)
@@ -420,6 +426,10 @@ def _catch_fails_with_files_didnt_exist():
         yield
     except Failed as failure_exc:
         if failure_exc.msg and "File not found in data directory, created" in failure_exc.msg:
-            raise FilesDidntExist(failure_exc.msg, pytrace=failure_exc.pytrace) from failure_exc
+            raise FilesDidntExist(
+                failure_exc.msg
+                + "\n(Use the --gen-missing flag to create any missing regression files.)",
+                pytrace=failure_exc.pytrace,
+            ) from failure_exc
         else:
             raise

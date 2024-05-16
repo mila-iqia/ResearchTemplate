@@ -88,21 +88,31 @@ class EnvTests:
             action_from_space
         )
         _check_observation(observation_from_step)
-        assert (
-            isinstance(reward, torch.Tensor)
-            and reward.device == device
-            and reward.dtype == torch.float32
-        )
-        assert (
-            isinstance(terminated, torch.Tensor)
-            and terminated.device == device
-            and terminated.dtype == torch.bool
-        )
-        assert (
-            isinstance(truncated, torch.Tensor)
-            and truncated.device == device
-            and truncated.dtype == torch.bool
-        )
+
+        def _check_tensor_or_jax_array(
+            v: Any, device: torch.device, dtype: torch.dtype
+        ) -> torch.Tensor:
+            assert isinstance(v, torch.Tensor | jax.Array), v
+            if isinstance(v, jax.Array):
+                v = jax_to_torch_tensor(v)
+            assert v.device == device
+            assert v.dtype == dtype
+            return v
+
+        reward = _check_tensor_or_jax_array(reward, device, torch.float32)
+
+        def _check_bool_or_tensor_or_jax_array(v: Any, device: torch.device, dtype: torch.dtype):
+            assert isinstance(v, torch.Tensor | jax.Array | bool), v
+            if isinstance(v, jax.Array):
+                v = jax_to_torch_tensor(v)
+            if isinstance(v, torch.Tensor):
+                assert v.device == device
+                assert v.dtype == dtype
+            return v
+
+        terminated = _check_bool_or_tensor_or_jax_array(terminated, device, torch.bool)
+        truncated = _check_bool_or_tensor_or_jax_array(truncated, device, torch.bool)
+
         _check_dict(info_from_step)
 
         tensor_regression.check(
@@ -234,8 +244,13 @@ class EnvTests:
                 assert mask_key == f"_{key}"
                 mask = infos[mask_key]
                 info = infos[key]
-                assert isinstance(mask, np.ndarray) and mask.dtype == bool and mask.shape == (n,)
-                assert isinstance(info, np.ndarray) and info.dtype == object and info.shape == (n,)
+                assert (
+                    isinstance(mask, jax.Array)
+                    and str(mask.devices().pop()) == "cuda:0"
+                    and mask.dtype == jax.numpy.bool
+                    and mask.shape == (n,)
+                ), (mask, str(mask.device()))
+                assert isinstance(info, np.ndarray | jax.Array), info
                 for mask_i, info_i in zip(mask, info):
                     if mask_i:
                         if key == "final_observation":
