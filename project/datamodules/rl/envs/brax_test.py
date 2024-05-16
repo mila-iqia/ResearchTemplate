@@ -12,12 +12,13 @@ envs = [
 ]
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.parametrize("env_id", envs, indirect=True)
 class TestBraxEnv(EnvTests):
     """Tests for the wrapped Brax environments."""
 
     @pytest.mark.xfail(
-        reason="It seems almost impossible to get the final observation and info from the brax envs."
+        reason="TODO: seems hard, but we would need to get the final observation and info from the brax envs."
     )
     def test_vectorenv_info_on_episode_end(self, vectorenv: BraxToTorchVectorEnv, seed: int):
         super().test_vectorenv_info_on_episode_end(vectorenv=vectorenv, seed=seed)

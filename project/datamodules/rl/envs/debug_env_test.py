@@ -1,3 +1,4 @@
+import jax
 import numpy as np
 import pytest
 import torch
@@ -134,7 +135,7 @@ def test_action_affects_vectorenv_state(seed: int, device: torch.device):
     def _to_list(v):
         if isinstance(v, list):
             return list(map(_to_list, v))
-        if isinstance(v, np.ndarray):
+        if isinstance(v, np.ndarray | jax.Array):
             return v.tolist()
         if isinstance(v, torch.Tensor):
             return v.cpu().tolist()

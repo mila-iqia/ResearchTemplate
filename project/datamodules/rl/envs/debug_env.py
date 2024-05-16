@@ -317,12 +317,10 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
                 # NOTE: We're not actually able to use a np.ndarray here to perfectly match the
                 # VectorEnv, because it would try to convert the cuda tensors to numpy arrays.
                 # We'll just keep this as a list for now.
-                final_observation=jax.numpy.asarray(
-                    [
-                        torch_to_jax_tensor(old_observation_i) if env_done[i] else None
-                        for i, old_observation_i in enumerate(old_observation)
-                    ]
-                ),
+                final_observation=[
+                    old_observation_i if env_done[i] else None
+                    for i, old_observation_i in enumerate(old_observation)
+                ],
                 # dtype=object,
                 # copy=False,
                 # Todo: Look at the `like` argument of `np.asarray`, could be very interesting
