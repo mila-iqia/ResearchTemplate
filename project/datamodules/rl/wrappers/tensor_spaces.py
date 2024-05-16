@@ -137,6 +137,8 @@ class TensorBox(TensorSpace):
 
     def contains(self, x: Any) -> bool:
         # BUG: doesn't work with `nan` values for low or high.
+        if isinstance(x, jax.Array):
+            x = jax_to_torch_tensor(x)
         return bool(
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
@@ -270,6 +272,8 @@ class TensorDiscrete(TensorSpace):
         )
 
     def contains(self, x: Any) -> bool:
+        if isinstance(x, jax.Array):
+            x = jax_to_torch_tensor(x)
         return (
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
@@ -381,6 +385,8 @@ class TensorMultiDiscrete(TensorSpace):
         """Return boolean specifying if x is a valid member of this space."""
         # if nvec is uint32 and space dtype is uint32, then 0 <= x < self.nvec guarantees that x
         # is within correct bounds for space dtype (even though x does not have to be unsigned)
+        if isinstance(x, jax.Array):
+            x = jax_to_torch_tensor(x)
         if not isinstance(x, torch.Tensor):
             return False
         if x.device != self.device:
