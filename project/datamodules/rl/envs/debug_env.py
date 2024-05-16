@@ -3,10 +3,12 @@ from typing import Any, SupportsFloat, TypedDict
 
 import gymnasium
 import gymnasium.envs.registration
+import jax
 import numpy as np
 import torch
 
 from project.datamodules.rl.types import VectorEnv
+from project.datamodules.rl.wrappers.jax_torch_interop import torch_to_jax_tensor
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
     TensorDiscrete,
@@ -169,7 +171,7 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
         )
 
 
-type bool_mask = np.ndarray[tuple[int], np.dtype[np.bool_]]
+type bool_mask = np.ndarray[tuple[int], np.dtype[np.bool_]] | jax.Array
 
 
 class DebugVectorEnvInfo(TypedDict):
@@ -180,10 +182,10 @@ class DebugVectorEnvInfo(TypedDict):
 
 
 class DebugVectorEnvInfoAtFinalStep(DebugVectorEnvInfo):
-    final_observation: np.ndarray | Sequence[torch.Tensor | None]
-    _final_observation: bool_mask | torch.Tensor
+    final_observation: np.ndarray | jax.Array | Sequence[torch.Tensor | None]
+    _final_observation: bool_mask
     final_info: np.ndarray | Sequence[DebugEnvInfo | None]
-    _final_info: bool_mask | torch.Tensor
+    _final_info: bool_mask
 
 
 class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
@@ -270,15 +272,18 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
         torch.Tensor,
         DebugVectorEnvInfo | DebugVectorEnvInfoAtFinalStep,
     ]:
-        obs, reward, terminated, truncated, info = super()._step(action)
+        obs, reward, terminated, truncated, _info = super()._step(action)
         env_done = terminated | truncated
+
+        # Need to store the mask as a numpy array to match gymnasium.vector.SyncVectorEnv
+        env_done_mask: bool_mask = torch_to_jax_tensor(env_done)
 
         info: DebugVectorEnvInfo | DebugVectorEnvInfoAtFinalStep
 
         if not env_done.any():
             info = DebugVectorEnvInfo(
-                episode_length=info["episode_length"],
-                target=info["target"],
+                episode_length=_info["episode_length"],
+                target=_info["target"],
                 # _episode_length=mask,
                 # _target=mask,
             )
@@ -312,16 +317,18 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
                 # NOTE: We're not actually able to use a np.ndarray here to perfectly match the
                 # VectorEnv, because it would try to convert the cuda tensors to numpy arrays.
                 # We'll just keep this as a list for now.
-                final_observation=[
-                    old_observation_i if env_done[i] else None
-                    for i, old_observation_i in enumerate(old_observation)
-                ],
+                final_observation=jax.numpy.asarray(
+                    [
+                        torch_to_jax_tensor(old_observation_i) if env_done[i] else None
+                        for i, old_observation_i in enumerate(old_observation)
+                    ]
+                ),
                 # dtype=object,
                 # copy=False,
                 # Todo: Look at the `like` argument of `np.asarray`, could be very interesting
                 # to start using it in gym so the ndarrays created can actually be jax Arrays
                 # ),
-                _final_observation=env_done,
+                _final_observation=env_done_mask,
                 final_info=np.array(
                     [
                         {k: v[i] for k, v in old_info.items()} if env_done_i else None
@@ -329,6 +336,6 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
                     ],
                     dtype=object,
                 ),
-                _final_info=env_done,
+                _final_info=env_done_mask,
             )
         return obs, reward, terminated, truncated, info
