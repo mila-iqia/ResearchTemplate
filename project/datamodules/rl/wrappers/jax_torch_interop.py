@@ -194,16 +194,29 @@ def get_torch_device_from_jax_array(array: jax.Array) -> torch.device:
     jax_device = array.devices()
     assert len(jax_device) == 1
     jax_device_str = str(jax_device.pop())
-    return get_torch_device_from_jax_device(jax_device_str)
+    return jax_to_torch_device(jax_device_str)
 
 
-def get_torch_device_from_jax_device(jax_device: str | jax.Device) -> torch.device:
+def jax_to_torch_device(jax_device: str | jax.Device) -> torch.device:
     jax_device = str(jax_device)
     if jax_device.startswith("cuda"):
         device_type, _, index = jax_device.partition(":")
         assert index.isdigit()
         return torch.device(device_type, int(index))
     return torch.device("cpu")
+
+
+def torch_to_jax_device(torch_device: torch.device) -> jax.Device:
+    devices = jax.devices(backend=get_backend_from_torch_device(torch_device))
+    if torch_device.type == "cuda":
+        return devices[torch_device.index]
+    else:
+        torch_device.index
+        return devices[0]
+
+
+jax_to_torch.register(jax.Device, jax_to_torch_device)
+torch_to_jax.register(torch.device, torch_to_jax_device)
 
 
 def get_backend_from_torch_device(device: torch.device) -> str:

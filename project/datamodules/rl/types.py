@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, ClassVar, Generic, NotRequired, Self, TypedDict
+from typing import Any, Final, Generic, NotRequired, Self, TypedDict
 
 import gym
 import gym.spaces
@@ -16,6 +16,7 @@ from numpy.typing import NDArray
 from torch import Tensor
 from typing_extensions import TypeVar
 
+from project.datamodules.rl.episode_dataset import sliced_dict
 from project.utils.types import NestedMapping
 
 type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
@@ -169,11 +170,13 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     def as_transitions(self):
         """Convert the episode into a sequence of `Transition`s."""
+        sliced_actor_outputs = list(sliced_dict(self.actor_outputs, n_slices=self.length))
         return tuple(
             MiddleTransition(
                 observation=self.observations[i],
                 info=self.infos[i],
                 action=self.actions[i],
+                actor_output=sliced_actor_outputs[i],
                 reward=self.rewards[i],
                 next_observation=self.observations[i + 1],
                 next_info=self.infos[i + 1],
@@ -184,6 +187,7 @@ class Episode(MappingMixin, Generic[ActorOutput]):
                 observation=self.observations[-1],
                 info=self.infos[-1],
                 action=self.actions[-1],
+                actor_output=sliced_actor_outputs[-1],
                 reward=self.rewards[-1],
                 terminated=self.terminated,
                 truncated=self.truncated,
@@ -192,29 +196,54 @@ class Episode(MappingMixin, Generic[ActorOutput]):
             ),
         )
 
+    def full_transitions(self) -> list[MiddleTransition[ActorOutput]]:
+        """Convert the episode into a sequence of `Transition`s where every transition has."""
+        *full_transitions, last_full_transition, _final_transition = self.as_transitions()
+        return full_transitions + [dataclasses.replace(last_full_transition, is_terminal=True)]
+
 
 @dataclasses.dataclass(frozen=True)
-class Transition:
+class Transition[ActorOutput]:
     observation: Tensor
     info: dict
     action: Tensor
+    actor_output: ActorOutput
     reward: Tensor | jax.Array
+    is_terminal: bool
 
 
 @dataclasses.dataclass(frozen=True)
-class MiddleTransition(Transition):
+class MiddleTransition(Transition[ActorOutput]):
     next_observation: Tensor
     next_info: dict
-    is_terminal: ClassVar[bool] = False
+    is_terminal: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
-class FinalTransition(Transition):
+class FinalTransition(Transition[ActorOutput]):
     terminated: bool | torch.BoolTensor | jax.Array
     truncated: bool | torch.BoolTensor | jax.Array
     final_observation: Tensor | None = None
     final_info: dict | None = None
-    is_terminal: ClassVar[bool] = True
+    is_terminal: Final[bool] = True
+
+
+type Tree[K, V] = Mapping[K, V | list[V] | Tree[K, V] | list[Tree[K, V]]]
+type DictTree[K, V] = dict[K, V | list[V] | DictTree[K, V] | list[DictTree[K, V]]]
+
+
+def treemap[K, I, O](
+    tree: Tree[K, I],
+    fn: Callable[[I], O],
+) -> DictTree[K, O]:
+    def _map_fn(v):
+        if isinstance(v, list | tuple):
+            return [_map_fn(v_i) for v_i in v]
+        if isinstance(v, Mapping):
+            return {k: _map_fn(v_i) for k, v_i in v.items()}
+        return fn(v)
+
+    return {k: _map_fn(v) for k, v in tree.items()}
 
 
 @dataclass(frozen=True)
@@ -235,7 +264,7 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     actions: Tensor  # [B, <episode_lengths>, *action_shape]
     rewards: Tensor  # [B, <episode_lengths>]
 
-    infos: list[list[EpisodeInfo]]  # [B, <episode_lengths>]
+    infos: list[list[dict]]  # [B, <episode_lengths>]
     """List of the `info` dictionaries in each episode."""
 
     truncated: Tensor  # [B]
@@ -252,16 +281,24 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     """
 
     def to(self, device: torch.device) -> Self:
-        def _move(v: Any, device: torch.device):
-            if isinstance(v, Tensor):
+        # todo: also move jax arrays to the given device.
+        # jax_device = "cuda" if device.type != "cuda" else "gpu"
+
+        def _move(v):
+            if isinstance(v, torch.Tensor):
                 return v.to(device=device)
-            if isinstance(v, list):
-                return [_move(v_i, device) for v_i in v]
-            if isinstance(v, dict):
-                return {k: _move(v_i, device) for k, v_i in v.items()}
             return v
 
-        return type(self)(**{k: _move(v, device) for k, v in self.items()})
+        moved_values = treemap(self, _move)
+        return type(self)(**moved_values)
+
+    def detach(self) -> Self:
+        def _detach(v):
+            if isinstance(v, torch.Tensor):
+                return v.detach()
+            return v
+
+        return type(self)(**treemap(self, _detach))
 
     @classmethod
     def from_episodes(cls, episodes: Sequence[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:

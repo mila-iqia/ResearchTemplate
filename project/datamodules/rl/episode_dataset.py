@@ -86,33 +86,32 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
         if isinstance(self._iterator, VectorEnvEpisodeIterator):
             self._iterator.reset_envs()
 
-    def __iter__(self) -> Iterable[Episode[ActorOutput]]:
+    def _get_iterator(self):
+        if isinstance(self.env.unwrapped, gymnasium.vector.VectorEnv):
+            return VectorEnvEpisodeIterator(
+                # The env might not be a subclass our `VectorEnv` which just has type hint fixes
+                # for `VectorEnv`
+                env=self.env,  # type: ignore
+                actor=self.actor,
+                initial_seed=self.seed,
+                max_episodes=self.episodes_per_epoch,
+                max_steps=self.steps_per_epoch,
+            )
+        else:
+            assert self.seed is None or isinstance(self.seed, int)
+            return EnvEpisodeIterator(
+                env=self.env,
+                actor=self.actor,
+                initial_seed=self.seed,
+                max_episodes=self.episodes_per_epoch,
+                max_steps=self.steps_per_epoch,
+            )
+
+    def __iter__(self) -> Iterator[Episode[ActorOutput]]:
         # Reset the env RNG at each epoch start? or only on the first epoch?
         if self._iterator is None:
-            if isinstance(self.env.unwrapped, gymnasium.vector.VectorEnv):
-                self._iterator = VectorEnvEpisodeIterator(
-                    # The env might not be a subclass our `VectorEnv` which just has type hint fixes
-                    # for `VectorEnv`
-                    env=self.env,  # type: ignore
-                    actor=self.actor,
-                    initial_seed=self.seed,
-                    max_episodes=self.episodes_per_epoch,
-                    max_steps=self.steps_per_epoch,
-                )
-            else:
-                assert self.seed is None or isinstance(self.seed, int)
-                self._iterator = EnvEpisodeIterator(
-                    env=self.env,
-                    actor=self.actor,
-                    initial_seed=self.seed,
-                    max_episodes=self.episodes_per_epoch,
-                    max_steps=self.steps_per_epoch,
-                )
-        yield from self._iterator
-
-    def __len__(self) -> int:
-        assert self.episodes_per_epoch is not None
-        return self.episodes_per_epoch
+            self._iterator = self._get_iterator()
+        return self._iterator
 
 
 @dataclasses.dataclass
