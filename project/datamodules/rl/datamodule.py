@@ -55,13 +55,16 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
         self.env = dataset
         self._iterator: Iterator[EpisodeBatch[ActorOutput]] | None = None
 
-    def __next__(self) -> EpisodeBatch[ActorOutput]:
-        if self._iterator is None:
-            self._iterator = super().__iter__()
-        return next(self._iterator)
+    # def __next__(self) -> EpisodeBatch[ActorOutput]:
+    #     if self._iterator is None:
+    #         self._iterator = super().__iter__()
+    #     return next(self._iterator)
 
     def __iter__(self):
-        return self
+        if self._iterator is None:
+            self._iterator = super().__iter__()
+        yield from self._iterator
+        self._iterator = None
 
     def on_actor_update(self) -> None:
         self.env.on_actor_update()

@@ -3,11 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Generic
 
 from lightning import Callback, LightningModule, Trainer
 from torch import Tensor, nn
-from typing_extensions import TypeVar
+from typing_extensions import Generic, TypeVar  # noqa
 
 from project.datamodules.rl.types import EpisodeBatch
 from project.utils.types import NestedMapping, PhaseStr, StepOutputDict

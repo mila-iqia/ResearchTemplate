@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -17,8 +17,10 @@ from torch import Tensor
 from torch.distributions import Categorical, Normal
 
 from project.algorithms.bases.algorithm import Algorithm
+from project.datamodules.rl import episode_dataset
 from project.datamodules.rl.datamodule import RlDataModule
-from project.datamodules.rl.types import EpisodeBatch
+from project.datamodules.rl.envs import make_torch_vectorenv
+from project.datamodules.rl.types import Actor, EpisodeBatch, Transition
 from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
 from project.datamodules.rl.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from project.datamodules.rl.wrappers.tensor_spaces import (
@@ -28,7 +30,8 @@ from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorSpace,
 )
 from project.networks.fcnet import FcNet
-from project.utils.types import PhaseStr, StepOutputDict
+from project.utils.device import default_device
+from project.utils.types import NestedMapping, PhaseStr, StepOutputDict
 from project.utils.types.protocols import Module
 
 logger = get_logger(__name__)
@@ -52,9 +55,7 @@ class ReinforceActorOutput(TypedDict):
     """The log-probability of the selected action at that step."""
 
 
-class Reinforce[ModuleType: Module[[Tensor], Tensor]](
-    Algorithm[EpisodeBatch, StepOutputDict, ModuleType]
-):
+class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]]):
     """Example of a Reinforcement Learning algorithm: Reinforce.
 
     IDEA: Make this algorithm applicable in Supervised Learning by wrapping the
@@ -69,7 +70,7 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
     def __init__(
         self,
         datamodule: RlDataModule,
-        network: ModuleType,
+        network: Module[[Tensor], Tensor],
         hp: Reinforce.HParams | None = None,
     ):
         """
@@ -80,7 +81,6 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
         - gamma: Discount rate.
         """
         super().__init__(datamodule=datamodule, network=network, hp=hp)
-        self.network: ModuleType
         self.hp: Reinforce.HParams
         self.datamodule: RlDataModule
 
@@ -92,14 +92,13 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
         observations: Tensor,
         action_space: TensorBox | TensorDiscrete | TensorMultiDiscrete,
     ) -> tuple[Tensor, ReinforceActorOutput]:
-        # NOTE: Would be nice to be able to do this:
-        # assert observations.shape == self.network.input_space.shape
-
+        """Performs a forward pass, returning an action and some additional outputs used for
+        training later."""
         network_outputs = self.network(observations.to(torch.float32))
 
         if not observations.is_nested:
             # Either a single observation or a batch of observations.
-            action_distribution = self.get_action_distribution(network_outputs, action_space)
+            action_distribution = get_action_distribution(network_outputs, action_space)
             actions = action_distribution.sample()
             # (normalized) log probability of the selected actions (treated as independent).
             action_log_probabilities = action_distribution.log_prob(actions).sum(-1)
@@ -111,18 +110,18 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
             # list of episodes where episodes have different lengths) and we're returning the
             # actions that would have been taken for each observation.
             distributions = [
-                self.get_action_distribution(outputs_i, action_space)
+                get_action_distribution(outputs_i, action_space)
                 for outputs_i in network_outputs.unbind()
             ]
             actions = torch.nested.as_nested_tensor([dist.sample() for dist in distributions])
             action_log_probabilities = torch.nested.as_nested_tensor(
                 [dist.log_prob(a).sum(0) for dist, a in zip(distributions, actions.unbind())]
             )
-        actor_outputs_to_save_in_episode: ReinforceActorOutput = {
+        actor_outputs: ReinforceActorOutput = {
             "logits": network_outputs,
             "action_log_probability": action_log_probabilities,
         }
-        return actions, actor_outputs_to_save_in_episode
+        return actions, actor_outputs
 
     def training_step(self, batch: EpisodeBatch) -> StepOutputDict:
         return self.shared_step(batch, phase="train")
@@ -251,42 +250,40 @@ class Reinforce[ModuleType: Module[[Tensor], Tensor]](
             log_dir = Path(self.trainer.log_dir or log_dir)
         return log_dir
 
-    def get_action_distribution(
-        self,
-        network_outputs: Tensor,
-        action_space: TensorDiscrete | TensorBox | TensorMultiDiscrete,
-    ) -> Categorical | Normal:
-        """Creates an action distribution based on the network outputs."""
-        # TODO: Once we can work with batched environments, should `action_space` here always be
-        # the single action space?
-        assert isinstance(action_space, TensorSpace), action_space
 
-        if isinstance(action_space, TensorDiscrete | TensorMultiDiscrete):
-            return Categorical(logits=network_outputs)
+def get_action_distribution(
+    network_outputs: Tensor,
+    action_space: TensorDiscrete | TensorBox | TensorMultiDiscrete,
+) -> Categorical | Normal:
+    """Creates an action distribution based on the network outputs."""
+    # TODO: Once we can work with batched environments, should `action_space` here always be
+    # the single action space?
+    assert isinstance(action_space, TensorSpace), action_space
 
-        # NOTE: The environment has a wrapper applied to it that normalizes the continuous action
-        # space to be in the [-1, 1] range, and the actions outside that range will be clipped by
-        # that wrapper.
-        assert isinstance(action_space, TensorBox)
-        assert (action_space.low == -1).all() and (action_space.high == 1).all(), action_space
-        d = action_space.shape[-1]
-        assert network_outputs.size(-1) == d * 2
+    if isinstance(action_space, TensorDiscrete | TensorMultiDiscrete):
+        return Categorical(logits=network_outputs)
 
-        if network_outputs.is_nested:
-            if not all(
-                out_i.shape == network_outputs[0].shape for out_i in network_outputs.unbind()
-            ):
-                raise NotImplementedError(
-                    "Can't pass a nested tensor to torch.distributions.Normal yet. "
-                    "Therefore we need to have the same shape for all the nested tensors."
-                )
-            network_outputs = torch.stack(network_outputs.unbind())
+    # NOTE: The environment has a wrapper applied to it that normalizes the continuous action
+    # space to be in the [-1, 1] range, and the actions outside that range will be clipped by
+    # that wrapper.
+    assert isinstance(action_space, TensorBox)
+    assert (action_space.low == -1).all() and (action_space.high == 1).all(), action_space
+    d = action_space.shape[-1]
+    assert network_outputs.size(-1) == d * 2
 
-        loc, scale = network_outputs.chunk(2, -1)
-        loc = torch.tanh(loc)
-        scale = torch.relu(scale) + 1e-5
+    if network_outputs.is_nested:
+        if not all(out_i.shape == network_outputs[0].shape for out_i in network_outputs.unbind()):
+            raise NotImplementedError(
+                "Can't pass a nested tensor to torch.distributions.Normal yet. "
+                "Therefore we need to have the same shape for all the nested tensors."
+            )
+        network_outputs = torch.stack(network_outputs.unbind())
 
-        return Normal(loc=loc, scale=scale)
+    loc, scale = network_outputs.chunk(2, -1)
+    loc = torch.tanh(loc)
+    scale = torch.relu(scale) + 1e-5
+
+    return Normal(loc=loc, scale=scale)
 
 
 def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
@@ -346,6 +343,26 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
 #     return list(returns_list)
 
 
+def collect_transitions[ActorOutput: NestedMapping[str, Tensor]](
+    env_id: str,
+    actor: Actor[Tensor, Tensor, ActorOutput],
+    num_transitions: int,
+    num_parallel_envs: int = 128,
+    seed: int = 123,
+    device: torch.device = default_device(),
+) -> Sequence[Transition[ActorOutput]]:
+    env = make_torch_vectorenv(env_id, num_envs=num_parallel_envs, seed=seed, device=device)
+    dataset = episode_dataset.EpisodeIterableDataset(
+        env, actor=actor, steps_per_epoch=num_transitions
+    )
+    transitions: list[Transition[ActorOutput]] = []
+    for episode in iter(dataset):
+        transitions.extend(episode.as_transitions())
+        if len(transitions) >= num_transitions:
+            break
+    return transitions
+
+
 def main():
     datamodule = RlDataModule(
         env="CartPole-v1", num_parallel_envs=1, actor=None, episodes_per_epoch=100, batch_size=100
@@ -370,9 +387,9 @@ def main():
 
     algorithm = Reinforce(datamodule=datamodule, network=network)
 
-    datamodule.set_actor(algorithm)
-
-    trainer = lightning.Trainer(max_epochs=2, devices=1, accelerator="auto")
+    trainer = lightning.Trainer(
+        max_epochs=100, devices=1, accelerator="auto", reload_dataloaders_every_n_epochs=1
+    )
     # todo: fine for now, but perhaps the SL->RL wrapper for Reinforce will change that.
     assert algorithm.datamodule is datamodule
     trainer.fit(algorithm, datamodule=datamodule)
