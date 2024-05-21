@@ -146,9 +146,9 @@ class RlDataModule(
         self.valid_env: TensorEnv | None = None
         self.test_env: TensorEnv | None = None
 
-        self.train_dataset: EpisodeIterableDataset[ActorOutput] | None = None
-        self.valid_dataset: EpisodeIterableDataset[ActorOutput] | None = None
-        self.test_dataset: EpisodeIterableDataset[ActorOutput] | None = None
+        self.train_dataset: EpisodeIterableDataset | None = None
+        self.valid_dataset: EpisodeIterableDataset | None = None
+        self.test_dataset: EpisodeIterableDataset | None = None
 
         self._train_wrappers = tuple(train_wrappers or ())
         self._valid_wrappers = tuple(valid_wrappers or ())
@@ -164,7 +164,7 @@ class RlDataModule(
         self.valid_seed = val_seed
         self.test_seed = 111
 
-        self._train_dataloader: Iterable[EpisodeBatch[ActorOutput]] | None = None
+        self._train_dataloader: EnvDataLoader | None = None
 
     def set_actor[SomeActorOutputType: dict](
         self, actor: Actor[Tensor, Tensor, SomeActorOutputType]
@@ -201,6 +201,10 @@ class RlDataModule(
             self.test_dataset.actor = self.test_actor
         return self  # type: ignore
 
+    def on_actor_update(self) -> None:
+        assert self._train_dataloader is not None
+        self._train_dataloader.on_actor_update()
+
     def prepare_data(self) -> None:
         # NOTE: We don't use this hook here.
         ...
@@ -228,6 +232,7 @@ class RlDataModule(
             # warn("No actor was set, using a random policy.", color="red")
             # self.train_actor = random_actor
             raise _error_actor_required(self, "train")
+        assert self.train_seed is not None
         self.train_env = self.train_env or self._make_env(
             wrappers=self.train_wrappers, seed=self.train_seed
         )
@@ -237,13 +242,15 @@ class RlDataModule(
             episodes_per_epoch=self.episodes_per_epoch,
             seed=self.train_seed,
         )
-        dataloader: Iterable[EpisodeBatch[ActorOutput]] = EnvDataLoader(
+        assert self.train_dataset is not None
+        dataloader = EnvDataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
         )
         for dataloader_wrapper in self.train_dataloader_wrappers or []:
             logger.debug(f"Applying dataloader wrapper {dataloader_wrapper}")
             dataloader = dataloader_wrapper(dataloader)
+        self._train_dataloader = dataloader
         return dataloader
 
     def val_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
