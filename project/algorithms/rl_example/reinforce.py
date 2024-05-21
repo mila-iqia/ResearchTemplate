@@ -15,12 +15,13 @@ import torch
 from gymnasium.wrappers.record_video import RecordVideo
 from torch import Tensor
 from torch.distributions import Categorical, Normal
+from torch.optim.optimizer import Optimizer
 
 from project.algorithms.bases.algorithm import Algorithm
 from project.datamodules.rl import episode_dataset
 from project.datamodules.rl.datamodule import RlDataModule
 from project.datamodules.rl.envs import make_torch_vectorenv
-from project.datamodules.rl.types import Actor, EpisodeBatch, Transition
+from project.datamodules.rl.types import Actor, EpisodeBatch, EpisodeStats, Transition
 from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
 from project.datamodules.rl.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from project.datamodules.rl.wrappers.tensor_spaces import (
@@ -123,6 +124,10 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         }
         return actions, actor_outputs
 
+    def on_before_zero_grad(self, optimizer: Optimizer) -> None:
+        super().on_before_zero_grad(optimizer)
+        self.datamodule.on_actor_update()
+
     def training_step(self, batch: EpisodeBatch) -> StepOutputDict:
         return self.shared_step(batch, phase="train")
 
@@ -138,9 +143,9 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         PyTorch-Lightning will then use the loss as the training signal, but we could also do the
         backward pass ourselves if we wanted to (as shown in the ManualGradientsExample).
         """
-        rewards = batch["rewards"]
+        rewards = batch.rewards
         # Retrieve the outputs that we saved at each step:
-        actor_outputs: ReinforceActorOutput = batch["actor_outputs"]
+        actor_outputs: ReinforceActorOutput = batch.actor_outputs  # type: ignore
         batch_size = rewards.size(0)
 
         # Nested Tensor of shape [n_envs, <episode_len>] where episode_len varies between tensors.
@@ -171,38 +176,47 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         policy_loss_per_episode = policy_loss_per_step.sum(dim=1)
         # Average across episodes
         policy_loss = policy_loss_per_episode.mean(dim=0)
-        self.log(f"{phase}/loss", policy_loss, prog_bar=True)
+        self.log(f"{phase}/loss", policy_loss, prog_bar=True, batch_size=batch_size)
 
         # Log the episode statistics gathered by the RecordEpisodeStatistics gym wrapper.
-        episode_stats = [
-            episode_infos[-1]["episode"]
-            for episode_infos in batch["infos"]
-            if episode_infos and "episode" in episode_infos[-1]
+        # TODO: There is some weird structure to this. It doesn't match what we'd expect.
+        # There seems to be multiple "Episode stats" dicts within a single episode.
+        _episode_stats_multiple: list[list[EpisodeStats]] = [
+            [ep_i["episode"] for ep_i in batch_i if "episode" in ep_i] for batch_i in batch.infos
         ]
+        _episode_stats = [
+            [ep_stats_i for ep_stats_i in episode_stats if set(ep_stats_i.values()) != {0}]
+            for episode_stats in _episode_stats_multiple
+        ]
+        episode_stats: list[EpisodeStats] = sum(_episode_stats, [])
+
         if episode_stats:
             episode_lengths = np.array([s["l"] for s in episode_stats])
             episode_total_rewards = np.array([s["r"] for s in episode_stats])
             # episode_time_since_start = np.array([s["t"] for s in episode_stats])  # unused atm.
-            avg_episode_length = sum(episode_lengths) / batch_size
+            # TODO: Bug here, there should be `batch_size` dicts, but there are batch_size // 2!
+            n_stats = len(episode_stats)
+
+            avg_episode_length = sum(episode_lengths) / n_stats
             avg_episode_reward = episode_total_rewards.mean(0)
-            avg_episode_return = sum(returns.select(dim=1, index=0)) / batch_size
+            avg_episode_return = sum(returns.select(dim=1, index=0)) / n_stats
             self.log(
                 f"{phase}/avg_episode_length",
                 avg_episode_length,
                 prog_bar=True,
-                batch_size=batch_size,
+                batch_size=n_stats,
             )
             self.log(
                 f"{phase}/avg_episode_reward",
                 avg_episode_reward,
                 prog_bar=True,
-                batch_size=batch_size,
+                batch_size=n_stats,
             )
             self.log(
                 f"{phase}/avg_episode_return",
                 avg_episode_return,
                 prog_bar=True,
-                batch_size=batch_size,
+                batch_size=n_stats,
             )
 
         return {"loss": policy_loss}
@@ -228,6 +242,7 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         self, videos_subdir: str
     ) -> list[Callable[[gymnasium.Env], gymnasium.Env]]:
         video_folder = str(self.log_dir / "videos" / videos_subdir)
+        logger.info(f"Saving videos in {video_folder}.")
         wrappers = [
             check_and_normalize_box_actions,
             # NOTE: The functools.partial below is Equivalent to the following:
@@ -365,7 +380,11 @@ def collect_transitions[ActorOutput: NestedMapping[str, Tensor]](
 
 def main():
     datamodule = RlDataModule(
-        env="CartPole-v1", num_parallel_envs=1, actor=None, episodes_per_epoch=100, batch_size=100
+        env="CartPole-v1",
+        num_parallel_envs=128,
+        actor=None,
+        episodes_per_epoch=10_000,
+        batch_size=256,
     )
 
     # TODO: Test out if we can make this stuff work with Brax envs:
