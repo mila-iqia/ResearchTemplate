@@ -16,9 +16,11 @@ from numpy.typing import NDArray
 from torch import Tensor
 from typing_extensions import TypeVar
 
-from project.utils.types import NestedMapping
+from project.utils.types import NestedMapping, is_list_of, is_sequence_of
 
-type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
+type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[
+    ObsType, ActType
+]
 type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
 
 BoxSpace = gym.spaces.Box | gymnasium.spaces.Box
@@ -51,7 +53,9 @@ WrapperActType = TypeVar("WrapperActType")
 
 
 # VectorEnv doesn't have type hints in current gymnasium.
-class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]):
+class VectorEnv[ObsType, ActType](
+    gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]
+):
     observation_space: Space[ObsType]
     action_space: Space[ActType]
 
@@ -99,7 +103,9 @@ class VectorEnvWrapper(
         return getattr(self.env, name)
 
 
-def random_actor(observation: Any, action_space: Space[ActionT]) -> tuple[ActionT, dict]:
+def random_actor(
+    observation: Any, action_space: Space[ActionT]
+) -> tuple[ActionT, dict]:
     """Actor that takes random actions."""
     return action_space.sample(), {}
 
@@ -164,14 +170,18 @@ class Episode(MappingMixin, Generic[ActorOutput]):
     @property
     def length(self) -> int:
         size = self.rewards.shape[0]
-        assert self.observations.size(0) == self.actions.size(0) == len(self.infos) == size
+        assert (
+            self.observations.size(0) == self.actions.size(0) == len(self.infos) == size
+        )
         return size
 
     def as_transitions(self):
         """Convert the episode into a sequence of `Transition`s."""
         from project.datamodules.rl.episode_dataset import sliced_dict
 
-        sliced_actor_outputs = list(sliced_dict(self.actor_outputs, n_slices=self.length))
+        sliced_actor_outputs = list(
+            sliced_dict(self.actor_outputs, n_slices=self.length)
+        )
         return tuple(
             MiddleTransition(
                 observation=self.observations[i],
@@ -199,8 +209,12 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     def full_transitions(self) -> list[MiddleTransition[ActorOutput]]:
         """Convert the episode into a sequence of `Transition`s where every transition has."""
-        *full_transitions, last_full_transition, _final_transition = self.as_transitions()
-        return full_transitions + [dataclasses.replace(last_full_transition, is_terminal=True)]
+        *full_transitions, last_full_transition, _final_transition = (
+            self.as_transitions()
+        )
+        return full_transitions + [
+            dataclasses.replace(last_full_transition, is_terminal=True)
+        ]
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -233,10 +247,9 @@ type Tree[K, V] = Mapping[K, V | list[V] | Tree[K, V] | list[Tree[K, V]]]
 type DictTree[K, V] = dict[K, V | list[V] | DictTree[K, V] | list[DictTree[K, V]]]
 
 
-def treemap[K, I, O](
-    tree: Tree[K, I],
-    fn: Callable[[I], O],
-) -> DictTree[K, O]:
+def treemap[
+    K, I, O
+](tree: Tree[K, I], fn: Callable[[I], O],) -> DictTree[K, O]:
     def _map_fn(v):
         if isinstance(v, list | tuple):
             return [_map_fn(v_i) for v_i in v]
@@ -281,6 +294,12 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     probabilities, activations, etc.)
     """
 
+    final_infos: list[dict] | None
+    """Info dicts at the final step of each episode, or `None` if that isn't saved in the env."""
+
+    final_observations: Tensor | None
+    """ Stacked tensor with the final observation of each episode, or None if that isn't saved. """
+
     def to(self, device: torch.device) -> Self:
         # todo: also move jax arrays to the given device.
         # jax_device = "cuda" if device.type != "cuda" else "gpu"
@@ -302,12 +321,16 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
         return type(self)(**treemap(self, _detach))
 
     @classmethod
-    def from_episodes(cls, episodes: Sequence[Episode[ActorOutput]]) -> EpisodeBatch[ActorOutput]:
+    def from_episodes(
+        cls, episodes: Sequence[Episode[ActorOutput]]
+    ) -> EpisodeBatch[ActorOutput]:
         """Collates a list of episodes into an EpisodeBatch object containing (possibly nested)
         tensors."""
         rewards = [ep.rewards for ep in episodes]
         from project.datamodules.rl.stacking_utils import stack
-        from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch_tensor
+        from project.datamodules.rl.wrappers.jax_torch_interop import (
+            jax_to_torch_tensor,
+        )
 
         stacked_rewards = stack(rewards)  # type: ignore
         assert isinstance(stacked_rewards, np.ndarray | jax.Array | torch.Tensor)
@@ -330,6 +353,18 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
         if isinstance(truncated, np.ndarray):
             truncated = torch.as_tensor(truncated, dtype=torch.bool)
 
+        final_observation: torch.Tensor | None = None
+        final_observations = [ep.final_observation for ep in episodes]
+        if is_list_of(final_observations, Tensor):
+            final_observation = stack(final_observations)
+
+        final_infos: list[dict] | None = None
+        if any(ep.final_info is not None for ep in episodes):
+            assert all(ep.final_info is not None for ep in episodes)
+            _final_infos = [ep.final_info for ep in episodes]
+            assert is_list_of(_final_infos, dict)
+            final_infos = _final_infos
+
         return EpisodeBatch(
             observations=stack([ep.observations for ep in episodes]),
             actions=stack([ep.actions for ep in episodes]),
@@ -340,7 +375,56 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
             terminated=terminated,
             truncated=truncated,
             actor_outputs=stack([ep.actor_outputs for ep in episodes]),
+            final_infos=final_infos,
+            final_observations=final_observation,
         )
+
+    @property
+    def batch_size(self) -> int:
+        return self.terminated.shape[0]
+
+    def split(self) -> list[Episode[ActorOutput]]:
+        """Splits the batch into a list of episodes."""
+
+        def _unstack(values):
+            if isinstance(values, torch.Tensor):
+                return values.unbind(0)
+            if isinstance(values, dict):
+                return {k: _unstack(v) for k, v in values.items()}
+            raise NotImplementedError(f"Cannot unstack values {values}.")
+
+        return [
+            Episode(
+                observations=obs,
+                actions=act,
+                rewards=rew,
+                infos=info,
+                terminated=term,
+                truncated=trunc,
+                actor_outputs=act_out,
+                final_observation=final_obs,
+                final_info=final_info,
+            )
+            for obs, act, rew, info, term, trunc, act_out, final_obs, final_info in zip(
+                self.observations.unbind(0),
+                self.actions.unbind(0),
+                self.rewards.unbind(0),
+                self.infos,
+                self.terminated.unbind(0),
+                self.truncated.unbind(0),
+                _unstack(self.actor_outputs),
+                (
+                    self.final_observations.unbind(0)
+                    if isinstance(self.final_observations, Tensor)
+                    else [None] * self.batch_size
+                ),
+                (
+                    self.final_infos
+                    if self.final_infos is not None
+                    else [None] * self.batch_size
+                ),
+            )
+        ]
 
 
 class EpisodeInfo(TypedDict):

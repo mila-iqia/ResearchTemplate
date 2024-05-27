@@ -23,11 +23,15 @@ from .types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv
 logger = get_logger(__name__)
 eps = np.finfo(np.float32).eps.item()
 
-jax.experimental.compilation_cache.compilation_cache.set_cache_dir(Path.home() / ".cache/jax")
+jax.experimental.compilation_cache.compilation_cache.set_cache_dir(
+    Path.home() / ".cache/jax"
+)
 
 
 @dataclass
-class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[ActorOutput]):
+class EpisodeIterableDataset(
+    IterableDataset[Episode[ActorOutput]], Generic[ActorOutput]
+):
     """An IterableDataset that uses an actor in an environment and yields episodes."""
 
     env: gymnasium.Env[Tensor, Tensor] | VectorEnv[Tensor, Tensor]
@@ -50,12 +54,14 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
             else None
         )
         if self.num_envs:
-            logger.info(f"The environment is vectorized (num_envs={self.num_envs})")
+            logger.debug(f"The environment is vectorized (num_envs={self.num_envs})")
         else:
-            logger.info("The environment is NOT vectorized (num_envs is None)")
+            logger.debug("The environment is NOT vectorized (num_envs is None)")
         # TODO: Need to call a method on the iterator to reset the envs when the actor is updated.
         self._iterator: (
-            VectorEnvEpisodeIterator[ActorOutput] | EnvEpisodeIterator[ActorOutput] | None
+            VectorEnvEpisodeIterator[ActorOutput]
+            | EnvEpisodeIterator[ActorOutput]
+            | None
         ) = None
 
     # @property
@@ -75,7 +81,9 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
         would cause errors when backpropagating.
         """
         if self._iterator is None:
-            logger.warning("The actor has been updated before starting to iterate on the env?")
+            logger.warning(
+                "The actor has been updated before starting to iterate on the env?"
+            )
             return
 
         logger.debug(
@@ -190,7 +198,6 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             else:
                 observations.append(obs)
                 infos.append(info)
-
         return stack_episode(
             observations=observations,
             actions=actions,
@@ -256,7 +263,9 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         # episodes, not the steps in the environment.
         while not self._episodes_to_yield_at_this_step:
             # Take a step and store the completed episodes (if any).
-            self._episodes_to_yield_at_this_step = self.step_and_yield_completed_episodes()
+            self._episodes_to_yield_at_this_step = (
+                self.step_and_yield_completed_episodes()
+            )
         episode = self._episodes_to_yield_at_this_step.pop(0)
         self._yielded_episodes += 1
         self._yielded_steps += episode.length
@@ -292,7 +301,9 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         )
         if self._episodes_to_yield_at_this_step:
             n_wasted_episodes = len(self._episodes_to_yield_at_this_step)
-            n_wasted_steps = sum(ep.length for ep in self._episodes_to_yield_at_this_step)
+            n_wasted_steps = sum(
+                ep.length for ep in self._episodes_to_yield_at_this_step
+            )
             logger.warning(
                 f"Wasting {n_wasted_episodes} episodes that just completed at this step with "
                 f"previous actor but had not yet been yielded (total of {n_wasted_steps} steps)."
@@ -339,19 +350,23 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
 
     def step_and_yield_completed_episodes(self) -> list[Episode[ActorOutput]]:
         """Do one step in the vectorenv and yield any episodes that just finished at that step."""
-        assert self._last_observation is not None, "end should have been reset before stepping!"
+        assert (
+            self._last_observation is not None
+        ), "end should have been reset before stepping!"
         # note: Could pass the info to the actor as well?
         action_batch, actor_output_batch = self.actor(
             self._last_observation, self.env.action_space
         )
         logger.debug(f"{self.episode_lengths()=}")
-        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = self.env.step(
-            action_batch
+        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = (
+            self.env.step(action_batch)
         )
         self._last_observation = obs_batch
         self._last_info = info_batch
         env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
-        env_actor_outputs = list(sliced_dict(actor_output_batch, n_slices=self.num_envs))
+        env_actor_outputs = list(
+            sliced_dict(actor_output_batch, n_slices=self.num_envs)
+        )
 
         episodes_at_this_step: list[Episode[ActorOutput]] = []
 
@@ -372,7 +387,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
                 self.actor_outputs[env_index].append(env_actor_output)
 
                 # We don't really use these as far as I can tell (the jax envs don't produce them).
-                final_observation: Tensor | None = env_info.get("old_observation")
+                final_observation: Tensor | None = env_info.get("final_observation")
                 final_info: EpisodeInfo | None = env_info.get("final_info")
 
                 episode = stack_episode(
@@ -411,9 +426,9 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         return episodes_at_this_step
 
 
-def sliced_dict[M: NestedMapping[str, Tensor | None]](
-    d: M, n_slices: int | None = None
-) -> Iterable[M]:
+def sliced_dict[
+    M: NestedMapping[str, Tensor | None]
+](d: M, n_slices: int | None = None) -> Iterable[M]:
     """Slice a dict of sequences (tensors) into a sequence of dicts with the values at the same
     index in the 0th dimension."""
     if not d:
