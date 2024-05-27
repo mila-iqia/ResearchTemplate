@@ -33,7 +33,7 @@ def get_experiment_config(command_line_overrides: list[str]) -> Config:
 
 class TestReinforce(AlgorithmTests[Reinforce]):
     algorithm_type: type[Reinforce] = Reinforce
-    algorithm_name: ClassVar[str] = "rl_example"
+    algorithm_name: ClassVar[str] = "reinforce"
 
     metric_name: ClassVar[str] = "train/avg_episode_return"
     lower_is_better: ClassVar[bool] = False
@@ -65,7 +65,12 @@ class TestReinforce(AlgorithmTests[Reinforce]):
         )
     )
     @pytest.mark.parametrize(
-        ("rl_datamodule_name", "initial_state_seed", "num_training_iterations", "expected_reward"),
+        (
+            "rl_datamodule_name",
+            "initial_state_seed",
+            "num_training_iterations",
+            "expected_reward",
+        ),
         [
             (
                 "pendulum",

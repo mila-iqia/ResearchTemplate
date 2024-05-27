@@ -21,7 +21,7 @@ dependencies = [
     "matplotlib>=3.8.3",
     "moviepy>=1.0.3",
     "pygame==2.5.2",
-    "jax[cuda12_pip]>=0.4.26",
+    "jax[cuda12]",
     "brax>=0.10.3",
     "tensorboard>=2.16.2",
     "gymnax>=0.0.8",
