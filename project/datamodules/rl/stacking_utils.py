@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import functools
 from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
 from typing import Any, overload
@@ -120,6 +119,36 @@ def stack_mappings[M: Mapping](values: Sequence[M]) -> M:
     return result
 
 
+@register_stacking_fn(torch.distributions.Distribution)
+def stack_distributions[D](values: Sequence[D]) -> D:
+    """Stack multiple distributions."""
+    raise NotImplementedError(f"Don't know how to stack distributions of type {type(values[0])}")
+
+
+@register_stacking_fn(torch.distributions.Independent)
+def stack_independent_distributions(
+    values: Sequence[torch.distributions.Independent],
+) -> torch.distributions.Independent:
+    n_batch_dims = values[0].reinterpreted_batch_ndims
+    assert all(d.reinterpreted_batch_ndims == n_batch_dims for d in values)
+    return torch.distributions.Independent(
+        stack([d.base_dist for d in values]), reinterpreted_batch_ndims=n_batch_dims + 1
+    )
+
+
+@register_stacking_fn(torch.distributions.Normal)
+def stack_normal_distributions[D: torch.distributions.Normal](
+    values: Sequence[D],
+) -> torch.distributions.Independent:
+    assert len(set([type(d) for d in values])) == 1
+    loc = stack([v.loc for v in values])
+    scale = stack([v.scale for v in values])
+    return torch.distributions.Independent(
+        type(values[0])(loc=loc, scale=scale),
+        reinterpreted_batch_ndims=1,
+    )
+
+
 def stack_episode(
     observations: list[Tensor],
     actions: list[Tensor],
@@ -148,27 +177,61 @@ def stack_episode(
     )
 
 
-def _get_device(values: Any) -> torch.device:
-    """Retrieve the Device of the first found Tensor in `values`."""
+@functools.singledispatch
+def unstack(v: Any, /, *, n_slices: int) -> list[Any]:
+    raise NotImplementedError(
+        f"Don't know how to slice values of type {type(v)} into {n_slices} slices."
+    )
 
-    def _get_device(value: Tensor | Any) -> torch.device | None:
-        if isinstance(value, Tensor):
-            return value.device
-        if isinstance(value, dict):
-            for k, v in value.items():
-                device = _get_device(v)
-                if device is not None:
-                    return device
-            return None
-        if isinstance(value, list | tuple):
-            for v in value:
-                device = _get_device(v)
-                if device is not None:
-                    return device
-            return None
-        return None
 
-    device = _get_device(values)
-    if device is None:
-        raise ValueError("There are no tensors in values, can't determine the device!")
-    return device
+@unstack.register
+def _unstack_dict(v: Mapping, n_slices: int) -> list[Mapping]:
+    keys = list(v.keys())
+    unstacked_values: list[list] = [unstack(v, n_slices=n_slices) for v in v.values()]
+    return [{k: v[i] for k, v in zip(keys, unstacked_values)} for i in range(n_slices)]
+
+
+@unstack.register(type(None))
+@unstack.register(int | float | str | bool)
+def _unstack_shallow_copy[T](v: T, n_slices: int) -> list[T]:
+    return [v for _ in range(n_slices)]
+
+
+@unstack.register(Tensor | np.ndarray | jax.Array)
+def _unstack_arraylike[T: Tensor | np.ndarray | jax.Array](v: T, n_slices: int) -> list[T]:
+    assert v.shape[0] == n_slices
+    return list(v)
+    # duplicate the value.
+    return [v for _ in range(n_slices)]
+
+
+@unstack.register(list)
+def _unstack_list[V](v: list[V], n_slices: int) -> list[V]:
+    assert len(v) == n_slices
+    return v.copy()
+
+
+@unstack.register(torch.distributions.Categorical)
+def _unstack_categorical[D: torch.distributions.Categorical](v: D, n_slices: int) -> list[D]:
+    return [type(v)(logits=v.logits[i]) for i in range(n_slices)]
+
+
+@unstack.register(torch.distributions.Normal)
+def _unstack_normal[D: torch.distributions.Normal](v: D, n_slices: int) -> list[D]:
+    loc = unstack(v.loc, n_slices=n_slices)
+    scale = unstack(v.scale, n_slices=n_slices)
+    return [type(v)(loc=loc[i], scale=scale[i]) for i in range(n_slices)]
+
+
+@unstack.register(torch.distributions.Independent)
+def _unstack_independent_distributions(
+    v: torch.distributions.Independent, n_slices: int
+) -> list[torch.distributions.Independent] | list[torch.distributions.Distribution]:
+    if v.reinterpreted_batch_ndims == 1:
+        return unstack(v.base_dist, n_slices=n_slices)
+    return [
+        torch.distributions.Independent(
+            d, reinterpreted_batch_ndims=v.reinterpreted_batch_ndims - 1
+        )
+        for d in unstack(v.base_dist, n_slices=n_slices)
+    ]

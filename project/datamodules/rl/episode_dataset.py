@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Generic
+from typing import Any, Generic
 
 import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
@@ -394,6 +395,39 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         return episodes_at_this_step
 
 
+@functools.singledispatch
+def unstack(v: Any, n_slices: int) -> list[Any]:
+    raise NotImplementedError(
+        f"Don't know how to slice values of type {type(v)} into {n_slices} slices."
+    )
+
+
+# if isinstance(v, Mapping):
+#     result[k] = _sliced(v, index)
+# elif v is None:
+#     result[k] = None
+# elif isinstance(v, list) and len(v) == n_slices:
+#     result[k] = v[index]
+# elif isinstance(v, Tensor | np.ndarray | jax.Array):
+#     if v.shape and v.shape[0] == n_slices:
+#         result[k] = v[index]
+#     else:
+#         # duplicate the value.
+#         result[k] = v
+# elif isinstance(v, int | float | bool | str):
+#     # Copy the value at every index, for instance if the actor returns a single int for
+#     # a batch of observations
+#     result[k] = v
+# elif isinstance(v, torch.distributions.Categorical):
+#     result[k] = torch.distributions.Categorical(logits=v.logits[index])
+# elif isinstance(v, torch.distributions.Categorical):
+#     result[k] = torch.distributions.Categorical(logits=v.logits[index])
+# else:
+#     raise NotImplementedError(
+#         f"Don't know how to slice value at key {k} of type {type(v)} (with a value of {v}) from the actor dict {d}"
+#     )
+
+
 def sliced_dict[M: NestedMapping[str, Tensor | None]](
     d: M, n_slices: int | None = None
 ) -> Iterable[M]:
@@ -444,6 +478,10 @@ def sliced_dict[M: NestedMapping[str, Tensor | None]](
                 # Copy the value at every index, for instance if the actor returns a single int for
                 # a batch of observations
                 result[k] = v
+            elif isinstance(v, torch.distributions.Categorical):
+                result[k] = torch.distributions.Categorical(logits=v.logits[index])
+            elif isinstance(v, torch.distributions.Categorical):
+                result[k] = torch.distributions.Categorical(logits=v.logits[index])
             else:
                 raise NotImplementedError(
                     f"Don't know how to slice value at key {k} of type {type(v)} (with a value of {v}) from the actor dict {d}"
