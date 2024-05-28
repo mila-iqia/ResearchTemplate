@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from logging import getLogger as get_logger
@@ -9,7 +10,6 @@ from typing import Any, TypedDict
 
 import gymnasium
 import gymnasium.spaces
-import lightning
 import numpy as np
 import torch
 from gymnasium.wrappers.record_video import RecordVideo
@@ -25,15 +25,11 @@ from project.datamodules.rl.types import (
     Actor,
     Episode,
     EpisodeBatch,
-    EpisodeStats,
     Transition,
     VectorEnv,
 )
 from project.datamodules.rl.wrappers.normalize_actions import (
     check_and_normalize_box_actions,
-)
-from project.datamodules.rl.wrappers.record_episode_statistics import (
-    RecordEpisodeStatistics,
 )
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
@@ -125,14 +121,9 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
                 get_action_distribution(outputs_i, action_space)
                 for outputs_i in network_outputs.unbind()
             ]
-            actions = torch.nested.as_nested_tensor(
-                [dist.sample() for dist in distributions]
-            )
+            actions = torch.nested.as_nested_tensor([dist.sample() for dist in distributions])
             action_log_probabilities = torch.nested.as_nested_tensor(
-                [
-                    dist.log_prob(a).sum(0)
-                    for dist, a in zip(distributions, actions.unbind())
-                ]
+                [dist.log_prob(a).sum(0) for dist, a in zip(distributions, actions.unbind())]
             )
         actor_outputs: ReinforceActorOutput = {
             "logits": network_outputs,
@@ -171,11 +162,11 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         # NOTE: Equivalent to the following:
         if returns.is_nested:
             normalized_returns = torch.nested.as_nested_tensor(
-                [(ret - ret.mean()) / (ret.std() + eps) for ret in returns.unbind()]
+                [(ret - ret.mean()) / (ret.std().clamp_min_(eps)) for ret in returns.unbind()]
             )
         else:
             normalized_returns = (returns - returns.mean(dim=1, keepdim=True)) / (
-                returns.std(dim=1, keepdim=True) + eps
+                returns.std(dim=1, keepdim=True).clamp_min_(eps)
             )
 
         # NOTE: In this particular case here, the actions are "live" tensors with grad_fns.
@@ -184,9 +175,7 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         # the nested tensors).
 
         # Nested tensor of shape [n_envs, <episode_len>]
-        action_log_probs = actor_outputs["action_log_probability"].reshape_as(
-            normalized_returns
-        )
+        action_log_probs = actor_outputs["action_log_probability"].reshape_as(normalized_returns)
         policy_loss_per_step = -action_log_probs * normalized_returns
 
         # Sum across episode steps
@@ -197,48 +186,17 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         policy_loss = policy_loss_per_episode.mean(dim=0)
         self.log(f"{phase}/loss", policy_loss, prog_bar=True, batch_size=batch_size)
 
-        # Log the episode statistics gathered by the RecordEpisodeStatistics gym wrapper.
-        # TODO: There is some weird structure to this. It doesn't match what we'd expect.
-        # There seems to be multiple "Episode stats" dicts within a single episode.
-        assert batch.final_infos is not None
-        episode_stats: list[EpisodeStats] = [
-            info["episode"] for info in batch.final_infos
-        ]
-        assert len(episode_stats) == batch_size
-        logs = {}
-        if episode_stats:
-            episode_lengths = np.array([s["l"] for s in episode_stats])
-            episode_total_rewards = np.array([s["r"] for s in episode_stats])
-            # episode_time_since_start = np.array([s["t"] for s in episode_stats])  # unused atm.
-            # TODO: Bug here, there should be `batch_size` dicts, but there are batch_size // 2!
-            n_stats = len(episode_stats)
-
-            avg_episode_length = torch.as_tensor(sum(episode_lengths) / n_stats)
-            avg_episode_reward = torch.as_tensor(episode_total_rewards.mean(0))
-            avg_episode_return = torch.as_tensor(
-                sum(returns.select(dim=1, index=0)) / n_stats
-            )
-            logs[f"{phase}/avg_episode_length"] = avg_episode_length
-            logs[f"{phase}/avg_episode_reward"] = avg_episode_reward
-            logs[f"{phase}/avg_episode_return"] = avg_episode_return
-            self.log(
-                f"{phase}/avg_episode_length",
-                avg_episode_length,
-                prog_bar=True,
-                batch_size=n_stats,
-            )
-            self.log(
-                f"{phase}/avg_episode_reward",
-                avg_episode_reward,
-                prog_bar=True,
-                batch_size=n_stats,
-            )
-            self.log(
-                f"{phase}/avg_episode_return",
-                avg_episode_return,
-                prog_bar=True,
-                batch_size=n_stats,
-            )
+        # Log some useful information.
+        avg_episode_length = sum(batch.episode_lengths) / batch_size
+        avg_episode_reward = batch.rewards.sum(1).mean(0)
+        avg_episode_return = (returns.select(dim=1, index=0).sum()) / batch_size
+        logs = {
+            "avg_episode_length": avg_episode_length,
+            "avg_episode_reward": avg_episode_reward,
+            "avg_episode_return": avg_episode_return,
+        }
+        for k, v in logs.items():
+            self.log(f"{phase}/{k}", torch.as_tensor(v), prog_bar=True, batch_size=batch_size)
 
         return {"loss": policy_loss, "log": logs}
 
@@ -246,28 +204,17 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         logger.info("Starting training.")
         if not self.datamodule:
             return
-        assert isinstance(self.datamodule, RlDataModule) or hasattr(
-            self.datamodule, "set_actor"
-        )
+        assert isinstance(self.datamodule, RlDataModule) or hasattr(self.datamodule, "set_actor")
         # Set the actor on the datamodule so our `forward` method is used to select actions at each
         # step.
         self.datamodule.set_actor(self)
 
         # We only add the gym wrappers to the datamodule once.
         assert self.datamodule.train_dataset is None
-        assert (
-            len(self.datamodule.train_wrappers) == 0
-            or self.datamodule.train_wrappers[-1] is not RecordEpisodeStatistics
-        )
-        self.datamodule.train_wrappers += tuple(
-            self.gym_wrappers_to_add(videos_subdir="train")
-        )
-        self.datamodule.valid_wrappers += tuple(
-            self.gym_wrappers_to_add(videos_subdir="valid")
-        )
-        self.datamodule.test_wrappers += tuple(
-            self.gym_wrappers_to_add(videos_subdir="test")
-        )
+        assert len(self.datamodule.train_wrappers) == 0
+        self.datamodule.train_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="train"))
+        self.datamodule.valid_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="valid"))
+        self.datamodule.test_wrappers += tuple(self.gym_wrappers_to_add(videos_subdir="test"))
 
     def gym_wrappers_to_add(
         self, videos_subdir: str
@@ -277,12 +224,11 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         wrappers = [
             check_and_normalize_box_actions,
             # NOTE: The functools.partial below is Equivalent to the following:
-            # lambda env: RecordVideo(env, video_folder=str(log_dir / "videos/train")),
-            RecordEpisodeStatistics,
+            # lambda env: RecordVideo(env, video_folder=video_folder),
         ]
         if not self.datamodule:
             return []
-        if self.datamodule.env.render_mode is not None:
+        if self.datamodule.env.unwrapped.render_mode is not None:
             wrappers.append(functools.partial(RecordVideo, video_folder=video_folder))
         return wrappers
 
@@ -315,17 +261,12 @@ def get_action_distribution(
     # space to be in the [-1, 1] range, and the actions outside that range will be clipped by
     # that wrapper.
     assert isinstance(action_space, TensorBox)
-    assert (action_space.low == -1).all() and (
-        action_space.high == 1
-    ).all(), action_space
+    assert (action_space.low == -1).all() and (action_space.high == 1).all(), action_space
     d = action_space.shape[-1]
     assert network_outputs.size(-1) == d * 2
 
     if network_outputs.is_nested:
-        if not all(
-            out_i.shape == network_outputs[0].shape
-            for out_i in network_outputs.unbind()
-        ):
+        if not all(out_i.shape == network_outputs[0].shape for out_i in network_outputs.unbind()):
             raise NotImplementedError(
                 "Can't pass a nested tensor to torch.distributions.Normal yet. "
                 "Therefore we need to have the same shape for all the nested tensors."
@@ -365,9 +306,7 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
         # todo: probably a way to vectorize this and get rid of the for-loop.
         for step in reversed(range(ep_len)):
             reward_at_that_step = rewards_batch[:, step]
-            discounted_future_rewards = (
-                reward_at_that_step + gamma * discounted_future_rewards
-            )
+            discounted_future_rewards = reward_at_that_step + gamma * discounted_future_rewards
             returns[:, step] = discounted_future_rewards
         return returns
 
@@ -382,9 +321,7 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
 
         for step in reversed(range(ep_len)):
             reward_at_that_step = rewards[step]
-            discounted_future_rewards = (
-                reward_at_that_step + gamma * discounted_future_rewards
-            )
+            discounted_future_rewards = reward_at_that_step + gamma * discounted_future_rewards
             returns[step] = discounted_future_rewards
 
         returns_batch.append(returns)
@@ -401,9 +338,7 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
 #     return list(returns_list)
 
 
-def collect_transitions[
-    ActorOutput: NestedMapping[str, Tensor]
-](
+def collect_transitions[ActorOutput: NestedMapping[str, Tensor]](
     env_id: str,
     actor: Actor[Tensor, Tensor, ActorOutput],
     num_transitions: int,
@@ -411,9 +346,7 @@ def collect_transitions[
     seed: int = 123,
     device: torch.device = default_device(),
 ) -> Sequence[Transition[ActorOutput]]:
-    env = make_torch_vectorenv(
-        env_id, num_envs=num_parallel_envs, seed=seed, device=device
-    )
+    env = make_torch_vectorenv(env_id, num_envs=num_parallel_envs, seed=seed, device=device)
     dataset = episode_dataset.EpisodeIterableDataset(
         env, actor=actor, steps_per_epoch=num_transitions
     )
@@ -425,16 +358,13 @@ def collect_transitions[
     return transitions
 
 
-def collect_episodes[
-    ActorOutput: NestedMapping[str, Tensor]
-](
+def collect_episodes[ActorOutput: NestedMapping[str, Tensor]](
     env: gymnasium.Env[Tensor, Tensor] | VectorEnv[Tensor, Tensor],
     *,
     actor: Actor[Tensor, Tensor, ActorOutput],
     min_episodes: int | None = None,
     min_num_transitions: int | None = None,
 ) -> EpisodeBatch[ActorOutput]:
-
     assert min_episodes or min_num_transitions
     dataset = episode_dataset.EpisodeIterableDataset(
         env,
@@ -449,9 +379,9 @@ def collect_episodes[
 
 
 def main():
+    import logging
 
     import rich.logging
-    import logging
 
     logging.basicConfig(
         level=logging.INFO,
@@ -479,20 +409,19 @@ def main():
     # env = wrappers.TorchWrapper(env, device=torch.device("cuda"))
     env_id = "CartPole-v1"
     device = default_device()
-    env = make_torch_env(env_id, seed=123, device=device)
-    # env = make_torch_vectorenv(env_id, num_envs=1, seed=123, device=device)
-    env = RecordEpisodeStatistics(env)
-    # obs, info = env.reset(seed=123)
-    # print(obs, info)
-    # done = False
-    # while not done:
-    #     obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
-    #     print(obs, reward, info)
-    #     done = terminated | truncated
+    num_episodes = 1000
+    num_envs = 1
+
+    seed = 123
+    if num_envs is not None:
+        assert num_envs >= 1
+        env = make_torch_vectorenv(env_id, num_envs=num_envs, seed=seed, device=device)
+    else:
+        env = make_torch_env(env_id, seed=seed, device=device)
+        num_envs = 1
+
     with device:
-        single_action_space = getattr(
-            env.unwrapped, "single_action_space", env.action_space
-        )
+        single_action_space = getattr(env.unwrapped, "single_action_space", env.action_space)
         network = FcNet(
             # todo: change to `input_dims` and pass flatdim(observation_space) instead.
             output_dims=gymnasium.spaces.flatdim(single_action_space),
@@ -501,8 +430,10 @@ def main():
     import tqdm
 
     optimizer = algorithm.configure_optimizers()
-
-    for step in tqdm.tqdm(range(1000)):
+    pbar = tqdm.tqdm(range(num_episodes))
+    start = time.perf_counter()
+    total_transitions = 0
+    for step in pbar:
         episodes = collect_episodes(
             env,
             actor=algorithm,
@@ -511,19 +442,41 @@ def main():
         assert episodes.batch_size == 1
         # split_episodes = episodes.split()
         # episode = episodes.split()[0]
-
+        assert isinstance(optimizer, torch.optim.Optimizer)
         optimizer.zero_grad()
         step_output = algorithm.training_step(episodes)
-        print(step_output)
         assert "loss" in step_output
-        loss: Tensor = step_output["loss"]
+        loss = step_output["loss"]
+        assert isinstance(loss, Tensor)
         assert "log" in step_output
         logs = step_output["log"]
         assert logs, step_output
         loss.backward()
         optimizer.step()
+        num_transitions = sum(episodes.episode_lengths)
+        total_transitions += num_transitions
 
-        print(f"Step {step}: loss={loss}, episode_length={logs["train/avg_episode_length"]}")
+        sps = total_transitions / (time.perf_counter() - start)
+        updates_per_second = (step + 1) / (time.perf_counter() - start)
+
+        pbar.set_postfix(
+            {
+                "loss": f"{loss.item():.2f}",
+                "sps": sps,
+                "ups": updates_per_second,
+                **{k: v.item() if isinstance(v, Tensor) else v for k, v in logs.items()},
+            }
+        )
+
+        if logs["avg_episode_length"] > 200:
+            logger.info(f"Reached the threshold of an episode length of 200 after {step+1} steps.")
+            break
+
+    print(
+        f"Num envs: {num_envs}, transitions per second: {sps}, updates per second: {updates_per_second}"
+    )
+
+    # print(f"Step {step}: loss={loss}, episode_length={logs["avg_episode_length"]}")
 
     # trainer = lightning.Trainer(
     #     max_epochs=100, devices=1, accelerator="auto", reload_dataloaders_every_n_epochs=1
