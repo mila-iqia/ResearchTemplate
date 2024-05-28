@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, NotRequired, TypedDict
+from typing import Any, Generic, Literal, NotRequired, TypedDict
 
 import gym
 import gym.spaces
@@ -17,6 +17,7 @@ from torch import Tensor
 from typing_extensions import TypeVar
 
 from project.utils.types import NestedMapping, is_list_of
+from project.utils.utils import get_shape_ish
 
 type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
 type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
@@ -229,24 +230,6 @@ class FinalTransition(Transition[ActorOutput]):
     is_terminal: bool = True
 
 
-type Tree[K, V] = Mapping[K, V | list[V] | Tree[K, V] | list[Tree[K, V]]]
-type DictTree[K, V] = dict[K, V | list[V] | DictTree[K, V] | list[DictTree[K, V]]]
-
-
-def treemap[K, I, O](
-    tree: Tree[K, I],
-    fn: Callable[[I], O],
-) -> DictTree[K, O]:
-    def _map_fn(v):
-        if isinstance(v, list | tuple):
-            return [_map_fn(v_i) for v_i in v]
-        if isinstance(v, Mapping):
-            return {k: _map_fn(v_i) for k, v_i in v.items()}
-        return fn(v)
-
-    return {k: _map_fn(v) for k, v in tree.items()}
-
-
 @dataclass(frozen=True)
 class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     """Object that contains a batch of episodes, stored as nested tensors.
@@ -286,6 +269,14 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
 
     final_observations: Tensor | None
     """Stacked tensor with the final observation of each episode, or None if that isn't saved."""
+
+    def shapes(self) -> dict[str, tuple[int, int | Literal["?"], *tuple[int, ...]]]:
+        return {k: get_shape_ish(v) for k, v in self.items() if isinstance(v, Tensor)}  # type: ignore
+
+    @property
+    def is_nested(self) -> bool:
+        """Returns whether episodes have different lengths (if the tensors are nested tensors)."""
+        return self.observations.is_nested
 
     @property
     def episode_lengths(self) -> list[int]:

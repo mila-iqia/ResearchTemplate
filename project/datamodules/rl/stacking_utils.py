@@ -149,6 +149,85 @@ def stack_normal_distributions[D: torch.distributions.Normal](
     )
 
 
+class NestedDistribution[DistType: torch.distributions.Distribution](
+    torch.distributions.Distribution
+):
+    def __init__[**P](
+        self,
+        dist_type: Callable[P, DistType],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ):
+        assert is_sequence_of(args, torch.Tensor), "expected only nested tensors in args"
+        _unbind_args = [arg.unbind() for arg in args]
+        _values = kwargs.values()
+        assert is_sequence_of(_values, torch.Tensor), "expected only nested tensors in kwargs"
+        unbind_kwargs = {k: v.unbind() for k, v in zip(kwargs.keys(), _values)}
+        n_dists: int | None = None
+        for arg in _unbind_args:
+            if isinstance(arg, tuple):
+                n_dists = len(arg)
+                break
+        else:
+            for k, v in unbind_kwargs.items():
+                if isinstance(v, tuple):
+                    n_dists = len(v)
+                    break
+
+        if n_dists is None:
+            raise ValueError(
+                f"couldn't infer the number of distributions from {args=} and {kwargs=}"
+            )
+
+        args_for_each_dist = [tuple(arg_i[j] for arg_i in _unbind_args) for j in range(n_dists)]
+        kwargs_for_each_dist = [
+            {k: v[j] for k, v in unbind_kwargs.items()} for j in range(n_dists)
+        ]
+        self._distributions: list[DistType] = [
+            dist_type(*args, **kwargs)
+            for arg, kwargs in zip(args_for_each_dist, kwargs_for_each_dist)
+        ]
+        batch_shape = torch.Size([len(self._distributions), *self._distributions[0].batch_shape])
+        super().__init__(batch_shape=batch_shape, validate_args=False)
+
+    def sample(self, sample_shape: torch.Size = torch.Size()) -> Tensor:
+        return torch.nested.as_nested_tensor(
+            [dist.sample(sample_shape) for dist in self._distributions]
+        )
+
+    def log_prob(self, value: Tensor) -> Tensor:
+        assert value.is_nested
+        values = value.unbind()
+        assert len(values) == len(self._distributions)
+        return torch.nested.as_nested_tensor(
+            [dist.log_prob(val) for dist, val in zip(self._distributions, values)]
+        )
+
+
+class NestedCategorical(NestedDistribution[torch.distributions.Categorical]):
+    def __init__(self, probs: Tensor | None = None, logits: Tensor | None = None):
+        if (probs is None) == (logits is None):
+            raise ValueError("Either `probs` or `logits` must be specified, but not both.")
+        if probs is not None:
+            kwargs = {"probs": probs}
+        else:
+            kwargs = {"logits": logits}
+        super().__init__(torch.distributions.Categorical, **kwargs)
+
+
+@register_stacking_fn(torch.distributions.Categorical)
+def stack_categorical_distributions(
+    values: Sequence[torch.distributions.Categorical],
+) -> torch.distributions.Categorical | NestedCategorical:
+    assert len(set([type(d) for d in values])) == 1
+
+    logits = stack([v.logits for v in values])
+    if logits.is_nested:
+        return NestedCategorical(logits=logits)
+    else:
+        return torch.distributions.Categorical(logits=logits)
+
+
 def stack_episode(
     observations: list[Tensor],
     actions: list[Tensor],
@@ -221,6 +300,13 @@ def _unstack_normal[D: torch.distributions.Normal](v: D, n_slices: int) -> list[
     loc = unstack(v.loc, n_slices=n_slices)
     scale = unstack(v.scale, n_slices=n_slices)
     return [type(v)(loc=loc[i], scale=scale[i]) for i in range(n_slices)]
+
+
+@unstack.register(NestedDistribution)
+def _unstack_nested_distribution[D: torch.distributions.Distribution](
+    v: NestedDistribution[D], n_slices: int
+) -> list[D]:
+    return v._distributions.copy()
 
 
 @unstack.register(torch.distributions.Independent)

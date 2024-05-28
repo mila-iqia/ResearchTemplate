@@ -23,6 +23,7 @@ from project.algorithms.bases.algorithm import Algorithm
 from project.datamodules.rl import episode_dataset
 from project.datamodules.rl.datamodule import RlDataModule
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
+from project.datamodules.rl.stacking_utils import NestedCategorical
 from project.datamodules.rl.types import (
     Actor,
     Episode,
@@ -30,6 +31,7 @@ from project.datamodules.rl.types import (
     Transition,
     VectorEnv,
 )
+from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch, torch_to_jax
 from project.datamodules.rl.wrappers.normalize_actions import (
     check_and_normalize_box_actions,
 )
@@ -164,26 +166,33 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         # For Off-policy-style algorithms like DQN, this could be sampled from a replay buffer, and
         # so we could pass all the episodes through the network in a single forward pass (thanks to
         # the nested tensors).
-
         # Nested tensor of shape [n_envs, <episode_len>]
         action_distributions = actor_outputs["action_distribution"]
         action_log_probs = action_distributions.log_prob(batch.actions)
-        assert False, action_log_probs
-        policy_loss_per_step = -action_log_probs * normalized_returns
+        policy_loss_at_each_step = -action_log_probs * normalized_returns
 
-        # Sum across episode steps
-        if policy_loss_per_step.is_nested:
-            policy_loss_per_step = policy_loss_per_step.to_padded_tensor(0.0)
-        policy_loss_per_episode = policy_loss_per_step.sum(dim=1)
-        # Average across episodes
-        policy_loss = policy_loss_per_episode.mean(dim=0)
+        if policy_loss_at_each_step.is_nested:
+            # Pad with zeros in case of different episode lengths.
+            policy_loss_at_each_step = policy_loss_at_each_step.to_padded_tensor(0.0)
+
+        # Sum within each episode, then average across episodes
+        policy_loss = policy_loss_at_each_step.sum(dim=1).mean(dim=0)
         self.log(f"{phase}/loss", policy_loss, prog_bar=True, batch_size=batch_size)
 
         # Log some useful information.
+        max_episode_length = max(batch.episode_lengths)
         avg_episode_length = sum(batch.episode_lengths) / batch_size
-        avg_episode_reward = batch.rewards.sum(1).mean(0)
-        avg_episode_return = (returns.select(dim=1, index=0).sum()) / batch_size
+        _rewards = batch.rewards
+        if _rewards.is_nested:
+            _rewards = _rewards.to_padded_tensor(0.0)
+        avg_episode_reward = _rewards.sum(1).mean(0)
+
+        if not returns.is_nested:
+            avg_episode_return = returns[:, 0].mean()
+        else:
+            avg_episode_return = torch.stack([ret[0] for ret in returns.unbind()]).mean()
         logs = {
+            "max_episode_length": max_episode_length,
             "avg_episode_length": avg_episode_length,
             "avg_episode_reward": avg_episode_reward,
             "avg_episode_return": avg_episode_return,
@@ -247,6 +256,8 @@ def get_action_distribution(
     assert isinstance(action_space, TensorSpace), action_space
 
     if isinstance(action_space, TensorDiscrete | TensorMultiDiscrete):
+        if network_outputs.is_nested:
+            return NestedCategorical(logits=network_outputs)
         return Categorical(logits=network_outputs)
 
     # NOTE: The environment has a wrapper applied to it that normalizes the continuous action
@@ -257,14 +268,7 @@ def get_action_distribution(
     d = action_space.shape[-1]
     assert network_outputs.size(-1) == d * 2
 
-    if network_outputs.is_nested:
-        if not all(out_i.shape == network_outputs[0].shape for out_i in network_outputs.unbind()):
-            raise NotImplementedError(
-                "Can't pass a nested tensor to torch.distributions.Normal yet. "
-                "Therefore we need to have the same shape for all the nested tensors."
-            )
-        network_outputs = torch.stack(network_outputs.unbind())
-
+    # todo: make sure that this works with nested tensors.
     loc, scale = network_outputs.chunk(2, -1)
     loc = torch.tanh(loc)
     scale = torch.relu(scale) + 1e-5
@@ -370,6 +374,26 @@ def collect_episodes[ActorOutput: NestedMapping[str, Tensor]](
     return EpisodeBatch[ActorOutput].from_episodes(episodes)
 
 
+def bench_jax_to_torch(device: torch.device):
+    v = torch.rand(100, 100, 100, device=device)
+    start = time.perf_counter()
+    for n in range(100):
+        v = torch_to_jax(v)
+        v = jax_to_torch(v)
+    print(
+        f"Time taken for 100 back and forths between jax and torch: {time.perf_counter() - start}"
+    )
+    v = torch.rand(100, 100, 100, device=device)
+    start = time.perf_counter()
+    for n in range(100):
+        v = v.clone()
+        v = torch_to_jax(v)
+        v = jax_to_torch(v)
+    print(
+        f"Time taken for 100 back and forths between jax and torch (with a copy) {time.perf_counter() - start}"
+    )
+
+
 def main():
     import logging
 
@@ -399,23 +423,31 @@ def main():
     # env = wrappers.VectorGymWrapper(env)
     # automatically convert between jax ndarrays and torch tensors:
     # env = wrappers.TorchWrapper(env, device=torch.device("cuda"))
+
     env_id = "CartPole-v1"
     device = default_device()
-    num_episodes = 1000
-    num_envs = 2
+    # device = torch.device("cpu")
+    max_num_updates = 3
+    num_envs = 256
+    min_num_transitions_per_update = 10_000
 
     seed = 123
-
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+    if device.type == "cuda":
+        torch.set_deterministic_debug_mode("error")
 
     if num_envs is not None:
         assert num_envs >= 1
         env = make_torch_vectorenv(env_id, num_envs=num_envs, seed=seed, device=device)
+        env.single_observation_space.seed(seed)
+        env.single_action_space.seed(seed)
     else:
         env = make_torch_env(env_id, seed=seed, device=device)
         num_envs = 1
+    env.observation_space.seed(seed)
+    env.action_space.seed(seed)
 
     with device:
         single_action_space = getattr(env.unwrapped, "single_action_space", env.action_space)
@@ -423,22 +455,21 @@ def main():
             # todo: change to `input_dims` and pass flatdim(observation_space) instead.
             output_dims=gymnasium.spaces.flatdim(single_action_space),
         )
-    algorithm = Reinforce(datamodule=None, network=network)
-    import tqdm
+        algorithm = Reinforce(datamodule=None, network=network)
+        import tqdm
 
-    optimizer = algorithm.configure_optimizers()
-    pbar = tqdm.tqdm(range(num_episodes))
+        optimizer = algorithm.configure_optimizers()
+
+    pbar = tqdm.tqdm(range(max_num_updates))
     start = time.perf_counter()
     total_transitions = 0
+    total_episodes = 0
     for update in pbar:
         episodes = collect_episodes(
             env,
             actor=algorithm,
-            min_episodes=1,
+            min_num_transitions=min_num_transitions_per_update,
         )
-        assert episodes.batch_size == 1
-        # split_episodes = episodes.split()
-        # episode = episodes.split()[0]
         assert isinstance(optimizer, torch.optim.Optimizer)
         optimizer.zero_grad()
         step_output = algorithm.training_step(episodes)
@@ -450,17 +481,20 @@ def main():
         assert logs, step_output
         loss.backward()
         optimizer.step()
+        num_episodes = episodes.batch_size
         num_transitions = sum(episodes.episode_lengths)
         total_transitions += num_transitions
-
+        total_episodes += num_episodes
         sps = total_transitions / (time.perf_counter() - start)
         updates_per_second = (update + 1) / (time.perf_counter() - start)
+        episodes_per_second = total_episodes / (time.perf_counter() - start)
 
         pbar.set_postfix(
             {
                 "loss": f"{loss.item():.2f}",
                 "sps": sps,
                 "ups": updates_per_second,
+                "eps": episodes_per_second,
                 **{k: v.item() if isinstance(v, Tensor) else v for k, v in logs.items()},
             }
         )
