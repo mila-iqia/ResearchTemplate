@@ -40,7 +40,8 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
 
     def __init__(
         self,
-        datamodule: DataModule[BatchType],
+        *,
+        datamodule: DataModule[BatchType] | None = None,
         network: NetworkType,
         hp: Algorithm.HParams | None = None,
     ):

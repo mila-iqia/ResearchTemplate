@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import random
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ import gymnasium
 import gymnasium.spaces
 import numpy as np
 import torch
+from gymnasium import Space
 from gymnasium.wrappers.record_video import RecordVideo
 from torch import Tensor
 from torch.distributions import Categorical, Normal
@@ -59,8 +61,11 @@ class ReinforceActorOutput(TypedDict):
     logits: Tensor
     """The network outputs at that step."""
 
-    action_log_probability: Tensor
-    """The log-probability of the selected action at that step."""
+    action_distribution: torch.distributions.Distribution
+    """The distribution over the action space form which the action was sampled."""
+
+    # action_log_probability: Tensor
+    # """The log-probability of the selected action at that step."""
 
 
 class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]]):
@@ -98,36 +103,23 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
     def forward(
         self,
         observations: Tensor,
-        action_space: TensorBox | TensorDiscrete | TensorMultiDiscrete,
+        action_space: gymnasium.Space[Tensor],
     ) -> tuple[Tensor, ReinforceActorOutput]:
-        """Performs a forward pass, returning an action and some additional outputs used for
-        training later."""
-        network_outputs = self.network(observations.to(torch.float32))
+        """Forward pass: Given some observations, return an action some additional outputs.
 
-        if not observations.is_nested:
-            # Either a single observation or a batch of observations.
-            action_distribution = get_action_distribution(network_outputs, action_space)
-            actions = action_distribution.sample()
-            # (normalized) log probability of the selected actions (treated as independent).
-            action_log_probabilities = action_distribution.log_prob(actions).sum(-1)
-        else:
-            # NOTE: This isn't used here, but could be very useful for off-policy algorithms like
-            # for instance DQN:
-
-            # Getting a batch of sequence of observations (a list[list[Observation]], probably a
-            # list of episodes where episodes have different lengths) and we're returning the
-            # actions that would have been taken for each observation.
-            distributions = [
-                get_action_distribution(outputs_i, action_space)
-                for outputs_i in network_outputs.unbind()
-            ]
-            actions = torch.nested.as_nested_tensor([dist.sample() for dist in distributions])
-            action_log_probabilities = torch.nested.as_nested_tensor(
-                [dist.log_prob(a).sum(0) for dist, a in zip(distributions, actions.unbind())]
-            )
+        Parameters
+        ----------
+        observations: Either a single observation, or a batch of observations when training with \
+            a vectorized environment.
+        action_space: The space of possible actions. This is a version of gymnasium.Space where \
+            sampling produces a Tensor on the same device as the environment.
+        """
+        network_outputs = self.network(observations.to(self.dtype))
+        action_distribution = get_action_distribution(network_outputs, action_space)
+        actions = action_distribution.sample()
         actor_outputs: ReinforceActorOutput = {
             "logits": network_outputs,
-            "action_log_probability": action_log_probabilities,
+            "action_distribution": action_distribution,
         }
         return actions, actor_outputs
 
@@ -151,13 +143,12 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         PyTorch-Lightning will then use the loss as the training signal, but we could also do the
         backward pass ourselves if we wanted to (as shown in the ManualGradientsExample).
         """
-        rewards = batch.rewards
         # Retrieve the outputs that we saved at each step:
         actor_outputs: ReinforceActorOutput = batch.actor_outputs  # type: ignore
-        batch_size = rewards.size(0)
+        batch_size = batch.rewards.size(0)
 
         # Nested Tensor of shape [n_envs, <episode_len>] where episode_len varies between tensors.
-        returns = discounted_returns(rewards, gamma=self.hp.gamma)
+        returns = discounted_returns(batch.rewards, gamma=self.hp.gamma)
 
         # NOTE: Equivalent to the following:
         if returns.is_nested:
@@ -175,7 +166,9 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         # the nested tensors).
 
         # Nested tensor of shape [n_envs, <episode_len>]
-        action_log_probs = actor_outputs["action_log_probability"].reshape_as(normalized_returns)
+        action_distributions = actor_outputs["action_distribution"]
+        action_log_probs = action_distributions.log_prob(batch.actions)
+        assert False, action_log_probs
         policy_loss_per_step = -action_log_probs * normalized_returns
 
         # Sum across episode steps
@@ -246,9 +239,8 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
 
 
 def get_action_distribution(
-    network_outputs: Tensor,
-    action_space: TensorDiscrete | TensorBox | TensorMultiDiscrete,
-) -> Categorical | Normal:
+    network_outputs: Tensor, action_space: Space[Tensor]
+) -> torch.distributions.Distribution:
     """Creates an action distribution based on the network outputs."""
     # TODO: Once we can work with batched environments, should `action_space` here always be
     # the single action space?
@@ -410,9 +402,14 @@ def main():
     env_id = "CartPole-v1"
     device = default_device()
     num_episodes = 1000
-    num_envs = 1
+    num_envs = 2
 
     seed = 123
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
     if num_envs is not None:
         assert num_envs >= 1
         env = make_torch_vectorenv(env_id, num_envs=num_envs, seed=seed, device=device)
@@ -433,7 +430,7 @@ def main():
     pbar = tqdm.tqdm(range(num_episodes))
     start = time.perf_counter()
     total_transitions = 0
-    for step in pbar:
+    for update in pbar:
         episodes = collect_episodes(
             env,
             actor=algorithm,
@@ -457,7 +454,7 @@ def main():
         total_transitions += num_transitions
 
         sps = total_transitions / (time.perf_counter() - start)
-        updates_per_second = (step + 1) / (time.perf_counter() - start)
+        updates_per_second = (update + 1) / (time.perf_counter() - start)
 
         pbar.set_postfix(
             {
@@ -469,7 +466,10 @@ def main():
         )
 
         if logs["avg_episode_length"] > 200:
-            logger.info(f"Reached the threshold of an episode length of 200 after {step+1} steps.")
+            logger.info(
+                f"Reached the threshold of an episode length of 200 after {update+1} updates "
+                f"({logs['avg_episode_length']})."
+            )
             break
 
     print(
