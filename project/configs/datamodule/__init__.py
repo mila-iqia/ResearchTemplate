@@ -15,10 +15,14 @@ from project.datamodules import (
     MNISTDataModule,
     VisionDataModule,
 )
-from project.datamodules.vision.cifar10 import cifar10_train_transforms
-from project.datamodules.vision.imagenet32 import imagenet32_train_transforms
-from project.datamodules.vision.inaturalist import INaturalistDataModule, TargetType, Version
-from project.datamodules.vision.mnist import mnist_train_transforms
+from project.datamodules.image_classification.cifar10 import cifar10_train_transforms
+from project.datamodules.image_classification.imagenet32 import imagenet32_train_transforms
+from project.datamodules.image_classification.inaturalist import (
+    INaturalistDataModule,
+    TargetType,
+    Version,
+)
+from project.datamodules.image_classification.mnist import mnist_train_transforms
 from project.datamodules.vision.moving_mnist import MovingMnistDataModule
 
 FILE = Path(__file__)

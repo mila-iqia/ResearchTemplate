@@ -15,7 +15,9 @@ from project.algorithms.bases.algorithm_test import (
     MetricShouldImprove,
 )
 from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
-from project.datamodules.bases.image_classification import ImageClassificationDataModule
+from project.datamodules.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.datamodules.vision.moving_mnist import MovingMnistDataModule
 from project.utils.types import DataModule
 

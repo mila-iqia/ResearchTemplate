@@ -9,7 +9,7 @@ from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAccuracy
 
 from project.algorithms.bases.algorithm import Algorithm
-from project.datamodules.bases.image_classification import (
+from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import ClassificationOutputs, PhaseStr

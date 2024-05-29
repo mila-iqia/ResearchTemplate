@@ -7,7 +7,7 @@ import torch
 from torchvision.datasets import FashionMNIST
 from torchvision.transforms import v2 as transform_lib
 
-from project.datamodules.bases.vision import VisionDataModule
+from project.datamodules.vision.base import VisionDataModule
 from project.utils.types import C, H, W
 
 

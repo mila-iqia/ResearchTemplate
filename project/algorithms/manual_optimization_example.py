@@ -6,7 +6,7 @@ import torch
 from torch import Tensor, nn
 
 from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
-from project.datamodules.bases.image_classification import (
+from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import ClassificationOutputs, PhaseStr

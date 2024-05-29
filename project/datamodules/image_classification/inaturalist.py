@@ -10,7 +10,7 @@ from typing import Any, ClassVar, Literal
 import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
-from project.datamodules.bases.vision import VisionDataModule
+from project.datamodules.vision.base import VisionDataModule
 from project.utils.types import C, H, W
 
 logger = get_logger(__name__)

@@ -17,7 +17,9 @@ from torch import Tensor
 from torch.nn.parameter import Parameter
 from torchvision import transforms
 
-from project.datamodules.bases.image_classification import ImageClassificationDataModule
+from project.datamodules.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.types.protocols import DataModule, Module
 
 from .types import NestedDict
