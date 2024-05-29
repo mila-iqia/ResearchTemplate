@@ -5,7 +5,7 @@ from torch import Tensor, nn
 
 from project.algorithms.bases.algorithm import Algorithm, BatchType
 from project.algorithms.callbacks.callback import Callback
-from project.algorithms.ppo.utils import get_episode_lengths
+from project.datamodules.rl.types import EpisodeBatch
 from project.utils.types import PhaseStr, StepOutputDict, is_sequence_of
 
 
@@ -41,16 +41,16 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
             phase=phase,
             dataloader_idx=dataloader_idx,
         )
-        now = time.time()
+        now = time.perf_counter()
         if phase in self.last_step_times:
             elapsed = now - self.last_step_times[phase]
             if is_sequence_of(batch, Tensor):
                 batch_size = batch[0].shape[0]
                 pl_module.log(f"{phase}/samples_per_second", batch_size / elapsed, prog_bar=True)
 
-            elif isinstance(batch, dict) and "observations" in batch:
+            elif isinstance(batch, EpisodeBatch):
                 # in the case of episode batches, we might have to be smarter about this.
-                episode_lengths = get_episode_lengths(batch)  # type: ignore
+                episode_lengths = batch.episode_lengths
                 total_steps = sum(episode_lengths)
                 episodes = len(episode_lengths)
                 pl_module.log(f"{phase}/steps_per_second", total_steps / elapsed, prog_bar=True)

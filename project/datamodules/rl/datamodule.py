@@ -44,13 +44,18 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
         self,
         dataset: EpisodeIterableDataset[ActorOutput],
         batch_size: int,
+        batch_sampler: None = None,
+        sampler: None = None,
     ):
+        assert not batch_sampler, batch_sampler
+        assert not sampler, sampler
         super().__init__(
             dataset,
             batch_size=batch_size,
             num_workers=0,
             collate_fn=EpisodeBatch.from_episodes,
             shuffle=False,
+            # **kwargs,
         )
         self.env = dataset
         self._iterator: Iterator[EpisodeBatch[ActorOutput]] | None = None
@@ -68,6 +73,7 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
 
     def on_actor_update(self) -> None:
         self.env.on_actor_update()
+        del self._iterator
         # force re-creation of the iterator, to prevent different actors in the same batch.
         self._iterator = None
 
@@ -97,6 +103,7 @@ class RlDataModule(
         # todo: also add `steps_per_epoch` (mutually exclusive with episodes_per_epoch).
         episodes_per_epoch: int = 100,
         batch_size: int = 1,
+        discount_factor: float | None = None,
         train_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
         valid_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
         test_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
@@ -139,6 +146,7 @@ class RlDataModule(
         self.env: TensorEnv = self.env_fn(seed=0)
         self.episodes_per_epoch = episodes_per_epoch
         self.batch_size = batch_size
+        self.discount_factor = discount_factor
 
         self.actor: Actor[Tensor, Tensor, ActorOutput] | None = actor
 
@@ -195,15 +203,20 @@ class RlDataModule(
         # the buffers.
         if self.train_dataset is not None:
             self.train_dataset.actor = self.train_actor
+            self.train_dataset.on_actor_update()
         if self.valid_dataset is not None:
             self.valid_dataset.actor = self.valid_actor
+            self.valid_dataset.on_actor_update()
+
         if self.test_dataset is not None:
             self.test_dataset.actor = self.test_actor
+            self.test_dataset.on_actor_update()
         return self  # type: ignore
 
     def on_actor_update(self) -> None:
         assert self._train_dataloader is not None
         self._train_dataloader.on_actor_update()
+        self.train_dataset.on_actor_update()
 
     def prepare_data(self) -> None:
         # NOTE: We don't use this hook here.
@@ -366,12 +379,14 @@ class RlDataModule(
         # gym.vector.make.
         logger.debug(f"Creating a new environment with {len(wrappers)} wrappers:")
         env = self.env_fn(seed=seed)
+
+        # Wrap the environment with the given wrappers.
         for i, wrapper in enumerate(wrappers):
             env = wrapper(env)
             logger.debug(
                 f"after {i} wrappers: {type(env)=}, {env.observation_space=}, {env.action_space=}"
             )
-        # TODO: Should this wrapper always be mandatory? And should it always be placed at the end?
+
         if isinstance(env.observation_space, TensorSpace) and isinstance(
             env.action_space, TensorSpace
         ):
@@ -379,9 +394,11 @@ class RlDataModule(
             assert env.action_space.device == self.device
             logger.debug("Env is already on the right device.")
         else:
-            logger.debug(
-                f"Add a {ToTorchWrapper.__name__} wrapper to move the numpy arrays to GPU. This isn't ideal!"
-            )
+            if self.device.type == "cuda":
+                logger.warning(
+                    f"Add a {ToTorchWrapper.__name__} wrapper to env {env} which will move the "
+                    "numpy arrays to the GPU. This really isn't ideal!"
+                )
             env = ToTorchWrapper(env, device=self.device)
         return env
 

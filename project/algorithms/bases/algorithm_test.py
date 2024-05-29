@@ -4,6 +4,7 @@ import copy
 import inspect
 import operator
 import sys
+import typing
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -116,8 +117,8 @@ class AlgorithmTests(Generic[AlgorithmType]):
         This allows overrides for specific datamodule/network combinations, for instance, some
         networks are not as powerful and require more updates to see an improvement in the metric.
         """
-        # By default, perform 3 updates on a single batch.
-        return 3
+        # By default, perform 5 updates on a single batch.
+        return 5
 
     @pytest.mark.xfail(
         raises=NotImplementedError, reason="TODO: Implement this test.", strict=True
@@ -448,6 +449,13 @@ class AlgorithmTests(Generic[AlgorithmType]):
             return
 
         config_type: type = get_type_for_config_name(group, config_name, _cs=cs)
+        if not inspect.isclass(config_type):
+            config_return_type = typing.get_type_hints(config_type).get("return")
+            if config_return_type and inspect.isclass(config_return_type):
+                logger.warning(
+                    f"Treating {config_type} as if it returns objects of type {config_return_type}"
+                )
+                config_type = config_return_type
 
         if unsupported_types and supported_types:
             if not set(unsupported_types).isdisjoint(supported_types):
@@ -457,7 +465,6 @@ class AlgorithmTests(Generic[AlgorithmType]):
                     f"{group}={supported_types}. Please remove any overlap between these two "
                     f"fields."
                 )
-
         if issubclass(config_type, tuple(unsupported_types)):
             skip_or_xfail(
                 reason=(
@@ -483,6 +490,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
                     f"Unable to check if {config_type=} is within the list of supported types "
                     f"{supported_types=}!"
                 )
+
         return True
 
 

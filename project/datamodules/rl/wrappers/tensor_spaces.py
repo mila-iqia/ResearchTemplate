@@ -198,7 +198,7 @@ def box_sample(
         bounded_below: jax.Array = low > jax.numpy.iinfo(dtype).min
         bounded_above: jax.Array = high < jax.numpy.iinfo(dtype).max
 
-    high = high if high.dtype.kind == "f" else high.astype("int64") + 1
+    high = high if high.dtype.kind == "f" else high.astype("int32") + 1
 
     # Masking arrays which classify the coordinates according to interval type
     # unbounded = ~bounded_below & ~bounded_above  # note: not used, see code below.
@@ -323,7 +323,7 @@ class TensorMultiDiscrete(TensorSpace):
     def __init__(
         self,
         nvec: torch.Tensor | numpy.typing.NDArray[np.integer[Any]] | list[int],
-        dtype: torch.dtype = torch.int64,
+        dtype: torch.dtype = torch.int32,
         seed: int | torch.Tensor | None = None,
         start: torch.Tensor | numpy.typing.NDArray[np.integer[Any]] | list[int] | None = None,
         device: torch.device = torch.device("cpu"),

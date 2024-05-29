@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-import functools
 import itertools
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterator
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic
+from typing import Generic
 
 import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
@@ -16,9 +15,10 @@ import torch
 from torch import Tensor
 from torch.utils.data import IterableDataset
 
-from project.utils.types import NestedDict, NestedMapping
+from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch
+from project.utils.types import NestedMapping
 
-from .stacking_utils import stack_episode
+from .stacking_utils import stack_episode, unstack
 from .types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv
 
 logger = get_logger(__name__)
@@ -36,15 +36,9 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
     episodes_per_epoch: int | None = None
     steps_per_epoch: int | None = None
     seed: int | list[int] | None = None
+    discount_factor: float | None = None
 
     def __post_init__(self):
-        super().__init__()
-        # self.env = env
-        # self._actor = actor
-        # self.episodes_per_epoch = episodes_per_epoch
-        # self.steps_per_epoch = steps_per_epoch
-        # self.seed = seed
-
         self.num_envs: int | None = (
             self.env.unwrapped.num_envs
             if isinstance(self.env.unwrapped, gymnasium.vector.VectorEnv)
@@ -58,15 +52,6 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
         self._iterator: (
             VectorEnvEpisodeIterator[ActorOutput] | EnvEpisodeIterator[ActorOutput] | None
         ) = None
-
-    # @property
-    # def actor(self) -> Actor[Tensor, Tensor, ActorOutput]:
-    #     return self._actor
-
-    # @actor.setter
-    # def actor(self, value: Actor[Tensor, Tensor, ActorOutput]) -> None:
-    #     self._actor = value
-    #     self.on_actor_update()
 
     def on_actor_update(self) -> None:
         """Call this after updating the weights of the actor neural net, so the env iterator can
@@ -97,6 +82,7 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
                 initial_seed=self.seed,
                 max_episodes=self.episodes_per_epoch,
                 max_steps=self.steps_per_epoch,
+                discount_factor=self.discount_factor,
             )
         else:
             assert self.seed is None or isinstance(self.seed, int)
@@ -106,6 +92,7 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
                 initial_seed=self.seed,
                 max_episodes=self.episodes_per_epoch,
                 max_steps=self.steps_per_epoch,
+                discount_factor=self.discount_factor,
             )
 
     def __iter__(self) -> Iterator[Episode[ActorOutput]]:
@@ -117,13 +104,16 @@ class EpisodeIterableDataset(IterableDataset[Episode[ActorOutput]], Generic[Acto
 
 @dataclasses.dataclass
 class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
-    """Iterator for a single environment."""
+    """Iterator for a single environment that yields episodes one at a time."""
 
     env: gymnasium.Env[Tensor, Tensor]
     actor: Actor[Tensor, Tensor, ActorOutput]
     max_episodes: int | None = None
     max_steps: int | None = None
     initial_seed: int | None = None
+
+    discount_factor: float | None = None
+    """The discount factor (gamma) used to calculate the episode returns at each step."""
 
     _yielded_steps: int = dataclasses.field(default=0, init=False)
     _yielded_episodes: int = dataclasses.field(default=0, init=False)
@@ -157,7 +147,7 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
         # logger.debug(f"Starting episode {self._episode_index}.")
         observations: list[Tensor] = []
         actions: list[Tensor] = []
-        rewards: list[jax.Array] = []
+        rewards: list[Tensor] = []
         infos: list[dict] = []
         actor_outputs: list[ActorOutput] = []
         terminated = False
@@ -178,11 +168,11 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             action, actor_output = self.actor(obs, self.env.action_space)
             obs, reward, terminated, truncated, info = self.env.step(action)
             logger.debug(f"step {_episode_step}, %s", terminated)
-
-            assert isinstance(reward, jax.Array | torch.Tensor), reward
-
             actions.append(action)
             actor_outputs.append(actor_output)
+            if isinstance(reward, jax.Array):
+                reward = jax_to_torch(reward)
+            assert isinstance(reward, torch.Tensor)
             rewards.append(reward)
             if terminated or truncated:
                 final_observation = obs
@@ -191,6 +181,7 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             else:
                 observations.append(obs)
                 infos.append(info)
+
         return stack_episode(
             observations=observations,
             actions=actions,
@@ -201,6 +192,7 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             actor_outputs=actor_outputs,
             final_observation=final_observation,
             final_info=final_info,
+            discount_factor=self.discount_factor,
         )
 
 
@@ -214,6 +206,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         env: VectorEnv[Tensor, Tensor],
         actor: Actor[Tensor, Tensor, ActorOutput],
         initial_seed: int | list[int] | None = None,
+        discount_factor: float | None = None,
         max_episodes: int | None = None,
         max_steps: int | None = None,
     ) -> None:
@@ -225,6 +218,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         self.actor = actor
         self.max_episodes = max_episodes
         self.max_steps = max_steps
+        self.discount_factor = discount_factor
 
         self.observations: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
         self.rewards: list[list[Tensor]] = [[] for _ in range(self.num_envs)]
@@ -300,7 +294,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         for i, env_obs in enumerate(obs_batch):
             self.observations[i].append(env_obs)
 
-        env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
+        env_infos = list(unstack(info_batch, n_slices=self.num_envs))
         for i, env_info in enumerate(env_infos):
             self.infos[i].append(env_info)  # type: ignore
 
@@ -334,8 +328,8 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
         )
         self._last_observation = obs_batch
         self._last_info = info_batch
-        env_infos = list(sliced_dict(info_batch, n_slices=self.num_envs))
-        env_actor_outputs = list(sliced_dict(actor_output_batch, n_slices=self.num_envs))
+        env_infos = list(unstack(info_batch, n_slices=self.num_envs))
+        env_actor_outputs = list(unstack(actor_output_batch, n_slices=self.num_envs))
 
         episodes_at_this_step: list[Episode[ActorOutput]] = []
 
@@ -371,6 +365,7 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
                     final_observation=final_observation,
                     final_info=final_info,
                     environment_index=env_index,
+                    discount_factor=self.discount_factor,
                 )
                 episodes_at_this_step.append(episode)
 
@@ -393,101 +388,3 @@ class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
                 self.actor_outputs[env_index].append(env_actor_output)
 
         return episodes_at_this_step
-
-
-@functools.singledispatch
-def unstack(v: Any, n_slices: int) -> list[Any]:
-    raise NotImplementedError(
-        f"Don't know how to slice values of type {type(v)} into {n_slices} slices."
-    )
-
-
-# if isinstance(v, Mapping):
-#     result[k] = _sliced(v, index)
-# elif v is None:
-#     result[k] = None
-# elif isinstance(v, list) and len(v) == n_slices:
-#     result[k] = v[index]
-# elif isinstance(v, Tensor | np.ndarray | jax.Array):
-#     if v.shape and v.shape[0] == n_slices:
-#         result[k] = v[index]
-#     else:
-#         # duplicate the value.
-#         result[k] = v
-# elif isinstance(v, int | float | bool | str):
-#     # Copy the value at every index, for instance if the actor returns a single int for
-#     # a batch of observations
-#     result[k] = v
-# elif isinstance(v, torch.distributions.Categorical):
-#     result[k] = torch.distributions.Categorical(logits=v.logits[index])
-# elif isinstance(v, torch.distributions.Categorical):
-#     result[k] = torch.distributions.Categorical(logits=v.logits[index])
-# else:
-#     raise NotImplementedError(
-#         f"Don't know how to slice value at key {k} of type {type(v)} (with a value of {v}) from the actor dict {d}"
-#     )
-
-
-def sliced_dict[M: NestedMapping[str, Tensor | None]](
-    d: M, n_slices: int | None = None
-) -> Iterable[M]:
-    """Slice a dict of sequences (tensors) into a sequence of dicts with the values at the same
-    index in the 0th dimension."""
-    if not d:
-        assert n_slices is not None
-        for _ in range(n_slices):
-            yield {}
-        return
-
-    def get_len(d: NestedMapping[str, Tensor | None]):
-        length: int | None = None
-        for k, v in d.items():
-            if isinstance(v, Mapping):
-                length = get_len(v)
-                continue
-            if v is None:
-                continue
-            if length is None:
-                length = len(v)
-            else:
-                assert length == len(v)
-        return length
-
-    if n_slices is None:
-        n_slices = get_len(d)
-        assert n_slices is not None
-
-    def _sliced(
-        d: NestedMapping[str, Tensor | None], index: int
-    ) -> NestedDict[str, Tensor | None]:
-        result: NestedDict[str, Tensor | None] = {}
-        for k, v in d.items():
-            if isinstance(v, Mapping):
-                result[k] = _sliced(v, index)
-            elif v is None:
-                result[k] = None
-            elif isinstance(v, list) and len(v) == n_slices:
-                result[k] = v[index]
-            elif isinstance(v, Tensor | np.ndarray | jax.Array):
-                if v.shape and v.shape[0] == n_slices:
-                    result[k] = v[index]
-                else:
-                    # duplicate the value.
-                    result[k] = v
-            elif isinstance(v, int | float | bool | str):
-                # Copy the value at every index, for instance if the actor returns a single int for
-                # a batch of observations
-                result[k] = v
-            elif isinstance(v, torch.distributions.Categorical):
-                result[k] = torch.distributions.Categorical(logits=v.logits[index])
-            elif isinstance(v, torch.distributions.Categorical):
-                result[k] = torch.distributions.Categorical(logits=v.logits[index])
-            else:
-                raise NotImplementedError(
-                    f"Don't know how to slice value at key {k} of type {type(v)} (with a value of {v}) from the actor dict {d}"
-                )
-        return result
-
-    for i in range(n_slices):
-        yield _sliced(d, i)
-    return

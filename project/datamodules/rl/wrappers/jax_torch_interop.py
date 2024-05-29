@@ -150,7 +150,7 @@ class JaxToTorchMixin:
         obs, reward, terminated, truncated, info = self.env.step(jax_action)
         torch_obs = jax_to_torch_tensor(obs)
 
-        # IDEA: Keep the rewards as jax arrays, since most envs / wrappers of Gymnasium assume a jax array.
+        # IDEA: Keep the rewards as jax arrays, since most envs / wrappers of Gymnasium assume a jax array?
         assert isinstance(reward, jax.Array)
         assert isinstance(terminated, jax.Array | bool), terminated
         assert isinstance(truncated, jax.Array | bool), truncated
