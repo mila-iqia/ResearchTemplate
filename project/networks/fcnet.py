@@ -102,6 +102,9 @@ class FcNet(nn.Sequential):
         super().__init__(*blocks)
 
 
+HParams = FcNet.HParams  # needed for hydra to be able to resolve the class for some reason...
+
+
 @singledispatch
 def make_fcnet_for(datamodule: DataModule, hparams: FcNet.HParams | None = None) -> FcNet:
     raise NotImplementedError(

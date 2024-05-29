@@ -173,7 +173,6 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
     network_config = experiment_config.network
 
     device = get_experiment_device(experiment_config)
-
     if hasattr(network_config, "_target_"):
         with device:
             network = instantiate(network_config)

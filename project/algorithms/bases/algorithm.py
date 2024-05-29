@@ -3,20 +3,30 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any, TypedDict
 
 from lightning import Callback, LightningModule, Trainer
 from torch import Tensor, nn
 from typing_extensions import Generic, TypeVar  # noqa
 
-from project.utils.types import NestedMapping, PhaseStr, StepOutputDict
+from project.utils.types import NestedMapping, PhaseStr
 from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import get_device
 
-StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, default=StepOutputDict)
 
-NetworkType = TypeVar("NetworkType", bound=Module, default=nn.Module)
+class StepOutputDict(TypedDict, total=False):
+    """A dictionary that shows what an Algorithm should output from `training/val/test_step`."""
+
+    loss: Tensor | float
+    """Optional loss tensor that can be returned by those methods."""
+
+    log: dict[str, Tensor | Any]
+    """Optional dictionary of things to log at each step."""
+
 
 BatchType = TypeVar("BatchType", bound=Tensor | Sequence[Tensor] | NestedMapping[str, Tensor])
+StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, default=StepOutputDict)
+NetworkType = TypeVar("NetworkType", bound=Module, default=nn.Module)
 
 
 class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, NetworkType]):
