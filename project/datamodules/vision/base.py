@@ -27,7 +27,10 @@ logger = get_logger(__name__)
 
 
 class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_co]):
-    """A LightningDataModule for image datasets."""
+    """A LightningDataModule for image datasets.
+
+    (Taken from pl_bolts which is not very well maintained.)
+    """
 
     name: ClassVar[str] = ""
     """Dataset name."""

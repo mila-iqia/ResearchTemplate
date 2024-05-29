@@ -78,7 +78,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
     algorithm_name: ClassVar[str]
 
     unsupported_datamodule_names: ClassVar[list[str]] = []
-    unsupported_datamodule_types: ClassVar[list[type[LightningDataModule]]] = []
+    unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
 
     unsupported_network_names: ClassVar[list[str]] = []
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
@@ -87,7 +87,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
     # is compatible with, however their use is discouraged, since we want to encourage researchers
     # to write algorithms that are as widely usable as possible.
     _supported_datamodule_names: ClassVar[list[str]] | None = None
-    _supported_datamodule_types: ClassVar[list[type[LightningDataModule]]] | None = None
+    _supported_datamodule_types: ClassVar[list[type[DataModule]]] | None = None
     _supported_network_names: ClassVar[list[str]] | None = None
     _supported_network_types: ClassVar[list[type[nn.Module]]] | None = None
 
