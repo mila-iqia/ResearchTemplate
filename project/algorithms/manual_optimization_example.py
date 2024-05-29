@@ -5,11 +5,14 @@ from dataclasses import dataclass
 import torch
 from torch import Tensor, nn
 
-from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
+from project.algorithms.bases.image_classification import (
+    ClassificationOutputs,
+    ImageClassificationAlgorithm,
+)
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.types import ClassificationOutputs, PhaseStr
+from project.utils.types import PhaseStr
 
 
 class ManualGradientsExample(ImageClassificationAlgorithm):

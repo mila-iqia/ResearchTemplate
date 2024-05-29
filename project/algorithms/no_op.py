@@ -4,9 +4,10 @@ import torch
 from torch import nn
 
 from project.algorithms.bases import Algorithm
+from project.algorithms.bases.algorithm import StepOutputDict
 from project.algorithms.callbacks.callback import Callback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.utils.types import PhaseStr, StepOutputDict
+from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
 
 

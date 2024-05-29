@@ -6,6 +6,7 @@ from hydra_plugins.custom_launcher.custom_launcher import (
     CustomSlurmLauncher,
     CustomSlurmQueueConf,
 )
+from project.networks import FcNetConfig, ResNet18Config
 
 from .config import Config
 from .datamodule import (
@@ -33,6 +34,9 @@ cs.store(group="datamodule", name="imagenet32", node=ImageNet32DataModuleConfig)
 cs.store(group="datamodule", name="inaturalist", node=INaturalistDataModuleConfig)
 cs.store(group="datamodule", name="moving_mnist", node=MovingMnistDataModuleConfig)
 
+
+cs.store(group="network", name="fcnet", node=FcNetConfig)
+cs.store(group="network", name="resnet18", node=ResNet18Config)
 
 __all__ = [
     "Config",

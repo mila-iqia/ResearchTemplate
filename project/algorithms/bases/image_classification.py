@@ -2,18 +2,32 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Required
 
 import torch
 from torch import Tensor
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAccuracy
 
-from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.bases.algorithm import Algorithm, StepOutputDict
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.types import ClassificationOutputs, PhaseStr
+from project.utils.types import PhaseStr
 from project.utils.types.protocols import Module
+
+# TODO: Remove this `log` dict, perhaps it's better to use self.log of the pl module instead?
+
+
+class ClassificationOutputs(StepOutputDict):
+    """The dictionary format that is minimally required to be returned from
+    `training/val/test_step`."""
+
+    logits: Required[Tensor]
+    """The un-normalized logits."""
+
+    y: Required[Tensor]
+    """The class labels."""
 
 
 class ImageClassificationAlgorithm[

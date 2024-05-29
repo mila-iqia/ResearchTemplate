@@ -12,21 +12,22 @@ from logging import getLogger
 from typing import Any
 
 from hydra_zen import instantiate
-from lightning import LightningDataModule
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
+from project.algorithms.bases.image_classification import (
+    ClassificationOutputs,
+    ImageClassificationAlgorithm,
+)
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import PhaseStr
-from project.utils.types.outputs import ClassificationOutputs
 from project.utils.types.protocols import Module
 
 logger = getLogger(__name__)
@@ -66,7 +67,7 @@ class ExampleAlgorithm(ImageClassificationAlgorithm):
 
     def __init__(
         self,
-        datamodule: LightningDataModule,
+        datamodule: ImageClassificationDataModule,
         network: Module[[Tensor], Tensor],
         hp: ExampleAlgorithm.HParams | None = None,
     ):

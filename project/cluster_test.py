@@ -87,7 +87,7 @@ def test_launch_job_on_cluster(nodes: int, gpus: int, gpu_type: str | None) -> N
 
     overrides = [
         "name=test",
-        "algorithm=backprop",
+        "algorithm=example_algo",
         "datamodule=cifar10",
         "experiment=overfit_one_batch",
         "trainer.max_epochs=1",
@@ -164,7 +164,7 @@ def test_packing_runs_in_one_job() -> None:
 
     overrides = [
         "name=test",
-        "algorithm=backprop",
+        "algorithm=example_algo",
         "datamodule=cifar10",
         "experiment=overfit_one_batch",
         "trainer.max_epochs=1",

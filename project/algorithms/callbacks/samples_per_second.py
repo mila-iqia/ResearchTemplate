@@ -3,9 +3,9 @@ import time
 from lightning import Trainer
 from torch import Tensor, nn
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType
+from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputDict
 from project.algorithms.callbacks.callback import Callback
-from project.utils.types import PhaseStr, StepOutputDict, is_sequence_of
+from project.utils.types import PhaseStr, is_sequence_of
 
 
 class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):

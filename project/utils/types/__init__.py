@@ -16,7 +16,6 @@ from typing_extensions import (
     TypeVarTuple,
 )
 
-from .outputs import ClassificationOutputs, StepOutputDict
 from .protocols import Dataclass, DataModule, HasInputOutputShapes, Module
 
 # These are used to show which dim is which.
@@ -63,6 +62,4 @@ __all__ = [
     "Module",
     "Dataclass",
     "DataModule",
-    "StepOutputDict",
-    "ClassificationOutputs",
 ]

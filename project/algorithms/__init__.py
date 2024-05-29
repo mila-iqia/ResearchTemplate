@@ -15,7 +15,7 @@ from .manual_optimization_example import ManualGradientsExample
 # from the command-line, and be validated against the schema.
 
 algorithm_store = store(group="algorithm")
-algorithm_store(ExampleAlgorithm.HParams(), name="backprop")
+algorithm_store(ExampleAlgorithm.HParams(), name="example_algo")
 algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
 algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
 

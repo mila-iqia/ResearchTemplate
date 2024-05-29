@@ -34,7 +34,6 @@ from project.experiment import (
 )
 from project.main import main
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.maxpool_utils import has_maxunpool2d
 from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.testutils import (
     default_marks_for_config_name,
@@ -193,7 +192,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         *trainer_args: P.args,
         **trainer_kwargs: P.kwargs,
     ):
-        can_use_deterministic_mode = not has_maxunpool2d(algorithm) and not any(
+        can_use_deterministic_mode = not any(
             isinstance(mod, nn.modules.pooling._AdaptiveAvgPoolNd) for mod in algorithm.modules()
         )
 

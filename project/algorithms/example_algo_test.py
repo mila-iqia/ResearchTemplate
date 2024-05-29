@@ -7,5 +7,5 @@ from .example_algo import ExampleAlgorithm
 
 class TestExampleAlgorithm(ImageClassificationAlgorithmTests[ExampleAlgorithm]):
     algorithm_type = ExampleAlgorithm
-    algorithm_name: str = "backprop"
+    algorithm_name: str = "example_algo"
     unsupported_datamodule_names: ClassVar[list[str]] = ["rl"]

@@ -53,7 +53,7 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=backprop"], ExampleAlgorithm.HParams),
+        (["algorithm=example_algo"], ExampleAlgorithm.HParams),
     ],
     ids=_ids,
 )
@@ -76,7 +76,7 @@ def test_setting_algorithm(
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=backprop", "network=fcnet"], FcNet.HParams),
+        (["algorithm=example_algo", "network=fcnet"], FcNet.HParams),
     ],
     ids=_ids,
 )
