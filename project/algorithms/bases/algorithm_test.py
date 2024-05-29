@@ -140,7 +140,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
             "reproducible."
         )
 
-    def get_testing_callbacks(self):
+    def get_testing_callbacks(self) -> list[TestingCallback]:
         return [
             AllParamsShouldHaveGradients(),
         ]
@@ -175,7 +175,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         self,
         algorithm: AlgorithmType,
         tmp_path: Path,
-        testing_callbacks: list[TestingCallback],
+        testing_callbacks: Sequence[TestingCallback],
         # trainer arguments that are set from the fixtures.
         accelerator: str,
         devices: list[int],
