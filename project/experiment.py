@@ -12,7 +12,6 @@ import rich.console
 import rich.logging
 import rich.traceback
 import torch
-from gym import spaces
 from hydra.utils import instantiate
 from lightning import Callback, Trainer, seed_everything
 from omegaconf import DictConfig
@@ -23,8 +22,6 @@ from project.configs.config import Config
 from project.datamodules.bases.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.rl.datamodule import RlDataModule
-from project.networks.fcnet import FcNet
 from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass
 from project.utils.types.protocols import DataModule, Module
@@ -281,37 +278,4 @@ def instantiate_network_from_hparams(network_hparams: Dataclass, datamodule: Dat
             hparams=network_hparams,
         )
 
-    if isinstance(datamodule, RlDataModule):
-        # TODO: Make this more general: Reinforce should be able to use other architectures on SL
-        # problems also.
-        observation_space = datamodule.env.observation_space
-        action_space = datamodule.env.action_space
-        if issubclass(network_type, FcNet):
-            assert isinstance(network_hparams, FcNet.HParams)
-            # todo:
-            raise NotImplementedError("This is not implemented yet.")
-            # return fcnet_for_env(
-            #     observation_space=observation_space,  # type: ignore
-            #     action_space=action_space,  # type: ignore
-            #     hparams=network_hparams,
-            # )
-        if isinstance(observation_space, spaces.Box) and isinstance(action_space, spaces.Discrete):
-            # TODO: These networks assume that the input are images. For now we tried CartPole with
-            # Reinforce, but we could potentially try other Gym envs with Pixel observations.
-            input_shape = datamodule.env.observation_space.shape
-            assert isinstance(datamodule.env.action_space, spaces.Discrete)
-            n_classes = datamodule.env.action_space.n
-            if len(observation_space.shape) == 3:
-                in_channels = observation_space.shape[0]
-                return network_type(
-                    in_channels=in_channels,
-                    n_classes=n_classes,
-                    hparams=network_hparams,
-                )
-            # TODO: Make this more generic once we add more types of datamodules / networks.
-            return network_type(
-                input_shape=input_shape,
-                output_shape=(n_classes,),
-                hparams=network_hparams,
-            )
     raise NotImplementedError(datamodule, network_hparams)

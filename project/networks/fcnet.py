@@ -5,11 +5,9 @@ from functools import singledispatch
 
 import numpy as np
 import torch
-from gym.spaces.utils import flatdim
 from torch import Tensor, nn
 
 from project.datamodules.bases.image_classification import ImageClassificationDataModule
-from project.datamodules.rl.datamodule import RlDataModule
 from project.utils.types.protocols import DataModule
 
 
@@ -104,7 +102,9 @@ class FcNet(nn.Sequential):
 
 @singledispatch
 def make_fcnet_for(datamodule: DataModule, hparams: FcNet.HParams | None = None) -> FcNet:
-    raise NotImplementedError(f"Unsupported datamodule type: {type(datamodule)}")
+    raise NotImplementedError(
+        f"Don't know what the output dimensions are for samples of the given datamodule: {datamodule}"
+    )
 
 
 @make_fcnet_for.register(ImageClassificationDataModule)
@@ -112,12 +112,3 @@ def make_fcnet_for_vision(
     datamodule: ImageClassificationDataModule, hparams: FcNet.HParams | None = None
 ) -> FcNet:
     return FcNet(input_shape=datamodule.dims, output_dims=datamodule.num_classes, hparams=hparams)
-
-
-@make_fcnet_for.register(RlDataModule)
-def make_fcnet_for_rl(datamodule: RlDataModule, hparams: FcNet.HParams | None = None) -> FcNet:
-    return FcNet(
-        input_shape=(flatdim(datamodule.observation_space),),
-        output_dims=flatdim(datamodule.action_space),
-        hparams=hparams,
-    )

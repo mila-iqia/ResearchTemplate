@@ -14,7 +14,7 @@ from lightning import LightningDataModule
 from omegaconf import DictConfig
 
 from project.configs.config import Config
-from project.datamodules.rl.datamodule import RlDataModule
+from project.datamodules.bases.image_classification import ImageClassificationDataModule
 from project.experiment import Experiment, setup_experiment
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
@@ -129,24 +129,9 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
 
     returned_results_dict = results[0]
     results_dict = results[0].copy()
-    # rich.print(results_dict)
 
     loss = results_dict.pop(f"{results_type}/loss")
-    # rich.print(f"{results_type} loss: {loss:.2f}")
-    if isinstance(experiment.datamodule, RlDataModule):
-        # NOTE: Reinforce is a bit of an annoying algorithm, because it can be used in RL and SL..
-        average_episode_rewards = results_dict.pop(f"{results_type}/avg_episode_reward")
-        average_episode_returns = results_dict.pop(f"{results_type}/avg_episode_return")
-        average_episode_length = results_dict.pop(f"{results_type}/avg_episode_length")
-        rich.print(f"{results_type} Average episode rewards: {average_episode_rewards:.2f}")
-        rich.print(f"{results_type} Average episode returns: {average_episode_returns:.2f}")
-        rich.print(f"{results_type} Average episode length: {average_episode_length:.1}")
-        # NOTE: This is the "lower is better" value that is used for HParam sweeps. Does it make
-        # sense to use the (val/test) loss here? Or should we use -1 * rewards/returns?
-        error = loss
-        metric_name = "loss"
-
-    else:
+    if isinstance(experiment.datamodule, ImageClassificationDataModule):
         accuracy: float = results_dict.pop(f"{results_type}/accuracy")
         top5_accuracy: float | None = results_dict.get(f"{results_type}/top5_accuracy")
         rich.print(f"{results_type} top1 accuracy: {accuracy:.1%}")
@@ -155,6 +140,9 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
         # NOTE: This is the value that is used for HParam sweeps.
         error = 1 - accuracy
         metric_name = "1-accuracy"
+    else:
+        metric_name = "loss"
+        error = loss
 
     for key, value in results_dict.items():
         rich.print(f"{results_type} {key}: ", value)

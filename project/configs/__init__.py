@@ -19,7 +19,6 @@ from .datamodule import (
     INaturalistDataModuleConfig,
     MNISTDataModuleConfig,
     MovingMnistDataModuleConfig,
-    RlDataModuleConfig,
 )
 
 # todo: look into using this instead:
@@ -32,7 +31,6 @@ cs.store(group="datamodule", name="mnist", node=MNISTDataModuleConfig)
 cs.store(group="datamodule", name="fashion_mnist", node=FashionMNISTDataModuleConfig)
 cs.store(group="datamodule", name="imagenet32", node=ImageNet32DataModuleConfig)
 cs.store(group="datamodule", name="inaturalist", node=INaturalistDataModuleConfig)
-cs.store(group="datamodule", name="rl", node=RlDataModuleConfig)
 cs.store(group="datamodule", name="moving_mnist", node=MovingMnistDataModuleConfig)
 
 
