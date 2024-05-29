@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import collections
+import collections.abc
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -108,7 +110,7 @@ def random_actor(observation: Any, action_space: Space[ActionT]) -> tuple[Action
 V = TypeVar("V", default=Any)
 
 
-class MappingMixin(Mapping[str, V]):
+class MappingMixin(collections.abc.Mapping[str, V]):
     """Makes a dataclass usable like a Mapping."""
 
     def __iter__(self) -> Iterable[str]:
@@ -161,6 +163,9 @@ class Episode(MappingMixin, Generic[ActorOutput]):
 
     environment_index: int | None = None
     """The environment index (when in a vectorenv) that this episode was generated from."""
+
+    returns: Tensor | None = None
+    discount_factor: float | None = None
 
     @property
     def length(self) -> int:
@@ -270,6 +275,10 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     final_observations: Tensor | None
     """Stacked tensor with the final observation of each episode, or None if that isn't saved."""
 
+    returns: Tensor | None
+    discount_factors: Tensor | np.ndarray | None
+    # todo: Add the returns as part of the episode, or add gamma and compute them lazily?
+
     def shapes(self) -> dict[str, tuple[int, int | Literal["?"], *tuple[int, ...]]]:
         return {k: get_shape_ish(v) for k, v in self.items() if isinstance(v, Tensor)}  # type: ignore
 
@@ -331,6 +340,16 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
             assert is_list_of(_final_infos, dict)
             final_infos = _final_infos
 
+        returns: Tensor | None = None
+        ep_returns = [ep.returns is not None for ep in episodes]
+        if is_list_of(ep_returns, Tensor):
+            returns = stack(ep_returns)
+
+        discount_factors: Tensor | np.ndarray | None = None
+        ep_discount_factors = [ep.discount_factor is not None for ep in episodes]
+        if is_list_of(ep_discount_factors, float) or is_list_of(ep_discount_factors, float):
+            discount_factors = stack(ep_discount_factors)
+
         return EpisodeBatch(
             observations=stack([ep.observations for ep in episodes]),
             actions=stack([ep.actions for ep in episodes]),
@@ -343,6 +362,8 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
             actor_outputs=stack([ep.actor_outputs for ep in episodes]),
             final_infos=final_infos,
             final_observations=final_observation,
+            returns=returns,
+            discount_factors=discount_factors,
         )
 
     def split(self) -> list[Episode[ActorOutput]]:
@@ -383,6 +404,30 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
                 (self.final_infos if self.final_infos is not None else [None] * self.batch_size),
             )
         ]
+
+    def to(self, device: torch.device):
+        def _to[V](value: V) -> V:
+            if isinstance(value, Tensor):
+                return value.to(device=device)
+            if isinstance(value, Mapping):
+                return type(value)(**{k: _to(v) for k, v in value.items()})
+            if isinstance(value, list):
+                return type(value)([_to(v) for v in value])
+            return value
+
+        return EpisodeBatch(
+            observations=self.observations.to(device),
+            actions=self.actions.to(device),
+            rewards=self.rewards.to(device),
+            infos=self.infos,
+            terminated=self.terminated.to(device),
+            truncated=self.truncated.to(device),
+            actor_outputs=_to(self.actor_outputs),
+            final_infos=self.final_infos,
+            final_observations=_to(self.final_observations),
+            returns=_to(self.returns),
+            discount_factors=_to(self.discount_factors),
+        )
 
 
 class EpisodeInfo(TypedDict):

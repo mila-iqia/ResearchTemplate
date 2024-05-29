@@ -44,7 +44,7 @@ type NestedMapping[K, V] = Mapping[K, V | NestedMapping[K, V]]
 
 def is_list_of[V](object: Any, item_type: type[V] | tuple[type[V], ...]) -> TypeGuard[list[V]]:
     """Used to check (and tell the type checker) that `object` is a list of items of this type."""
-    return is_sequence_of(object, item_type) and isinstance(object, list)
+    return isinstance(object, list) and is_sequence_of(object, item_type)
 
 
 def is_sequence_of[V](

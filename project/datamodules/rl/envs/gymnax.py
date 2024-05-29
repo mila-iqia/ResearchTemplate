@@ -87,7 +87,6 @@ class GymnaxVectorEnvToTorchWrapper(
         jax_single_action_space = self.env._env.action_space(self.env.env_params)
         torch_single_observation_space = gymnax_space_to_torch_space(jax_single_observation_space)
         torch_single_action_space = gymnax_space_to_torch_space(jax_single_action_space)
-
         self.single_observation_space = torch_single_observation_space
         self.single_action_space = torch_single_action_space
 
@@ -140,9 +139,11 @@ def _gymnax_discrete_to_torch_discrete(
         jax_array = gymnax_space.sample(jax.random.key(0))
         assert isinstance(jax_array, jax.Array)
         device = get_torch_device_from_jax_array(jax_array)
+    assert gymnax_space.dtype == jax.numpy.int64
+    torch_dtype = torch.int32
     return TensorDiscrete(
         n=gymnax_space.n,
         start=0,
-        dtype=get_torch_dtype_from_jax_dtype(gymnax_space.dtype),
+        dtype=torch_dtype,
         device=device,
     )

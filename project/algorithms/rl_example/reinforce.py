@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-import random
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -15,14 +14,16 @@ import numpy as np
 import torch
 from gymnasium import Space
 from gymnasium.wrappers.record_video import RecordVideo
+from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.distributions import Categorical, Normal
 from torch.optim.optimizer import Optimizer
 
 from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.callbacks.callback import Callback
 from project.datamodules.rl import episode_dataset
 from project.datamodules.rl.datamodule import RlDataModule
-from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
+from project.datamodules.rl.envs import make_torch_vectorenv
 from project.datamodules.rl.stacking_utils import NestedCategorical
 from project.datamodules.rl.types import (
     Actor,
@@ -31,7 +32,6 @@ from project.datamodules.rl.types import (
     Transition,
     VectorEnv,
 )
-from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch, torch_to_jax
 from project.datamodules.rl.wrappers.normalize_actions import (
     check_and_normalize_box_actions,
 )
@@ -41,7 +41,6 @@ from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorMultiDiscrete,
     TensorSpace,
 )
-from project.networks.fcnet import FcNet
 from project.utils.device import default_device
 from project.utils.types import NestedMapping, PhaseStr, StepOutputDict
 from project.utils.types.protocols import Module
@@ -127,7 +126,8 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
 
     def on_before_zero_grad(self, optimizer: Optimizer) -> None:
         super().on_before_zero_grad(optimizer)
-        if self.datamodule:
+        if self.datamodule is not None:
+            logger.info("Updating the actor.")
             self.datamodule.on_actor_update()
 
     def training_step(self, batch: EpisodeBatch) -> StepOutputDict:
@@ -138,19 +138,27 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
     def validation_step(self, batch: EpisodeBatch, batch_index: int) -> StepOutputDict:
         return self.shared_step(batch, phase="val")
 
+    # def on_before_batch_transfer(self, batch: EpisodeBatch, dataloader_idx: int) -> EpisodeBatch:
+    #     # IDEA: Use this PL hook to annotate the batch however you want.
+    #     return batch
+
     def shared_step(self, batch: EpisodeBatch, phase: PhaseStr) -> StepOutputDict:
         """Perform a single step of training or validation.
 
         The input is a batch of episodes, and the output is a dictionary with the loss and metrics.
         PyTorch-Lightning will then use the loss as the training signal, but we could also do the
-        backward pass ourselves if we wanted to (as shown in the ManualGradientsExample).
+        backward pass ourselves if we wanted to (as shown in the manual optimization example).
         """
+        batch_size = batch.batch_size
+
         # Retrieve the outputs that we saved at each step:
         actor_outputs: ReinforceActorOutput = batch.actor_outputs  # type: ignore
-        batch_size = batch.rewards.size(0)
-
-        # Nested Tensor of shape [n_envs, <episode_len>] where episode_len varies between tensors.
-        returns = discounted_returns(batch.rewards, gamma=self.hp.gamma)
+        assert actor_outputs["logits"]._version == 0
+        # Nested Tensor of shape [n_episodes, <episode_len>] where episode_len might vary between episodes.
+        returns = batch.returns
+        if returns is None:
+            # When not using a PL trainer, for example in tests, the above hook isn't called.
+            returns = get_returns(batch.rewards, gamma=self.hp.gamma)
 
         # NOTE: Equivalent to the following:
         if returns.is_nested:
@@ -169,6 +177,8 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         # Nested tensor of shape [n_envs, <episode_len>]
         action_distributions = actor_outputs["action_distribution"]
         action_log_probs = action_distributions.log_prob(batch.actions)
+        if phase == "train":
+            assert action_log_probs.requires_grad
         policy_loss_at_each_step = -action_log_probs * normalized_returns
 
         if policy_loss_at_each_step.is_nested:
@@ -198,7 +208,12 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
             "avg_episode_return": avg_episode_return,
         }
         for k, v in logs.items():
-            self.log(f"{phase}/{k}", torch.as_tensor(v), prog_bar=True, batch_size=batch_size)
+            self.log(
+                f"{phase}/{k}",
+                torch.as_tensor(v, dtype=torch.float32),
+                prog_bar=True,
+                batch_size=batch_size,
+            )
 
         return {"loss": policy_loss, "log": logs}
 
@@ -276,7 +291,7 @@ def get_action_distribution(
     return Normal(loc=loc, scale=scale)
 
 
-def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
+def get_returns(rewards: Tensor, gamma: float, bootstrap_value: Tensor | float = 0.0) -> Tensor:
     """Returns a batch of discounted returns for each step of each episode.
 
     Parameters
@@ -291,47 +306,31 @@ def discounted_returns(rewards_batch: Tensor, gamma: float) -> Tensor:
     # todo: Check if this also works if the rewards batch is a regular tensor (with all the
     # episodes having the same length).
     # _batch_size, ep_len = rewards.shape
+    if rewards.ndim not in (1, 2):
+        raise ValueError(f"Expected either 1d or 2d rewards tensor, not {rewards.ndim}d tensor!")
 
-    # NOTE: `rewards` has shape [batch_size, <ep_length>] atm.
-    if not rewards_batch.is_nested:
-        assert rewards_batch.ndim == 2
-        batch_size, ep_len = rewards_batch.shape
-        # use a better, vectorized implementation in the case of a non-nested tensor.
-        returns = torch.zeros_like(rewards_batch)
-        discounted_future_rewards = rewards_batch.new_zeros((batch_size, 1))
-        # todo: probably a way to vectorize this and get rid of the for-loop.
+    if not rewards.is_nested:
+        was_1d = rewards.ndim == 1
+        if was_1d:
+            rewards = rewards.unsqueeze(0)
+        returns = torch.zeros_like(rewards)
+        discounted_sum_of_future_rewards = torch.ones_like(rewards[:, 0]) * bootstrap_value
+        ep_len = rewards.size(-1)
         for step in reversed(range(ep_len)):
-            reward_at_that_step = rewards_batch[:, step]
-            discounted_future_rewards = reward_at_that_step + gamma * discounted_future_rewards
-            returns[:, step] = discounted_future_rewards
+            discounted_sum_of_future_rewards = (
+                rewards[..., step] + gamma * discounted_sum_of_future_rewards
+            )
+            returns[..., step] = discounted_sum_of_future_rewards
+        if was_1d:
+            returns = returns.squeeze(0)
         return returns
 
-    returns_batch: list[Tensor] = []
-
-    for rewards in rewards_batch.unbind():
-        returns = torch.zeros_like(rewards)
-
-        discounted_future_rewards = torch.zeros_like(rewards[0])
-
-        ep_len = rewards.size(0)
-
-        for step in reversed(range(ep_len)):
-            reward_at_that_step = rewards[step]
-            discounted_future_rewards = reward_at_that_step + gamma * discounted_future_rewards
-            returns[step] = discounted_future_rewards
-
-        returns_batch.append(returns)
-
-    return torch.nested.as_nested_tensor(returns_batch)
-
-
-# def _discounted_returns_list(rewards: list[float], gamma: float) -> list[float]:
-#     sum_of_discounted_future_rewards = 0
-#     returns_list: deque[float] = deque()
-#     for reward in reversed(rewards):
-#         sum_of_discounted_future_rewards = reward + gamma * sum_of_discounted_future_rewards
-#         returns_list.appendleft(sum_of_discounted_future_rewards)  # type: ignore
-#     return list(returns_list)
+    return torch.nested.as_nested_tensor(
+        [
+            get_returns(episode_rewards, gamma, bootstrap_value)
+            for episode_rewards in rewards.unbind()
+        ]
+    )
 
 
 def collect_transitions[ActorOutput: NestedMapping[str, Tensor]](
@@ -374,161 +373,65 @@ def collect_episodes[ActorOutput: NestedMapping[str, Tensor]](
     return EpisodeBatch[ActorOutput].from_episodes(episodes)
 
 
-def bench_jax_to_torch(device: torch.device):
-    v = torch.rand(100, 100, 100, device=device)
-    start = time.perf_counter()
-    for n in range(100):
-        v = torch_to_jax(v)
-        v = jax_to_torch(v)
-    print(
-        f"Time taken for 100 back and forths between jax and torch: {time.perf_counter() - start}"
-    )
-    v = torch.rand(100, 100, 100, device=device)
-    start = time.perf_counter()
-    for n in range(100):
-        v = v.clone()
-        v = torch_to_jax(v)
-        v = jax_to_torch(v)
-    print(
-        f"Time taken for 100 back and forths between jax and torch (with a copy) {time.perf_counter() - start}"
-    )
+class MeasureThroughputCallback(Callback[EpisodeBatch, StepOutputDict]):
+    def __init__(self):
+        super().__init__()
+        self.total_transitions = 0
+        self.total_episodes = 0
+        self._start = time.perf_counter()
+        self._updates = 0
 
+    def on_fit_start(
+        self,
+        trainer: Trainer,
+        pl_module: Algorithm[EpisodeBatch[dict]],
+    ) -> None:
+        self.total_transitions = 0
+        self.total_episodes = 0
+        self._start = time.perf_counter()
+        self._updates = 0
 
-def main():
-    import logging
+    def on_before_optimizer_step(
+        self, trainer: Trainer, pl_module: LightningModule, optimizer: Optimizer, opt_idx: int
+    ) -> None:
+        self._updates += 1
 
-    import rich.logging
+    def on_train_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: Algorithm[EpisodeBatch[dict]],
+        outputs: StepOutputDict,
+        batch: EpisodeBatch[dict],
+        batch_idx: int,
+    ) -> None:
+        episodes = batch
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s ",
-        handlers=[rich.logging.RichHandler()],
-    )
-    # datamodule = RlDataModule(
-    #     env="CartPole-v1",
-    #     num_parallel_envs=128,
-    #     actor=None,
-    #     episodes_per_epoch=10_000,
-    #     batch_size=256,
-    # )
-
-    # TODO: Test out if we can make this stuff work with Brax envs:
-    # from brax import envs
-    # import brax.envs.wrappers
-    # from brax.envs import create
-    # from brax.envs import wrappers
-    # from brax.io import metrics
-    # from brax.training.agents.ppo import train as ppo
-    # env = create("halfcheetah", batch_size=2, episode_length=200, backend="spring")
-    # env = wrappers.VectorGymWrapper(env)
-    # automatically convert between jax ndarrays and torch tensors:
-    # env = wrappers.TorchWrapper(env, device=torch.device("cuda"))
-
-    env_id = "CartPole-v1"
-    device = default_device()
-    # device = torch.device("cpu")
-    max_num_updates = 3
-    num_envs = 256
-    min_num_transitions_per_update = 10_000
-
-    seed = 123
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    if device.type == "cuda":
-        torch.set_deterministic_debug_mode("error")
-
-    if num_envs is not None:
-        assert num_envs >= 1
-        env = make_torch_vectorenv(env_id, num_envs=num_envs, seed=seed, device=device)
-        env.single_observation_space.seed(seed)
-        env.single_action_space.seed(seed)
-    else:
-        env = make_torch_env(env_id, seed=seed, device=device)
-        num_envs = 1
-    env.observation_space.seed(seed)
-    env.action_space.seed(seed)
-
-    with device:
-        single_action_space = getattr(env.unwrapped, "single_action_space", env.action_space)
-        network = FcNet(
-            # todo: change to `input_dims` and pass flatdim(observation_space) instead.
-            output_dims=gymnasium.spaces.flatdim(single_action_space),
-        )
-        algorithm = Reinforce(datamodule=None, network=network)
-        import tqdm
-
-        optimizer = algorithm.configure_optimizers()
-
-    pbar = tqdm.tqdm(range(max_num_updates))
-    start = time.perf_counter()
-    total_transitions = 0
-    total_episodes = 0
-    for update in pbar:
-        episodes = collect_episodes(
-            env,
-            actor=algorithm,
-            min_num_transitions=min_num_transitions_per_update,
-        )
-        assert isinstance(optimizer, torch.optim.Optimizer)
-        optimizer.zero_grad()
-        step_output = algorithm.training_step(episodes)
-        assert "loss" in step_output
-        loss = step_output["loss"]
-        assert isinstance(loss, Tensor)
-        assert "log" in step_output
-        logs = step_output["log"]
-        assert logs, step_output
-        loss.backward()
-        optimizer.step()
         num_episodes = episodes.batch_size
         num_transitions = sum(episodes.episode_lengths)
-        total_transitions += num_transitions
-        total_episodes += num_episodes
-        sps = total_transitions / (time.perf_counter() - start)
-        updates_per_second = (update + 1) / (time.perf_counter() - start)
-        episodes_per_second = total_episodes / (time.perf_counter() - start)
 
-        pbar.set_postfix(
+        self.total_transitions += num_transitions
+        self.total_episodes += num_episodes
+
+        sps = self.total_transitions / (time.perf_counter() - self._start)
+        updates_per_second = (self._updates) / (time.perf_counter() - self._start)
+        episodes_per_second = self.total_episodes / (time.perf_counter() - self._start)
+
+        pl_module.log_dict(
             {
-                "loss": f"{loss.item():.2f}",
-                "sps": sps,
-                "ups": updates_per_second,
-                "eps": episodes_per_second,
-                **{k: v.item() if isinstance(v, Tensor) else v for k, v in logs.items()},
-            }
+                "sps": torch.as_tensor(sps, dtype=torch.float32),
+                "ups": torch.as_tensor(updates_per_second, dtype=torch.float32),
+                "eps": torch.as_tensor(episodes_per_second, dtype=torch.float32),
+            },
+            prog_bar=True,
         )
 
-        if logs["avg_episode_length"] > 200:
-            logger.info(
-                f"Reached the threshold of an episode length of 200 after {update+1} updates "
-                f"({logs['avg_episode_length']})."
-            )
-            break
-
-    print(
-        f"Num envs: {num_envs}, transitions per second: {sps}, updates per second: {updates_per_second}"
-    )
-
-    # print(f"Step {step}: loss={loss}, episode_length={logs["avg_episode_length"]}")
-
-    # trainer = lightning.Trainer(
-    #     max_epochs=100, devices=1, accelerator="auto", reload_dataloaders_every_n_epochs=1
-    # )
-    # # todo: fine for now, but perhaps the SL->RL wrapper for Reinforce will change that.
-    # assert algorithm.datamodule is datamodule
-    # trainer.fit(algorithm, datamodule=datamodule)
-
-    # Otherwise, could also do it manually, like so:
-
-    # optim = algorithm.configure_optimizers()
-    # for episode in algorithm.train_dataloader():
-    #     optim.zero_grad()
-    #     loss = algorithm.training_step(episode)
-    #     loss.backward()
-    #     optim.step()
-    #     print(f"Loss: {loss}")
-
-
-if __name__ == "__main__":
-    main()
+    def on_fit_end(self, trainer: Trainer, pl_module: Algorithm[EpisodeBatch[dict]]) -> None:
+        steps_per_second = self.total_transitions / (time.perf_counter() - self._start)
+        updates_per_second = (self._updates) / (time.perf_counter() - self._start)
+        episodes_per_second = self.total_episodes / (time.perf_counter() - self._start)
+        logger.info(
+            f"Total transitions: {self.total_transitions}, total episodes: {self.total_episodes}"
+        )
+        logger.info(f"Steps per second: {steps_per_second}")
+        logger.info(f"Episodes per second: {episodes_per_second}")
+        logger.info(f"Updates per second: {updates_per_second}")

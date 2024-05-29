@@ -239,20 +239,29 @@ def stack_episode(
     final_observation: Tensor | None = None,
     final_info: dict | None = None,
     environment_index: int | None = None,
+    discount_factor: float | None = None,
 ) -> Episode[ActorOutput]:
     """Stacks the lists of items at each step into an Episode dict containing tensors."""
+    stacked_rewards = stack(rewards)
+    returns: Tensor | None = None
+    if discount_factor is not None:
+        from project.algorithms.rl_example.reinforce import get_returns
+
+        returns = get_returns(stacked_rewards, gamma=discount_factor)
 
     return Episode(
         observations=stack(observations),
         actions=stack(actions),
-        rewards=stack(rewards),  # RecordEpisodeStatistics wrapper needs np.ndarray rewards.
-        infos=infos,  # todo: do we want to stack episode info dicts?
+        rewards=stacked_rewards,
+        infos=infos,  # We don't stack the info dicts because the keys aren't necessarily consistent.
         truncated=truncated,
         terminated=terminated,
         actor_outputs=stack(actor_outputs),
         final_observation=final_observation,
         final_info=final_info,
         environment_index=environment_index,
+        returns=returns,
+        discount_factor=discount_factor,
     )
 
 

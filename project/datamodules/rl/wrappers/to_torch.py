@@ -139,7 +139,7 @@ def gymnasium_discrete_to_tensor_space(
     return TensorDiscrete(
         start=int(space.start),
         n=int(space.n),
-        dtype=dtype or torch.int64,
+        dtype=dtype or torch.int32,
         device=device or torch.device("cpu"),
     )
 

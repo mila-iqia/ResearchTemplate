@@ -14,6 +14,7 @@ envs = [
 ]
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.parametrize("env_id", envs, indirect=True)
 class TestGymnaxEnv(EnvTests):
     """Tests for the wrapped Gymnax environments."""

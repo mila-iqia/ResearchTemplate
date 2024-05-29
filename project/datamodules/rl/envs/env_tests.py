@@ -7,6 +7,7 @@ import pytest
 import torch
 import torch.utils
 import torch.utils.data
+from pytest_benchmark.fixture import BenchmarkFixture
 from torch import Tensor
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
@@ -40,7 +41,7 @@ class EnvTests:
     def seed(self, request: pytest.FixtureRequest):
         return request.param
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="function")
     def env(self, env_id: str, seed: int, device: torch.device):
         return make_torch_env(env_id, device=device, seed=seed)
 
@@ -48,7 +49,7 @@ class EnvTests:
     def num_envs(self, request: pytest.FixtureRequest) -> int:
         return request.param
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="function")
     def vectorenv(self, env_id: str, seed: int, num_envs: int, device: torch.device):
         return make_torch_vectorenv(env_id=env_id, num_envs=num_envs, seed=seed, device=device)
 
@@ -129,7 +130,30 @@ class EnvTests:
             }
         )
 
-    @pytest.mark.timeout(60)
+    def test_reset_speed(
+        self,
+        vectorenv: VectorEnv[torch.Tensor, torch.Tensor],
+        num_envs: int,
+        device: torch.device,
+        seed: int,
+        tensor_regression: TensorRegressionFixture,
+        benchmark: BenchmarkFixture,
+    ):
+        _ = benchmark(vectorenv.reset, seed=seed)
+
+    def test_step_speed(
+        self,
+        vectorenv: VectorEnv[torch.Tensor, torch.Tensor],
+        seed: int,
+        benchmark: BenchmarkFixture,
+    ):
+        _ = vectorenv.reset(seed=seed)
+
+        def _step():
+            _ = vectorenv.step(vectorenv.action_space.sample())
+
+        benchmark(_step)
+
     def test_vectorenv(
         self,
         vectorenv: VectorEnv[torch.Tensor, torch.Tensor],
