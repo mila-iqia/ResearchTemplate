@@ -31,7 +31,7 @@ readme = "README.md"
 license = {text = "MIT"}
 
 [tool.setuptools]
-packages = ["project", "hydra_plugins.custom_launcher"]
+packages = ["project"]
 
 [tool.pdm]
 distribution = true
