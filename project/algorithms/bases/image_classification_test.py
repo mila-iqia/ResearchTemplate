@@ -18,15 +18,17 @@ from project.algorithms.bases.image_classification import ImageClassificationAlg
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.moving_mnist import MovingMnistDataModule
 from project.utils.types import DataModule
 
 ImageAlgorithmType = TypeVar("ImageAlgorithmType", bound=ImageClassificationAlgorithm)
 
 
 class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
-    unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = [MovingMnistDataModule]
+    unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
+    _supported_datamodule_types: ClassVar[list[type[ImageClassificationDataModule]]] = [
+        ImageClassificationDataModule
+    ]
 
     metric_name: ClassVar[str] = "train/accuracy"
     """The main  metric to inspect to check if training is working."""
