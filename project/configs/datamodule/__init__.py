@@ -13,7 +13,6 @@ from project.datamodules import (
     FashionMNISTDataModule,
     ImageNet32DataModule,
     MNISTDataModule,
-    RlDataModule,
     VisionDataModule,
 )
 from project.datamodules.vision.cifar10 import cifar10_train_transforms
@@ -134,13 +133,6 @@ class ImageNet32DataModuleConfig(VisionDataModuleConfig):
     num_images_per_val_class: int = 50  # Slightly different.
     normalize: bool = True
     train_transforms: ImageNet32TrainTransforms = field(default_factory=ImageNet32TrainTransforms)
-
-
-@hydrated_dataclass(target=RlDataModule, populate_full_signature=False)
-class RlDataModuleConfig(DataModuleConfig):
-    env: str = "CartPole-v1"
-    episodes_per_epoch: int = 100
-    batch_size: int = 1
 
 
 @hydrated_dataclass(target=INaturalistDataModule, populate_full_signature=True)

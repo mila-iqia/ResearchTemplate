@@ -12,10 +12,10 @@ from torch.utils.data import DataLoader, TensorDataset
 from project.algorithms.bases.algorithm_test import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
+    MetricShouldImprove,
 )
 from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.datamodules.bases.image_classification import ImageClassificationDataModule
-from project.datamodules.rl.datamodule import RlDataModule
 from project.datamodules.vision.moving_mnist import MovingMnistDataModule
 from project.utils.types import DataModule
 
@@ -23,10 +23,7 @@ ImageAlgorithmType = TypeVar("ImageAlgorithmType", bound=ImageClassificationAlgo
 
 
 class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
-    unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = [
-        RlDataModule,
-        MovingMnistDataModule,
-    ]
+    unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = [MovingMnistDataModule]
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
 
     metric_name: ClassVar[str] = "train/accuracy"
@@ -111,6 +108,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
         """Perform `n_updates` training steps on exactly the same batch of training data."""
         testing_callbacks = self.get_testing_callbacks() + [
             CheckBatchesAreTheSameAtEachStep(),
+            MetricShouldImprove(metric=self.metric_name, lower_is_better=self.lower_is_better),
         ]
         self._train(
             algorithm=algorithm,

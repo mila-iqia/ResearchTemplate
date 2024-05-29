@@ -6,8 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from project.algorithms import Algorithm, Backprop
-from project.algorithms.rl_example.reinforce import Reinforce
+from project.algorithms import Algorithm, ExampleAlgorithm
 from project.configs.config import Config
 from project.configs.datamodule import CIFAR10DataModuleConfig
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
@@ -40,7 +39,7 @@ def set_testing_hydra_dir():
 
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
-    assert isinstance(experiment_config.algorithm, Backprop.HParams)
+    assert isinstance(experiment_config.algorithm, ExampleAlgorithm.HParams)
     assert isinstance(experiment_config.datamodule, CIFAR10DataModuleConfig)
 
 
@@ -54,8 +53,7 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=rl_example"], Reinforce.HParams),
-        (["algorithm=backprop"], Backprop.HParams),
+        (["algorithm=backprop"], ExampleAlgorithm.HParams),
     ],
     ids=_ids,
 )

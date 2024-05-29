@@ -1,6 +1,6 @@
-"""Pytorch Lightning image classifier.
+"""Example of an algorithm, which is a Pytorch Lightning image classifier.
 
-Uses regular backprop.
+Uses regular backpropagation.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from logging import getLogger
 from typing import Any
 
 from hydra_zen import instantiate
+from lightning import LightningDataModule
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor
 from torch.nn import functional as F
@@ -29,8 +30,8 @@ from project.utils.types.protocols import Module
 logger = getLogger(__name__)
 
 
-class Backprop(ImageClassificationAlgorithm):
-    """Baseline model that uses normal backpropagation."""
+class ExampleAlgorithm(ImageClassificationAlgorithm):
+    """Example algorithm for image classification."""
 
     # TODO: Make this less specific to Image classification once we add other supervised learning
     # settings.
@@ -63,24 +64,20 @@ class Backprop(ImageClassificationAlgorithm):
 
     def __init__(
         self,
-        datamodule: ImageClassificationDataModule,
+        datamodule: LightningDataModule,
         network: Module[[Tensor], Tensor],
-        hp: Backprop.HParams | None = None,
+        hp: ExampleAlgorithm.HParams | None = None,
     ):
         super().__init__(datamodule=datamodule, network=network, hp=hp)
         self.datamodule: ImageClassificationDataModule
-        self.hp: Backprop.HParams
+        self.hp: ExampleAlgorithm.HParams
         self.automatic_optimization = True
 
         # Initialize any lazy weights.
         _ = self.network(self.example_input_array)
-        self.save_hyperparameters(
-            {"network_type": type(network), "hp": dataclasses.asdict(self.hp)}
-        )
+        self.save_hyperparameters({"hp": dataclasses.asdict(self.hp)})
 
-    def forward(self, input: Tensor) -> Tensor:  # type: ignore
-        # Dummy forward pass, not used in practice. We just implement it so that PL can
-        # display the input/output shapes of our networks.
+    def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
         return logits
 
@@ -92,17 +89,9 @@ class Backprop(ImageClassificationAlgorithm):
     ) -> ClassificationOutputs:
         x, y = batch
         logits = self(x)
-        # NOTE: There's an issue with PyTorch-Lightning's precision plugin, it assumes that the
-        # loss, if returned, is a scalar!
-
-        # reduction=sum to get the proper gradients in a backward pass when using multiple gpus.
+        # reduction=none to get the proper gradients in a backward pass when using multiple gpus.
         loss = F.cross_entropy(logits, y, reduction="none")
-        self.log(f"{phase}/local_loss", loss.detach().mean())
-
-        total_loss = self.all_gather(loss, sync_grads=True)
-        assert isinstance(total_loss, Tensor)
-        loss = total_loss.mean()
-        self.log(f"{phase}/loss", loss, rank_zero_only=True)
+        self.log(f"{phase}/loss", loss.detach().mean())
 
         # probs = torch.softmax(logits, -1)
         # accuracy = getattr(self, f"{phase}_accuracy")

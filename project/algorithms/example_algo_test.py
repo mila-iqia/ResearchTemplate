@@ -2,10 +2,10 @@ from typing import ClassVar
 
 from project.algorithms.bases.image_classification_test import ImageClassificationAlgorithmTests
 
-from .backprop import Backprop
+from .example_algo import ExampleAlgorithm
 
 
-class TestBackprop(ImageClassificationAlgorithmTests[Backprop]):
-    algorithm_type = Backprop
+class TestExampleAlgorithm(ImageClassificationAlgorithmTests[ExampleAlgorithm]):
+    algorithm_type = ExampleAlgorithm
     algorithm_name: str = "backprop"
     unsupported_datamodule_names: ClassVar[list[str]] = ["rl"]
