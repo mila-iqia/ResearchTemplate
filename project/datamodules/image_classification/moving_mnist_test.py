@@ -12,7 +12,7 @@ from project.configs.datamodule import DATA_DIR
 from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.types import PhaseStr
 
-from .moving_mnist import MovingMnistDataModule
+from ..vision.moving_mnist import MovingMnistDataModule
 
 
 @pytest.fixture(scope="session")

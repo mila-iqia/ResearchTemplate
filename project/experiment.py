@@ -19,7 +19,7 @@ from torch import nn
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
-from project.datamodules.bases.image_classification import (
+from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.hydra_utils import get_outer_class

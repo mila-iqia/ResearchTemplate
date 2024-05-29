@@ -22,7 +22,9 @@ from torch.optim.lr_scheduler import _LRScheduler
 from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
-from project.datamodules.bases.image_classification import ImageClassificationDataModule
+from project.datamodules.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.types import PhaseStr
 from project.utils.types.outputs import ClassificationOutputs
 from project.utils.types.protocols import Module

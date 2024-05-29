@@ -18,7 +18,7 @@ from torchvision.datasets.vision import VisionDataset
 
 from project.utils.types import C, H, StageStr, W
 
-from ..bases.vision import VisionDataModule
+from ..vision.base import VisionDataModule
 
 logger = getLogger(__name__)
 

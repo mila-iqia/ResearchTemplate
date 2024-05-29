@@ -11,7 +11,7 @@ from torchvision.transforms import v2 as transforms
 
 from project.utils.types import C, H, W
 
-from ..bases.vision import VisionDataModule
+from ..vision.base import VisionDataModule
 
 
 def cifar10_train_transforms():

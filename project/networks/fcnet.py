@@ -7,7 +7,9 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 
-from project.datamodules.bases.image_classification import ImageClassificationDataModule
+from project.datamodules.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.types.protocols import DataModule
 
 

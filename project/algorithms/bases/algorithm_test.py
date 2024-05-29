@@ -24,8 +24,10 @@ from typing_extensions import ParamSpec
 
 from project.configs.config import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
-from project.datamodules.bases.image_classification import ImageClassificationDataModule
-from project.datamodules.bases.vision import VisionDataModule
+from project.datamodules.image_classification import (
+    ImageClassificationDataModule,
+)
+from project.datamodules.vision.base import VisionDataModule
 from project.experiment import (
     instantiate_datamodule,
     instantiate_network,
