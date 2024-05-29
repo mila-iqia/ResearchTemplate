@@ -60,10 +60,6 @@ class ImageClassificationAlgorithm[
         self.val_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
         self.test_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
 
-    def predict(self, x: Tensor) -> Tensor:
-        """Predict the classification labels."""
-        return self.network(x).argmax(-1)
-
     def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> ClassificationOutputs:
         """Performs a training step."""
         return self.shared_step(batch=batch, batch_idx=batch_idx, phase="train")
@@ -77,6 +73,14 @@ class ImageClassificationAlgorithm[
     def test_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> ClassificationOutputs:
         """Performs a test step."""
         return self.shared_step(batch=batch, batch_idx=batch_idx, phase="test")
+
+    def predict_step(self, batch: Tensor, batch_idx: int, dataloader_idx: int):
+        """Performs a prediction step."""
+        return self.predict(batch)
+
+    def predict(self, x: Tensor) -> Tensor:
+        """Predict the classification labels."""
+        return self.network(x).argmax(-1)
 
     @abstractmethod
     def shared_step(

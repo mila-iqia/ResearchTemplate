@@ -1,3 +1,5 @@
+"""Simple layers you might find useful when creating new networks."""
+
 from __future__ import annotations
 
 import functools
@@ -193,37 +195,3 @@ class Sample(Lambda, Module[[torch.distributions.Distribution], Tensor]):
 
     if typing.TYPE_CHECKING:
         __call__ = forward
-
-
-class SampleIfDistribution(nn.Module, Module[[Tensor | torch.distributions.Distribution], Tensor]):
-    def __init__(self, differentiable=False) -> None:
-        super().__init__()
-        self._differentiable = differentiable
-        self.sample = Sample(differentiable=differentiable)
-
-    @property
-    def differentiable(self) -> bool:
-        return self._differentiable
-
-    @differentiable.setter
-    def differentiable(self, value: bool):
-        self.sample.differentiable = value
-        self._differentiable = value
-
-    # TODO: add __init__ and such
-    def forward(self, tensor_or_distribution: Tensor | torch.distributions.Distribution) -> Tensor:
-        if isinstance(tensor_or_distribution, torch.distributions.Distribution):
-            return self.sample(tensor_or_distribution)
-        return tensor_or_distribution
-
-
-def independent_normal_layer(
-    scale: Tensor | float = 1.0,
-    differentiable: bool = True,
-    reinterpreted_batch_ndims: int = 1,
-) -> nn.Sequential:
-    return nn.Sequential(
-        Lambda(torch.distributions.Normal, scale=scale),
-        Lambda(torch.distributions.Independent, reinterpreted_batch_ndims=1),
-        Sample(differentiable=differentiable),
-    )
