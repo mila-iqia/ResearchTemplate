@@ -23,7 +23,6 @@ from project.datamodules.image_classification.inaturalist import (
     Version,
 )
 from project.datamodules.image_classification.mnist import mnist_train_transforms
-from project.datamodules.vision.moving_mnist import MovingMnistDataModule
 
 FILE = Path(__file__)
 REPO_ROOTDIR = FILE.parent
@@ -144,8 +143,3 @@ class INaturalistDataModuleConfig(VisionDataModuleConfig):
     data_dir: Path | None = None
     version: Version = "2021_train"
     target_type: TargetType | list[TargetType] = "full"
-
-
-@hydrated_dataclass(target=MovingMnistDataModule, populate_full_signature=True)
-class MovingMnistDataModuleConfig(VisionDataModuleConfig):
-    data_dir: Path | None = SLURM_TMPDIR
