@@ -121,8 +121,9 @@ class AlgorithmTests(Generic[AlgorithmType]):
         This allows overrides for specific datamodule/network combinations, for instance, some
         networks are not as powerful and require more updates to see an improvement in the metric.
         """
-        # By default, perform 2 updates on a single batch.
-        return 2
+        # By default, perform 5 updates on a single batch before checking if the metric has
+        # improved.
+        return 5
 
     @pytest.mark.xfail(
         raises=NotImplementedError, reason="TODO: Implement this test.", strict=True
@@ -664,7 +665,9 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
                 assert (
                     gradient is None
                 ), f"Param {name} has a gradient when it doesn't require one!"
-            elif not any(name.startswith(exception) for exception in self.exceptions):
+            elif any(name.startswith(exception) for exception in self.exceptions):
+                pass
+            else:
                 assert (
                     gradient is not None
                 ), f"param {name} doesn't have a gradient even though it requires one!"

@@ -1,3 +1,5 @@
+"""Some hooks you might find useful."""
+
 from __future__ import annotations
 
 import contextlib
@@ -14,7 +16,6 @@ from torch.utils.hooks import RemovableHandle
 from project.networks.layers.layers import (
     OutT,
     Sample,
-    SampleIfDistribution,
     T,
 )
 from project.utils.types import Module, is_sequence_of
@@ -304,7 +305,7 @@ def _detach_block_inputs_forward_pre_hook(
     kwargs: dict[str, Any],
 ) -> tuple[tuple[Tensor | torch.distributions.Distribution, ...], dict[str, Any]]:
     assert isinstance(inputs, tuple)
-    if isinstance(module, Sample | SampleIfDistribution):
+    if isinstance(module, Sample):
         if len(inputs) != 1 or kwargs:
             raise NotImplementedError(f"Don't know how to detach {inputs}.")
         input: Tensor | torch.distributions.Distribution = inputs[0]
