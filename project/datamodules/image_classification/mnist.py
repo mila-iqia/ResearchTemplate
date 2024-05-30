@@ -8,9 +8,8 @@ from torch import Tensor
 from torchvision.datasets import MNIST
 from torchvision.transforms import v2 as transforms
 
+from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.utils.types import C, H, W
-
-from ..vision.base import VisionDataModule
 
 
 def mnist_train_transforms():
@@ -43,7 +42,7 @@ def mnist_unnormalization(x: Tensor) -> Tensor:
     return (x * std) + mean
 
 
-class MNISTDataModule(VisionDataModule):
+class MNISTDataModule(ImageClassificationDataModule):
     """
     .. figure:: https://miro.medium.com/max/744/1*AO2rIhzRYzFVQlFLx9DM9A.png
         :width: 400
@@ -74,6 +73,7 @@ class MNISTDataModule(VisionDataModule):
     name = "mnist"
     dataset_cls = MNIST
     dims = (C(1), H(28), W(28))
+    num_classes = 10
 
     def __init__(
         self,
@@ -115,14 +115,6 @@ class MNISTDataModule(VisionDataModule):
             *args,
             **kwargs,
         )
-
-    @property
-    def num_classes(self) -> int:
-        """
-        Return:
-            10
-        """
-        return 10
 
     def default_transforms(self) -> Callable:
         if self.normalize:

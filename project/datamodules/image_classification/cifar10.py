@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from argparse import ArgumentParser
 from collections.abc import Callable
 from typing import Any
 
@@ -9,9 +8,8 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2 as transform_lib
 from torchvision.transforms import v2 as transforms
 
+from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.utils.types import C, H, W
-
-from ..vision.base import VisionDataModule
 
 
 def cifar10_train_transforms():
@@ -42,7 +40,7 @@ def cifar10_unnormalization(x: torch.Tensor) -> torch.Tensor:
     return (x * std) + mean
 
 
-class CIFAR10DataModule(VisionDataModule):
+class CIFAR10DataModule(ImageClassificationDataModule):
     """
     .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/wp-content/uploads/2019/01/
         Plot-of-a-Subset-of-Images-from-the-CIFAR-10-Dataset.png
@@ -87,6 +85,7 @@ class CIFAR10DataModule(VisionDataModule):
     name = "cifar10"
     dataset_cls = CIFAR10
     dims = (C(3), H(32), W(32))
+    num_classes = 10
 
     def __init__(
         self,
@@ -134,14 +133,6 @@ class CIFAR10DataModule(VisionDataModule):
         train_len, _ = self._get_splits(len_dataset=50_000)
         return train_len
 
-    @property
-    def num_classes(self) -> int:
-        """
-        Return:
-            10
-        """
-        return 10
-
     def default_transforms(self) -> Callable:
         if self.normalize:
             cf10_transforms = transform_lib.Compose(
@@ -160,13 +151,3 @@ class CIFAR10DataModule(VisionDataModule):
             )
 
         return cf10_transforms
-
-    @staticmethod
-    def add_dataset_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
-
-        parser.add_argument("--data_dir", type=str, default=".")
-        parser.add_argument("--num_workers", type=int, default=0)
-        parser.add_argument("--batch_size", type=int, default=32)
-
-        return parser

@@ -7,11 +7,11 @@ import torch
 from torchvision.datasets import FashionMNIST
 from torchvision.transforms import v2 as transform_lib
 
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.utils.types import C, H, W
 
 
-class FashionMNISTDataModule(VisionDataModule):
+class FashionMNISTDataModule(ImageClassificationDataModule):
     """
     .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/
         wp-content/uploads/2019/02/Plot-of-a-Subset-of-Images-from-the-Fashion-MNIST-Dataset.png
@@ -43,6 +43,7 @@ class FashionMNISTDataModule(VisionDataModule):
     name = "fashion_mnist"
     dataset_cls = FashionMNIST
     dims = (C(1), H(28), W(28))
+    num_classes = 10
 
     def __init__(
         self,
@@ -87,11 +88,6 @@ class FashionMNISTDataModule(VisionDataModule):
         )
         self.prepare_data()
         self.setup("fit")
-
-    @property
-    def num_classes(self) -> int:
-        """Returns the number of classes."""
-        return 10
 
     def default_transforms(self) -> Callable:
         if self.normalize:
