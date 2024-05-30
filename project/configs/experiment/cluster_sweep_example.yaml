@@ -1,13 +1,14 @@
 # @package _global_
 defaults:
   - example.yaml
-  - override /resources: pack_jobs.yaml
+  - override /resources: one_gpu.yaml
+  # - override /resources: pack_jobs.yaml
   - override /trainer/logger: wandb
   - override /hydra/launcher: submitit_slurm
   - override /hydra/sweeper: orion
 
-name: cluster_sweep_example
 log_level: DEBUG
+name: "sweep-example"
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
 seed: ${oc.env:SLURM_PROCID,123}
 
@@ -39,8 +40,9 @@ hydra:
 
   launcher:
     array_parallelism: 4  # max num of jobs to run in parallel
-    job_config:
-      ram_gb: 4  # NOTE: This is the RAM usage per-job!
+    # note: Can't currently use this argument with the submitit launcher plugin. We would need to
+    # create a subclass to add support for it.
+    # ntasks_per_gpu: 2
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
