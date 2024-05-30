@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.datasets import VisionDataset
 from typing_extensions import ParamSpec
 
-from project.utils.types import C, H, W
+from project.utils.types import C, H, StageStr, W
 
 from ...utils.types.protocols import DataModule
 
@@ -99,10 +99,10 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.train_kwargs["train"] = True
             self.test_kwargs["train"] = False
 
-        self._rng = torch.Generator(device="cpu").manual_seed(self.seed)
-        self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=self._rng).item())
-        self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=self._rng).item())
-        self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=self._rng).item())
+        _rng = torch.Generator(device="cpu").manual_seed(self.seed)
+        self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+        self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+        self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
 
         self.dataset_test: VisionDataset | None = None
 
@@ -153,9 +153,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             )
             self.dataset_cls(str(self.data_dir), **test_kwargs)
 
-    def setup(self, stage: str | None = None) -> None:
+    def setup(self, stage: StageStr | None = None) -> None:
         """Creates train, val, and test dataset."""
-        if stage == "fit" or stage is None:
+        if stage in ["fit", "validate"] or stage is None:
             train_transforms = (
                 self.default_transforms()
                 if self.train_transforms is None
@@ -240,6 +240,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 )
                 | kwargs
             ),
+            persistent_workers=True,
         )
 
     def val_dataloader(
@@ -255,6 +256,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             _dataloader_fn=_dataloader_fn,
             *args,
             **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
+            persistent_workers=True,
         )
 
     def test_dataloader(
@@ -272,6 +274,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             _dataloader_fn=_dataloader_fn,
             *args,
             **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
+            persistent_workers=True,
         )
 
     def _data_loader(

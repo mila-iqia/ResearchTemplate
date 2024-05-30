@@ -3,8 +3,8 @@ defaults:
   - example.yaml
   - override /resources: pack_jobs.yaml
   - override /trainer/logger: wandb
-  - override /hydra/launcher: custom_submitit_slurm
-  - override /hydra/sweeper: custom_orion
+  - override /hydra/launcher: submitit_slurm
+  - override /hydra/sweeper: orion
 
 name: cluster_sweep_example
 log_level: DEBUG
@@ -46,8 +46,8 @@ hydra:
       time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
       # requeue: null  # requeue job if it fails
     ## A list of commands to add to the generated sbatch script before running srun:
-    setup:
-    - unset CUDA_VISIBLE_DEVICES
+    # setup:
+    # - unset CUDA_VISIBLE_DEVICES
 
   sweeper:
     params:

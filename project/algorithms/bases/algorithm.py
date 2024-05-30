@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -49,7 +47,7 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
         *,
         datamodule: DataModule[BatchType] | None = None,
         network: NetworkType,
-        hp: Algorithm.HParams | None = None,
+        hp: HParams | None = None,
     ):
         super().__init__()
         self.datamodule = datamodule
@@ -94,9 +92,7 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
         """
         return self.network(x)
 
-    def configure_callbacks(
-        self,
-    ) -> Sequence[Callback]:
+    def configure_callbacks(self) -> list[Callback]:
         """Use this to add some callbacks that should always be included with the model."""
         if getattr(self.hp, "use_scheduler", False) and self.trainer and self.trainer.logger:
             from lightning.pytorch.callbacks.lr_monitor import LearningRateMonitor

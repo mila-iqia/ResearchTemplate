@@ -1,12 +1,12 @@
 _target_: lightning.Trainer
 
 logger: null
-accelerator: gpu
+accelerator: auto
 strategy: null
 devices: 1
 
 min_epochs: 1
-max_epochs: 90
+max_epochs: 10
 
 # path to output directory, created dynamically by hydra
 # path generation pattern is specified in `configs/hydra/default.yaml`
