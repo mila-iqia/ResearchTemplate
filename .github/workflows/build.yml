@@ -99,7 +99,7 @@ jobs:
 
   # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
   upload-coverage-codecov:
-    needs: [real-slurm-integration-tests]
+    needs: [integration_tests]
     runs-on: ubuntu-latest
     name: Upload coverage reports to Codecov
     steps:
