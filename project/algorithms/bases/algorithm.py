@@ -46,12 +46,14 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
         self,
         *,
         datamodule: DataModule[BatchType] | None = None,
-        network: NetworkType,
+        network: NetworkType | None = None,
         hp: HParams | None = None,
     ):
         super().__init__()
         self.datamodule = datamodule
-        self._device = get_device(network)  # fix for `self.device` property which defaults to cpu.
+        if network is not None:
+            # fix for `self.device` property which defaults to cpu.
+            self._device = get_device(network)
         self.network = network
         self.hp = hp or self.HParams()
         self.trainer: Trainer

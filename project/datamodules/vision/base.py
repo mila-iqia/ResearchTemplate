@@ -240,7 +240,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 )
                 | kwargs
             ),
-            persistent_workers=True,
         )
 
     def val_dataloader(
@@ -256,7 +255,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             _dataloader_fn=_dataloader_fn,
             *args,
             **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
-            persistent_workers=True,
         )
 
     def test_dataloader(
@@ -274,7 +272,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             _dataloader_fn=_dataloader_fn,
             *args,
             **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
-            persistent_workers=True,
         )
 
     def _data_loader(
@@ -290,6 +287,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 num_workers=self.num_workers,
                 drop_last=self.drop_last,
                 pin_memory=self.pin_memory,
+                persistent_workers=True if self.num_workers > 0 else False,
             )
             | dataloader_kwargs
         )
