@@ -133,8 +133,11 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
     results_dict = results[0].copy()
 
     loss = results_dict.pop(f"{results_type}/loss")
-    if isinstance(experiment.datamodule, ImageClassificationDataModule):
-        accuracy: float = results_dict.pop(f"{results_type}/accuracy")
+    if (
+        isinstance(experiment.datamodule, ImageClassificationDataModule)
+        and f"{results_type}/accuracy" in results_dict
+    ):
+        accuracy: float = results_dict[f"{results_type}/accuracy"]
         top5_accuracy: float | None = results_dict.get(f"{results_type}/top5_accuracy")
         rich.print(f"{results_type} top1 accuracy: {accuracy:.1%}")
         if top5_accuracy is not None:

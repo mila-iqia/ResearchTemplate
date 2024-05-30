@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import override
@@ -13,13 +12,12 @@ from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputT
 from project.utils.types import PhaseStr, StageStr
 from project.utils.utils import get_log_dir
 
-if typing.TYPE_CHECKING:
-    pass
-
 logger = get_logger(__name__)
 
 
 class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
+    """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class."""
+
     def __init__(self) -> None:
         super().__init__()
         self.log_dir: Path | None = None
