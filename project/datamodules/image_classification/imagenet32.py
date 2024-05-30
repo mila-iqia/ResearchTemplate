@@ -14,8 +14,8 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
-from torchvision.datasets.vision import VisionDataset
 
+from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.utils.types import C, H, StageStr, W
 
 from ..vision.base import VisionDataModule
@@ -27,12 +27,14 @@ def imagenet32_normalization():
     return transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
 
 
-class ImageNet32Dataset(VisionDataset):
+class ImageNet32Dataset(ImageClassificationDataModule):
     """Downsampled ImageNet 32x32 Dataset."""
 
     url: ClassVar[str] = "https://drive.google.com/uc?id=1XAlD_wshHhGNzaqy8ML-Jk0ZhAm8J5J_"
     md5: ClassVar[str] = "64cae578416aebe1576729ee93e41c25"
     archive_filename: ClassVar[str] = "imagenet32.tar.gz"
+
+    dims: ClassVar[tuple[C, H, W]] = (C(3), H(32), W(32))
 
     def __init__(
         self,

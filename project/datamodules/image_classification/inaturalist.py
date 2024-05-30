@@ -10,7 +10,7 @@ from typing import Any, ClassVar, Literal
 import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.utils.types import C, H, W
 
 logger = get_logger(__name__)
@@ -49,7 +49,7 @@ def inat_dataset_dir() -> Path:
     return network_dir
 
 
-class INaturalistDataModule(VisionDataModule):
+class INaturalistDataModule(ImageClassificationDataModule):
     name: ClassVar[str] = "inaturalist"
     """Dataset name."""
 

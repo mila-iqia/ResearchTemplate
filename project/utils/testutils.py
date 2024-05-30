@@ -23,7 +23,7 @@ from torch import Tensor, nn
 from torch.optim import Optimizer
 
 from project.configs.config import Config, cs
-from project.configs.datamodule import DATA_DIR
+from project.configs.datamodule import DATA_DIR, SLURM_JOB_ID
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
@@ -259,7 +259,18 @@ def get_all_datamodule_names_params():
             marks=[
                 pytest.mark.xdist_group(name=dm_name),
             ]
-            + ([pytest.mark.slow] if dm_name in SLOW_DATAMODULES else []),
+            + ([pytest.mark.slow] if dm_name in SLOW_DATAMODULES else [])
+            + (
+                [
+                    pytest.mark.xfail(
+                        SLURM_JOB_ID is None,
+                        raises=NotImplementedError,
+                        reason="Needs to be run on the Mila cluster atm.",
+                    )
+                ]
+                if dm_name == "inaturalist"
+                else []
+            ),
         )
         for dm_name in dm_names
     ]
