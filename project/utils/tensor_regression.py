@@ -20,6 +20,14 @@ from project.utils.utils import flatten_dict, get_shape_ish
 
 logger = get_logger(__name__)
 
+PRECISION = 3
+"""Number of decimals used when rounding the simple stats of Tensor / ndarray in the pre-check.
+
+Full precision is used in the actual regression check, but this is just for the simple attributes
+(min, max, mean, etc.) which seem to be slightly different on the GitHub CI than on a local
+machine.
+"""
+
 
 @functools.singledispatch
 def to_ndarray(v: Any) -> np.ndarray | None:
@@ -85,6 +93,7 @@ class TensorRegressionFixture:
         ndarrays_regression: NDArraysRegressionFixture,
         data_regression: DataRegressionFixture,
         monkeypatch: pytest.MonkeyPatch,
+        simple_attributes_precision: int = PRECISION,
     ) -> None:
         self.request = request
         self.datadir = datadir
@@ -93,6 +102,7 @@ class TensorRegressionFixture:
         self.ndarrays_regression = ndarrays_regression
         self.data_regression = data_regression
         self.monkeypatch = monkeypatch
+        self.simple_attributes_precision = simple_attributes_precision
         self.generate_missing_files: bool | None = self.request.config.getoption(
             "--gen-missing",
             default=None,  # type: ignore
@@ -238,7 +248,9 @@ class TensorRegressionFixture:
             )
 
     def pre_check(self, data_dict: dict[str, Any], simple_attributes_source_file: Path) -> None:
-        version_controlled_simple_attributes = get_version_controlled_attributes(data_dict)
+        version_controlled_simple_attributes = get_version_controlled_attributes(
+            data_dict, precision=self.simple_attributes_precision
+        )
         # Run the regression check with the hashes (and don't fail if they don't exist)
         __tracebackhide__ = True
         # TODO: Figure out how to include/use the names of the GPUs:
@@ -325,25 +337,25 @@ def get_test_source_and_temp_file_paths(
 
 
 @functools.singledispatch
-def get_simple_attributes(value: Any) -> Any:
+def get_simple_attributes(value: Any, precision: int) -> Any:
     raise NotImplementedError(
         f"get_simple_attributes doesn't have a registered handler for values of type {type(value)}"
     )
 
 
 @get_simple_attributes.register(type(None))
-def _get_none_attributes(value: None):
+def _get_none_attributes(value: None, precision: int):
     return {"type": "None"}
 
 
 @get_simple_attributes.register(bool)
 @get_simple_attributes.register(int | float | str)
-def _get_bool_attributes(value: Any):
+def _get_bool_attributes(value: Any, precision: int):
     return {"value": value, "type": type(value).__name__}
 
 
 @get_simple_attributes.register(list)
-def list_simple_attributes(some_list: list[Any]):
+def list_simple_attributes(some_list: list[Any], precision: int):
     return {
         "length": len(some_list),
         "item_types": sorted(set(type(item).__name__ for item in some_list)),
@@ -351,24 +363,24 @@ def list_simple_attributes(some_list: list[Any]):
 
 
 @get_simple_attributes.register(dict)
-def dict_simple_attributes(some_dict: dict[str, Any]):
-    return {k: get_simple_attributes(v) for k, v in some_dict.items()}
+def dict_simple_attributes(some_dict: dict[str, Any], precision: int):
+    return {k: get_simple_attributes(v, precision=precision) for k, v in some_dict.items()}
 
 
 @get_simple_attributes.register(np.ndarray)
-def ndarray_simple_attributes(array: np.ndarray) -> dict:
+def ndarray_simple_attributes(array: np.ndarray, precision: int) -> dict:
     return {
         "shape": tuple(array.shape),
         "hash": _hash(array),
-        "min": array.min().item(),
-        "max": array.max().item(),
-        "sum": array.sum().item(),
-        "mean": array.mean(),
+        "min": round(array.min().item(), precision),
+        "max": round(array.max().item(), precision),
+        "sum": round(array.sum().item(), precision),
+        "mean": round(array.mean(), precision),
     }
 
 
 @get_simple_attributes.register(Tensor)
-def tensor_simple_attributes(tensor: Tensor) -> dict:
+def tensor_simple_attributes(tensor: Tensor, precision: int) -> dict:
     if tensor.is_nested:
         # assert not [tensor_i.any() for tensor_i in tensor.unbind()], tensor
         # TODO: It might be a good idea to make a distinction here between '0' as the default, and
@@ -378,10 +390,10 @@ def tensor_simple_attributes(tensor: Tensor) -> dict:
     return {
         "shape": tuple(tensor.shape) if not tensor.is_nested else get_shape_ish(tensor),
         "hash": _hash(tensor),
-        "min": tensor.min().item(),
-        "max": tensor.max().item(),
-        "sum": tensor.sum().item(),
-        "mean": tensor.float().mean().item(),
+        "min": round(tensor.min().item(), precision),
+        "max": round(tensor.max().item(), precision),
+        "sum": round(tensor.sum().item(), precision),
+        "mean": round(tensor.float().mean().item(), precision),
         "device": (
             "cpu" if tensor.device.type == "cpu" else f"{tensor.device.type}:{tensor.device.index}"
         ),
@@ -399,8 +411,10 @@ def get_gpu_names(data_dict: dict[str, Any]) -> list[str]:
     )
 
 
-def get_version_controlled_attributes(data_dict: dict[str, Any]) -> dict[str, Any]:
-    return {key: get_simple_attributes(value) for key, value in data_dict.items()}
+def get_version_controlled_attributes(data_dict: dict[str, Any], precision: int) -> dict[str, Any]:
+    return {
+        key: get_simple_attributes(value, precision=precision) for key, value in data_dict.items()
+    }
 
 
 class FilesDidntExist(Failed):

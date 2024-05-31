@@ -11,7 +11,7 @@ from project.configs.config import Config
 from project.configs.datamodule import CIFAR10DataModuleConfig
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
-from project.networks.fcnet import FcNet
+from project.networks import FcNetConfig
 from project.utils.hydra_utils import resolve_dictconfig
 
 if typing.TYPE_CHECKING:
@@ -77,7 +77,7 @@ def test_setting_algorithm(
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=example_algo", "network=fcnet"], FcNet.HParams),
+        (["algorithm=example_algo", "network=fcnet"], FcNetConfig),
     ],
     ids=_ids,
 )
