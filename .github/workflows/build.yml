@@ -43,14 +43,9 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install pre-commit
-    - run: pre-commit --version
-    - run: pre-commit install
-    - run: pre-commit run --all-files
+    - run: pip install pdm
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
+      run: pdm install
     - name: Test with pytest (very fast)
       run: pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append
     - name: Test with pytest (fast)
@@ -75,14 +70,9 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install pre-commit
-    - run: pre-commit --version
-    - run: pre-commit install
-    - run: pre-commit run --all-files
+    - run: pip install pdm
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
+      run: pdm install
 
     - name: Test with pytest
       run: pytest -v --cov=project --cov-report=xml --cov-append
