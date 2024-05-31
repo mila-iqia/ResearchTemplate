@@ -183,9 +183,6 @@ def accelerator(request: pytest.FixtureRequest):
     return accelerator
 
 
-_cuda_available = torch.cuda.is_available()
-
-
 @pytest.fixture(
     scope="session",
     params=None,

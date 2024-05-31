@@ -20,6 +20,8 @@ from project.utils.utils import flatten_dict, get_shape_ish
 
 logger = get_logger(__name__)
 
+PRECISION = 5
+
 
 @functools.singledispatch
 def to_ndarray(v: Any) -> np.ndarray | None:
@@ -360,10 +362,10 @@ def ndarray_simple_attributes(array: np.ndarray) -> dict:
     return {
         "shape": tuple(array.shape),
         "hash": _hash(array),
-        "min": array.min().item(),
-        "max": array.max().item(),
-        "sum": array.sum().item(),
-        "mean": array.mean(),
+        "min": round(array.min().item(), PRECISION),
+        "max": round(array.max().item(), PRECISION),
+        "sum": round(array.sum().item(), PRECISION),
+        "mean": round(array.mean(), PRECISION),
     }
 
 
@@ -378,10 +380,10 @@ def tensor_simple_attributes(tensor: Tensor) -> dict:
     return {
         "shape": tuple(tensor.shape) if not tensor.is_nested else get_shape_ish(tensor),
         "hash": _hash(tensor),
-        "min": tensor.min().item(),
-        "max": tensor.max().item(),
-        "sum": tensor.sum().item(),
-        "mean": tensor.float().mean().item(),
+        "min": round(tensor.min().item(), PRECISION),
+        "max": round(tensor.max().item(), PRECISION),
+        "sum": round(tensor.sum().item(), PRECISION),
+        "mean": round(tensor.float().mean().item(), PRECISION),
         "device": (
             "cpu" if tensor.device.type == "cpu" else f"{tensor.device.type}:{tensor.device.index}"
         ),
