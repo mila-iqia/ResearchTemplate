@@ -4,7 +4,6 @@
 name: Python application
 
 on:
-  push:
   pull_request:
 
 permissions:
