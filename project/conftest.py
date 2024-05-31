@@ -5,7 +5,7 @@ import random
 import sys
 import typing
 import warnings
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -27,7 +27,7 @@ from project.configs.datamodule import DATA_DIR
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule, num_cpus_on_node
+from project.datamodules.vision.base import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
@@ -198,24 +198,7 @@ def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
         return num_gpus  # Use only one GPU by default.
     else:
         assert accelerator == "cpu"
-        return request.param
-
-
-def run_with_multiple_devices(test_fn: Callable) -> pytest.MarkDecorator:
-    if torch.cuda.is_available():
-        gpus = torch.cuda.device_count()
-        return pytest.mark.parametrize(
-            num_devices_to_use.__name__,
-            list(range(1, gpus + 1)),
-            indirect=True,
-            ids=[f"gpus={i}" for i in range(1, gpus + 1)],
-        )
-    return pytest.mark.parametrize(
-        num_devices_to_use.__name__,
-        [num_cpus_on_node()],
-        indirect=True,
-        ids=[""],
-    )(test_fn)
+        return getattr(request, "param", 1)
 
 
 @pytest.fixture(scope="session")
