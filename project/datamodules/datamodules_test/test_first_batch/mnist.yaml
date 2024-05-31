@@ -1,9 +1,9 @@
 '0':
   device: cpu
   hash: 4338584025941619046
-  max: 2.82149
-  mean: 0.01424
-  min: -0.42421
+  max: 2.8215
+  mean: 0.0142
+  min: -0.4242
   shape:
   - 128
   - 1
@@ -14,7 +14,7 @@
   device: cpu
   hash: 1596942422053415325
   max: 9
-  mean: 4.24219
+  mean: 4.2422
   min: 0
   shape:
   - 128

@@ -20,7 +20,7 @@ from project.utils.utils import flatten_dict, get_shape_ish
 
 logger = get_logger(__name__)
 
-PRECISION = 5
+PRECISION = 4
 
 
 @functools.singledispatch
