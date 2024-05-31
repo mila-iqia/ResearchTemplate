@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import field
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -22,7 +22,7 @@ from project.datamodules.image_classification import (
 )
 from project.utils.types.protocols import DataModule, Module
 
-from .types import NestedDict
+from .types import NestedDict, NestedMapping
 
 logger = get_logger(__name__)
 
@@ -221,7 +221,7 @@ def print_config(
     #     rich.print(tree, file=file)
 
 
-def flatten[K, V](nested: NestedDict[K, V]) -> dict[tuple[K, ...], V]:
+def flatten[K, V](nested: NestedMapping[K, V]) -> dict[tuple[K, ...], V]:
     """Flatten a dictionary of dictionaries. The returned dictionary's keys are tuples, one entry
     per layer.
 
@@ -230,7 +230,7 @@ def flatten[K, V](nested: NestedDict[K, V]) -> dict[tuple[K, ...], V]:
     """
     flattened: dict[tuple[K, ...], V] = {}
     for k, v in nested.items():
-        if isinstance(v, dict):
+        if isinstance(v, Mapping):
             for subkeys, subv in flatten(v).items():
                 collision_key = (k, *subkeys)
                 assert collision_key not in flattened
@@ -257,7 +257,7 @@ def unflatten[K, V](flattened: dict[tuple[K, ...], V]) -> NestedDict[K, V]:
     return nested
 
 
-def flatten_dict[V](nested: NestedDict[str, V], sep: str = ".") -> dict[str, V]:
+def flatten_dict[V](nested: NestedMapping[str, V], sep: str = ".") -> dict[str, V]:
     """Flatten a dictionary of dictionaries. Joins different nesting levels with `sep` as
     separator.
 

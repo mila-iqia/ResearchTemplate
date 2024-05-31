@@ -70,7 +70,7 @@ def test_first_batch(
 
     fig.suptitle(f"First batch of datamodule {type(datamodule).__name__}")
     figure_path, _ = get_test_source_and_temp_file_paths(
-        ".png", request=request, original_datadir=original_datadir, datadir=datadir
+        extension=".png", request=request, original_datadir=original_datadir, datadir=datadir
     )
     figure_path.parent.mkdir(exist_ok=True, parents=True)
     fig.savefig(figure_path)
