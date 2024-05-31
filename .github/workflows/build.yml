@@ -47,9 +47,9 @@ jobs:
     - name: Install dependencies
       run: pdm install
     - name: Test with pytest (very fast)
-      run: pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append
+      run: pdm run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append
     - name: Test with pytest (fast)
-      run: pytest -v --cov=project --cov-report=xml --cov-append
+      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append
 
     - name: Store coverage report as an artifact
       uses: actions/upload-artifact@v4
@@ -75,10 +75,10 @@ jobs:
       run: pdm install
 
     - name: Test with pytest
-      run: pytest -v --cov=project --cov-report=xml --cov-append
+      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append
 
     - name: Test with pytest (only slow tests)
-      run: pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+      run: pdm run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
 
     - name: Store coverage report as an artifact
       uses: actions/upload-artifact@v4
