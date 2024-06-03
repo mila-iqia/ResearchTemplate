@@ -6,6 +6,7 @@ import copy
 import dataclasses
 import hashlib
 import importlib
+import os
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
@@ -33,6 +34,16 @@ from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
 from project.utils.utils import get_device
+
+in_github_CI = os.environ.get("GITHUB_ACTIONS") == "true"
+in_self_hosted_github_CI = in_github_CI and torch.cuda.is_available()
+
+skip_test_on_github_CI = pytest.mark.skipif(in_github_CI, reason="Skipping test on GitHub CI.")
+skip_test_on_github_cloud_CI = pytest.mark.skipif(
+    in_github_CI and not in_self_hosted_github_CI,
+    reason="Skipping test on GitHub cloud CI, but run on the self-hosted runner.",
+)
+needs_gpu = pytest.mark.skipif(not torch.cuda.is_available(), reason="Needs a GPU to run.")
 
 SLOW_DATAMODULES = ["inaturalist", "imagenet32"]
 

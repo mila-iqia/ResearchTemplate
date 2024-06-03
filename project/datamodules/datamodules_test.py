@@ -9,12 +9,13 @@ from project.utils.tensor_regression import (
     TensorRegressionFixture,
     get_test_source_and_temp_file_paths,
 )
-from project.utils.testutils import run_for_all_datamodules
+from project.utils.testutils import run_for_all_datamodules, skip_test_on_github_cloud_CI
 from project.utils.types import is_sequence_of
 
 from ..utils.types.protocols import DataModule
 
 
+@skip_test_on_github_cloud_CI
 @pytest.mark.timeout(25, func_only=True)
 @run_for_all_datamodules()
 def test_first_batch(
