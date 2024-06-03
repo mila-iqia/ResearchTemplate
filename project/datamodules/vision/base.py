@@ -21,7 +21,11 @@ from ...utils.types.protocols import DataModule
 P = ParamSpec("P")
 
 SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
+    Path(os.environ["SLURM_TMPDIR"])
+    if "SLURM_TMPDIR" in os.environ
+    else tmp
+    if "SLURM_JOB_ID" in os.environ and (tmp := Path("/tmp")).exists()
+    else None
 )
 logger = get_logger(__name__)
 

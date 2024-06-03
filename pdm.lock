@@ -1188,7 +1188,7 @@ files = [
 
 [[package]]
 name = "jaxlib"
-version = "0.4.28+cuda12.cudnn89"
+version = "0.4.28"
 requires_python = ">=3.9"
 summary = "XLA library for JAX"
 groups = ["default"]
@@ -2823,7 +2823,7 @@ files = [
 
 [[package]]
 name = "torch-jax-interop"
-version = "0.0.2"
+version = "0.0.3"
 requires_python = "<4.0,>=3.11"
 summary = "Utility to convert Tensors from Jax to Torch and vice-versa"
 groups = ["default"]
@@ -2834,8 +2834,8 @@ dependencies = [
     "torch<3.0.0,>=2.3.0",
 ]
 files = [
-    {file = "torch_jax_interop-0.0.2-py3-none-any.whl", hash = "sha256:a155c3dd3b00017040755b77e7ff87599fa1d909d8be0f6a9854ed57e94a04d7"},
-    {file = "torch_jax_interop-0.0.2.tar.gz", hash = "sha256:cb1e8d8e8195652f244031cb21391483bfa6d790931f257b0566dc522c1b0e75"},
+    {file = "torch_jax_interop-0.0.3-py3-none-any.whl", hash = "sha256:fcae8b45304ef4f8d8cd6b40f078c05147d8bafec65dec3a79cee3595aa8dc4e"},
+    {file = "torch_jax_interop-0.0.3.tar.gz", hash = "sha256:44fdc37fe89be32de85f648e0604056dd1af46bb869aab4ddcb2267198c6cf86"},
 ]
 
 [[package]]
