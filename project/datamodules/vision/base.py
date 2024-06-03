@@ -15,14 +15,10 @@ from torchvision.datasets import VisionDataset
 from typing_extensions import ParamSpec
 
 from project.utils.types import C, H, StageStr, W
-
-from ...utils.types.protocols import DataModule
+from project.utils.types.protocols import DataModule
 
 P = ParamSpec("P")
 
-SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
-)
 logger = get_logger(__name__)
 
 
@@ -75,8 +71,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         """
 
         super().__init__()
+        from project.configs.datamodule import DATA_DIR
 
-        self.data_dir = data_dir if data_dir is not None else os.getcwd()
+        self.data_dir = data_dir if data_dir is not None else DATA_DIR
         self.val_split = val_split
         if num_workers is None:
             num_workers = num_cpus_on_node()
@@ -232,15 +229,10 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         return self._data_loader(
             self.dataset_train,
             _dataloader_fn=_dataloader_fn,
+            shuffle=self.shuffle,
             *args,
-            **(
-                dict(
-                    shuffle=self.shuffle,
-                    generator=torch.Generator().manual_seed(self.train_dl_rng_seed),
-                )
-                | kwargs
-            ),
-            persistent_workers=True,
+            **kwargs,
+            generator=torch.Generator().manual_seed(self.train_dl_rng_seed),
         )
 
     def val_dataloader(
@@ -255,8 +247,8 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.dataset_val,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
-            persistent_workers=True,
+            **kwargs,
+            generator=torch.Generator().manual_seed(self.val_dl_rng_seed),
         )
 
     def test_dataloader(
@@ -273,14 +265,16 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.dataset_test,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
-            persistent_workers=True,
+            **kwargs,
+            generator=torch.Generator().manual_seed(self.test_dl_rng_seed),
         )
 
     def _data_loader(
         self,
         dataset: Dataset,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
+        generator: torch.Generator | None = None,
+        shuffle: bool | None = None,
         *dataloader_args: P.args,
         **dataloader_kwargs: P.kwargs,
     ) -> DataLoader:
@@ -291,6 +285,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 drop_last=self.drop_last,
                 pin_memory=self.pin_memory,
             )
+            | (dict(shuffle=shuffle) if shuffle is not None else {})
+            | (dict(generator=generator) if generator is not None else {})
+            | (dict(persistent_workers=True) if self.num_workers > 0 else {})
             | dataloader_kwargs
         )
         return _dataloader_fn(dataset, *dataloader_args, **dataloader_kwargs)

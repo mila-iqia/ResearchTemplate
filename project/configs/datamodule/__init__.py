@@ -17,12 +17,14 @@ from project.datamodules import (
 )
 from project.datamodules.image_classification.cifar10 import cifar10_train_transforms
 from project.datamodules.image_classification.imagenet32 import imagenet32_train_transforms
-from project.datamodules.image_classification.inaturalist import (
+from project.datamodules.image_classification.mnist import mnist_train_transforms
+from project.datamodules.vision.inaturalist import (
     INaturalistDataModule,
     TargetType,
     Version,
 )
-from project.datamodules.image_classification.mnist import mnist_train_transforms
+
+logger = get_logger(__name__)
 
 FILE = Path(__file__)
 REPO_ROOTDIR = FILE.parent
@@ -31,16 +33,16 @@ for level in range(5):
         break
     REPO_ROOTDIR = REPO_ROOTDIR.parent
 
-
-SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
-)
 SLURM_JOB_ID: int | None = (
     int(os.environ["SLURM_JOB_ID"]) if "SLURM_JOB_ID" in os.environ else None
 )
-
-logger = get_logger(__name__)
-
+SLURM_TMPDIR: Path | None = (
+    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
+)
+if not SLURM_TMPDIR and SLURM_JOB_ID is not None:
+    # This can happens when running the integrated VSCode terminal with `mila code`!
+    if (_tmp := Path("/tmp")).exists():
+        SLURM_TMPDIR = _tmp
 
 TORCHVISION_DIR: Path | None = None
 
@@ -49,11 +51,6 @@ if _torchvision_dir.exists() and _torchvision_dir.is_dir():
     TORCHVISION_DIR = _torchvision_dir
 
 
-if not SLURM_TMPDIR and SLURM_JOB_ID is not None:
-    # This can happens when running the integrated VSCode terminal with `mila code`!
-    _slurm_tmpdir = Path(f"/Tmp/slurm.{SLURM_JOB_ID}.0")
-    if _slurm_tmpdir.exists():
-        SLURM_TMPDIR = _slurm_tmpdir
 SCRATCH = Path(os.environ["SCRATCH"]) if "SCRATCH" in os.environ else None
 DATA_DIR = Path(os.environ.get("DATA_DIR", (SLURM_TMPDIR or SCRATCH or REPO_ROOTDIR) / "data"))
 

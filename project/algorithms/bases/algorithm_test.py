@@ -126,9 +126,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         # improved.
         return 5
 
-    @pytest.mark.xfail(
-        raises=NotImplementedError, reason="TODO: Implement this test.", strict=True
-    )
+    @pytest.mark.skip(reason="TODO: Implement this test.")
     def test_loss_is_reproducible(
         self,
         algorithm: AlgorithmType,
