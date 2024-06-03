@@ -79,8 +79,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         """
 
         super().__init__()
+        from project.configs.datamodule import DATA_DIR
 
-        self.data_dir = data_dir if data_dir is not None else os.getcwd()
+        self.data_dir = data_dir if data_dir is not None else DATA_DIR
         self.val_split = val_split
         if num_workers is None:
             num_workers = num_cpus_on_node()
