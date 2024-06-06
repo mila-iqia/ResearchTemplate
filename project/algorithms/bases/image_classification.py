@@ -58,7 +58,7 @@ class ImageClassificationAlgorithm[
         # NOTE: Setting this property allows PL to infer the shapes and number of params.
         # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
         # If possible, we'd like to remove any reference to the device from the algorithm.
-        self.example_input_array = torch.rand(
+        self.example_input_array = torch.zeros(
             [datamodule.batch_size, *datamodule.dims],
             device=self.device,
         )

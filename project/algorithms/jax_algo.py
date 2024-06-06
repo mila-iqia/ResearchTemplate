@@ -1,22 +1,18 @@
 import dataclasses
-import operator
-import typing
 from collections.abc import Callable
-from typing import ClassVar, Concatenate, Literal
+from typing import Concatenate, Literal
 
 import flax.linen
 import jax
 import torch
 import torch.distributed
-from chex import PyTreeDef
-from flax.typing import VariableDict
 from lightning import Trainer
-from torch_jax_interop import jax_to_torch, torch_to_jax
+from torch_jax_interop import JaxModule, torch_to_jax
 
-from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
 from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.datamodules.image_classification.mnist import MNISTDataModule
-from project.utils.types import PhaseStr, is_sequence_of
+from project.utils.types import PhaseStr
 
 
 def flatten(x: jax.Array) -> jax.Array:
@@ -105,93 +101,11 @@ def to_channels_last[T: jax.Array | torch.Tensor](tensor: T) -> T:
         return tensor.transpose(1, 3)
 
 
-class JaxOperation(torch.nn.Module):
-    def __init__(
-        self,
-        jax_function: Callable[[VariableDict, jax.Array], jax.Array],
-        jax_params_dict: VariableDict,
-    ):
-        super().__init__()
-        self.jax_function = jax.jit(jax_function)
-        params_list, self.params_treedef = jax.tree.flatten(jax_params_dict)
-        # Register the parameters.
-        # Need to call .clone() when doing distributed training, otherwise we get a RuntimeError:
-        # Invalid device pointer when trying to share the CUDA memory.
-        self.params = torch.nn.ParameterList(
-            map(operator.methodcaller("clone"), map(jax_to_torch, params_list))
-        )
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        out = JaxFunction.apply(
-            input,
-            self.params_treedef,
-            self.jax_function,
-            *self.params,
-        )
-        return out
-
-    if typing.TYPE_CHECKING:
-        __call__ = forward
-
-
-class JaxFunction(torch.autograd.Function):
-    """Wrapper for a jax function."""
-    params_treedef: ClassVar
-
-    @staticmethod
-    def forward(
-        ctx: torch.autograd.function.NestedIOFunction,
-        input: torch.Tensor,
-        params_treedef: PyTreeDef,
-        jax_function: Callable[[VariableDict, jax.Array], jax.Array],
-        *params: torch.Tensor,  # need to flatten the params for autograd to understand that they need a gradient.
-    ):
-        jax_input = torch_to_jax(input)
-        jax_params = tuple(map(torch_to_jax, params))
-        jax_params = jax.tree.unflatten(params_treedef, jax_params)
-
-        needs_grad: tuple[bool, ...] = ctx.needs_input_grad  # type: ignore
-        input_needs_grad, _, _, _, *params_need_grad = needs_grad
-        if any(params_need_grad) or input_needs_grad:
-            output, jvp_function =  jax.vjp(jax_function, jax_params, jax_input)
-            ctx.jvp_function = jvp_function
-        else:
-            # Forward pass without gradient computation.
-            output = jax_function(jax_params, jax_input)
-        output = jax_to_torch(output)
-        return output
-
-    @staticmethod
-    def backward(
-        ctx: torch.autograd.function.NestedIOFunction,
-        grad_output: torch.Tensor,
-    ):
-        input_need_grad,  _, _, *params_needs_grad = ctx.needs_input_grad
-        # todo: broaden this a bit in case we need the grad of the input.
-        # todo: Figure out how to do jax.grad for a function that outputs a matrix or vector.
-        assert not input_need_grad
-        grad_input = None
-        if input_need_grad or any(params_needs_grad):
-            assert all(params_needs_grad)
-            jvp_function = ctx.jvp_function
-            jax_grad_output = torch_to_jax(grad_output)
-            jax_grad_params, jax_input_grad = jvp_function(jax_grad_output)
-            params_grads = jax.tree.map(jax_to_torch, jax.tree.leaves(jax_grad_params))
-            assert is_sequence_of(params_grads, torch.Tensor)
-
-            if input_need_grad:
-                grad_input = jax_to_torch(jax_input_grad)
-        else:
-            assert not any(params_needs_grad)
-            params_grads = tuple(None for _ in params_needs_grad)
-        return grad_input, None, None, *params_grads
-
-
-class JaxAlgorithm(Algorithm):
+class JaxAlgorithm(ImageClassificationAlgorithm):
     """Example of an algorithm where the forward / backward passes are written in Jax."""
 
     @dataclasses.dataclass
-    class HParams(Algorithm.HParams):
+    class HParams(ImageClassificationAlgorithm.HParams):
         lr: float = 1e-3
         seed: int = 123
         debug: bool = False
@@ -203,23 +117,18 @@ class JaxAlgorithm(Algorithm):
         datamodule: ImageClassificationDataModule,
         hp: HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, hp=hp or self.HParams())
+        super().__init__(datamodule=datamodule, network=None, hp=hp or self.HParams())
         self.hp: JaxAlgorithm.HParams
         torch.zeros(1, device="cuda")  # weird cuda errors!
         key = jax.random.key(self.hp.seed)
-        x = jax.random.uniform(key, shape=(datamodule.batch_size, *datamodule.dims))
-        x = to_channels_last(x)
-        jax_net = CNN()
+        assert isinstance(self.example_input_array, torch.Tensor)
+
+        x = torch_to_jax(to_channels_last(self.example_input_array))
+        jax_net = network
         params = jax_net.init(key, x=x)
         # Need to call .clone() when doing distributed training, otherwise we get a RuntimeError:
         # Invalid device pointer when trying to share the CUDA memory.
-
-        self.network = JaxOperation(jax_function=jax_net.apply, jax_params_dict=params)
-
-        # self.params = torch.nn.ParameterList(
-        #     map(operator.methodcaller("clone"), map(jax_to_torch, params_list))
-        # )
-
+        self.network = JaxModule(jax_function=jax_net, jax_params=params)
         self.automatic_optimization = True
 
     def on_fit_start(self):
