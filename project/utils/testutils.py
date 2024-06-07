@@ -367,13 +367,15 @@ class AutoEncoder(LightningModule):
     def forward(self, input: Tensor) -> Tensor:
         return self.inf_network(input)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="train")
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="train")
 
-    def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="val")
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="val")
 
-    def shared_step(self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr) -> Tensor:
+    def shared_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+    ) -> Tensor:
         x, _y = batch
         latents = self.inf_network(x)
         x_hat = self.gen_network(latents)
@@ -405,7 +407,9 @@ class AutoEncoderClassifier(AutoEncoder):
         assert isinstance(output, Tensor)
         return output
 
-    def shared_step(self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr) -> Tensor:
+    def shared_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+    ) -> Tensor:
         x, y = batch
         latents = self.inf_network(x)
         x_hat = self.gen_network(latents)
@@ -436,13 +440,15 @@ class ImageClassifier(LightningModule):
     def forward(self, input: Tensor) -> Tensor:
         return self.network(input)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="train")
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="train")
 
-    def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="val")
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="val")
 
-    def shared_step(self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr) -> Tensor:
+    def shared_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+    ) -> Tensor:
         x, y = batch
         logits = self.network(x)
         assert isinstance(logits, Tensor)

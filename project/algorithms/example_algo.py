@@ -87,7 +87,7 @@ class ExampleAlgorithm(ImageClassificationAlgorithm):
     def shared_step(
         self,
         batch: tuple[Tensor, Tensor],
-        batch_idx: int,
+        batch_index: int,
         phase: PhaseStr,
     ) -> ClassificationOutputs:
         x, y = batch

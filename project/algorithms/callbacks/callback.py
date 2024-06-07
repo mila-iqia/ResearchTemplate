@@ -34,7 +34,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         trainer: Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
     ): ...
@@ -45,7 +45,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         pl_module: Algorithm[BatchType, StepOutputType],
         outputs: StepOutputType,
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
     ): ...
@@ -65,21 +65,21 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         pl_module: Algorithm[BatchType, StepOutputType],
         outputs: StepOutputType,
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
         super().on_train_batch_end(
             trainer=trainer,
             pl_module=pl_module,
             outputs=outputs,  # type: ignore
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
         )
         self.on_shared_batch_end(
             trainer=trainer,
             pl_module=pl_module,
             outputs=outputs,
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
             phase="train",
         )
 
@@ -90,7 +90,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         pl_module: Algorithm[BatchType, StepOutputType],
         outputs: StepOutputType,
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         dataloader_idx: int,
     ) -> None:
         super().on_validation_batch_end(
@@ -98,7 +98,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,  # type: ignore
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
             dataloader_idx=dataloader_idx,
         )
         self.on_shared_batch_end(
@@ -106,7 +106,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
             dataloader_idx=dataloader_idx,
             phase="val",
         )
@@ -118,7 +118,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         pl_module: Algorithm[BatchType, StepOutputType],
         outputs: StepOutputType,
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         dataloader_idx: int,
     ) -> None:
         super().on_test_batch_end(
@@ -126,7 +126,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,  # type: ignore
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
             dataloader_idx=dataloader_idx,
         )
         self.on_shared_batch_end(
@@ -134,7 +134,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
             dataloader_idx=dataloader_idx,
             phase="test",
         )
@@ -145,11 +145,15 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         trainer: Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
-        super().on_train_batch_start(trainer, pl_module, batch, batch_idx)
+        super().on_train_batch_start(trainer, pl_module, batch, batch_index)
         self.on_shared_batch_start(
-            trainer=trainer, pl_module=pl_module, batch=batch, batch_idx=batch_idx, phase="train"
+            trainer=trainer,
+            pl_module=pl_module,
+            batch=batch,
+            batch_index=batch_index,
+            phase="train",
         )
 
     @override
@@ -158,15 +162,15 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         trainer: Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         dataloader_idx: int,
     ) -> None:
-        super().on_validation_batch_start(trainer, pl_module, batch, batch_idx, dataloader_idx)
+        super().on_validation_batch_start(trainer, pl_module, batch, batch_index, dataloader_idx)
         self.on_shared_batch_start(
             trainer,
             pl_module,
             batch,
-            batch_idx,
+            batch_index,
             dataloader_idx=dataloader_idx,
             phase="val",
         )
@@ -177,15 +181,15 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         trainer: Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         dataloader_idx: int,
     ) -> None:
-        super().on_test_batch_start(trainer, pl_module, batch, batch_idx, dataloader_idx)
+        super().on_test_batch_start(trainer, pl_module, batch, batch_index, dataloader_idx)
         self.on_shared_batch_start(
             trainer,
             pl_module,
             batch,
-            batch_idx,
+            batch_index,
             dataloader_idx=dataloader_idx,
             phase="test",
         )

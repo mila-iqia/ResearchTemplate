@@ -27,7 +27,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
         pl_module: Algorithm[BatchType, StepOutputDict, nn.Module],
         outputs: StepOutputDict,
         batch: BatchType,
-        batch_idx: int,
+        batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
     ):
@@ -36,7 +36,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
             pl_module=pl_module,
             outputs=outputs,
             batch=batch,
-            batch_idx=batch_idx,
+            batch_index=batch_index,
             phase=phase,
             dataloader_idx=dataloader_idx,
         )

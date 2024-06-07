@@ -554,7 +554,7 @@ class GetMetricCallback(TestingCallback):
         pl_module: LightningModule,
         outputs,
         batch: tuple[Tensor, Tensor],
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
         assert self.metric in trainer.logged_metrics, (self.metric, trainer.logged_metrics.keys())
         metric_value = trainer.logged_metrics[self.metric]
@@ -591,9 +591,9 @@ class MetricShouldImprove(GetMetricCallback):
         pl_module: LightningModule,
         outputs,
         batch: tuple[Tensor, Tensor],
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
-        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
+        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_index)
         self.num_training_steps += 1
 
     def on_train_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -644,9 +644,9 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
         pl_module: LightningModule,
         outputs: STEP_OUTPUT,
         batch: Any,
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
-        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
+        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_index)
 
         parameters_with_nans = [
             name for name, param in pl_module.named_parameters() if param.isnan().any()
@@ -701,7 +701,7 @@ class CheckBatchesAreTheSameAtEachStep(TestingCallback):
         pl_module: LightningModule,
         outputs: STEP_OUTPUT,
         batch: Any,
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
         if self.item_index is not None:
             batch = batch[self.item_index]
