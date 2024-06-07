@@ -64,3 +64,8 @@ class DataModule[BatchType](Protocol):
     def setup(self, stage: StageStr) -> None: ...
 
     def train_dataloader(self) -> Iterable[BatchType]: ...
+
+
+@runtime_checkable
+class ClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
+    num_classes: int
