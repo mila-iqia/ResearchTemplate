@@ -72,7 +72,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,  # type: ignore
             batch=batch,
-            batch_index=batch_index,
+            batch_idx=batch_index,
         )
         self.on_shared_batch_end(
             trainer=trainer,
@@ -98,7 +98,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,  # type: ignore
             batch=batch,
-            batch_index=batch_index,
+            batch_idx=batch_index,
             dataloader_idx=dataloader_idx,
         )
         self.on_shared_batch_end(
@@ -126,7 +126,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
             pl_module=pl_module,
             outputs=outputs,  # type: ignore
             batch=batch,
-            batch_index=batch_index,
+            batch_idx=batch_index,
             dataloader_idx=dataloader_idx,
         )
         self.on_shared_batch_end(
