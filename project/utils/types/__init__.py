@@ -39,6 +39,7 @@ T = TypeVar("T", default=Tensor)
 
 type NestedDict[K, V] = dict[K, V | NestedDict[K, V]]
 type NestedMapping[K, V] = Mapping[K, V | NestedMapping[K, V]]
+type PyTree[T] = T | tuple[PyTree[T], ...] | list[PyTree[T]] | Mapping[Any, PyTree[T]]
 
 
 def is_list_of[V](object: Any, item_type: type[V] | tuple[type[V], ...]) -> TypeGuard[list[V]]:
@@ -51,10 +52,18 @@ def is_sequence_of[V](
 ) -> TypeGuard[Sequence[V]]:
     """Used to check (and tell the type checker) that `object` is a sequence of items of this
     type."""
-    try:
-        return all(isinstance(value, item_type) for value in object)
-    except TypeError:
-        return False
+    return isinstance(object, Sequence) and all(isinstance(value, item_type) for value in object)
+
+
+def is_mapping_of[K, V](
+    object: Any, key_type: type[K], value_type: type[V]
+) -> TypeGuard[Mapping[K, V]]:
+    """Used to check (and tell the type checker) that `object` is a mapping with keys and values of
+    the given types."""
+    return isinstance(object, Mapping) and all(
+        isinstance(key, key_type) and isinstance(value, value_type)
+        for key, value in object.items()
+    )
 
 
 __all__ = [

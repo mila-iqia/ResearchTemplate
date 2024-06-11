@@ -61,6 +61,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
                     prog_bar=True,
                     on_step=True,
                     on_epoch=True,
+                    sync_dist=True,
                 )
             # todo: support other kinds of batches
         self.last_step_times[phase] = now

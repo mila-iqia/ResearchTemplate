@@ -14,7 +14,7 @@ import rich.logging
 import torch
 import torch.distributed
 from lightning import Callback, Trainer
-from torch_jax_interop import JaxModule, torch_to_jax
+from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
 from project.algorithms.bases.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
@@ -22,6 +22,7 @@ from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSec
 from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.types import PhaseStr
+from project.utils.types.protocols import ClassificationDataModule
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
@@ -48,7 +49,7 @@ class CNN(flax.linen.Module):
         x = flax.linen.relu(x)
         x = flax.linen.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
 
-        x = x.reshape((x.shape[0], -1))  # flatten
+        x = flatten(x)
         x = flax.linen.Dense(features=256)(x)
         x = flax.linen.relu(x)
         x = flax.linen.Dense(features=self.num_classes)(x)
@@ -60,61 +61,23 @@ class FcNet(flax.linen.Module):
 
     @flax.linen.compact
     def __call__(self, x: jax.Array):
-        x = x.reshape((x.shape[0], -1))  # flatten
+        x = flatten(x)
         x = flax.linen.Dense(features=256)(x)
         x = flax.linen.relu(x)
         x = flax.linen.Dense(features=self.num_classes)(x)
         return x
 
 
-def jit[**P, Out](
-    fn: Callable[P, Out],
-) -> Callable[P, Out]:
-    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-    return jax.jit(fn)  # type: ignore
-
-
-def value_and_grad[In, **P, Out, Aux](
-    fn: Callable[Concatenate[In, P], tuple[Out, Aux]],
-    argnums: Literal[0] = 0,
-    has_aux: Literal[True] = True,
-) -> Callable[Concatenate[In, P], tuple[tuple[Out, Aux], In]]:
-    """Small type hint fix for jax's `value_and_grad` (preserves the signature of the callable)."""
-    return jax.value_and_grad(fn, argnums=argnums, has_aux=has_aux)  # type: ignore
-
-
-# Register a handler for "converting" nn.Parameters to jax Arrays: they can be viewed as jax Arrays
-# by just viewing their data as a jax array.
+# Register a handler function to "convert" `torch.nn.Parameter`s to jax Arrays: they can be viewed
+# as jax Arrays by just viewing their data as a jax array.
 @torch_to_jax.register(torch.nn.Parameter)
 def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
     return torch_to_jax(value.data)
 
 
-def is_channels_first(shape: tuple[int, int, int] | tuple[int, int, int, int]) -> bool:
-    if len(shape) == 4:
-        return is_channels_first(shape[1:])
-    return (shape[0] in (1, 3) and shape[1] not in {1, 3} and shape[2] not in {1, 3}) or (
-        shape[0] < min(shape[1], shape[2])
-    )
-
-
-def to_channels_last[T: jax.Array | torch.Tensor](tensor: T) -> T:
-    shape = tuple(tensor.shape)
-    assert len(shape) == 3 or len(shape) == 4
-    if not is_channels_first(shape):
-        return tensor
-    if isinstance(tensor, jax.Array):
-        if len(shape) == 3:
-            return tensor.transpose(1, 2, 0)
-        return tensor.transpose(0, 2, 3, 1)
-    else:
-        if len(shape) == 3:
-            return tensor.transpose(0, 2)
-        return tensor.transpose(1, 3)
-
-
 class JaxAlgorithm(Algorithm):
-    """Example of an algorithm where the forward / backward passes are written in Jax."""
+    """Example of an algorithm where the network, forward and backward passes are written in
+    Jax."""
 
     @dataclasses.dataclass
     class HParams(Algorithm.HParams):
@@ -131,38 +94,38 @@ class JaxAlgorithm(Algorithm):
     ):
         super().__init__(datamodule=datamodule)
         self.hp: JaxAlgorithm.HParams = hp or self.HParams()
-        self.datamodule: ImageClassificationDataModule
 
-        self.example_input_array = torch.zeros(
-            [datamodule.batch_size, *datamodule.dims],
+        example_input = torch.zeros(
+            (datamodule.batch_size, *datamodule.dims),
             device=self.device,
         )
         # Initialize the jax parameters with a forward pass.
-        params = network.init(
-            jax.random.key(self.hp.seed), x=torch_to_jax(self.example_input_array)
-        )
-        self.network = JaxModule(
-            jax_function=network,
+        params = network.init(jax.random.key(self.hp.seed), x=torch_to_jax(example_input))
+
+        # Wrap the jax network into a nn.Module:
+        self.network = WrappedJaxFunction(
+            jax_function=jax.jit(network.apply) if not self.hp.debug else network.apply,
             jax_params=params,
-            jit=not self.hp.debug,
             # Need to call .clone() when doing distributed training, otherwise we get a RuntimeError:
-            # Invalid device pointer when trying to share the CUDA tensors..
+            # Invalid device pointer when trying to share the CUDA tensors that come from jax.
             clone_params=True,
+            has_aux=False,
         )
+
+        self.example_input_array = example_input
 
     def shared_step(
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_index: int, phase: PhaseStr
     ):
         x, y = batch
+        assert not x.requires_grad
         logits = self.network(x)
         assert isinstance(logits, torch.Tensor)
-
+        # In this example we use a jax "encoder" network and a PyTorch loss function, but we could
+        # also just as easily have done the whole forward and backward pass in jax if we wanted to.
         loss = torch.nn.functional.cross_entropy(logits, target=y).mean()
-        assert isinstance(loss, torch.Tensor)
-        if phase == "train":
-            assert loss.requires_grad
-        self.log(f"{phase}/loss", loss, prog_bar=True, sync_dist=True)
         acc = logits.argmax(-1).eq(y).float().mean()
+        self.log(f"{phase}/loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{phase}/acc", acc, prog_bar=True, sync_dist=True)
         return {"loss": loss, "logits": logits, "y": y}
 
@@ -170,10 +133,59 @@ class JaxAlgorithm(Algorithm):
         return torch.optim.SGD(self.parameters(), lr=self.hp.lr)
 
     def configure_callbacks(self) -> list[Callback]:
+        assert isinstance(self.datamodule, ClassificationDataModule)
         return super().configure_callbacks() + [
             MeasureSamplesPerSecondCallback(),
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes),
         ]
+
+
+def is_channels_first(shape: tuple[int, ...]) -> bool:
+    if len(shape) == 4:
+        return is_channels_first(shape[1:])
+    if len(shape) != 3:
+        return False
+    return (shape[0] in (1, 3) and shape[1] not in {1, 3} and shape[2] not in {1, 3}) or (
+        shape[0] < min(shape[1], shape[2])
+    )
+
+
+def is_channels_last(shape: tuple[int, ...]) -> bool:
+    if len(shape) == 4:
+        return is_channels_last(shape[1:])
+    if len(shape) != 3:
+        return False
+    return (shape[2] in (1, 3) and shape[0] not in {1, 3} and shape[1] not in {1, 3}) or (
+        shape[2] < min(shape[0], shape[1])
+    )
+
+
+def to_channels_last(x: jax.Array) -> jax.Array:
+    shape = tuple(x.shape)
+    if is_channels_last(shape):
+        return x
+    if not is_channels_first(shape):
+        return x
+    if x.ndim == 3:
+        return x.transpose(1, 2, 0)
+    assert x.ndim == 4
+    return x.transpose(0, 2, 3, 1)
+
+
+def jit[**P, Out](
+    fn: Callable[P, Out],
+) -> Callable[P, Out]:
+    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
+    return jax.jit(fn)  # type: ignore
+
+
+def value_and_grad[In, **P, Out, Aux](
+    fn: Callable[Concatenate[In, P], tuple[Out, Aux]],
+    argnums: Literal[0] = 0,
+    has_aux: Literal[True] = True,
+) -> Callable[Concatenate[In, P], tuple[tuple[Out, Aux], In]]:
+    """Small type hint fix for jax's `value_and_grad` (preserves the signature of the callable)."""
+    return jax.value_and_grad(fn, argnums=argnums, has_aux=has_aux)  # type: ignore
 
 
 def main():

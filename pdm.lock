@@ -2837,10 +2837,10 @@ files = [
 
 [[package]]
 name = "torch-jax-interop"
-version = "0.0.4.post5.dev0"
+version = "0.0.4.post7.dev0"
 requires_python = "<4.0,>=3.11"
 git = "https://www.github.com/lebrice/torch_jax_interop"
-revision = "c6122c5dfdf0d97f5346e1c7af393191c19cf92a"
+revision = "7f0c72fe19d8bd4bd957f20dd90d77acd8178bd4"
 summary = "Utility to convert Tensors from Jax to Torch and vice-versa"
 groups = ["default"]
 dependencies = [

@@ -29,6 +29,8 @@ class ClassificationOutputs(StepOutputDict):
 
 
 class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
+    """Callback that adds classification metrics to the pl module."""
+
     def __init__(self) -> None:
         super().__init__()
         self.disabled = False
