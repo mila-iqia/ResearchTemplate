@@ -67,7 +67,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
         self.last_step_times[phase] = now
 
     def on_before_optimizer_step(
-        self, trainer: Trainer, pl_module: LightningModule, optimizer: Optimizer, opt_idx: int
+        self, trainer: Trainer, pl_module: LightningModule, optimizer: Optimizer, opt_idx: int = 0
     ) -> None:
         if opt_idx not in self.last_update_time or self.last_update_time[opt_idx] is None:
             self.last_update_time[opt_idx] = time.perf_counter()
