@@ -2,13 +2,6 @@ import pytest
 
 
 def pytest_addoption(parser: pytest.Parser):
-    from argparse import BooleanOptionalAction
-
-    parser.addoption(
-        "--gen-missing",
-        action=BooleanOptionalAction,
-        help="Whether to generate missing regression files or raise an error when a regression file is missing.",
-    )
     parser.addoption(
         "--shorter-than",
         action="store",

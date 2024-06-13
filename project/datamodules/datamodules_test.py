@@ -3,12 +3,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
+from tensor_regression.fixture import TensorRegressionFixture, get_test_source_and_temp_file_paths
 from torch import Tensor
 
-from project.utils.tensor_regression import (
-    TensorRegressionFixture,
-    get_test_source_and_temp_file_paths,
-)
 from project.utils.testutils import run_for_all_datamodules
 from project.utils.types import is_sequence_of
 

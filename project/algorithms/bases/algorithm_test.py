@@ -18,6 +18,7 @@ import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from omegaconf import DictConfig
+from tensor_regression import TensorRegressionFixture
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 from typing_extensions import ParamSpec
@@ -34,7 +35,6 @@ from project.experiment import (
 )
 from project.main import main
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.testutils import (
     default_marks_for_config_name,
     get_all_datamodule_names_params,
