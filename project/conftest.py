@@ -500,7 +500,8 @@ def network(
     input: Tensor,
     request: pytest.FixtureRequest,
 ):
-    network = instantiate_network(experiment_config, datamodule=datamodule).to(device)
+    with device:
+        network = instantiate_network(experiment_config, datamodule=datamodule)
     try:
         _ = network(input)
     except RuntimeError as err:

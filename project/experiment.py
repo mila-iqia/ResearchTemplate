@@ -170,12 +170,15 @@ def get_experiment_device(experiment_config: Config | DictConfig) -> torch.devic
 
 
 def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
+    device = get_experiment_device(experiment_config)
+
     network_config = experiment_config.network
 
-    device = get_experiment_device(experiment_config)
+    # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
+
     if isinstance(network_config, dict | DictConfig) or hasattr(network_config, "_target_"):
         with device:
-            network = instantiate(network_config)
+            network = hydra_zen.instantiate(network_config)
     elif is_dataclass(network_config):
         with device:
             network = instantiate_network_from_hparams(
