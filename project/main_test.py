@@ -4,6 +4,7 @@ from __future__ import annotations
 import typing
 from pathlib import Path
 
+import hydra_zen
 import pytest
 
 from project.algorithms import Algorithm, ExampleAlgorithm
@@ -11,7 +12,7 @@ from project.configs.config import Config
 from project.configs.datamodule import CIFAR10DataModuleConfig
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
-from project.networks import FcNetConfig
+from project.networks.fcnet import FcNet
 from project.utils.hydra_utils import resolve_dictconfig
 
 if typing.TYPE_CHECKING:
@@ -77,13 +78,13 @@ def test_setting_algorithm(
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=example_algo", "network=fcnet"], FcNetConfig),
+        (["algorithm=example_algo", "network=fcnet"], FcNet),
     ],
     ids=_ids,
 )
 def test_setting_network(
     overrides: list[str],
-    expected_type: type[Algorithm.HParams],
+    expected_type: type,
     testing_overrides: list[str],
     tmp_path: Path,
 ) -> None:
@@ -93,7 +94,7 @@ def test_setting_network(
     ) as dictconfig:
         options = resolve_dictconfig(dictconfig)
     assert isinstance(options, Config)
-    assert isinstance(options.network, expected_type)
+    assert hydra_zen.get_target(options.network) is expected_type
 
 
 # TODO: Add some more integration tests:

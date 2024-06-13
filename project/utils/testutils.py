@@ -22,7 +22,7 @@ from omegaconf import OmegaConf
 from torch import Tensor, nn
 from torch.optim import Optimizer
 
-from project.configs.config import Config, cs
+from project.configs import Config, cs
 from project.configs.datamodule import DATA_DIR, SLURM_JOB_ID
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
@@ -125,11 +125,24 @@ class ParametrizedFixture:
 
 
 def get_all_configs_in_group(group_name: str) -> list[str]:
-    names_yaml = cs.list(group_name)
-    names = [name.rpartition(".")[0] for name in names_yaml]
-    if "base" in names:
-        names.remove("base")
-    return names
+    # note: here we're copying a bit of the internal code from Hydra so that we also get the
+    # configs that are just yaml files, in addition to the configs we added programmatically to the
+    # configstores.
+
+    # names_yaml = cs.list(group_name)
+    # names = [name.rpartition(".")[0] for name in names_yaml]
+    # if "base" in names:
+    #     names.remove("base")
+    # return names
+
+    from hydra._internal.config_loader_impl import ConfigLoaderImpl
+    from hydra._internal.utils import create_automatic_config_search_path
+
+    search_path = create_automatic_config_search_path(
+        calling_file=None, calling_module=None, config_path="pkg://project.configs"
+    )
+    config_loader = ConfigLoaderImpl(config_search_path=search_path)
+    return config_loader.get_group_options(group_name)
 
 
 def get_all_algorithm_names() -> list[str]:

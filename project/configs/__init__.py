@@ -11,12 +11,11 @@ from .datamodule import (
 )
 from .network import network_store
 
-# todo: look into using this instead:
-# from hydra_zen import store
-
 cs = ConfigStore.instance()
+cs.store(name="base_config", node=Config)
 datamodule_store.add_to_hydra_store()
 network_store.add_to_hydra_store()
+# todo: move the algorithm_store.add_to_hydra_store() here?
 
 __all__ = [
     "Config",

@@ -14,7 +14,7 @@ from .manual_optimization_example import ManualGradientsExample
 
 # If you add a configuration file under `configs/algorithm`, it will also be available as an option
 # from the command-line, and be validated against the schema.
-
+# todo: It might be nicer if we did this this `configs/algorithms` instead of here, no?
 algorithm_store = store(group="algorithm")
 algorithm_store(ExampleAlgorithm.HParams(), name="example_algo")
 algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")

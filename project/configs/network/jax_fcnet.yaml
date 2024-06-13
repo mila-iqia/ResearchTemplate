@@ -1,0 +1,3 @@
+_target_: project.algorithms.jax_algo.JaxFcNet
+num_classes: ${instance_attr:datamodule.num_classes}
+num_features: 256

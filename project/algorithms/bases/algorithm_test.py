@@ -23,7 +23,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 from typing_extensions import ParamSpec
 
-from project.configs.config import Config, cs
+from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,

@@ -27,6 +27,86 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 
 
+def interpolate_config_attribute(*attributes: str, default: Any | Literal[MISSING] = MISSING):
+    """Use this in a config to to get an attribute from another config after it is instantiated.
+
+    Multiple attributes can be specified, which will lead to trying each of them in order until the
+    attribute is found. If none are found, then an error will be raised.
+
+    For example, if we only know the number of classes in the datamodule after it is instantiated,
+    we can set this in the network config so it is created with the right number of output dims.
+
+    ```yaml
+    _target_: torchvision.models.resnet50
+    num_classes: ${instance_attr:datamodule.num_classes}
+    ```
+
+    This is equivalent to:
+
+    >>> import hydra_zen
+    >>> import torchvision.models
+    >>> resnet50_config = hydra_zen.builds(
+    ...     torchvision.models.resnet50,
+    ...     num_classes=interpolate_config_attribute("datamodule.num_classes"),
+    ...     populate_full_signature=True,
+    ... )
+    >>> print(hydra_zen.to_yaml(resnet50_config))  # doctest: +NORMALIZE_WHITESPACE
+    _target_: torchvision.models.resnet.resnet50
+    weights: null
+    progress: true
+    num_classes: ${instance_attr:datamodule.num_classes}
+    """
+    if default is MISSING:
+        return "${instance_attr:" + ",".join(attributes) + "}"
+    return "${instance_attr:" + ",".join(attributes) + ":" + str(default) + "}"
+
+
+def interpolated_field(
+    interpolation: str,
+    default: T | Literal[MISSING] = MISSING,
+    default_factory: Callable[[], T] | Literal[MISSING] = MISSING,
+    instance_attr: bool = False,
+) -> T:
+    """Field with a default value computed with a OmegaConf-style interpolation when appropriate.
+
+    When the dataclass is created by Hydra / OmegaConf, the interpolation is used.
+    Otherwise, behaves as usual (either using default or calling the default_factory).
+
+    Parameters
+    ----------
+    interpolation: The string interpolation to use to get the default value.
+    default: The default value to use when not in a hydra/OmegaConf context.
+    default_factory: The default value to use when not in a hydra/OmegaConf context.
+    instance_attr: Whether to use the `instance_attr` custom resolver to run the interpolation \
+        with respect to instantiated objects instead of their configs.
+        Passing `interpolation='${instance_attr:some_config.some_attr}'` has the same effect.
+
+    This last parameter is important, since in order to retrieve the instance attribute, we need to
+    instantiate the objects, which could be expensive. These instantiated objects are reused at
+    least, but still, be mindful when using this parameter.
+    """
+    assert "${" in interpolation and "}" in interpolation
+
+    if instance_attr:
+        if not interpolation.startswith("${instance_attr:"):
+            interpolation = interpolation.removeprefix("${")
+            interpolation = "${instance_attr:" + interpolation
+
+    if default is MISSING and default_factory is MISSING:
+        raise RuntimeError(
+            "Interpolated fields currently still require a default value or default factory for "
+            "when they are used outside the Hydra/OmegaConf context."
+        )
+    return field(
+        default_factory=functools.partial(
+            _default_factory,
+            interpolation=interpolation,
+            default=default,
+            default_factory=default_factory,
+        )
+    )
+
+
 # @dataclass(init=False)
 class Partial(functools.partial[T], _Partial[T]):
     def __getattr__(self, name: str):
@@ -259,52 +339,6 @@ def get_instantiated_attr(
         f"Could not find any of these attributes {attributes} from the instantiated objects: "
         + str({k: type(v) for k, v in objects_cache.items()})
         # + "\n".join([f"- {k}: {type(v)}" for k, v in all_init_field_items.items()])
-    )
-
-
-def interpolated_field(
-    interpolation: str,
-    default: T | Literal[MISSING] = MISSING,
-    default_factory: Callable[[], T] | Literal[MISSING] = MISSING,
-    instance_attr: bool = False,
-) -> T:
-    """Field with a default value computed with a OmegaConf-style interpolation when appropriate.
-
-    When the dataclass is created by Hydra / OmegaConf, the interpolation is used.
-    Otherwise, behaves as usual (either using default or calling the default_factory).
-
-    Parameters
-    ----------
-    interpolation: The string interpolation to use to get the default value.
-    default: The default value to use when not in a hydra/OmegaConf context.
-    default_factory: The default value to use when not in a hydra/OmegaConf context.
-    instance_attr: Whether to use the `instance_attr` custom resolver to run the interpolation \
-        with respect to instantiated objects instead of their configs.
-        Passing `interpolation='${instance_attr:some_config.some_attr}'` has the same effect.
-
-    This last parameter is important, since in order to retrieve the instance attribute, we need to
-    instantiate the objects, which could be expensive. These instantiated objects are reused at
-    least, but still, be mindful when using this parameter.
-    """
-    assert "${" in interpolation and "}" in interpolation
-
-    if instance_attr:
-        if not interpolation.startswith("${instance_attr:"):
-            interpolation = interpolation.removeprefix("${")
-            interpolation = "${instance_attr:" + interpolation
-
-    if default is MISSING and default_factory is MISSING:
-        raise RuntimeError(
-            "Interpolated fields currently still require a default value or default factory for "
-            "when they are used outside the Hydra/OmegaConf context."
-        )
-    return field(
-        default_factory=functools.partial(
-            _default_factory,
-            interpolation=interpolation,
-            default=default,
-            default_factory=default_factory,
-        )
     )
 
 
