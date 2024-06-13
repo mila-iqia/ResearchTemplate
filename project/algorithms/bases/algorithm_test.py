@@ -332,9 +332,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
         All overrides should have already been applied.
         """
+        # todo: remove this hard-coded check somehow.
         if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
+        # todo: Get the name of the algorithm from the hydra config?
         algorithm_name = self.algorithm_name
         with setup_hydra_for_tests_and_compose(
             all_overrides=[
@@ -388,8 +390,9 @@ class AlgorithmTests(Generic[AlgorithmType]):
                     f"type {type(network)}"
                 )
             )
-        assert isinstance(network, nn.Module)
-        return network.to(device=device)
+        if isinstance(network, nn.Module):
+            network = network.to(device=device)
+        return network
 
     @pytest.fixture(scope="class")
     def hp(self, experiment_config: Config) -> Algorithm.HParams:  # type: ignore
