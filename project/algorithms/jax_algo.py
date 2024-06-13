@@ -56,13 +56,14 @@ class CNN(flax.linen.Module):
         return x
 
 
-class FcNet(flax.linen.Module):
+class JaxFcNet(flax.linen.Module):
     num_classes: int = 10
+    num_features: int = 256
 
     @flax.linen.compact
     def __call__(self, x: jax.Array):
         x = flatten(x)
-        x = flax.linen.Dense(features=256)(x)
+        x = flax.linen.Dense(features=self.num_features)(x)
         x = flax.linen.relu(x)
         x = flax.linen.Dense(features=self.num_classes)(x)
         return x
@@ -76,8 +77,11 @@ def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
 
 
 class JaxAlgorithm(Algorithm):
-    """Example of an algorithm where the network, forward and backward passes are written in
-    Jax."""
+    """Example of an algorithm that uses Jax.
+
+    In this case, the network is a flax.linen.Module, and its forward and backward passes are
+    written in Jax.
+    """
 
     @dataclasses.dataclass
     class HParams(Algorithm.HParams):
@@ -123,7 +127,7 @@ class JaxAlgorithm(Algorithm):
         assert isinstance(logits, torch.Tensor)
         # In this example we use a jax "encoder" network and a PyTorch loss function, but we could
         # also just as easily have done the whole forward and backward pass in jax if we wanted to.
-        loss = torch.nn.functional.cross_entropy(logits, target=y).mean()
+        loss = torch.nn.functional.cross_entropy(logits, target=y, reduction="mean")
         acc = logits.argmax(-1).eq(y).float().mean()
         self.log(f"{phase}/loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{phase}/acc", acc, prog_bar=True, sync_dist=True)
