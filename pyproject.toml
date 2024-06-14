@@ -64,7 +64,7 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = ["project"]
 # todo: look into using https://github.com/scientific-python/pytest-doctestplus
-addopts = ["--doctest-modules"]
+addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
 
 [tool.ruff]
 line-length = 99
