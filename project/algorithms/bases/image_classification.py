@@ -58,7 +58,7 @@ class ImageClassificationAlgorithm[
         # NOTE: Setting this property allows PL to infer the shapes and number of params.
         # TODO: Check if PL now moves the `example_input_array` to the right device automatically.
         # If possible, we'd like to remove any reference to the device from the algorithm.
-        self.example_input_array = torch.rand(
+        self.example_input_array = torch.zeros(
             [datamodule.batch_size, *datamodule.dims],
             device=self.device,
         )
@@ -74,21 +74,23 @@ class ImageClassificationAlgorithm[
         self.val_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
         self.test_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> ClassificationOutputs:
+    def training_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int
+    ) -> ClassificationOutputs:
         """Performs a training step."""
-        return self.shared_step(batch=batch, batch_idx=batch_idx, phase="train")
+        return self.shared_step(batch=batch, batch_index=batch_index, phase="train")
 
     def validation_step(
-        self, batch: tuple[Tensor, Tensor], batch_idx: int
+        self, batch: tuple[Tensor, Tensor], batch_index: int
     ) -> ClassificationOutputs:
         """Performs a validation step."""
-        return self.shared_step(batch=batch, batch_idx=batch_idx, phase="val")
+        return self.shared_step(batch=batch, batch_index=batch_index, phase="val")
 
-    def test_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> ClassificationOutputs:
+    def test_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> ClassificationOutputs:
         """Performs a test step."""
-        return self.shared_step(batch=batch, batch_idx=batch_idx, phase="test")
+        return self.shared_step(batch=batch, batch_index=batch_index, phase="test")
 
-    def predict_step(self, batch: Tensor, batch_idx: int, dataloader_idx: int):
+    def predict_step(self, batch: Tensor, batch_index: int, dataloader_idx: int):
         """Performs a prediction step."""
         return self.predict(batch)
 
@@ -98,7 +100,7 @@ class ImageClassificationAlgorithm[
 
     @abstractmethod
     def shared_step(
-        self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
     ) -> ClassificationOutputs:
         """Performs a training/validation/test step.
 

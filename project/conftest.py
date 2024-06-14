@@ -17,8 +17,6 @@ import torch
 from hydra import compose, initialize_config_module
 from lightning import seed_everything
 from omegaconf import DictConfig, open_dict
-from pytest_regressions.data_regression import DataRegressionFixture
-from pytest_regressions.ndarrays_regression import NDArraysRegressionFixture
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
@@ -38,7 +36,6 @@ from project.experiment import (
     setup_logging,
 )
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.testutils import default_marks_for_config_name
 from project.utils.types import is_sequence_of
 from project.utils.types.protocols import DataModule
@@ -503,7 +500,8 @@ def network(
     input: Tensor,
     request: pytest.FixtureRequest,
 ):
-    network = instantiate_network(experiment_config, datamodule=datamodule).to(device)
+    with device:
+        network = instantiate_network(experiment_config, datamodule=datamodule)
     try:
         _ = network(input)
     except RuntimeError as err:
@@ -548,41 +546,6 @@ def make_torch_deterministic():
     torch.set_deterministic_debug_mode("error")
     yield
     torch.set_deterministic_debug_mode(mode_before)
-
-
-@pytest.fixture
-def tensor_regression(
-    datadir: Path,
-    original_datadir: Path,
-    request: pytest.FixtureRequest,
-    ndarrays_regression: NDArraysRegressionFixture,
-    data_regression: DataRegressionFixture,
-    monkeypatch: pytest.MonkeyPatch,
-    make_torch_deterministic: None,
-) -> TensorRegressionFixture:
-    """Similar to num_regression, but supports numpy arrays with arbitrary shape. The dictionary is
-    stored as an NPZ file. The values of the dictionary must be accepted by ``np.asarray``.
-
-    Example::
-
-        def test_some_data(tensor_regression):
-            points, values = some_function()
-            tensor_regression.check(
-                {
-                    'points': points,  # tensor with shape (100, 3)
-                    'values': values,  # tensor with shape (100,)
-                },
-                default_tolerance=dict(atol=1e-8, rtol=1e-8)
-            )
-    """
-    return TensorRegressionFixture(
-        datadir=datadir,
-        original_datadir=original_datadir,
-        request=request,
-        ndarrays_regression=ndarrays_regression,
-        data_regression=data_regression,
-        monkeypatch=monkeypatch,
-    )
 
 
 # Incremental testing: https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps

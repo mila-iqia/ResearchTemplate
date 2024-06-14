@@ -25,6 +25,8 @@ dependencies = [
     "brax>=0.10.3",
     "tensorboard>=2.16.2",
     "gymnax>=0.0.8",
+    "torch-jax-interop @ git+https://www.github.com/lebrice/torch_jax_interop",
+    "tensor-regression @ git+https://www.github.com/lebrice/tensor_regression",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -47,6 +49,7 @@ dev = [
     "ruff>=0.3.3",
     "pytest-benchmark>=4.0.0",
     "pytest-cov>=5.0.0",
+    "tensor-regression>=0.0.2.post3.dev0",
 ]
 
 [[tool.pdm.source]]
@@ -60,6 +63,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["project"]
+# todo: look into using https://github.com/scientific-python/pytest-doctestplus
+addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
 
 [tool.ruff]
 line-length = 99

@@ -1,5 +1,6 @@
 from hydra_zen import builds, store
 
+from project.algorithms.jax_algo import JaxAlgorithm
 from project.algorithms.no_op import NoOp
 
 from .bases.algorithm import Algorithm
@@ -13,11 +14,12 @@ from .manual_optimization_example import ManualGradientsExample
 
 # If you add a configuration file under `configs/algorithm`, it will also be available as an option
 # from the command-line, and be validated against the schema.
-
+# todo: It might be nicer if we did this this `configs/algorithms` instead of here, no?
 algorithm_store = store(group="algorithm")
 algorithm_store(ExampleAlgorithm.HParams(), name="example_algo")
 algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
 algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
+algorithm_store(JaxAlgorithm.HParams(), name="jax_algo")
 
 algorithm_store.add_to_hydra_store()
 

@@ -12,6 +12,7 @@ type LRSchedulerConfig[LRSchedulerType: torch.optim.lr_scheduler._LRScheduler] =
 ]
 
 
+# TODO: getting doctest issues here?
 @hydrated_dataclass(target=torch.optim.lr_scheduler.StepLR, zen_partial=True)
 class StepLRConfig:
     """Config for the StepLR Scheduler."""

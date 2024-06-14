@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, TypedDict
 
+import torch
 from lightning import Callback, LightningModule, Trainer
 from torch import Tensor, nn
 from typing_extensions import Generic, TypeVar  # noqa
@@ -46,12 +47,18 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
         self,
         *,
         datamodule: DataModule[BatchType] | None = None,
-        network: NetworkType,
+        network: NetworkType | None = None,
         hp: HParams | None = None,
     ):
         super().__init__()
         self.datamodule = datamodule
-        self._device = get_device(network)  # fix for `self.device` property which defaults to cpu.
+        if isinstance(network, torch.nn.Module):
+            # fix for `self.device` property which defaults to cpu.
+            self._device = get_device(network)
+        elif network and not isinstance(network, torch.nn.Module):
+            # todo: Should we automatically convert jax networks to torch in case the base class
+            # doesn't?
+            pass
         self.network = network
         self.hp = hp or self.HParams()
         self.trainer: Trainer

@@ -1,0 +1,2 @@
+_target_: project.algorithms.jax_algo.CNN
+num_classes: ${instance_attr:datamodule.num_classes}

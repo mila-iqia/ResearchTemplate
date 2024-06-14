@@ -18,11 +18,12 @@ import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from omegaconf import DictConfig
+from tensor_regression import TensorRegressionFixture
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 from typing_extensions import ParamSpec
 
-from project.configs.config import Config, cs
+from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
@@ -34,7 +35,6 @@ from project.experiment import (
 )
 from project.main import main
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.testutils import (
     default_marks_for_config_name,
     get_all_datamodule_names_params,
@@ -332,9 +332,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
         All overrides should have already been applied.
         """
+        # todo: remove this hard-coded check somehow.
         if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
+        # todo: Get the name of the algorithm from the hydra config?
         algorithm_name = self.algorithm_name
         with setup_hydra_for_tests_and_compose(
             all_overrides=[
@@ -388,8 +390,9 @@ class AlgorithmTests(Generic[AlgorithmType]):
                     f"type {type(network)}"
                 )
             )
-        assert isinstance(network, nn.Module)
-        return network.to(device=device)
+        if isinstance(network, nn.Module):
+            network = network.to(device=device)
+        return network
 
     @pytest.fixture(scope="class")
     def hp(self, experiment_config: Config) -> Algorithm.HParams:  # type: ignore
@@ -554,7 +557,7 @@ class GetMetricCallback(TestingCallback):
         pl_module: LightningModule,
         outputs,
         batch: tuple[Tensor, Tensor],
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
         assert self.metric in trainer.logged_metrics, (self.metric, trainer.logged_metrics.keys())
         metric_value = trainer.logged_metrics[self.metric]
@@ -591,9 +594,9 @@ class MetricShouldImprove(GetMetricCallback):
         pl_module: LightningModule,
         outputs,
         batch: tuple[Tensor, Tensor],
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
-        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
+        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_index)
         self.num_training_steps += 1
 
     def on_train_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -644,9 +647,9 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
         pl_module: LightningModule,
         outputs: STEP_OUTPUT,
         batch: Any,
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
-        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
+        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_index)
 
         parameters_with_nans = [
             name for name, param in pl_module.named_parameters() if param.isnan().any()
@@ -701,7 +704,7 @@ class CheckBatchesAreTheSameAtEachStep(TestingCallback):
         pl_module: LightningModule,
         outputs: STEP_OUTPUT,
         batch: Any,
-        batch_idx: int,
+        batch_index: int,
     ) -> None:
         if self.item_index is not None:
             batch = batch[self.item_index]

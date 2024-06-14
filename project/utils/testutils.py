@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 import hydra.errors
+import hydra_zen
 import pytest
 import torch
 import yaml
@@ -22,7 +23,7 @@ from omegaconf import OmegaConf
 from torch import Tensor, nn
 from torch.optim import Optimizer
 
-from project.configs.config import Config, cs
+from project.configs import Config, cs
 from project.configs.datamodule import DATA_DIR, SLURM_JOB_ID
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
@@ -124,12 +125,29 @@ class ParametrizedFixture:
         return _parametrized_fixture_method
 
 
+def get_config_loader():
+    from hydra._internal.config_loader_impl import ConfigLoaderImpl
+    from hydra._internal.utils import create_automatic_config_search_path
+
+    search_path = create_automatic_config_search_path(
+        calling_file=None, calling_module=None, config_path="pkg://project.configs"
+    )
+    config_loader = ConfigLoaderImpl(config_search_path=search_path)
+    return config_loader
+
+
 def get_all_configs_in_group(group_name: str) -> list[str]:
-    names_yaml = cs.list(group_name)
-    names = [name.rpartition(".")[0] for name in names_yaml]
-    if "base" in names:
-        names.remove("base")
-    return names
+    # note: here we're copying a bit of the internal code from Hydra so that we also get the
+    # configs that are just yaml files, in addition to the configs we added programmatically to the
+    # configstores.
+
+    # names_yaml = cs.list(group_name)
+    # names = [name.rpartition(".")[0] for name in names_yaml]
+    # if "base" in names:
+    #     names.remove("base")
+    # return names
+
+    return get_config_loader().get_group_options(group_name)
 
 
 def get_all_algorithm_names() -> list[str]:
@@ -142,7 +160,20 @@ def get_type_for_config_name(config_group: str, config_name: str, _cs: ConfigSto
 
     In the case of inner dataclasses (e.g. Model.HParams), this returns the outer class (Model).
     """
+
+    config_loader = get_config_loader()
+    _, caching_repo = config_loader._parse_overrides_and_create_caching_repo(
+        config_name=None, overrides=[]
+    )
+    config_result = caching_repo.load_config(f"{config_group}/{config_name}.yaml")
+    if config_result is not None:
+        try:
+            return hydra_zen.get_target(config_result.config)  # type: ignore
+        except TypeError:
+            pass
+
     config_node = _cs._load(f"{config_group}/{config_name}.yaml")
+
     if "_target_" in config_node.node:
         target: str = config_node.node["_target_"]
         module_name, _, class_name = target.rpartition(".")
@@ -367,13 +398,15 @@ class AutoEncoder(LightningModule):
     def forward(self, input: Tensor) -> Tensor:
         return self.inf_network(input)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="train")
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="train")
 
-    def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="val")
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="val")
 
-    def shared_step(self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr) -> Tensor:
+    def shared_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+    ) -> Tensor:
         x, _y = batch
         latents = self.inf_network(x)
         x_hat = self.gen_network(latents)
@@ -405,7 +438,9 @@ class AutoEncoderClassifier(AutoEncoder):
         assert isinstance(output, Tensor)
         return output
 
-    def shared_step(self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr) -> Tensor:
+    def shared_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+    ) -> Tensor:
         x, y = batch
         latents = self.inf_network(x)
         x_hat = self.gen_network(latents)
@@ -436,13 +471,15 @@ class ImageClassifier(LightningModule):
     def forward(self, input: Tensor) -> Tensor:
         return self.network(input)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="train")
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="train")
 
-    def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        return self.shared_step(batch, batch_idx, phase="val")
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int) -> Tensor:
+        return self.shared_step(batch, batch_index, phase="val")
 
-    def shared_step(self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr) -> Tensor:
+    def shared_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+    ) -> Tensor:
         x, y = batch
         logits = self.network(x)
         assert isinstance(logits, Tensor)

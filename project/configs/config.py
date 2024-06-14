@@ -3,8 +3,6 @@ from dataclasses import dataclass, field
 from logging import getLogger as get_logger
 from typing import Any, Literal
 
-from hydra.core.config_store import ConfigStore
-
 logger = get_logger(__name__)
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
@@ -39,7 +37,3 @@ class Config:
     debug: bool = False
 
     verbose: bool = False
-
-
-cs = ConfigStore.instance()
-cs.store(name="base_config", node=Config)

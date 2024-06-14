@@ -5,7 +5,7 @@ from logging import getLogger as get_logger
 from pathlib import Path
 
 import torch
-from hydra_zen import hydrated_dataclass, instantiate
+from hydra_zen import hydrated_dataclass, instantiate, store
 from torch import Tensor
 
 from project.datamodules import (
@@ -78,6 +78,9 @@ Transform = Callable[[Tensor], Tensor]
 class DataModuleConfig: ...
 
 
+datamodule_store = store(group="datamodule")
+
+
 @hydrated_dataclass(target=VisionDataModule, populate_full_signature=True)
 class VisionDataModuleConfig(DataModuleConfig):
     data_dir: str | None = str(TORCHVISION_DIR or DATA_DIR)
@@ -143,3 +146,10 @@ class INaturalistDataModuleConfig(VisionDataModuleConfig):
     data_dir: Path | None = None
     version: Version = "2021_train"
     target_type: TargetType | list[TargetType] = "full"
+
+
+datamodule_store(CIFAR10DataModuleConfig, name="cifar10")
+datamodule_store(MNISTDataModuleConfig, name="mnist")
+datamodule_store(FashionMNISTDataModuleConfig, name="fashion_mnist")
+datamodule_store(ImageNet32DataModuleConfig, name="imagenet32")
+datamodule_store(INaturalistDataModuleConfig, name="inaturalist")

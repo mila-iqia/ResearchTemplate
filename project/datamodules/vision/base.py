@@ -21,7 +21,11 @@ from ...utils.types.protocols import DataModule
 P = ParamSpec("P")
 
 SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
+    Path(os.environ["SLURM_TMPDIR"])
+    if "SLURM_TMPDIR" in os.environ
+    else tmp
+    if "SLURM_JOB_ID" in os.environ and (tmp := Path("/tmp")).exists()
+    else None
 )
 logger = get_logger(__name__)
 
@@ -75,8 +79,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         """
 
         super().__init__()
+        from project.configs.datamodule import DATA_DIR
 
-        self.data_dir = data_dir if data_dir is not None else os.getcwd()
+        self.data_dir = data_dir if data_dir is not None else DATA_DIR
         self.val_split = val_split
         if num_workers is None:
             num_workers = num_cpus_on_node()
@@ -240,7 +245,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 )
                 | kwargs
             ),
-            persistent_workers=True,
         )
 
     def val_dataloader(
@@ -256,7 +260,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             _dataloader_fn=_dataloader_fn,
             *args,
             **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
-            persistent_workers=True,
         )
 
     def test_dataloader(
@@ -274,7 +277,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             _dataloader_fn=_dataloader_fn,
             *args,
             **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
-            persistent_workers=True,
         )
 
     def _data_loader(
@@ -290,6 +292,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 num_workers=self.num_workers,
                 drop_last=self.drop_last,
                 pin_memory=self.pin_memory,
+                persistent_workers=True if self.num_workers > 0 else False,
             )
             | dataloader_kwargs
         )

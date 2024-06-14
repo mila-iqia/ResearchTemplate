@@ -49,16 +49,18 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
     def forward(self, x: Tensor) -> Tensor:
         return self.network(x)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> ClassificationOutputs:
-        return self.shared_step(batch, batch_idx, "train")
+    def training_step(
+        self, batch: tuple[Tensor, Tensor], batch_index: int
+    ) -> ClassificationOutputs:
+        return self.shared_step(batch, batch_index, "train")
 
     def validation_step(
-        self, batch: tuple[Tensor, Tensor], batch_idx: int
+        self, batch: tuple[Tensor, Tensor], batch_index: int
     ) -> ClassificationOutputs:
-        return self.shared_step(batch, batch_idx, "val")
+        return self.shared_step(batch, batch_index, "val")
 
     def shared_step(
-        self, batch: tuple[Tensor, Tensor], batch_idx: int, phase: PhaseStr
+        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
     ) -> ClassificationOutputs:
         """Performs a training/validation/test step.
 

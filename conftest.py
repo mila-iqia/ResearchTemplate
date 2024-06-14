@@ -1,14 +1,9 @@
+from pathlib import Path
+
 import pytest
 
 
 def pytest_addoption(parser: pytest.Parser):
-    from argparse import BooleanOptionalAction
-
-    parser.addoption(
-        "--gen-missing",
-        action=BooleanOptionalAction,
-        help="Whether to generate missing regression files or raise an error when a regression file is missing.",
-    )
     parser.addoption(
         "--shorter-than",
         action="store",
@@ -16,6 +11,14 @@ def pytest_addoption(parser: pytest.Parser):
         default=None,
         help="Skip tests that take longer than this.",
     )
+
+
+def pytest_ignore_collect(path: str):
+    p = Path(path)
+    # fixme: Trying to fix doctest issues for project/configs/algorithm/lr_scheduler/__init__.py::project.configs.algorithm.lr_scheduler.StepLRConfig
+    if p.name in ["lr_scheduler", "optimizer"] and "configs" in p.parts:
+        return True
+    return False
 
 
 def pytest_configure(config: pytest.Config):

@@ -13,30 +13,7 @@
 # _cs.store(group="network", name="fcnet", node=FcNetConfig)
 # _cs.store(group="network", name="resnet18", node=ResNet18Config)
 # Add your network configs here.
-from dataclasses import field
-
-from hydra_zen import hydrated_dataclass
-from torchvision.models import resnet18
-
-from project.utils.hydra_utils import interpolated_field
 
 from .fcnet import FcNet
-
-
-@hydrated_dataclass(target=FcNet, hydra_convert="object", hydra_recursive=True)
-class FcNetConfig:
-    output_dims: int = interpolated_field(
-        "${instance_attr:datamodule.num_classes,datamodule.action_dims}", default=-1
-    )
-    hparams: FcNet.HParams = field(default_factory=FcNet.HParams)
-
-
-@hydrated_dataclass(target=resnet18)
-class ResNet18Config:
-    pretrained: bool = False
-    num_classes: int = interpolated_field(
-        "${instance_attr:datamodule.num_classes,datamodule.action_dims}", default=1000
-    )
-
 
 __all__ = ["FcNet"]
