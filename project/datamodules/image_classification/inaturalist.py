@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import warnings
 from collections.abc import Callable
 from logging import getLogger as get_logger
@@ -11,6 +10,7 @@ import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
 from project.datamodules.image_classification.base import ImageClassificationDataModule
+from project.datamodules.vision.base import SLURM_TMPDIR
 from project.utils.types import C, H, W
 
 logger = get_logger(__name__)
@@ -23,23 +23,6 @@ Target2021 = Literal["full", "kingdom", "phylum", "class", "order", "family", "g
 
 TargetType = Target2017_2019 | Target2021
 Version = Version2017_2019 | Version2021
-
-
-def get_slurm_tmpdir() -> Path:
-    if "SLURM_TMPDIR" in os.environ:
-        return Path(os.environ["SLURM_TMPDIR"])
-    if "SLURM_JOB_ID" not in os.environ:
-        raise RuntimeError(
-            "SLURM_JOBID environment variable isn't set. Are you running this from a SLURM "
-            "cluster?"
-        )
-    slurm_tmpdir = Path(f"/Tmp/slurm.{os.environ['SLURM_JOB_ID']}.0")
-    if not slurm_tmpdir.is_dir():
-        raise NotImplementedError(
-            f"TODO: You appear to be running this outside the Mila cluster, since SLURM_TMPDIR "
-            f"isn't located at {slurm_tmpdir}."
-        )
-    return slurm_tmpdir
 
 
 def inat_dataset_dir() -> Path:
@@ -79,7 +62,8 @@ class INaturalistDataModule(ImageClassificationDataModule):
     ) -> None:
         # assuming that we're on the Mila cluster atm.
         self.network_dir = inat_dataset_dir()
-        slurm_tmpdir = get_slurm_tmpdir()
+        assert SLURM_TMPDIR, "assuming that we're on a compute node."
+        slurm_tmpdir = SLURM_TMPDIR
         default_data_dir = slurm_tmpdir / "data"
         if data_dir is None:
             data_dir = default_data_dir

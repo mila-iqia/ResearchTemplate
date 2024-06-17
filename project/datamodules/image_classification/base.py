@@ -5,9 +5,11 @@ from torch import Tensor
 from project.datamodules.vision.base import VisionDataModule
 from project.utils.types import C, H, W
 
+# todo: decide if this should be a protocol or an actual base class (currently a base class).
+
 
 class ImageClassificationDataModule[BatchType: tuple[Tensor, Tensor]](VisionDataModule[BatchType]):
-    """Protocol that describes lightning data modules for image classification."""
+    """Lightning data modules for image classification."""
 
     num_classes: int
     """Number of classes in the dataset."""

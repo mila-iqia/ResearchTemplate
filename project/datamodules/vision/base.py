@@ -12,21 +12,11 @@ import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.datasets import VisionDataset
-from typing_extensions import ParamSpec
 
 from project.utils.types import C, H, StageStr, W
 
 from ...utils.types.protocols import DataModule
 
-P = ParamSpec("P")
-
-SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"])
-    if "SLURM_TMPDIR" in os.environ
-    else tmp
-    if "SLURM_JOB_ID" in os.environ and (tmp := Path("/tmp")).exists()
-    else None
-)
 logger = get_logger(__name__)
 
 
@@ -195,7 +185,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
 
-    def train_dataloader(
+    def train_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -215,7 +205,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             ),
         )
 
-    def val_dataloader(
+    def val_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -230,7 +220,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
         )
 
-    def test_dataloader(
+    def test_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -247,7 +237,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
         )
 
-    def _data_loader(
+    def _data_loader[**P](
         self,
         dataset: Dataset,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,

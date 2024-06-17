@@ -21,6 +21,7 @@ def test_first_batch(
     original_datadir: Path,
     datadir: Path,
 ):
+    # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
     datamodule.prepare_data()
     datamodule.setup("fit")
 

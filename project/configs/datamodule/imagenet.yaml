@@ -1,0 +1,4 @@
+defaults:
+- vision
+_target_: project.datamodules.ImageNetDataModule
+# todo: add good configuration options here.

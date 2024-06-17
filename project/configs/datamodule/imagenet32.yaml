@@ -1,0 +1,9 @@
+defaults:
+- vision
+_target_: project.datamodules.ImageNet32DataModule
+data_dir: "${oc.env:SCRATCH}/data"
+val_split: -1
+num_images_per_val_class: 50  # Slightly different.
+normalize: True
+train_transforms:
+  _target_: project.datamodules.image_classification.imagenet32.imagenet32_train_transforms

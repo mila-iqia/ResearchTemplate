@@ -1,0 +1,7 @@
+defaults:
+- vision
+_target_: project.datamodules.MNISTDataModule
+normalize: True
+batch_size: 128
+train_transforms:
+  _target_: project.datamodules.image_classification.mnist.mnist_train_transforms
