@@ -140,7 +140,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 str(self.data_dir),
                 **self.train_kwargs,
             )
-            logger.debug(f"creating validation dataset with kwargs {self.train_kwargs}")
+            logger.debug(f"creating validation dataset with kwargs {self.valid_kwargs}")
             dataset_val = self.dataset_cls(
                 str(self.data_dir),
                 **self.valid_kwargs,

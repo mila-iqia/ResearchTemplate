@@ -201,7 +201,8 @@ class ImageNetDataModule(VisionDataModule):
             [
                 transform_lib.RandomResizedCrop(self.image_size),
                 transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToTensor(),
+                transform_lib.ToImage(),
+                transform_lib.ToDtype(torch.float32, scale=True),
                 imagenet_normalization(),
             ]
         )
@@ -226,7 +227,8 @@ class ImageNetDataModule(VisionDataModule):
             [
                 transform_lib.Resize(self.image_size + 32),
                 transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToTensor(),
+                transform_lib.ToImage(),
+                transform_lib.ToDtype(torch.float32, scale=True),
                 imagenet_normalization(),
             ]
         )
@@ -407,8 +409,7 @@ def main():
     logging.basicConfig(
         level=logging.DEBUG, format="%(message)s", handlers=[rich.logging.RichHandler()]
     )
-    slurm_tmpdir = Path(os.environ["SLURM_TMPDIR"])
-    datamodule = ImageNetDataModule(slurm_tmpdir)
+    datamodule = ImageNetDataModule()
     start = time.time()
     datamodule.prepare_data()
     datamodule.setup("fit")
