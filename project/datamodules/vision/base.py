@@ -122,12 +122,12 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         if _has_constructor_argument(self.dataset_cls, "download"):
             train_kwargs["download"] = True
             test_kwargs["download"] = True
-        logger.info(
+        logger.debug(
             f"Preparing {self.name} dataset training split in {self.data_dir} with {train_kwargs}"
         )
         self.dataset_cls(str(self.data_dir), **train_kwargs)
         if test_kwargs != train_kwargs:
-            logger.info(
+            logger.debug(
                 f"Preparing {self.name} dataset test spit in {self.data_dir} with {test_kwargs=}"
             )
             self.test_dataset_cls(str(self.data_dir), **test_kwargs)
