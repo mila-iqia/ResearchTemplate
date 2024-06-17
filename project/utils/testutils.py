@@ -6,6 +6,7 @@ import copy
 import dataclasses
 import hashlib
 import importlib
+import os
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
@@ -30,13 +31,16 @@ from project.datamodules.image_classification import (
 )
 from project.datamodules.vision.base import VisionDataModule
 from project.experiment import instantiate_trainer
-from project.utils.env_vars import SLURM_JOB_ID
+from project.utils.env_vars import NETWORK_DIR, SLURM_JOB_ID
 from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
 from project.utils.utils import get_device
 
-SLOW_DATAMODULES = ["inaturalist", "imagenet32"]
+on_github_ci = "GITHUB_ACTIONS" in os.environ
+on_self_hosted_github_ci = on_github_ci and "self-hosted" in os.environ.get("RUNNER_LABELS", "")
+
+SLOW_DATAMODULES = ["inaturalist", "imagenet32", "imagenet"]
 
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "imagenet32": [pytest.mark.slow],
@@ -47,6 +51,15 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
             strict=True,
             raises=hydra.errors.InstantiationException,
             reason="Expects to be run on the Mila cluster for now",
+        ),
+    ],
+    "imagenet": [
+        pytest.mark.slow,
+        pytest.mark.xfail(
+            not (NETWORK_DIR and (NETWORK_DIR / "datasets/imagenet").exists()),
+            strict=True,
+            raises=hydra.errors.InstantiationException,
+            reason="Expects to be run on a cluster with the ImageNet dataset.",
         ),
     ],
     "rl": [

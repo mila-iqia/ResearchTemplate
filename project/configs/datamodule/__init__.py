@@ -20,7 +20,9 @@ if (
     torchvision_dir = _torchvision_dir
 
 
-datamodule_store = store(group="datamodule")
+# TODO: Make it possible to extend a structured base via yaml files as well as adding new fields
+# (for example, ImagetNet32DataModule has a new constructor argument which can't be set atm in the
+# config).
 
 
 @hydrated_dataclass(target=VisionDataModule, populate_full_signature=True)
@@ -38,4 +40,5 @@ class VisionDataModuleConfig:
     __call__ = instantiate
 
 
+datamodule_store = store(group="datamodule")
 datamodule_store(VisionDataModuleConfig, name="vision")

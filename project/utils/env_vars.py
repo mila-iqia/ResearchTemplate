@@ -13,7 +13,14 @@ SLURM_TMPDIR: Path | None = (
 SLURM_JOB_ID: int | None = (
     int(os.environ["SLURM_JOB_ID"]) if "SLURM_JOB_ID" in os.environ else None
 )
-NETWORK_DIR = Path(os.environ["NETWORK_DIR"]) if "NETWORK_DIR" in os.environ else None
+
+NETWORK_DIR = (
+    Path(os.environ["NETWORK_DIR"])
+    if "NETWORK_DIR" in os.environ
+    else _network_dir
+    if (_network_dir := Path("/network")).exists()
+    else None
+)
 
 REPO_ROOTDIR = Path(__file__).parent
 for level in range(5):

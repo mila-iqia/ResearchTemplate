@@ -13,6 +13,7 @@ from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.datasets import VisionDataset
 
+from project.utils.env_vars import DATA_DIR, NUM_WORKERS
 from project.utils.types import C, H, StageStr, W
 
 from ...utils.types.protocols import DataModule
@@ -37,9 +38,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
 
     def __init__(
         self,
-        data_dir: str | Path | None = None,
+        data_dir: str | Path = DATA_DIR,
         val_split: int | float = 0.2,
-        num_workers: int | None = None,
+        num_workers: int | None = NUM_WORKERS,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,
@@ -69,13 +70,8 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         """
 
         super().__init__()
-        from project.configs.datamodule import DATA_DIR
-
         self.data_dir: Path = Path(data_dir or DATA_DIR)
         self.val_split = val_split
-        if num_workers is None:
-            num_workers = num_cpus_on_node()
-            logger.debug(f"Setting the number of dataloader workers to {num_workers}.")
         self.num_workers = num_workers
         self.normalize = normalize
         self.batch_size = batch_size
@@ -102,6 +98,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.valid_kwargs["train"] = True
             self.test_kwargs["train"] = False
 
+        # todo: what about the shuffling at each epoch?
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
         self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
         self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
