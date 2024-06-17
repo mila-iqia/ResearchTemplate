@@ -6,7 +6,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, ClassVar, Concatenate
+from typing import ClassVar, Concatenate
 
 import torch
 from lightning import LightningDataModule
@@ -81,7 +81,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         super().__init__()
         from project.configs.datamodule import DATA_DIR
 
-        self.data_dir = data_dir if data_dir is not None else DATA_DIR
+        self.data_dir: Path = Path(data_dir or DATA_DIR)
         self.val_split = val_split
         if num_workers is None:
             num_workers = num_cpus_on_node()
@@ -93,15 +93,23 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.shuffle = shuffle
         self.pin_memory = pin_memory
         self.drop_last = drop_last
-        self._train_transforms = train_transforms
-        self._val_transforms = val_transforms
-        self._test_transforms = test_transforms
+        self.train_transforms = train_transforms
+        self.val_transforms = val_transforms
+        self.test_transforms = test_transforms
         self.EXTRA_ARGS = kwargs
 
-        self.train_kwargs = self.EXTRA_ARGS.copy()
-        self.test_kwargs = self.EXTRA_ARGS.copy()
+        self.train_kwargs = self.EXTRA_ARGS | {
+            "transform": self.train_transforms or self.default_transforms()
+        }
+        self.valid_kwargs = self.EXTRA_ARGS | {
+            "transform": self.val_transforms or self.default_transforms()
+        }
+        self.test_kwargs = self.EXTRA_ARGS | {
+            "transform": self.test_transforms or self.default_transforms()
+        }
         if _has_constructor_argument(self.dataset_cls, "train"):
             self.train_kwargs["train"] = True
+            self.valid_kwargs["train"] = True
             self.test_kwargs["train"] = False
 
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
@@ -109,35 +117,11 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
         self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
 
+        self.test_dataset_cls = self.dataset_cls
+
+        self.dataset_train: Dataset | None = None
+        self.dataset_val: Dataset | None = None
         self.dataset_test: VisionDataset | None = None
-
-    @property
-    def train_transforms(self) -> Callable[..., Any] | None:
-        """Optional transforms (or collection of transforms) you can apply to train dataset."""
-        return self._train_transforms
-
-    @train_transforms.setter
-    def train_transforms(self, t: Callable) -> None:
-        self._train_transforms = t
-
-    @property
-    def val_transforms(self) -> Callable[..., Any] | None:
-        """Optional transforms (or collection of transforms) you can apply to validation
-        dataset."""
-        return self._val_transforms
-
-    @val_transforms.setter
-    def val_transforms(self, t: Callable) -> None:
-        self._val_transforms = t
-
-    @property
-    def test_transforms(self) -> Callable[..., Any] | None:
-        """Optional transforms (or collection of transforms) you can apply to test dataset."""
-        return self._test_transforms
-
-    @test_transforms.setter
-    def test_transforms(self, t: Callable) -> None:
-        self._test_transforms = t
 
     def prepare_data(self) -> None:
         """Saves files to data_dir."""
@@ -156,46 +140,30 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             logger.info(
                 f"Preparing {self.name} dataset test spit in {self.data_dir} with {test_kwargs=}"
             )
-            self.dataset_cls(str(self.data_dir), **test_kwargs)
+            self.test_dataset_cls(str(self.data_dir), **test_kwargs)
 
     def setup(self, stage: StageStr | None = None) -> None:
         """Creates train, val, and test dataset."""
         if stage in ["fit", "validate"] or stage is None:
-            train_transforms = (
-                self.default_transforms()
-                if self.train_transforms is None
-                else self.train_transforms
-            )
-            val_transforms = (
-                self.default_transforms() if self.val_transforms is None else self.val_transforms
-            )
-
+            logger.debug(f"creating training dataset with kwargs {self.train_kwargs}")
             dataset_train = self.dataset_cls(
                 str(self.data_dir),
-                transform=train_transforms,
                 **self.train_kwargs,
             )
-            # dataset_train = wrap_dataset_for_transforms_v2(dataset_train)
+            logger.debug(f"creating validation dataset with kwargs {self.train_kwargs}")
             dataset_val = self.dataset_cls(
                 str(self.data_dir),
-                transform=val_transforms,
-                **self.train_kwargs,  # todo: Assuming those are the same for now.
+                **self.valid_kwargs,
             )
-            # dataset_val = wrap_dataset_for_transforms_v2(dataset_val)
-
-            # Split
+            # Train/validation split.
+            # NOTE: the dataset is created twice (with the right transforms) and split in the same
+            # way, such that there is no overlap in indices between train and validation sets.
             self.dataset_train = self._split_dataset(dataset_train, train=True)
             self.dataset_val = self._split_dataset(dataset_val, train=False)
 
         if stage == "test" or stage is None:
-            test_transforms = (
-                self.default_transforms() if self.test_transforms is None else self.test_transforms
-            )
-            dataset_test = self.dataset_cls(
-                str(self.data_dir), transform=test_transforms, **self.test_kwargs
-            )
-            # dataset_test = wrap_dataset_for_transforms_v2(dataset_test)
-            self.dataset_test = dataset_test
+            logger.debug(f"creating test dataset with kwargs {self.train_kwargs}")
+            self.dataset_test = self.test_dataset_cls(str(self.data_dir), **self.test_kwargs)
 
     def _split_dataset(self, dataset: VisionDataset, train: bool = True) -> Dataset:
         """Splits the dataset into train and validation set."""

@@ -23,6 +23,7 @@ from project.datamodules.image_classification.inaturalist import (
     Version,
 )
 from project.datamodules.image_classification.mnist import mnist_train_transforms
+from project.datamodules.vision.base import SLURM_TMPDIR
 
 FILE = Path(__file__)
 REPO_ROOTDIR = FILE.parent
@@ -31,10 +32,6 @@ for level in range(5):
         break
     REPO_ROOTDIR = REPO_ROOTDIR.parent
 
-
-SLURM_TMPDIR: Path | None = (
-    Path(os.environ["SLURM_TMPDIR"]) if "SLURM_TMPDIR" in os.environ else None
-)
 SLURM_JOB_ID: int | None = (
     int(os.environ["SLURM_JOB_ID"]) if "SLURM_JOB_ID" in os.environ else None
 )
