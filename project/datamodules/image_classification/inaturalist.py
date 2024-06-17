@@ -10,7 +10,7 @@ import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
 from project.datamodules.image_classification.base import ImageClassificationDataModule
-from project.datamodules.vision.base import SLURM_TMPDIR
+from project.utils.env_vars import SLURM_TMPDIR
 from project.utils.types import C, H, W
 
 logger = get_logger(__name__)

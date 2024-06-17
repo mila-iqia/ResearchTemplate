@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from project.configs.datamodule import SCRATCH
+from project.utils.env_vars import SCRATCH
 
 from .imagenet32 import ImageNet32DataModule
 
