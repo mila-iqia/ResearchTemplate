@@ -4,6 +4,7 @@ from .image_classification.fashion_mnist import FashionMNISTDataModule
 from .image_classification.imagenet32 import ImageNet32DataModule, imagenet32_normalization
 from .image_classification.mnist import MNISTDataModule
 from .vision.base import VisionDataModule
+from .vision.imagenet import ImageNetDataModule
 
 __all__ = [
     "cifar10_normalization",
@@ -12,6 +13,7 @@ __all__ = [
     "ImageClassificationDataModule",
     "imagenet32_normalization",
     "ImageNet32DataModule",
+    "ImageNetDataModule",
     "MNISTDataModule",
     "VisionDataModule",
 ]
