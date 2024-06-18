@@ -3,7 +3,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
-from tensor_regression.fixture import TensorRegressionFixture, get_test_source_and_temp_file_paths
+from tensor_regression.fixture import (
+    TensorRegressionFixture,
+    get_test_source_and_temp_file_paths,
+)
 from torch import Tensor
 
 from project.utils.testutils import run_for_all_datamodules
@@ -68,7 +71,10 @@ def test_first_batch(
 
     fig.suptitle(f"First batch of datamodule {type(datamodule).__name__}")
     figure_path, _ = get_test_source_and_temp_file_paths(
-        extension=".png", request=request, original_datadir=original_datadir, datadir=datadir
+        extension=".png",
+        request=request,
+        original_datadir=original_datadir,
+        datadir=datadir,
     )
     figure_path.parent.mkdir(exist_ok=True, parents=True)
     fig.savefig(figure_path)
