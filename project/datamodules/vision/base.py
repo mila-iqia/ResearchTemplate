@@ -84,15 +84,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.test_transforms = test_transforms
         self.EXTRA_ARGS = kwargs
 
-        self.train_kwargs = self.EXTRA_ARGS | {
-            "transform": self.train_transforms or self.default_transforms()
-        }
-        self.valid_kwargs = self.EXTRA_ARGS | {
-            "transform": self.val_transforms or self.default_transforms()
-        }
-        self.test_kwargs = self.EXTRA_ARGS | {
-            "transform": self.test_transforms or self.default_transforms()
-        }
+        self.train_kwargs: dict = self.EXTRA_ARGS
+        self.valid_kwargs: dict = self.EXTRA_ARGS
+        self.test_kwargs: dict = self.EXTRA_ARGS
         if _has_constructor_argument(self.dataset_cls, "train"):
             self.train_kwargs["train"] = True
             self.valid_kwargs["train"] = True
@@ -100,15 +94,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
 
         # todo: what about the shuffling at each epoch?
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
-        self.train_dl_rng_seed = int(
-            torch.randint(0, int(1e6), (1,), generator=_rng).item()
-        )
-        self.val_dl_rng_seed = int(
-            torch.randint(0, int(1e6), (1,), generator=_rng).item()
-        )
-        self.test_dl_rng_seed = int(
-            torch.randint(0, int(1e6), (1,), generator=_rng).item()
-        )
+        self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+        self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+        self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
 
         self.test_dataset_cls = self.dataset_cls
 
@@ -135,6 +123,16 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             )
             self.test_dataset_cls(str(self.data_dir), **test_kwargs)
 
+        self.train_kwargs = self.EXTRA_ARGS | {
+            "transform": self.train_transforms or self.default_transforms()
+        }
+        self.valid_kwargs = self.EXTRA_ARGS | {
+            "transform": self.val_transforms or self.default_transforms()
+        }
+        self.test_kwargs = self.EXTRA_ARGS | {
+            "transform": self.test_transforms or self.default_transforms()
+        }
+
     def setup(self, stage: StageStr | None = None) -> None:
         """Creates train, val, and test dataset."""
         if stage in ["fit", "validate"] or stage is None:
@@ -156,9 +154,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
 
         if stage == "test" or stage is None:
             logger.debug(f"creating test dataset with kwargs {self.train_kwargs}")
-            self.dataset_test = self.test_dataset_cls(
-                str(self.data_dir), **self.test_kwargs
-            )
+            self.dataset_test = self.test_dataset_cls(str(self.data_dir), **self.test_kwargs)
 
     def _split_dataset(self, dataset: VisionDataset, train: bool = True) -> Dataset:
         """Splits the dataset into train and validation set."""
@@ -190,9 +186,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
 
-    def train_dataloader[
-        **P
-    ](
+    def train_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -212,9 +206,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             ),
         )
 
-    def val_dataloader[
-        **P
-    ](
+    def val_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -226,15 +218,10 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.dataset_val,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(
-                dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed))
-                | kwargs
-            ),
+            **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
         )
 
-    def test_dataloader[
-        **P
-    ](
+    def test_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -248,15 +235,10 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.dataset_test,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(
-                dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed))
-                | kwargs
-            ),
+            **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
         )
 
-    def _data_loader[
-        **P
-    ](
+    def _data_loader[**P](
         self,
         dataset: Dataset,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,

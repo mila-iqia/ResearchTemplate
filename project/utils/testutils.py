@@ -24,8 +24,7 @@ from omegaconf import OmegaConf
 from torch import Tensor, nn
 from torch.optim import Optimizer
 
-from project.configs import Config, cs
-from project.configs.datamodule import DATA_DIR
+from project.configs import Config
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
@@ -47,7 +46,7 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "inaturalist": [
         pytest.mark.slow,
         pytest.mark.xfail(
-            not Path("/network/datasets/inat").exists(),
+            not (NETWORK_DIR and (NETWORK_DIR / "datasets/inat").exists()),
             strict=True,
             raises=hydra.errors.InstantiationException,
             reason="Expects to be run on the Mila cluster for now",
@@ -61,17 +60,6 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
             raises=hydra.errors.InstantiationException,
             reason="Expects to be run on a cluster with the ImageNet dataset.",
         ),
-    ],
-    "rl": [
-        pytest.mark.xfail(
-            strict=False,
-            raises=AssertionError,
-            # match="Shapes are not the same."
-            reason="Isn't entirely deterministic yet.",
-        ),
-    ],
-    "moving_mnist": [
-        (pytest.mark.slow if not (DATA_DIR / "MovingMNIST").exists() else pytest.mark.timeout(5))
     ],
 }
 """Dict with some default marks for some configs name."""
@@ -169,11 +157,15 @@ def get_all_algorithm_names() -> list[str]:
     return get_all_configs_in_group("algorithm")
 
 
-def get_type_for_config_name(config_group: str, config_name: str, _cs: ConfigStore = cs) -> type:
+def get_type_for_config_name(
+    config_group: str, config_name: str, _cs: ConfigStore | None = None
+) -> type:
     """Returns the class that is to be instantiated by the given config name.
 
     In the case of inner dataclasses (e.g. Model.HParams), this returns the outer class (Model).
     """
+    if _cs is None:
+        from project.configs import cs as _cs
 
     config_loader = get_config_loader()
     _, caching_repo = config_loader._parse_overrides_and_create_caching_repo(
@@ -288,7 +280,11 @@ def run_for_all_networks(
 
 def get_all_datamodule_names() -> list[str]:
     """Retrieves the names of all the datamodules that are saved in the ConfigStore of Hydra."""
-    return get_all_configs_in_group("datamodule")
+    datamodules = get_all_configs_in_group("datamodule")
+    # todo: automatically detect which ones are configs for ABCs and remove them?
+    if "vision" in datamodules:
+        datamodules.remove("vision")
+    return datamodules
 
 
 def get_all_datamodule_names_params():

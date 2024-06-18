@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import v2 as transforms
 
+from project.utils.env_vars import SCRATCH
 from project.utils.types import C, H, StageStr, W
 
 from ..vision.base import VisionDataModule
@@ -177,10 +178,10 @@ class ImageNet32DataModule(VisionDataModule):
     def __init__(
         self,
         data_dir: str | Path,
-        readonly_datasets_dir: str | Path | None = None,
+        readonly_datasets_dir: str | Path | None = SCRATCH,
         val_split: int | float = -1,
         num_images_per_val_class: int | None = 50,
-        num_workers: int | None = 0,
+        num_workers: int = 0,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,
@@ -221,7 +222,9 @@ class ImageNet32DataModule(VisionDataModule):
 
         # ImageNetDataModule uses num_imgs_per_val_class: int = 50, which makes sense! Here
         # however we're using probably more than that for validation.
-        self.EXTRA_ARGS["readonly_datasets_dir"] = readonly_datasets_dir
+        self.train_kwargs["readonly_datasets_dir"] = readonly_datasets_dir
+        self.valid_kwargs["readonly_datasets_dir"] = readonly_datasets_dir
+        self.test_kwargs["readonly_datasets_dir"] = readonly_datasets_dir
         self.dataset_train: ImageNet32Dataset | Subset
         self.dataset_val: ImageNet32Dataset | Subset
         self.dataset_test: ImageNet32Dataset | Subset
