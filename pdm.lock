@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:805e3f5f1a98de3530f8ec547141537d7d30b7d7d7ca5a3b5f9477809327ecdd"
+content_hash = "sha256:df6ae2c882d59bd85dcb8e915205e54db01eab36f4a4910af80acaa945817388"
 
 [[package]]
 name = "absl-py"
@@ -2276,6 +2276,21 @@ files = [
 ]
 
 [[package]]
+name = "pytest-testmon"
+version = "2.1.1"
+requires_python = ">=3.8"
+summary = "selects tests affected by changed files and methods"
+groups = ["dev"]
+dependencies = [
+    "coverage<8,>=6",
+    "pytest<9,>=5",
+]
+files = [
+    {file = "pytest-testmon-2.1.1.tar.gz", hash = "sha256:8ebe2c3de42d99306ee54cd4536fed0fc48346a954420da904b18e8d59b5da98"},
+    {file = "pytest_testmon-2.1.1-py3-none-any.whl", hash = "sha256:8271ca47bc8c80760c4fc7fd7895ea786b111bbb31f13eeea879a6fd11fe2226"},
+]
+
+[[package]]
 name = "pytest-timeout"
 version = "2.3.1"
 requires_python = ">=3.7"
@@ -2838,15 +2853,15 @@ files = [
 [[package]]
 name = "torch-jax-interop"
 version = "0.0.4.post7.dev0"
-requires_python = "<4.0,>=3.11"
+requires_python = ">=3.11,<4.0"
 git = "https://www.github.com/lebrice/torch_jax_interop"
 revision = "7f0c72fe19d8bd4bd957f20dd90d77acd8178bd4"
 summary = "Utility to convert Tensors from Jax to Torch and vice-versa"
 groups = ["default"]
 dependencies = [
-    "flax<1.0.0,>=0.8.4",
-    "jax[cuda12]<1.0.0,>=0.4.28",
-    "pytorch2jax<1.0.0,>=0.1.0",
+    "flax<0.9.0,>=0.8.4",
+    "jax[cuda12]<0.5.0,>=0.4.28",
+    "pytorch2jax<0.2.0,>=0.1.0",
     "torch<3.0.0,>=2.3.0",
 ]
 

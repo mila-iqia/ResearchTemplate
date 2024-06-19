@@ -53,6 +53,7 @@ dev = [
     "pytest-benchmark>=4.0.0",
     "pytest-cov>=5.0.0",
     "tensor-regression>=0.0.2.post3.dev0",
+    "pytest-testmon>=2.1.1",
 ]
 
 [[tool.pdm.source]]
