@@ -99,11 +99,10 @@ class ManualGradientsExample(Algorithm):
 
             # NOTE: You don't need to call `loss.backward()`, you could also just set .grads
             # directly!
-            loss.backward()
+            self.manual_backward(loss)
 
             for name, parameter in self.named_parameters():
-                if parameter.grad is None:
-                    continue
+                assert parameter.grad is not None, name
                 parameter.grad += self.hp.gradient_noise_std * torch.randn_like(parameter.grad)
 
             optimizer.step()

@@ -6,9 +6,6 @@ from typing import Concatenate, Literal
 
 import flax.linen
 import jax
-import lightning
-import lightning.pytorch
-import lightning.pytorch.callbacks
 import rich
 import rich.logging
 import torch
@@ -196,11 +193,13 @@ def main():
     logging.basicConfig(
         level=logging.INFO, format="%(message)s", handlers=[rich.logging.RichHandler()]
     )
+    from lightning.pytorch.callbacks import RichProgressBar
+
     trainer = Trainer(
         devices="auto",
         max_epochs=10,
         accelerator="auto",
-        callbacks=[lightning.pytorch.callbacks.RichProgressBar()],
+        callbacks=[RichProgressBar()],
     )
     datamodule = MNISTDataModule(num_workers=4, batch_size=512)
     network = CNN(num_classes=datamodule.num_classes)

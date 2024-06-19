@@ -107,7 +107,7 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
     @property
     def device(self) -> torch.device:
         if self._device is None:
-            self._device = next(p.device for p in self.parameters())
+            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         device = self._device
         # make this more explicit to always include the index
         if device.type == "cuda" and device.index is None:
