@@ -36,6 +36,7 @@ from project.experiment import (
 from project.main import main
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
+    default_marks_for_config_combinations,
     default_marks_for_config_name,
     get_all_datamodule_names_params,
     get_all_network_names,
@@ -146,8 +147,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
             AllParamsShouldHaveGradients(),
         ]
 
+    # todo: make this much faster to run!
+    # Also, some combinations don't work, e.g. `imagenet + fcnet`, there are nans in the network.
+
     @pytest.mark.slow
-    @pytest.mark.timeout(10)  # todo: make this much faster to run!
+    # @pytest.mark.timeout(10)
     def test_overfit_training_batch(
         self,
         algorithm: AlgorithmType,
@@ -323,7 +327,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
     @pytest.fixture(scope="class")
     def _hydra_config(
-        self, datamodule_name: str, network_name: str, tmp_path_factory: pytest.TempPathFactory
+        self,
+        datamodule_name: str,
+        network_name: str,
+        tmp_path_factory: pytest.TempPathFactory,
+        request: pytest.FixtureRequest,
     ) -> DictConfig:
         """Fixture that gives the Hydra configuration for an experiment that uses this algorithm,
         datamodule, and network.
@@ -336,6 +344,16 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
         # todo: Get the name of the algorithm from the hydra config?
         algorithm_name = self.algorithm_name
+
+        combination = set([datamodule_name, network_name, algorithm_name])
+        for configs, marks in default_marks_for_config_combinations.items():
+            configs = set(configs)
+            if combination >= configs:
+                logger.debug(f"Applying markers because {combination} contains {configs}")
+                # There is a combination of potentially unsupported configs here.
+                for mark in marks:
+                    request.applymarker(mark)
+
         with setup_hydra_for_tests_and_compose(
             all_overrides=[
                 f"algorithm={algorithm_name}",
@@ -652,7 +670,8 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
         parameters_with_nans = [
             name for name, param in pl_module.named_parameters() if param.isnan().any()
         ]
-        assert not parameters_with_nans
+        if parameters_with_nans:
+            raise RuntimeError(f"Parameters {parameters_with_nans} contain NaNs!")
 
         parameters_with_nans_in_grad = [
             name

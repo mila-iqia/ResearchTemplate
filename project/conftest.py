@@ -36,7 +36,10 @@ from project.experiment import (
 )
 from project.utils.env_vars import DATA_DIR
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.testutils import default_marks_for_config_name
+from project.utils.testutils import (
+    default_marks_for_config_combinations,
+    default_marks_for_config_name,
+)
 from project.utils.types import is_sequence_of
 from project.utils.types.protocols import DataModule
 
@@ -362,8 +365,18 @@ def experiment_dictconfig(
     datamodule_name: str | None,
     network_name: str | None,
     overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
 ) -> Generator[DictConfig, None, None]:
     tmp_path = tmp_path_factory.mktemp("experiment_testing")
+
+    combination = set([datamodule_name, network_name, algorithm_name])
+    for configs, marks in default_marks_for_config_combinations.items():
+        configs = set(configs)
+        if combination >= configs:
+            logger.debug(f"Applying markers because {combination} contains {configs}")
+            # There is a combination of potentially unsupported configs here.
+            for mark in marks:
+                request.applymarker(mark)
 
     default_overrides = [
         # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.

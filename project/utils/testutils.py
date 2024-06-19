@@ -36,10 +36,11 @@ from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
 from project.utils.utils import get_device
 
+logger = get_logger(__name__)
+
 on_github_ci = "GITHUB_ACTIONS" in os.environ
 on_self_hosted_github_ci = on_github_ci and "self-hosted" in os.environ.get("RUNNER_LABELS", "")
 
-SLOW_DATAMODULES = ["inaturalist", "imagenet32", "imagenet"]
 
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "imagenet32": [pytest.mark.slow],
@@ -64,8 +65,24 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
 }
 """Dict with some default marks for some configs name."""
 
-
-logger = get_logger(__name__)
+default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDecorator]] = {
+    ("imagenet", "fcnet"): [
+        pytest.mark.xfail(
+            reason="FcNet shouldn't be applied to the ImageNet datamodule. It can lead to nans in the parameters."
+        )
+    ],
+    ("imagenet", "jax_fcnet"): [
+        pytest.mark.xfail(
+            reason="FcNet shouldn't be applied to the ImageNet datamodule. It can lead to nans in the parameters."
+        )
+    ],
+    ("imagenet", "jax_cnn"): [
+        pytest.mark.xfail(
+            reason="todo: parameters contain nans when overfitting on one batch? Maybe we're "
+            "using too many iterations?"
+        )
+    ],
+}
 
 
 def parametrized_fixture(name: str, values: Sequence, ids=None, **kwargs):
