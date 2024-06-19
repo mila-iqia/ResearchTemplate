@@ -22,7 +22,7 @@ from torchvision.models.resnet import ResNet152_Weights
 from torchvision.transforms import v2 as transform_lib
 
 from project.datamodules.vision.base import VisionDataModule
-from project.utils.env_vars import NUM_WORKERS, DATA_DIR
+from project.utils.env_vars import DATA_DIR, NUM_WORKERS
 from project.utils.types import C, H, StageStr, W
 from project.utils.types.protocols import Module
 
