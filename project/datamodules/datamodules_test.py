@@ -15,7 +15,8 @@ from project.utils.types import is_sequence_of
 from ..utils.types.protocols import DataModule
 
 
-@pytest.mark.timeout(25, func_only=True)
+# @pytest.mark.timeout(25, func_only=True)
+@pytest.mark.slow
 @run_for_all_datamodules()
 def test_first_batch(
     datamodule: DataModule,

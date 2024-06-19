@@ -11,12 +11,13 @@ from typing import ClassVar
 
 import gdown
 import numpy as np
+import torch
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import v2 as transforms
 
-from project.utils.env_vars import SCRATCH
+from project.utils.env_vars import DATA_DIR, SCRATCH
 from project.utils.types import C, H, StageStr, W
 
 from ..vision.base import VisionDataModule
@@ -177,7 +178,7 @@ class ImageNet32DataModule(VisionDataModule):
 
     def __init__(
         self,
-        data_dir: str | Path,
+        data_dir: Path = DATA_DIR,
         readonly_datasets_dir: str | Path | None = SCRATCH,
         val_split: int | float = -1,
         num_images_per_val_class: int | None = 50,
@@ -194,7 +195,7 @@ class ImageNet32DataModule(VisionDataModule):
     ) -> None:
         Path(data_dir).mkdir(parents=True, exist_ok=True)
         super().__init__(
-            data_dir=str(data_dir),
+            data_dir=data_dir,
             val_split=val_split,
             num_workers=num_workers,
             normalize=normalize,
@@ -208,7 +209,6 @@ class ImageNet32DataModule(VisionDataModule):
             test_transforms=test_transforms,
         )
         self.num_images_per_val_class = num_images_per_val_class
-
         if self.val_split == -1 and self.num_images_per_val_class is None:
             raise ValueError(
                 "Can't have both `val_split` and `num_images_per_val_class` set to `None`!"
@@ -235,9 +235,7 @@ class ImageNet32DataModule(VisionDataModule):
 
     def prepare_data(self) -> None:
         """Saves files to data_dir."""
-        # NOTE: In our case, the download gives us both. No need to do it twice.
-        self.dataset_cls(self.data_dir, train=True, download=True, **self.EXTRA_ARGS)
-        self.dataset_cls(self.data_dir, train=False, download=True, **self.EXTRA_ARGS)
+        super().prepare_data()
 
     def setup(self, stage: StageStr | None = None) -> None:
         """Creates train, val, and test dataset."""
@@ -249,32 +247,17 @@ class ImageNet32DataModule(VisionDataModule):
         else:
             logger.debug("Setting up for all stages")
 
-        if stage in ["fit", "val", None]:
-            train_transforms = (
-                self.default_transforms()
-                if self.train_transforms is None
-                else self.train_transforms
-            )
-            val_transforms = (
-                self.default_transforms() if self.val_transforms is None else self.val_transforms
-            )
-            # Create the entire dataset twice. This is only needed because they have different
-            # transforms...
-            base_dataset = self.dataset_cls(
-                self.data_dir,
-                train=True,
-                transform=transforms.ToTensor(),
-                **self.EXTRA_ARGS,
-            )
-            # Make sure they both use the same underlying data. (so we don't use twice as much
-            # memory, like the base-class does!
+        if stage in ["fit", "validate", None]:
+            base_dataset = self.dataset_cls(self.data_dir, **self.train_kwargs)
+            assert len(base_dataset) == 1_281_159
+
             base_dataset_train = copy.deepcopy(base_dataset)
-            base_dataset_train.transform = train_transforms
+            base_dataset_train.transform = self.train_transforms
             base_dataset_train.data = base_dataset.data
             base_dataset_train.targets = base_dataset.targets
 
             base_dataset_valid = copy.deepcopy(base_dataset)
-            base_dataset_valid.transform = val_transforms
+            base_dataset_valid.transform = self.val_transforms
             base_dataset_valid.data = base_dataset.data
             base_dataset_valid.targets = base_dataset.targets
 
@@ -300,13 +283,13 @@ class ImageNet32DataModule(VisionDataModule):
 
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
-        if self.normalize:
-            in32_transforms = transforms.Compose(
-                [transforms.ToTensor(), imagenet32_normalization()]
-            )
-        else:
-            in32_transforms = transforms.Compose([transforms.ToTensor()])
-        return in32_transforms
+        return transforms.Compose(
+            [
+                transforms.ToImage(),
+                transforms.ToDtype(torch.float32, scale=True),
+            ]
+            + ([imagenet32_normalization()] if self.normalize else [])
+        )
 
     def train_dataloader(self) -> DataLoader:
         """The train dataloader."""
@@ -331,6 +314,7 @@ class ImageNet32DataModule(VisionDataModule):
         )
 
     def _split_dataset(self, dataset: ImageNet32Dataset, train: bool = True) -> Subset:
+        assert self.val_split >= 0
         split_dataset = super()._split_dataset(dataset, train=train)
         assert isinstance(split_dataset, Subset)
         return split_dataset

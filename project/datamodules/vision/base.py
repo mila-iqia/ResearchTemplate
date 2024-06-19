@@ -84,14 +84,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.test_transforms = test_transforms
         self.EXTRA_ARGS = kwargs
 
-        self.train_kwargs: dict = self.EXTRA_ARGS
-        self.valid_kwargs: dict = self.EXTRA_ARGS
-        self.test_kwargs: dict = self.EXTRA_ARGS
-        if _has_constructor_argument(self.dataset_cls, "train"):
-            self.train_kwargs["train"] = True
-            self.valid_kwargs["train"] = True
-            self.test_kwargs["train"] = False
-
         # todo: what about the shuffling at each epoch?
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
         self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
@@ -103,6 +95,20 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.dataset_train: Dataset | None = None
         self.dataset_val: Dataset | None = None
         self.dataset_test: VisionDataset | None = None
+
+        self.train_kwargs = self.EXTRA_ARGS | {
+            "transform": self.train_transforms or self.default_transforms()
+        }
+        self.valid_kwargs = self.EXTRA_ARGS | {
+            "transform": self.val_transforms or self.default_transforms()
+        }
+        self.test_kwargs = self.EXTRA_ARGS | {
+            "transform": self.test_transforms or self.default_transforms()
+        }
+        if _has_constructor_argument(self.dataset_cls, "train"):
+            self.train_kwargs["train"] = True
+            self.valid_kwargs["train"] = True
+            self.test_kwargs["train"] = False
 
     def prepare_data(self) -> None:
         """Saves files to data_dir."""
@@ -122,16 +128,6 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 f"Preparing {self.name} dataset test spit in {self.data_dir} with {test_kwargs=}"
             )
             self.test_dataset_cls(str(self.data_dir), **test_kwargs)
-
-        self.train_kwargs = self.EXTRA_ARGS | {
-            "transform": self.train_transforms or self.default_transforms()
-        }
-        self.valid_kwargs = self.EXTRA_ARGS | {
-            "transform": self.val_transforms or self.default_transforms()
-        }
-        self.test_kwargs = self.EXTRA_ARGS | {
-            "transform": self.test_transforms or self.default_transforms()
-        }
 
     def setup(self, stage: StageStr | None = None) -> None:
         """Creates train, val, and test dataset."""
