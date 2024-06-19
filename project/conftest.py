@@ -21,7 +21,6 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.configs.datamodule import DATA_DIR
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
@@ -35,6 +34,7 @@ from project.experiment import (
     setup_experiment,
     setup_logging,
 )
+from project.utils.env_vars import DATA_DIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import default_marks_for_config_name
 from project.utils.types import is_sequence_of
@@ -339,7 +339,7 @@ def algorithm_name(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def datamodule_name(request: pytest.FixtureRequest) -> str | None:
-    datamodule_config_name = getattr(request, "param", None)
+    datamodule_config_name = getattr(request, "param")
     if datamodule_config_name:
         _add_default_marks_for_config_name(datamodule_config_name, request)
     return datamodule_config_name

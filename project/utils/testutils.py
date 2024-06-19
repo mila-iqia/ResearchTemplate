@@ -30,7 +30,7 @@ from project.datamodules.image_classification import (
 )
 from project.datamodules.vision.base import VisionDataModule
 from project.experiment import instantiate_trainer
-from project.utils.env_vars import NETWORK_DIR, SLURM_JOB_ID
+from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
@@ -45,10 +45,10 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "imagenet32": [pytest.mark.slow],
     "inaturalist": [
         pytest.mark.slow,
-        pytest.mark.xfail(
+        pytest.mark.skipif(
             not (NETWORK_DIR and (NETWORK_DIR / "datasets/inat").exists()),
-            strict=True,
-            raises=hydra.errors.InstantiationException,
+            # strict=True,
+            # raises=hydra.errors.InstantiationException,
             reason="Expects to be run on the Mila cluster for now",
         ),
     ],
@@ -300,18 +300,7 @@ def get_all_datamodule_names_params():
             marks=[
                 pytest.mark.xdist_group(name=dm_name),
             ]
-            + ([pytest.mark.slow] if dm_name in SLOW_DATAMODULES else [])
-            + (
-                [
-                    pytest.mark.xfail(
-                        SLURM_JOB_ID is None,
-                        raises=NotImplementedError,
-                        reason="Needs to be run on the Mila cluster atm.",
-                    )
-                ]
-                if dm_name == "inaturalist"
-                else []
-            ),
+            + default_marks_for_config_name.get(dm_name, []),
         )
         for dm_name in dm_names
     ]

@@ -10,7 +10,7 @@ import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
 from project.datamodules.image_classification.base import ImageClassificationDataModule
-from project.utils.env_vars import SLURM_TMPDIR
+from project.utils.env_vars import DATA_DIR, NUM_WORKERS, SLURM_TMPDIR
 from project.utils.types import C, H, W
 
 logger = get_logger(__name__)
@@ -44,9 +44,9 @@ class INaturalistDataModule(ImageClassificationDataModule):
 
     def __init__(
         self,
-        data_dir: str | Path | None = None,
+        data_dir: str | Path = DATA_DIR,
         val_split: int | float = 0.1,
-        num_workers: int | None = None,
+        num_workers: int = NUM_WORKERS,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,
@@ -105,7 +105,8 @@ class INaturalistDataModule(ImageClassificationDataModule):
 
         if not isinstance(target_type, list):
             self.num_classes = None
-        if version == "2021_train_mini" and target_type == "full":
+        # todo: double-check that the 2021_train split also has 10_000 classes.
+        if version in ["2021_train_mini", "2021_train"] and target_type == "full":
             self.num_classes = 10_000
         if isinstance(train_transforms, T.Compose):
             channels = 3

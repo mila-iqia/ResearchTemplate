@@ -1,0 +1,9 @@
+_target_: project.datamodules.VisionDataModule
+data_dir: ${constant:DATA_DIR}
+num_workers: ${constant:NUM_WORKERS}
+val_split: 0.1  # NOTE: reduced from default of 0.2
+normalize: True  # NOTE: Set to True by default instead of False
+shuffle: True  # NOTE: Set to True by default instead of False.
+pin_memory: True  # NOTE: Set to True by default instead of False.
+seed: 42
+batch_size: 64

@@ -297,11 +297,9 @@ class AlgorithmTests(Generic[AlgorithmType]):
     def datamodule_name(self, request: pytest.FixtureRequest):
         """Fixture that gives the name of a datamodule to use."""
         datamodule_name = request.param
-
         if datamodule_name in default_marks_for_config_name:
             for marker in default_marks_for_config_name[datamodule_name]:
                 request.applymarker(marker)
-
         self._skip_if_unsupported("datamodule", datamodule_name, skip_or_xfail=SKIP_OR_XFAIL)
         return datamodule_name
 

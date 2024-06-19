@@ -35,6 +35,10 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", (SLURM_TMPDIR or SCRATCH or REPO_ROOT
 """Directory where datasets should be extracted."""
 
 
+def get_constant(name: str):
+    return globals()[name]
+
+
 NUM_WORKERS = int(
     os.environ.get(
         "SLURM_CPUS_PER_TASK",
