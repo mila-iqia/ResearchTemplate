@@ -1,6 +1,6 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import Any, Required
+from typing import Required
 
 import torch
 import torchmetrics
@@ -81,7 +81,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
     def setup(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, ClassificationOutputs, Any],
+        pl_module: Algorithm[BatchType, ClassificationOutputs],
         stage: StageStr,
     ) -> None:
         if self.disabled:
@@ -104,7 +104,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
     def on_shared_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, ClassificationOutputs, Any],
+        pl_module: Algorithm[BatchType, ClassificationOutputs],
         outputs: ClassificationOutputs,
         batch: BatchType,
         batch_index: int,

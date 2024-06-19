@@ -5,12 +5,12 @@ from typing import Any, TypedDict
 
 import torch
 from lightning import Callback, LightningModule, Trainer
-from torch import Tensor, nn
+from torch import Tensor
 from typing_extensions import Generic, TypeVar  # noqa
 
+from project.datamodules.image_classification.base import ImageClassificationDataModule
 from project.utils.types import NestedMapping, PhaseStr
 from project.utils.types.protocols import DataModule, Module
-from project.utils.utils import get_device
 
 
 class StepOutputDict(TypedDict, total=False):
@@ -25,10 +25,9 @@ class StepOutputDict(TypedDict, total=False):
 
 BatchType = TypeVar("BatchType", bound=Tensor | Sequence[Tensor] | NestedMapping[str, Tensor])
 StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, default=StepOutputDict)
-NetworkType = TypeVar("NetworkType", bound=Module, default=nn.Module)
 
 
-class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, NetworkType]):
+class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
     """Base class for a learning algorithm.
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
@@ -47,20 +46,21 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
         self,
         *,
         datamodule: DataModule[BatchType] | None = None,
-        network: NetworkType | None = None,
+        network: Module | None = None,
         hp: HParams | None = None,
     ):
         super().__init__()
         self.datamodule = datamodule
-        if isinstance(network, torch.nn.Module):
-            # fix for `self.device` property which defaults to cpu.
-            self._device = get_device(network)
-        elif network and not isinstance(network, torch.nn.Module):
-            # todo: Should we automatically convert jax networks to torch in case the base class
-            # doesn't?
-            pass
         self.network = network
         self.hp = hp or self.HParams()
+        # fix for `self.device` property which defaults to cpu.
+        self._device = None
+
+        if isinstance(datamodule, ImageClassificationDataModule):
+            self.example_input_array = torch.zeros(
+                (datamodule.batch_size, *datamodule.dims), device=self.device
+            )
+
         self.trainer: Trainer
 
     def training_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
@@ -97,12 +97,19 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType, Network
 
         Feel free to overwrite this to do whatever you'd like.
         """
+        assert self.network is not None
         return self.network(x)
 
     def configure_callbacks(self) -> list[Callback]:
         """Use this to add some callbacks that should always be included with the model."""
-        if getattr(self.hp, "use_scheduler", False) and self.trainer and self.trainer.logger:
-            from lightning.pytorch.callbacks.lr_monitor import LearningRateMonitor
-
-            return [LearningRateMonitor()]
         return []
+
+    @property
+    def device(self) -> torch.device:
+        if self._device is None:
+            self._device = next(p.device for p in self.parameters())
+        device = self._device
+        # make this more explicit to always include the index
+        if device.type == "cuda" and device.index is None:
+            return torch.device("cuda", index=torch.cuda.current_device())
+        return device

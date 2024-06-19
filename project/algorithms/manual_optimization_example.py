@@ -5,22 +5,23 @@ from dataclasses import dataclass
 import torch
 from torch import Tensor, nn
 
+from project.algorithms.bases.algorithm import Algorithm
 from project.algorithms.bases.image_classification import (
     ClassificationOutputs,
-    ImageClassificationAlgorithm,
 )
+from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import PhaseStr
 
 
-class ManualGradientsExample(ImageClassificationAlgorithm):
+class ManualGradientsExample(Algorithm):
     """Example of an algorithm that calculates the gradients manually instead of having PL do the
     backward pass."""
 
     @dataclass
-    class HParams(ImageClassificationAlgorithm.HParams):
+    class HParams(Algorithm.HParams):
         """Hyper-parameters of this example algorithm."""
 
         lr: float = 0.1
@@ -34,7 +35,10 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
         network: nn.Module,
         hp: ManualGradientsExample.HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, network=network, hp=hp or self.HParams())
+        super().__init__()
+        self.datamodule = datamodule
+        self.network = network
+        self.hp = hp or self.HParams()
         # Just to let the type checker know the right type.
         self.hp: ManualGradientsExample.HParams
 
@@ -44,6 +48,9 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
         self.automatic_optimization = False
 
         # Instantiate any lazy weights with a dummy forward pass (optional).
+        self.example_input_array = torch.zeros(
+            (datamodule.batch_size, *datamodule.dims), device=self.device
+        )
         self.network(self.example_input_array)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -106,3 +113,8 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
     def configure_optimizers(self):
         """Creates the optimizer(s) and learning rate scheduler(s)."""
         return torch.optim.SGD(self.parameters(), lr=self.hp.lr)
+
+    def configure_callbacks(self):
+        return [
+            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+        ]

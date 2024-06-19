@@ -6,10 +6,9 @@ from typing import Required
 
 import torch
 from torch import Tensor
-from torch.nn import functional as F
-from torchmetrics.classification import MulticlassAccuracy
 
 from project.algorithms.bases.algorithm import Algorithm, StepOutputDict
+from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
@@ -32,9 +31,8 @@ class ClassificationOutputs(StepOutputDict):
 
 class ImageClassificationAlgorithm[
     BatchType: tuple[Tensor, Tensor],
-    NetworkType: Module[[Tensor], Tensor],
     StepOutputType: ClassificationOutputs,
-](Algorithm[BatchType, StepOutputType, NetworkType], ABC):
+](Algorithm[BatchType, StepOutputType], ABC):
     """Base class for a learning algorithm for image classification.
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
@@ -50,7 +48,7 @@ class ImageClassificationAlgorithm[
     def __init__(
         self,
         datamodule: ImageClassificationDataModule[BatchType],
-        network: NetworkType,
+        network: Module[[Tensor], Tensor],
         hp: ImageClassificationAlgorithm.HParams | None = None,
     ):
         super().__init__(datamodule=datamodule, network=network, hp=hp)
@@ -62,17 +60,6 @@ class ImageClassificationAlgorithm[
             [datamodule.batch_size, *datamodule.dims],
             device=self.device,
         )
-        num_classes: int = datamodule.num_classes
-
-        # IDEA: Could use a dict of metrics from torchmetrics instead of just accuracy:
-        # self.supervised_metrics: dist[str, Metrics]
-        # NOTE: Need to have one per phase! Not 100% sure that I'm not forgetting a phase here.
-        self.train_accuracy = MulticlassAccuracy(num_classes=num_classes)
-        self.val_accuracy = MulticlassAccuracy(num_classes=num_classes)
-        self.test_accuracy = MulticlassAccuracy(num_classes=num_classes)
-        self.train_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
-        self.val_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
-        self.test_top5_accuracy = MulticlassAccuracy(num_classes=num_classes, top_k=5)
 
     def training_step(
         self, batch: tuple[Tensor, Tensor], batch_index: int
@@ -96,6 +83,7 @@ class ImageClassificationAlgorithm[
 
     def predict(self, x: Tensor) -> Tensor:
         """Predict the classification labels."""
+        assert self.network is not None
         return self.network(x).argmax(-1)
 
     @abstractmethod
@@ -127,53 +115,21 @@ class ImageClassificationAlgorithm[
     def shared_step_end(
         self, step_output: ClassificationOutputs, phase: PhaseStr
     ) -> ClassificationOutputs:
-        required_entries = ClassificationOutputs.__required_keys__
-        if not isinstance(step_output, dict):
-            raise RuntimeError(
-                f"Expected the {phase} step method to output a dictionary with at least the "
-                f"{required_entries} keys, but got an output of type {type(step_output)} instead!"
-            )
-        if not all(k in step_output for k in required_entries):
-            raise RuntimeError(
-                f"Expected all the following keys to be in the output of the {phase} step "
-                f"method: {required_entries}"
-            )
-        logits = step_output["logits"]
-        y = step_output["y"]
-
-        probs = torch.softmax(logits, -1)
-
-        accuracy = getattr(self, f"{phase}_accuracy")
-        top5_accuracy = getattr(self, f"{phase}_top5_accuracy")
-
-        assert isinstance(accuracy, MulticlassAccuracy)
-        assert isinstance(top5_accuracy, MulticlassAccuracy)
-
-        # TODO: It's a bit confusing, not sure if this is the right way to use this:
-        accuracy(probs, y)
-        top5_accuracy(probs, y)
-        prog_bar = phase == "train"
-
-        self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
-        self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
-
-        if "cross_entropy" not in step_output:
-            # Add the cross entropy loss as a metric.
-            ce_loss = F.cross_entropy(logits.detach(), y, reduction="mean")
-            self.log(f"{phase}/cross_entropy", ce_loss, prog_bar=prog_bar, sync_dist=True)
-
         fused_output = step_output.copy()
         loss: Tensor | float | None = step_output.get("loss", None)
 
         if isinstance(loss, Tensor) and loss.shape:
             # Replace the loss with its mean. This is useful when automatic
-            # optimization is enabled, for example in the baseline (backprop), where each replica
+            # optimization is enabled, for example in the example algo, where each replica
             # returns the un-reduced cross-entropy loss. Here we need to reduce it to a scalar.
             fused_output["loss"] = loss.mean()
 
         if loss is not None:
-            self.log(
-                f"{phase}/loss", torch.as_tensor(loss).mean(), prog_bar=prog_bar, sync_dist=True
-            )
+            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
 
         return fused_output
+
+    def configure_callbacks(self):
+        return [
+            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+        ]
