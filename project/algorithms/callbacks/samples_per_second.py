@@ -1,7 +1,7 @@
 import time
 
 from lightning import LightningModule, Trainer
-from torch import Tensor, nn
+from torch import Tensor
 from torch.optim import Optimizer
 
 from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputDict
@@ -19,7 +19,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
     def on_shared_epoch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputDict, nn.Module],
+        pl_module: Algorithm[BatchType, StepOutputDict],
         phase: PhaseStr,
     ) -> None:
         self.last_update_time.clear()
@@ -34,7 +34,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
     def on_shared_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputDict, nn.Module],
+        pl_module: Algorithm[BatchType, StepOutputDict],
         outputs: StepOutputDict,
         batch: BatchType,
         batch_index: int,
