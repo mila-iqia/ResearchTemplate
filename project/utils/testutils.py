@@ -62,6 +62,7 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
             reason="Expects to be run on a cluster with the ImageNet dataset.",
         ),
     ],
+    "vision": [pytest.mark.skip(reason="Base class, shouldn't be instantiated.")],
 }
 """Dict with some default marks for some configs name."""
 

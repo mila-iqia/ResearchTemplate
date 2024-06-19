@@ -207,6 +207,8 @@ class ImageNet32DataModule(VisionDataModule):
             train_transforms=train_transforms,
             val_transforms=val_transforms,
             test_transforms=test_transforms,
+            # extra kwargs
+            readonly_datasets_dir=readonly_datasets_dir,
         )
         self.num_images_per_val_class = num_images_per_val_class
         if self.val_split == -1 and self.num_images_per_val_class is None:
@@ -220,11 +222,6 @@ class ImageNet32DataModule(VisionDataModule):
             )
             self.num_images_per_val_class = None
 
-        # ImageNetDataModule uses num_imgs_per_val_class: int = 50, which makes sense! Here
-        # however we're using probably more than that for validation.
-        self.train_kwargs["readonly_datasets_dir"] = readonly_datasets_dir
-        self.valid_kwargs["readonly_datasets_dir"] = readonly_datasets_dir
-        self.test_kwargs["readonly_datasets_dir"] = readonly_datasets_dir
         self.dataset_train: ImageNet32Dataset | Subset
         self.dataset_val: ImageNet32Dataset | Subset
         self.dataset_test: ImageNet32Dataset | Subset
@@ -274,9 +271,7 @@ class ImageNet32DataModule(VisionDataModule):
                 self.dataset_val = self._split_dataset(base_dataset_valid, train=False)
 
         if stage in ["test", None]:
-            test_transforms = (
-                self.default_transforms() if self.test_transforms is None else self.test_transforms
-            )
+            test_transforms = self.test_transforms or self.default_transforms()
             self.dataset_test = self.dataset_cls(
                 self.data_dir, train=False, transform=test_transforms, **self.EXTRA_ARGS
             )
@@ -350,6 +345,7 @@ def imagenet32_train_transforms():
     return transforms.Compose(
         [
             transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomCrop(size=32, padding=4, padding_mode="edge"),
             imagenet32_normalization(),

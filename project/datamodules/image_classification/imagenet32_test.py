@@ -20,8 +20,8 @@ def test_dataset_download_works():
     assert datamodule.val_split == -1
     datamodule.prepare_data()
     datamodule.setup(None)
-
     expected_total = 1_281_159
+
     assert (
         datamodule.num_samples
         == expected_total - datamodule.num_classes * datamodule.num_images_per_val_class

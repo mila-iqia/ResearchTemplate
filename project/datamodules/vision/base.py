@@ -12,6 +12,7 @@ import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.datasets import VisionDataset
+from torchvision.transforms import v2 as transforms
 
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
 from project.utils.types import C, H, StageStr, W
@@ -79,10 +80,13 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.shuffle = shuffle
         self.pin_memory = pin_memory
         self.drop_last = drop_last
-        self.train_transforms = train_transforms
-        self.val_transforms = val_transforms
-        self.test_transforms = test_transforms
-        self.EXTRA_ARGS = kwargs
+        self.train_transforms = train_transforms or self.default_transforms()
+        self.val_transforms = val_transforms or transforms.Compose(
+            [transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]
+        )
+        self.test_transforms = test_transforms or transforms.Compose(
+            [transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]
+        )
 
         # todo: what about the shuffling at each epoch?
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
@@ -96,15 +100,11 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         self.dataset_val: Dataset | None = None
         self.dataset_test: VisionDataset | None = None
 
-        self.train_kwargs = self.EXTRA_ARGS | {
-            "transform": self.train_transforms or self.default_transforms()
-        }
-        self.valid_kwargs = self.EXTRA_ARGS | {
-            "transform": self.val_transforms or self.default_transforms()
-        }
-        self.test_kwargs = self.EXTRA_ARGS | {
-            "transform": self.test_transforms or self.default_transforms()
-        }
+        self.EXTRA_ARGS = kwargs
+        self.train_kwargs = self.EXTRA_ARGS | {"transform": self.train_transforms}
+        self.valid_kwargs = self.EXTRA_ARGS | {"transform": self.val_transforms}
+        self.test_kwargs = self.EXTRA_ARGS | {"transform": self.test_transforms}
+
         if _has_constructor_argument(self.dataset_cls, "train"):
             self.train_kwargs["train"] = True
             self.valid_kwargs["train"] = True
