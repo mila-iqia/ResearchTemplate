@@ -13,7 +13,7 @@ dependencies = [
     "tqdm>=4.66.2",
     "hydra-zen>=0.12.1",
     "gym==0.26.2",
-    "lightning==1.9.0",
+    "lightning>=2.3.0",
     "gdown>=5.1.0",
     "hydra-submitit-launcher>=1.2.0",
     "wandb>=0.16.4",
@@ -27,6 +27,8 @@ dependencies = [
     "gymnax>=0.0.8",
     "torch-jax-interop @ git+https://www.github.com/lebrice/torch_jax_interop",
     "tensor-regression @ git+https://www.github.com/lebrice/tensor_regression",
+    "simple-parsing>=0.1.5",
+    "pydantic==2.7.4",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
