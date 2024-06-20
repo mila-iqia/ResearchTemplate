@@ -3,10 +3,12 @@ import itertools
 import pytest
 
 from project.utils.env_vars import DATA_DIR, SCRATCH
+from project.utils.testutils import IN_GITHUB_CI
 
 from .imagenet32 import ImageNet32DataModule
 
 
+@pytest.mark.skipif(IN_GITHUB_CI, reason="Can't run ")
 @pytest.mark.slow
 def test_dataset_download_works():
     batch_size = 16

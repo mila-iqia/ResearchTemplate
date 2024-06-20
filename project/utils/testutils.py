@@ -15,7 +15,6 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, TypeVar
 
-import hydra.errors
 import hydra_zen
 import numpy as np
 import pytest
@@ -41,8 +40,8 @@ from project.utils.utils import get_device
 
 logger = get_logger(__name__)
 
-on_github_ci = "GITHUB_ACTIONS" in os.environ
-on_self_hosted_github_ci = on_github_ci and "self-hosted" in os.environ.get("RUNNER_LABELS", "")
+IN_GITHUB_CI = "GITHUB_ACTIONS" in os.environ
+IN_SELF_HOSTED_GITHUB_CI = IN_GITHUB_CI and "self-hosted" in os.environ.get("RUNNER_LABELS", "")
 
 
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
@@ -58,10 +57,10 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     ],
     "imagenet": [
         pytest.mark.slow,
-        pytest.mark.xfail(
+        pytest.mark.skipif(
             not (NETWORK_DIR and (NETWORK_DIR / "datasets/imagenet").exists()),
-            strict=True,
-            raises=hydra.errors.InstantiationException,
+            # strict=True,
+            # raises=hydra.errors.InstantiationException,
             reason="Expects to be run on a cluster with the ImageNet dataset.",
         ),
     ],
