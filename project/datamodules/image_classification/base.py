@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from torch import Tensor
 
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.utils.types import C, H, W
 
 # todo: decide if this should be a protocol or an actual base class (currently a base class).

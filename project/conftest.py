@@ -24,7 +24,7 @@ from project.configs.config import Config
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
@@ -34,7 +34,6 @@ from project.experiment import (
     setup_experiment,
     setup_logging,
 )
-from project.utils.env_vars import DATA_DIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     default_marks_for_config_combinations,
@@ -136,11 +135,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
 
     for index in sorted(indices_to_remove, reverse=True):
         items.pop(index)
-
-
-@pytest.fixture(scope="session")
-def data_dir() -> Path:
-    return DATA_DIR
 
 
 @pytest.fixture(autouse=True)
@@ -342,7 +336,7 @@ def algorithm_name(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def datamodule_name(request: pytest.FixtureRequest) -> str | None:
-    datamodule_config_name = getattr(request, "param")
+    datamodule_config_name = getattr(request, "param", None)
     if datamodule_config_name:
         _add_default_marks_for_config_name(datamodule_config_name, request)
     return datamodule_config_name

@@ -21,7 +21,7 @@ from torchvision.datasets import ImageNet
 from torchvision.models.resnet import ResNet152_Weights
 from torchvision.transforms import v2 as transform_lib
 
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
 from project.utils.types import C, H, StageStr, W
 from project.utils.types.protocols import Module
@@ -30,9 +30,7 @@ logger = get_logger(__name__)
 
 
 def imagenet_normalization():
-    return transform_lib.Normalize(
-        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-    )
+    return transform_lib.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
 type ClassIndex = int
@@ -140,9 +138,7 @@ class ImageNetDataModule(VisionDataModule):
         logger.debug(f"Setup ImageNet datamodule for {stage=}")
         super().setup(stage)
 
-    def _split_dataset(
-        self, dataset: ImageNet, train: bool = True
-    ) -> torch.utils.data.Dataset:
+    def _split_dataset(self, dataset: ImageNet, train: bool = True) -> torch.utils.data.Dataset:
         class_item_indices: dict[ClassIndex, list[ImageIndex]] = defaultdict(list)
         for dataset_index, y in enumerate(dataset.targets):
             class_item_indices[y].append(dataset_index)
@@ -345,9 +341,7 @@ def _extract_train_archive(
     *, train_archive: Path, train_dir: Path, previously_extracted_dirs_file: Path
 ) -> None:
     # The ImageNet train archive is a tarfile of tarfiles (one for each class).
-    logger.debug(
-        "Extracting the ImageNet train archive using Olexa's tar magic in python form..."
-    )
+    logger.debug("Extracting the ImageNet train archive using Olexa's tar magic in python form...")
     train_dir.mkdir(exist_ok=True, parents=True)
 
     # Save a small text file or something that tells us which subdirs are

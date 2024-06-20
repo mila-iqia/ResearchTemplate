@@ -5,7 +5,7 @@ from .image_classification.imagenet import ImageNetDataModule
 from .image_classification.imagenet32 import ImageNet32DataModule, imagenet32_normalization
 from .image_classification.inaturalist import INaturalistDataModule
 from .image_classification.mnist import MNISTDataModule
-from .vision.base import VisionDataModule
+from .vision import VisionDataModule
 
 __all__ = [
     "cifar10_normalization",

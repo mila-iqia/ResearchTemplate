@@ -17,10 +17,9 @@ from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import v2 as transforms
 
+from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, SCRATCH
 from project.utils.types import C, H, StageStr, W
-
-from ..vision.base import VisionDataModule
 
 logger = getLogger(__name__)
 

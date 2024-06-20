@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import contextlib
 import copy
 import inspect
 import operator
-import random
 import sys
 import typing
 from collections.abc import Callable, Sequence
@@ -12,7 +10,6 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, ClassVar, Generic, Literal, TypeVar
 
-import numpy as np
 import pytest
 import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
@@ -28,7 +25,7 @@ from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_datamodule,
     instantiate_network,
@@ -38,6 +35,7 @@ from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     default_marks_for_config_combinations,
     default_marks_for_config_name,
+    fork_rng,
     get_all_datamodule_names_params,
     get_all_network_names,
     get_type_for_config_name,
@@ -267,15 +265,6 @@ class AlgorithmTests(Generic[AlgorithmType]):
         tmp_path_2 = tmp_path / "run_2"
         overrides_1 = all_overrides + [f"++trainer.default_root_dir={tmp_path_1}"]
         overrides_2 = all_overrides + [f"++trainer.default_root_dir={tmp_path_2}"]
-
-        @contextlib.contextmanager
-        def fork_rng():
-            with torch.random.fork_rng():
-                random_state = random.getstate()
-                np_random_state = np.random.get_state()
-                yield
-                np.random.set_state(np_random_state)
-                random.setstate(random_state)
 
         with (
             fork_rng(),

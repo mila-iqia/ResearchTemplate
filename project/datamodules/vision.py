@@ -16,8 +16,7 @@ from torchvision.transforms import v2 as transforms
 
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
 from project.utils.types import C, H, StageStr, W
-
-from ...utils.types.protocols import DataModule
+from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
 

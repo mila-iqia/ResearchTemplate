@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import dataclasses
 import hashlib
 import importlib
 import os
+import random
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
@@ -15,6 +17,7 @@ from typing import Any, TypeVar
 
 import hydra.errors
 import hydra_zen
+import numpy as np
 import pytest
 import torch
 import yaml
@@ -28,7 +31,7 @@ from project.configs import Config
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.experiment import instantiate_trainer
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_attr, get_outer_class
@@ -620,8 +623,17 @@ def assert_no_nans_in_params_or_grads(module: nn.Module):
             assert not torch.isnan(param.grad).any(), name
 
 
+@contextlib.contextmanager
+def fork_rng():
+    with torch.random.fork_rng():
+        random_state = random.getstate()
+        np_random_state = np.random.get_state()
+        yield
+        np.random.set_state(np_random_state)
+        random.setstate(random_state)
+
+
 @contextmanager
 def seeded(seed: int = 42):
-    with torch.random.fork_rng():
-        torch.random.manual_seed(seed)
+    with fork_rng():
         yield
