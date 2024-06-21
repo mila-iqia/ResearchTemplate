@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
 
-from hydra_zen import instantiate
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor
 from torch.nn import functional as F
@@ -27,6 +26,7 @@ from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
+from project.utils.hydra_utils import instantiate
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import Module
 

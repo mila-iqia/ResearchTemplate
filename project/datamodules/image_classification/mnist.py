@@ -27,11 +27,7 @@ def mnist_train_transforms():
 def mnist_normalization():
     # NOTE: Taken from https://stackoverflow.com/a/67233938/6388696
     # return transforms.Normalize(mean=0.5, std=0.5)
-    return transforms.Compose(
-        [
-            transforms.Normalize(mean=[0.1307], std=[0.3081]),
-        ]
-    )
+    return transforms.Normalize(mean=[0.1307], std=[0.3081])
 
 
 def mnist_unnormalization(x: Tensor) -> Tensor:

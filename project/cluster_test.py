@@ -22,12 +22,12 @@ from hydra.core.global_hydra import GlobalHydra
 from hydra.core.utils import JobReturn, JobStatus, run_job
 from hydra.plugins.sweeper import Sweeper
 from hydra.types import HydraContext, RunMode
-from hydra_zen import instantiate
 from hydra_zen._launch import _NotSet, _store_config
 from omegaconf import OmegaConf
 
 from project.configs.config import Config
 from project.main import main
+from project.utils.hydra_utils import instantiate
 from project.utils.types import Dataclass
 
 PROJECT_NAME = "project"  # TODO: Change this to the name of your project.

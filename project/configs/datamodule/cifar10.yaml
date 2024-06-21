@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../.schemas/cifar10_schema.json
+defaults:
+- vision
+_target_: project.datamodules.CIFAR10DataModule
+batch_size: 128
+train_transforms:
+  _target_: project.datamodules.image_classification.cifar10.cifar10_train_transforms

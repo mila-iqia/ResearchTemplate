@@ -15,7 +15,8 @@ from typing import (
     TypeVar,
 )
 
-from hydra_zen import instantiate
+import hydra_zen
+from hydra_zen.third_party.pydantic import pydantic_parser
 from hydra_zen.typing._implementations import Partial as _Partial
 from omegaconf import DictConfig, OmegaConf
 
@@ -377,3 +378,6 @@ def _default_factory(
     if default_factory is not dataclasses.MISSING:
         return default_factory()
     return default  # type: ignore
+
+
+instantiate = functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)

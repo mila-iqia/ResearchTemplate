@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
 
+from ..utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID, SLURM_TMPDIR
 from .config import Config
 from .datamodule import (
-    REPO_ROOTDIR,
-    SLURM_JOB_ID,
-    SLURM_TMPDIR,
     datamodule_store,
 )
 from .network import network_store

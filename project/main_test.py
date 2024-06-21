@@ -9,7 +9,6 @@ import pytest
 
 from project.algorithms import Algorithm, ExampleAlgorithm
 from project.configs.config import Config
-from project.configs.datamodule import CIFAR10DataModuleConfig
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.networks.fcnet import FcNet
@@ -42,7 +41,10 @@ def set_testing_hydra_dir():
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.algorithm, ExampleAlgorithm.HParams)
-    assert isinstance(experiment_config.datamodule, CIFAR10DataModuleConfig | CIFAR10DataModule)
+    assert (
+        isinstance(experiment_config.datamodule, CIFAR10DataModule)
+        or hydra_zen.get_target(experiment_config.datamodule) is CIFAR10DataModule
+    )
 
 
 def _ids(v):

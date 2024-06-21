@@ -12,7 +12,6 @@ import rich.console
 import rich.logging
 import rich.traceback
 import torch
-from hydra.utils import instantiate
 from lightning import Callback, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
@@ -22,7 +21,7 @@ from project.configs.config import Config
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.hydra_utils import get_outer_class
+from project.utils.hydra_utils import get_outer_class, instantiate
 from project.utils.types import Dataclass
 from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import validate_datamodule
@@ -112,9 +111,9 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     # fields have the right type.
 
     # instantiate all the callbacks
-    callbacks: dict[str, Callback] | None = hydra_zen.instantiate(
-        experiment_config.trainer.pop("callbacks", {})
-    )
+    callback_configs = experiment_config.trainer.pop("callbacks", {})
+    callback_configs = {k: v for k, v in callback_configs.items() if v is not None}
+    callbacks: dict[str, Callback] | None = instantiate(callback_configs)
     # Create the loggers, if any.
     loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
     # Create the Trainer.

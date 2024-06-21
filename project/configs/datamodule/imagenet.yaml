@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../.schemas/imagenet_schema.json
+defaults:
+  - vision
+_target_: project.datamodules.ImageNetDataModule
+# todo: add good configuration options here.

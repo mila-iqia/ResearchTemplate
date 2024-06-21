@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import contextlib
 import copy
 import inspect
 import operator
-import random
 import sys
 import typing
 from collections.abc import Callable, Sequence
@@ -12,7 +10,6 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, ClassVar, Generic, Literal, TypeVar
 
-import numpy as np
 import pytest
 import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
@@ -28,7 +25,7 @@ from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_datamodule,
     instantiate_network,
@@ -36,7 +33,9 @@ from project.experiment import (
 from project.main import main
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
+    default_marks_for_config_combinations,
     default_marks_for_config_name,
+    fork_rng,
     get_all_datamodule_names_params,
     get_all_network_names,
     get_type_for_config_name,
@@ -146,8 +145,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
             AllParamsShouldHaveGradients(),
         ]
 
+    # todo: make this much faster to run!
+    # Also, some combinations don't work, e.g. `imagenet + fcnet`, there are nans in the network.
+
     @pytest.mark.slow
-    @pytest.mark.timeout(10)  # todo: make this much faster to run!
+    # @pytest.mark.timeout(10)
     def test_overfit_training_batch(
         self,
         algorithm: AlgorithmType,
@@ -264,15 +266,6 @@ class AlgorithmTests(Generic[AlgorithmType]):
         overrides_1 = all_overrides + [f"++trainer.default_root_dir={tmp_path_1}"]
         overrides_2 = all_overrides + [f"++trainer.default_root_dir={tmp_path_2}"]
 
-        @contextlib.contextmanager
-        def fork_rng():
-            with torch.random.fork_rng():
-                random_state = random.getstate()
-                np_random_state = np.random.get_state()
-                yield
-                np.random.set_state(np_random_state)
-                random.setstate(random_state)
-
         with (
             fork_rng(),
             setup_hydra_for_tests_and_compose(overrides_1, tmp_path=tmp_path_1) as config_1,
@@ -297,11 +290,9 @@ class AlgorithmTests(Generic[AlgorithmType]):
     def datamodule_name(self, request: pytest.FixtureRequest):
         """Fixture that gives the name of a datamodule to use."""
         datamodule_name = request.param
-
         if datamodule_name in default_marks_for_config_name:
             for marker in default_marks_for_config_name[datamodule_name]:
                 request.applymarker(marker)
-
         self._skip_if_unsupported("datamodule", datamodule_name, skip_or_xfail=SKIP_OR_XFAIL)
         return datamodule_name
 
@@ -325,7 +316,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
     @pytest.fixture(scope="class")
     def _hydra_config(
-        self, datamodule_name: str, network_name: str, tmp_path_factory: pytest.TempPathFactory
+        self,
+        datamodule_name: str,
+        network_name: str,
+        tmp_path_factory: pytest.TempPathFactory,
+        request: pytest.FixtureRequest,
     ) -> DictConfig:
         """Fixture that gives the Hydra configuration for an experiment that uses this algorithm,
         datamodule, and network.
@@ -338,6 +333,16 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
         # todo: Get the name of the algorithm from the hydra config?
         algorithm_name = self.algorithm_name
+
+        combination = set([datamodule_name, network_name, algorithm_name])
+        for configs, marks in default_marks_for_config_combinations.items():
+            configs = set(configs)
+            if combination >= configs:
+                logger.debug(f"Applying markers because {combination} contains {configs}")
+                # There is a combination of potentially unsupported configs here.
+                for mark in marks:
+                    request.applymarker(mark)
+
         with setup_hydra_for_tests_and_compose(
             all_overrides=[
                 f"algorithm={algorithm_name}",
@@ -654,7 +659,8 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
         parameters_with_nans = [
             name for name, param in pl_module.named_parameters() if param.isnan().any()
         ]
-        assert not parameters_with_nans
+        if parameters_with_nans:
+            raise RuntimeError(f"Parameters {parameters_with_nans} contain NaNs!")
 
         parameters_with_nans_in_grad = [
             name
