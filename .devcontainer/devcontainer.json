@@ -66,11 +66,9 @@
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
 		// Mount a directory which will contain the pdm installation cache (shared with the host machine).
 		// This will use $SCRATCH/.cache/pdm, otherwise
-		"source=${localEnv:SCRATCH:~}/.cache/pdm,target=/home/vscode/.pdm_install_cache,type=bind,consistency=cached",
 		// Mount a "$SCRATCH" directory in the host to ~/scratch in the container.
-		// FIXME: This assumes that either the SCRATCH environment variable is set on the host, or
-		// that the $HOME/scratch directory exists.
-		"source=${localEnv:SCRATCH:~/scratch},target=/home/vscode/scratch,type=bind,consistency=cached",
+		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
+		"source=${localEnv:SCRATCH}/.cache/pdm,target=/home/vscode/.pdm_install_cache,type=bind,consistency=cached",
 		// Mount a /network to match the /network directory on the host.
 		// FIXME: This assumes that either the NETWORK_DIR environment variable is set on the host, or
 		// that the /network directory exists.
@@ -89,8 +87,8 @@
 	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
 	// doesn't fail.
 	"initializeCommand": {
-		"create pdm install cache": "mkdir -p ~/.cache/pdm",      // todo: put this on $SCRATCH on the host (e.g. compute node)
-		"create fake SLURM_TMPDIR": "mkdir -p /tmp/slurm_tmpdir"  // this is fine on compute nodes
+		"create pdm install cache": "mkdir -p ${SCRATCH?need the SCRATCH environment variable to be set.}/.cache/pdm",      // todo: put this on $SCRATCH on the host (e.g. compute node)
+		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR?need the SLURM_TMPDIR environment variable to be set.}"  // this is fine on compute nodes
 	},
 	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pdm to
 	// .cache/pdm in the container. Therefore, here I'm making a symlink from ~/.cache/pdm to
