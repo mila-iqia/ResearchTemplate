@@ -137,6 +137,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
         )
 
     def get_testing_callbacks(self) -> list[TestingCallback]:
+        """Callbacks to be used for unit tests."""
         return [
             AllParamsShouldHaveGradients(),
         ]
@@ -203,7 +204,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
             accelerator=accelerator,
             default_root_dir=tmp_path,
             callbacks=testing_callbacks.copy(),  # type: ignore
-            # NOTE: Would be nice to be able to enforce this, but DTP uses nn.MaxUnpool2d.
+            # NOTE: Would be nice to be able to enforce this in general, but some algos could be using nn.MaxUnpool2d.
             deterministic=True if can_use_deterministic_mode else "warn",
             **trainer_kwargs,
         )

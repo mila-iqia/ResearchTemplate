@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 from pathlib import Path
 from typing import ClassVar
 
@@ -28,7 +27,7 @@ from project.utils.types.protocols import (
 
 
 class ClassificationAlgorithmTests[
-    AlgorithmType: Algorithm[tuple[torch.Tensor, torch.Tensor], ClassificationOutputs]
+    AlgorithmType: Algorithm[tuple[Tensor, Tensor], ClassificationOutputs]
 ](AlgorithmTests[AlgorithmType]):
     """Test suite for (image) classification algorithms."""
 
@@ -79,8 +78,7 @@ class ClassificationAlgorithmTests[
     @pytest.fixture(scope="class")
     def repeat_first_batch_dataloader(
         self,
-        # algorithm: ImageAlgorithmType,
-        datamodule: ImageClassificationDataModule,
+        training_batch: tuple[Tensor, Tensor],
         n_updates: int,
     ):
         """Returns a dataloader that yields a exactly the same batch over and over again.
@@ -92,21 +90,14 @@ class ClassificationAlgorithmTests[
         """
         # Doing this just in case the algorithm wraps the datamodule somehow.
         # dm = getattr(algorithm, "datamodule", datamodule)
-        dm = datamodule
-        dm.prepare_data()
-        dm.setup("fit")
+        assert len(training_batch)
+        dataset = TensorDataset(*training_batch)
+        # need `start` to be of the same type, and it's hard to make an empty TensorDataset.
+        n_batches_dataset = sum([dataset] * (n_updates - 1), start=dataset)
 
-        train_dataloader = dm.train_dataloader()
-        assert isinstance(train_dataloader, DataLoader)
-        batch = next(iter(train_dataloader))
-        batches = list(itertools.repeat(batch, n_updates))
-        n_batches_dataset = TensorDataset(
-            *(torch.concatenate([b[i] for b in batches]) for i in range(len(batches[0])))
-        )
-        train_dl = DataLoader(
-            n_batches_dataset, batch_size=train_dataloader.batch_size, shuffle=False
-        )
-        torch.testing.assert_close(next(iter(train_dl)), batch)
+        batch_size = training_batch[0].shape[0]
+        train_dl = DataLoader(n_batches_dataset, batch_size=batch_size, shuffle=False)
+        torch.testing.assert_close(next(iter(train_dl)), training_batch)
         return train_dl
 
     @pytest.mark.slow

@@ -626,7 +626,7 @@ def assert_no_nans_in_params_or_grads(module: nn.Module):
 
 @contextlib.contextmanager
 def fork_rng():
-    with torch.random.fork_rng():
+    with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
         random_state = random.getstate()
         np_random_state = np.random.get_state()
         yield
