@@ -8,7 +8,7 @@ from lightning import LightningModule, Trainer
 from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType
+from project.algorithms.algorithm import Algorithm, BatchType
 from project.algorithms.callbacks.callback import Callback
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule

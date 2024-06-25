@@ -13,15 +13,16 @@ from tensor_regression.fixture import (
 )
 from torch import Tensor
 
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.datamodules.vision import VisionDataModule
 from project.utils.testutils import run_for_all_datamodules
 from project.utils.types import is_sequence_of
-from project.utils.types.protocols import ImageClassificationDataModule
-
-# @pytest.mark.timeout(25, func_only=True)
 
 
 # @use_overrides(["datamodule.num_workers=0"])
+# @pytest.mark.timeout(25, func_only=True)
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "stage",

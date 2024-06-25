@@ -66,6 +66,8 @@ class ClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
     num_classes: int
 
 
-@runtime_checkable
-class ImageClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
-    num_classes: int
+# todo: Decide if we want this to be a base class or a protocol. Currently a base class.
+# @runtime_checkable
+# class ImageClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
+#     num_classes: int
+#     dims: tuple[C, H, W]

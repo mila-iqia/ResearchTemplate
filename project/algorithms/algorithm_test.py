@@ -20,6 +20,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 from typing_extensions import ParamSpec
 
+from project.algorithms.algorithm import Algorithm
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification.image_classification import (
@@ -40,11 +41,7 @@ from project.utils.testutils import (
     get_all_network_names,
     get_type_for_config_name,
 )
-from project.utils.types.protocols import (
-    DataModule,
-)
-
-from .algorithm import Algorithm
+from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
 P = ParamSpec("P")
@@ -52,8 +49,6 @@ P = ParamSpec("P")
 
 SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 """Either skips the test entirely (default) or tries to run it and expect it to fail (slower)."""
-
-skip_test = pytest.mark.xfail if "-vvv" in sys.argv else pytest.mark.skip
 
 
 class AlgorithmTests[AlgorithmType: Algorithm]:
@@ -112,7 +107,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
 
         ```python
         @pytest.fixture
-        def n_updates(self, datamodule_name: str, network_name: str) -> int:
+        def n_updates(seor an actual classlf, datamodule_name: str, network_name: str) -> int:
             if datamodule_name == "imagenet32":
                 return 10
             return 3
@@ -293,7 +288,12 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
         if datamodule_name in default_marks_for_config_name:
             for marker in default_marks_for_config_name[datamodule_name]:
                 request.applymarker(marker)
-        self._skip_if_unsupported("datamodule", datamodule_name, skip_or_xfail=SKIP_OR_XFAIL)
+        # todo: if _supported_datamodule_types contains a protocol, this will raise a TypeError. In
+        # this case, we actually will use `_supported_datamodule_types` with `isinstance` instead.
+        try:
+            self._skip_if_unsupported("datamodule", datamodule_name, skip_or_xfail=SKIP_OR_XFAIL)
+        except TypeError:
+            pass
         return datamodule_name
 
     @pytest.fixture(params=get_all_network_names(), scope="class")

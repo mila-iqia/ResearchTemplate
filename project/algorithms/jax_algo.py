@@ -13,7 +13,7 @@ import torch.distributed
 from lightning import Callback, Trainer
 from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
-from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.datamodules.image_classification.image_classification import (

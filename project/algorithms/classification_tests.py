@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 import pytest
 import torch.testing
 from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from project.algorithms.bases.algorithm import Algorithm
-from project.algorithms.bases.algorithm_test import (
+from project.algorithms.algorithm import Algorithm
+from project.algorithms.algorithm_test import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
     MetricShouldImprove,
@@ -25,14 +25,17 @@ from project.utils.types.protocols import (
 )
 
 
-class ClassificationAlgorithmTests[AlgorithmType: Algorithm[Any, ClassificationOutputs]](
-    AlgorithmTests[AlgorithmType]
-):
+class ClassificationAlgorithmTests[
+    AlgorithmType: Algorithm[tuple[torch.Tensor, torch.Tensor], ClassificationOutputs]
+](AlgorithmTests[AlgorithmType]):
+    """Test suite for (image) classification algorithms."""
+
     unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
     _supported_datamodule_types: ClassVar[list[type[ClassificationDataModule]]] = [
-        # ClassificationDataModule,
-        ImageClassificationDataModule
+        # VisionDataModule,
+        ClassificationDataModule,  # type: ignore (we actually support this case).
+        # ImageClassificationDataModule,
     ]
 
     metric_name: ClassVar[str] = "train/accuracy"

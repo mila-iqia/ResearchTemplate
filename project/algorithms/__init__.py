@@ -3,7 +3,7 @@ from hydra_zen import builds, store
 from project.algorithms.jax_algo import JaxAlgorithm
 from project.algorithms.no_op import NoOp
 
-from .bases.algorithm import Algorithm
+from .algorithm import Algorithm
 from .example_algo import ExampleAlgorithm
 from .manual_optimization_example import ManualGradientsExample
 

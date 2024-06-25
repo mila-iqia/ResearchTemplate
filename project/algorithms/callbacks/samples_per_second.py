@@ -4,7 +4,7 @@ from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.optim import Optimizer
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputDict
+from project.algorithms.algorithm import Algorithm, BatchType, StepOutputDict
 from project.algorithms.callbacks.callback import Callback
 from project.utils.types import PhaseStr, is_sequence_of
 

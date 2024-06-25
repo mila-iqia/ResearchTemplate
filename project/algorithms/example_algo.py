@@ -19,7 +19,7 @@ from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import (
     ClassificationMetricsCallback,
     ClassificationOutputs,

@@ -2,20 +2,23 @@ from __future__ import annotations
 
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import override
+from typing import Literal, override
 
+import torch
 from lightning import Trainer
 from lightning import pytorch as pl
 from typing_extensions import Generic  # noqa
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputType
-from project.utils.types import PhaseStr
+from project.algorithms.algorithm import Algorithm, BatchType, StepOutputDict, StepOutputType
+from project.utils.types import PhaseStr, PyTree
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
 
 
-class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
+class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | StepOutputDict](
+    pl.Callback
+):
     """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class."""
 
     def __init__(self) -> None:
@@ -27,9 +30,9 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         self,
         trainer: pl.Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
-        stage: PhaseStr,
+        # todo: "tune" is mentioned in the docstring, is it still used?
+        stage: Literal["fit", "validate", "test", "predict", "tune"],
     ) -> None:
-        """Called when fit, validate, test, predict, or tune begins."""
         self.log_dir = get_log_dir(trainer=trainer)
 
     def on_shared_batch_start(
@@ -79,7 +82,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         super().on_train_batch_end(
             trainer=trainer,
             pl_module=pl_module,
-            outputs=outputs,  # type: ignore
+            outputs=outputs,
             batch=batch,
             batch_idx=batch_index,
         )
