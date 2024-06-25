@@ -139,20 +139,15 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
             # Replace the loss with its mean. This is useful when automatic
             # optimization is enabled, for example in the example algo, where each replica
             # returns the un-reduced cross-entropy loss. Here we need to reduce it to a scalar.
-            fused_output = step_output | {"loss": loss.mean()}
-
-        else:
-            assert isinstance(step_output, torch.Tensor)
-            loss = step_output
             # todo: find out if this was already logged, to not log it twice.
-            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
-            fused_output = step_output
+            # self.log(f"{phase}/loss", loss.mean(), sync_dist=True)
+            return step_output | {"loss": loss.mean()}
 
-        if loss is not None:
-            # todo: find out if this was already logged, to not log it twice.
-            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
+        elif isinstance(step_output, torch.Tensor) and (loss := step_output).shape:
+            return loss.mean()
 
-        return fused_output
+        # self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
+        return step_output
 
     def configure_callbacks(self) -> list[Callback]:
         """Use this to add some callbacks that should always be included with the model."""
