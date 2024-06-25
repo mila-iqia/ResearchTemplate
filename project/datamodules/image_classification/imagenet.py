@@ -108,7 +108,7 @@ class ImageNetDataModule(VisionDataModule):
             drop_last=drop_last,
             train_transforms=train_transforms or self.train_transform(),
             val_transforms=val_transforms or self.val_transform(),
-            test_transforms=test_transforms,
+            test_transforms=test_transforms or self.test_transform(),
             **kwargs,
         )
         self.dims = (C(3), H(self.image_size), W(self.image_size))
@@ -232,6 +232,9 @@ class ImageNetDataModule(VisionDataModule):
                 imagenet_normalization(),
             ]
         )
+
+    # todo: what should be the default transformations for the test set? Same as validation, right?
+    test_transform = val_transform
 
 
 def prepare_imagenet(

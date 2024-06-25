@@ -50,7 +50,6 @@ def test_first_batch(
 ):
     # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
     datamodule.prepare_data()
-
     if stage == RunningStage.TRAINING:
         datamodule.setup("fit")
         dataloader = datamodule.train_dataloader()
@@ -125,7 +124,14 @@ def test_first_batch(
                 # moving mnist, y isn't a label, it's another image.
                 axis.set_title(f"{index=}")
 
-    fig.suptitle(f"First batch of datamodule {type(datamodule).__name__}")
+    split = {
+        RunningStage.TRAINING: "training",
+        RunningStage.VALIDATING: "validation",
+        RunningStage.TESTING: "test",
+        RunningStage.PREDICTING: "prediction(?)",
+    }
+
+    fig.suptitle(f"First {split[stage]} batch of datamodule {type(datamodule).__name__}")
     figure_path, _ = get_test_source_and_temp_file_paths(
         extension=".png",
         request=request,
