@@ -69,14 +69,7 @@ class ManualGradientsExample(Algorithm):
     def shared_step(
         self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
     ) -> ClassificationOutputs:
-        """Performs a training/validation/test step.
-
-        This must return a dictionary with at least the 'y' and 'logits' keys, and an optional
-        `loss` entry. This is so that the training of the model is easier to parallelize the
-        training across GPUs:
-        - the cross entropy loss gets calculated using the global batch size
-        - the main metrics are logged inside `training_step_end` (supposed to be better for DP/DDP)
-        """
+        """Performs a training/validation/test step."""
         x, y = batch
         logits = self(x)
 

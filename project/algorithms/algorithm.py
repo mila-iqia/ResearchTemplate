@@ -115,21 +115,38 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
         """
         return self.shared_step_end(step_output, phase="train")
 
-    def validation_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+    def validation_step_end[Out: torch.Tensor | StepOutputDict](self, step_output: Out) -> Out:
         return self.shared_step_end(step_output, phase="val")
 
-    def test_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+    def test_step_end[Out: torch.Tensor | StepOutputDict](self, step_output: Out) -> Out:
         return self.shared_step_end(step_output, phase="test")
 
-    def shared_step_end(self, step_output: StepOutputDict, phase: PhaseStr) -> StepOutputDict:
-        fused_output = step_output.copy()
-        loss: Tensor | float | None = step_output.get("loss", None)
+    def shared_step_end[Out: torch.Tensor | StepOutputDict](
+        self, step_output: Out, phase: PhaseStr
+    ) -> Out:
+        """This is a default implementation for `[train/validation/test]_step_end`.
 
-        if isinstance(loss, Tensor) and loss.shape:
+        This does the following:
+        - Averages out the `loss` tensor if it was left unreduced.
+        - the main metrics are logged inside `training_step_end` (supposed to be better for DP/DDP)
+        """
+
+        if (
+            isinstance(step_output, dict)
+            and isinstance((loss := step_output.get("loss")), torch.Tensor)
+            and loss.shape
+        ):
             # Replace the loss with its mean. This is useful when automatic
             # optimization is enabled, for example in the example algo, where each replica
             # returns the un-reduced cross-entropy loss. Here we need to reduce it to a scalar.
-            fused_output["loss"] = loss.mean()
+            fused_output = step_output | {"loss": loss.mean()}
+
+        else:
+            assert isinstance(step_output, torch.Tensor)
+            loss = step_output
+            # todo: find out if this was already logged, to not log it twice.
+            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
+            fused_output = step_output
 
         if loss is not None:
             # todo: find out if this was already logged, to not log it twice.
