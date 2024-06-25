@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import dataclasses
 import hashlib
 import importlib
+import os
+import random
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, TypeVar
 
-import hydra.errors
 import hydra_zen
+import numpy as np
 import pytest
 import torch
 import yaml
@@ -23,47 +26,66 @@ from omegaconf import OmegaConf
 from torch import Tensor, nn
 from torch.optim import Optimizer
 
-from project.configs import Config, cs
-from project.configs.datamodule import DATA_DIR, SLURM_JOB_ID
+from project.configs import Config
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.experiment import instantiate_trainer
+from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
 from project.utils.utils import get_device
 
-SLOW_DATAMODULES = ["inaturalist", "imagenet32"]
+logger = get_logger(__name__)
+
+IN_GITHUB_CI = "GITHUB_ACTIONS" in os.environ
+IN_SELF_HOSTED_GITHUB_CI = IN_GITHUB_CI and "self-hosted" in os.environ.get("RUNNER_LABELS", "")
+
 
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "imagenet32": [pytest.mark.slow],
     "inaturalist": [
         pytest.mark.slow,
-        pytest.mark.xfail(
-            not Path("/network/datasets/inat").exists(),
-            strict=True,
-            raises=hydra.errors.InstantiationException,
+        pytest.mark.skipif(
+            not (NETWORK_DIR and (NETWORK_DIR / "datasets/inat").exists()),
+            # strict=True,
+            # raises=hydra.errors.InstantiationException,
             reason="Expects to be run on the Mila cluster for now",
         ),
     ],
-    "rl": [
-        pytest.mark.xfail(
-            strict=False,
-            raises=AssertionError,
-            # match="Shapes are not the same."
-            reason="Isn't entirely deterministic yet.",
+    "imagenet": [
+        pytest.mark.slow,
+        pytest.mark.skipif(
+            not (NETWORK_DIR and (NETWORK_DIR / "datasets/imagenet").exists()),
+            # strict=True,
+            # raises=hydra.errors.InstantiationException,
+            reason="Expects to be run on a cluster with the ImageNet dataset.",
         ),
     ],
-    "moving_mnist": [
-        (pytest.mark.slow if not (DATA_DIR / "MovingMNIST").exists() else pytest.mark.timeout(5))
-    ],
+    "vision": [pytest.mark.skip(reason="Base class, shouldn't be instantiated.")],
 }
 """Dict with some default marks for some configs name."""
 
-
-logger = get_logger(__name__)
+default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDecorator]] = {
+    ("imagenet", "fcnet"): [
+        pytest.mark.xfail(
+            reason="FcNet shouldn't be applied to the ImageNet datamodule. It can lead to nans in the parameters."
+        )
+    ],
+    ("imagenet", "jax_fcnet"): [
+        pytest.mark.xfail(
+            reason="FcNet shouldn't be applied to the ImageNet datamodule. It can lead to nans in the parameters."
+        )
+    ],
+    ("imagenet", "jax_cnn"): [
+        pytest.mark.xfail(
+            reason="todo: parameters contain nans when overfitting on one batch? Maybe we're "
+            "using too many iterations?"
+        )
+    ],
+}
 
 
 def parametrized_fixture(name: str, values: Sequence, ids=None, **kwargs):
@@ -155,11 +177,15 @@ def get_all_algorithm_names() -> list[str]:
     return get_all_configs_in_group("algorithm")
 
 
-def get_type_for_config_name(config_group: str, config_name: str, _cs: ConfigStore = cs) -> type:
+def get_type_for_config_name(
+    config_group: str, config_name: str, _cs: ConfigStore | None = None
+) -> type:
     """Returns the class that is to be instantiated by the given config name.
 
     In the case of inner dataclasses (e.g. Model.HParams), this returns the outer class (Model).
     """
+    if _cs is None:
+        from project.configs import cs as _cs
 
     config_loader = get_config_loader()
     _, caching_repo = config_loader._parse_overrides_and_create_caching_repo(
@@ -274,7 +300,11 @@ def run_for_all_networks(
 
 def get_all_datamodule_names() -> list[str]:
     """Retrieves the names of all the datamodules that are saved in the ConfigStore of Hydra."""
-    return get_all_configs_in_group("datamodule")
+    datamodules = get_all_configs_in_group("datamodule")
+    # todo: automatically detect which ones are configs for ABCs and remove them?
+    if "vision" in datamodules:
+        datamodules.remove("vision")
+    return datamodules
 
 
 def get_all_datamodule_names_params():
@@ -290,18 +320,7 @@ def get_all_datamodule_names_params():
             marks=[
                 pytest.mark.xdist_group(name=dm_name),
             ]
-            + ([pytest.mark.slow] if dm_name in SLOW_DATAMODULES else [])
-            + (
-                [
-                    pytest.mark.xfail(
-                        SLURM_JOB_ID is None,
-                        raises=NotImplementedError,
-                        reason="Needs to be run on the Mila cluster atm.",
-                    )
-                ]
-                if dm_name == "inaturalist"
-                else []
-            ),
+            + default_marks_for_config_name.get(dm_name, []),
         )
         for dm_name in dm_names
     ]
@@ -603,8 +622,17 @@ def assert_no_nans_in_params_or_grads(module: nn.Module):
             assert not torch.isnan(param.grad).any(), name
 
 
+@contextlib.contextmanager
+def fork_rng():
+    with torch.random.fork_rng():
+        random_state = random.getstate()
+        np_random_state = np.random.get_state()
+        yield
+        np.random.set_state(np_random_state)
+        random.setstate(random_state)
+
+
 @contextmanager
 def seeded(seed: int = 42):
-    with torch.random.fork_rng():
-        torch.random.manual_seed(seed)
+    with fork_rng():
         yield

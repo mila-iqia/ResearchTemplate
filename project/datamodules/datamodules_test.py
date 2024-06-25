@@ -3,7 +3,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
-from tensor_regression.fixture import TensorRegressionFixture, get_test_source_and_temp_file_paths
+from tensor_regression.fixture import (
+    TensorRegressionFixture,
+    get_test_source_and_temp_file_paths,
+)
 from torch import Tensor
 
 from project.utils.testutils import run_for_all_datamodules
@@ -12,7 +15,8 @@ from project.utils.types import is_sequence_of
 from ..utils.types.protocols import DataModule
 
 
-@pytest.mark.timeout(25, func_only=True)
+# @pytest.mark.timeout(25, func_only=True)
+@pytest.mark.slow
 @run_for_all_datamodules()
 def test_first_batch(
     datamodule: DataModule,
@@ -21,6 +25,7 @@ def test_first_batch(
     original_datadir: Path,
     datadir: Path,
 ):
+    # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
     datamodule.prepare_data()
     datamodule.setup("fit")
 
@@ -67,7 +72,10 @@ def test_first_batch(
 
     fig.suptitle(f"First batch of datamodule {type(datamodule).__name__}")
     figure_path, _ = get_test_source_and_temp_file_paths(
-        extension=".png", request=request, original_datadir=original_datadir, datadir=datadir
+        extension=".png",
+        request=request,
+        original_datadir=original_datadir,
+        datadir=datadir,
     )
     figure_path.parent.mkdir(exist_ok=True, parents=True)
     fig.savefig(figure_path)

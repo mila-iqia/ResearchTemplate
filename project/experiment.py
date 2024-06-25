@@ -112,9 +112,9 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     # fields have the right type.
 
     # instantiate all the callbacks
-    callbacks: dict[str, Callback] | None = hydra_zen.instantiate(
-        experiment_config.trainer.pop("callbacks", {})
-    )
+    callback_configs = experiment_config.trainer.pop("callbacks", {})
+    callback_configs = {k: v for k, v in callback_configs.items() if v is not None}
+    callbacks: dict[str, Callback] | None = hydra_zen.instantiate(callback_configs)
     # Create the loggers, if any.
     loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
     # Create the Trainer.

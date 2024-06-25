@@ -21,11 +21,10 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.configs.datamodule import DATA_DIR
 from project.datamodules.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision.base import VisionDataModule
+from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
@@ -36,7 +35,10 @@ from project.experiment import (
     setup_logging,
 )
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.testutils import default_marks_for_config_name
+from project.utils.testutils import (
+    default_marks_for_config_combinations,
+    default_marks_for_config_name,
+)
 from project.utils.types import is_sequence_of
 from project.utils.types.protocols import DataModule
 
@@ -133,11 +135,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
 
     for index in sorted(indices_to_remove, reverse=True):
         items.pop(index)
-
-
-@pytest.fixture(scope="session")
-def data_dir() -> Path:
-    return DATA_DIR
 
 
 @pytest.fixture(autouse=True)
@@ -362,8 +359,18 @@ def experiment_dictconfig(
     datamodule_name: str | None,
     network_name: str | None,
     overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
 ) -> Generator[DictConfig, None, None]:
     tmp_path = tmp_path_factory.mktemp("experiment_testing")
+
+    combination = set([datamodule_name, network_name, algorithm_name])
+    for configs, marks in default_marks_for_config_combinations.items():
+        configs = set(configs)
+        if combination >= configs:
+            logger.debug(f"Applying markers because {combination} contains {configs}")
+            # There is a combination of potentially unsupported configs here.
+            for mark in marks:
+                request.applymarker(mark)
 
     default_overrides = [
         # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.

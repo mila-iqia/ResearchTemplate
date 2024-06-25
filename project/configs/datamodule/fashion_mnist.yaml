@@ -1,0 +1,3 @@
+defaults:
+- mnist
+_target_: project.datamodules.FashionMNISTDataModule
