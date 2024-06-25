@@ -8,7 +8,9 @@ from torch import Tensor
 from torchvision.datasets import MNIST
 from torchvision.transforms import v2 as transforms
 
-from project.datamodules.image_classification.base import ImageClassificationDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.types import C, H, W
 
 

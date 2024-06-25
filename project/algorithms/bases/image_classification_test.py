@@ -2,31 +2,36 @@ from __future__ import annotations
 
 import itertools
 from pathlib import Path
-from typing import ClassVar, TypeVar
+from typing import Any, ClassVar
 
 import pytest
 import torch.testing
 from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from project.algorithms.bases.algorithm import Algorithm
 from project.algorithms.bases.algorithm_test import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
     MetricShouldImprove,
 )
-from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
-from project.datamodules.image_classification import (
+from project.algorithms.callbacks.classification_metrics import ClassificationOutputs
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import DataModule
+from project.utils.types.protocols import (
+    ClassificationDataModule,
+)
 
-ImageAlgorithmType = TypeVar("ImageAlgorithmType", bound=ImageClassificationAlgorithm)
 
-
-class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
+class ClassificationAlgorithmTests[AlgorithmType: Algorithm[Any, ClassificationOutputs]](
+    AlgorithmTests[AlgorithmType]
+):
     unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
-    _supported_datamodule_types: ClassVar[list[type[ImageClassificationDataModule]]] = [
+    _supported_datamodule_types: ClassVar[list[type[ClassificationDataModule]]] = [
+        # ClassificationDataModule,
         ImageClassificationDataModule
     ]
 
@@ -36,7 +41,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
 
     def test_output_shapes(
         self,
-        algorithm: ImageAlgorithmType,
+        algorithm: AlgorithmType,
         training_batch: tuple[Tensor, Tensor],
     ):
         """Tests that the output of the algorithm has the correct shape."""
@@ -47,6 +52,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
         else:
             y_pred = output
         assert isinstance(y_pred, Tensor)
+        assert isinstance(algorithm.datamodule, ClassificationDataModule)
         if y_pred.dtype.is_floating_point:
             # y_pred should be the logits.
             assert y_pred.shape == (y.shape[0], algorithm.datamodule.num_classes)
@@ -102,7 +108,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
     @pytest.mark.timeout(10)
     def test_overfit_exact_same_training_batch(
         self,
-        algorithm: ImageAlgorithmType,
+        algorithm: AlgorithmType,
         repeat_first_batch_dataloader: DataLoader,
         accelerator: str,
         devices: list[int],

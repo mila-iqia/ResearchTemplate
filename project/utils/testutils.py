@@ -27,7 +27,7 @@ from torch import Tensor, nn
 from torch.optim import Optimizer
 
 from project.configs import Config
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
@@ -35,7 +35,9 @@ from project.experiment import instantiate_trainer
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr
-from project.utils.types.protocols import DataModule
+from project.utils.types.protocols import (
+    DataModule,
+)
 from project.utils.utils import get_device
 
 logger = get_logger(__name__)

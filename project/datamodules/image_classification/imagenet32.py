@@ -19,7 +19,7 @@ from torchvision.transforms import v2 as transforms
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, SCRATCH
-from project.utils.types import C, H, StageStr, W
+from project.utils.types import C, H, PhaseStr, W
 
 logger = getLogger(__name__)
 
@@ -233,7 +233,7 @@ class ImageNet32DataModule(VisionDataModule):
         """Saves files to data_dir."""
         super().prepare_data()
 
-    def setup(self, stage: StageStr | None = None) -> None:
+    def setup(self, stage: PhaseStr | None = None) -> None:
         """Creates train, val, and test dataset."""
         if stage not in ["fit", "validate", "val", "test", None]:
             raise ValueError(f"Invalid stage: {stage}")

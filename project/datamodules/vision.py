@@ -6,16 +6,18 @@ from abc import abstractmethod
 from collections.abc import Callable
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import ClassVar, Concatenate
+from typing import ClassVar, Concatenate, Literal
 
 import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data._utils.collate import collate_tensor_fn, default_collate_fn_map
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import v2 as transforms
+from torchvision.tv_tensors import Image, set_return_type
 
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
-from project.utils.types import C, H, StageStr, W
+from project.utils.types import C, H, W
 from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
@@ -128,8 +130,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             )
             self.test_dataset_cls(str(self.data_dir), **test_kwargs)
 
-    def setup(self, stage: StageStr | None = None) -> None:
-        """Creates train, val, and test dataset."""
+    def setup(self, stage: Literal["fit", "validate", "test", "predict"] | None = None) -> None:
         if stage in ["fit", "validate"] or stage is None:
             logger.debug(f"creating training dataset with kwargs {self.train_kwargs}")
             dataset_train = self.dataset_cls(
@@ -141,6 +142,11 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 str(self.data_dir),
                 **self.valid_kwargs,
             )
+
+            # TODO: If we support more datasets than image classification, we could add this:
+            # dataset_train = wrap_dataset_for_transforms_v2(dataset_train)
+            # dataset_val = wrap_dataset_for_transforms_v2(dataset_val)
+
             # Train/validation split.
             # NOTE: the dataset is created twice (with the right transforms) and split in the same
             # way, such that there is no overlap in indices between train and validation sets.
@@ -188,17 +194,15 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         **kwargs: P.kwargs,
     ) -> DataLoader:
         """The train dataloader."""
+        assert self.dataset_train is not None
+        kwargs = kwargs.copy()  # type: ignore
+        kwargs.setdefault("shuffle", self.shuffle)
+        kwargs.setdefault("generator", torch.Generator().manual_seed(self.train_dl_rng_seed))
         return self._data_loader(
             self.dataset_train,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(
-                dict(
-                    shuffle=self.shuffle,
-                    generator=torch.Generator().manual_seed(self.train_dl_rng_seed),
-                )
-                | kwargs
-            ),
+            **kwargs,
         )
 
     def val_dataloader[**P](
@@ -208,12 +212,14 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         **kwargs: P.kwargs,
     ) -> DataLoader:
         """The val dataloader."""
-
+        assert self.dataset_val is not None
+        kwargs = kwargs.copy()  # type: ignore
+        kwargs.setdefault("generator", torch.Generator().manual_seed(self.val_dl_rng_seed))
         return self._data_loader(
             self.dataset_val,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(dict(generator=torch.Generator().manual_seed(self.val_dl_rng_seed)) | kwargs),
+            **kwargs,
         )
 
     def test_dataloader[**P](
@@ -223,14 +229,14 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         **kwargs: P.kwargs,
     ) -> DataLoader:
         """The test dataloader."""
-        if self.dataset_test is None:
-            self.setup("test")
         assert self.dataset_test is not None
+        kwargs = kwargs.copy()  # type: ignore
+        kwargs.setdefault("generator", torch.Generator().manual_seed(self.test_dl_rng_seed))
         return self._data_loader(
             self.dataset_test,
             _dataloader_fn=_dataloader_fn,
             *args,
-            **(dict(generator=torch.Generator().manual_seed(self.test_dl_rng_seed)) | kwargs),
+            **kwargs,
         )
 
     def _data_loader[**P](
@@ -246,11 +252,34 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
                 num_workers=self.num_workers,
                 drop_last=self.drop_last,
                 pin_memory=self.pin_memory,
-                persistent_workers=(self.num_workers or 0) > 0,
+                persistent_workers=self.num_workers > 0,
             )
             | dataloader_kwargs
         )
+
         return _dataloader_fn(dataset, *dataloader_args, **dataloader_kwargs)
+
+
+def collate_images(
+    images: list[Image],
+    *,
+    collate_fn_map: dict[type | tuple[type, ...], Callable] | None = None,
+):
+    with set_return_type("TVTensor"):
+        # note: Image is a subclass of Tensor, but list[Image] is not a subclass of list[Tensor]
+        image_batch: Image = collate_tensor_fn(images)  # type: ignore
+    assert isinstance(image_batch, Image), type(image_batch)
+
+    if image_batch.ndim <= 4:
+        # We wouldn't want to return an Image for higher-dimensions, it probably wouldn't make sense.
+        # log_once(
+        #     message="Collating images into `torchvision.tv_tensors.Image`s", level=logging.INFO
+        # )
+        return image_batch
+    return image_batch.as_subclass(torch.Tensor)
+
+
+default_collate_fn_map[Image] = collate_images
 
 
 def _has_constructor_argument(cls: type[VisionDataset], arg: str) -> bool:
@@ -260,7 +289,7 @@ def _has_constructor_argument(cls: type[VisionDataset], arg: str) -> bool:
     # Check if sig has a **kwargs argument
     if arg in sig.parameters:
         return True
-    if any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()):
+    if any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()) and cls.__base__ is not None:
         return _has_constructor_argument(cls.__base__, arg)
     return False
 

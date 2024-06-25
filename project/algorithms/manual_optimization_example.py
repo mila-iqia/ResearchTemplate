@@ -6,11 +6,11 @@ import torch
 from torch import Tensor, nn
 
 from project.algorithms.bases.algorithm import Algorithm
-from project.algorithms.bases.image_classification import (
+from project.algorithms.callbacks.classification_metrics import (
+    ClassificationMetricsCallback,
     ClassificationOutputs,
 )
-from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import PhaseStr

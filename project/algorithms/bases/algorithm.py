@@ -1,30 +1,37 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from typing import NotRequired, TypedDict
 
 import torch
 from lightning import Callback, LightningModule, Trainer
 from torch import Tensor
 from typing_extensions import Generic, TypeVar  # noqa
 
-from project.datamodules.image_classification.base import ImageClassificationDataModule
-from project.utils.types import NestedMapping, PhaseStr
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
+from project.utils.types import PhaseStr, PyTree
 from project.utils.types.protocols import DataModule, Module
 
 
 class StepOutputDict(TypedDict, total=False):
-    """A dictionary that shows what an Algorithm should output from `training/val/test_step`."""
+    """A dictionary that shows what an Algorithm can output from
+    `training/validation/test_step`."""
 
-    loss: Tensor | float
+    loss: NotRequired[Tensor | float]
     """Optional loss tensor that can be returned by those methods."""
 
-    log: dict[str, Tensor | Any]
-    """Optional dictionary of things to log at each step."""
 
-
-BatchType = TypeVar("BatchType", bound=Tensor | Sequence[Tensor] | NestedMapping[str, Tensor])
-StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, default=StepOutputDict)
+BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
+# StepOutputType = TypeVar(
+#     "StepOutputType", bound=StepOutputDict | PyTree[torch.Tensor], covariant=True
+# )
+StepOutputType = TypeVar(
+    "StepOutputType",
+    bound=torch.Tensor | StepOutputDict,
+    default=StepOutputDict,
+    covariant=True,
+)
 
 
 class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
@@ -78,7 +85,8 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
     def shared_step(self, batch: BatchType, batch_index: int, phase: PhaseStr) -> StepOutputType:
         """Performs a training/validation/test step.
 
-        This must return a dictionary with at least the 'y' and 'logits' keys, and an optional
+        This must return a nested dictionary of tensors matching the `StepOutputType` typedict for
+        this algorithm. By default,
         `loss` entry. This is so that the training of the model is easier to parallelize the
         training across GPUs:
         - the cross entropy loss gets calculated using the global batch size
@@ -99,6 +107,35 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
         """
         assert self.network is not None
         return self.network(x)
+
+    def training_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+        """Called with the results of each worker / replica's output.
+
+        See the `training_step_end` of pytorch-lightning for more info.
+        """
+        return self.shared_step_end(step_output, phase="train")
+
+    def validation_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+        return self.shared_step_end(step_output, phase="val")
+
+    def test_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
+        return self.shared_step_end(step_output, phase="test")
+
+    def shared_step_end(self, step_output: StepOutputDict, phase: PhaseStr) -> StepOutputDict:
+        fused_output = step_output.copy()
+        loss: Tensor | float | None = step_output.get("loss", None)
+
+        if isinstance(loss, Tensor) and loss.shape:
+            # Replace the loss with its mean. This is useful when automatic
+            # optimization is enabled, for example in the example algo, where each replica
+            # returns the un-reduced cross-entropy loss. Here we need to reduce it to a scalar.
+            fused_output["loss"] = loss.mean()
+
+        if loss is not None:
+            # todo: find out if this was already logged, to not log it twice.
+            self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
+
+        return fused_output
 
     def configure_callbacks(self) -> list[Callback]:
         """Use this to add some callbacks that should always be included with the model."""

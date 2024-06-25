@@ -23,7 +23,7 @@ from torchvision.transforms import v2 as transform_lib
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
-from project.utils.types import C, H, StageStr, W
+from project.utils.types import C, H, PhaseStr, W
 from project.utils.types.protocols import Module
 
 logger = get_logger(__name__)
@@ -134,7 +134,7 @@ class ImageNetDataModule(VisionDataModule):
 
         super().prepare_data()
 
-    def setup(self, stage: StageStr | None = None) -> None:
+    def setup(self, stage: PhaseStr | None = None) -> None:
         logger.debug(f"Setup ImageNet datamodule for {stage=}")
         super().setup(stage)
 

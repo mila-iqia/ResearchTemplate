@@ -9,7 +9,9 @@ from typing import Any, ClassVar, Literal
 import torchvision.transforms as T
 from torchvision.datasets import INaturalist
 
-from project.datamodules.image_classification.base import ImageClassificationDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS, SLURM_TMPDIR
 from project.utils.types import C, H, W
 

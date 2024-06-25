@@ -9,7 +9,7 @@ from lightning import pytorch as pl
 from typing_extensions import Generic  # noqa
 
 from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputType
-from project.utils.types import PhaseStr, StageStr
+from project.utils.types import PhaseStr
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
@@ -24,7 +24,10 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
 
     @override
     def setup(
-        self, trainer: pl.Trainer, pl_module: Algorithm[BatchType, StepOutputType], stage: StageStr
+        self,
+        trainer: pl.Trainer,
+        pl_module: Algorithm[BatchType, StepOutputType],
+        stage: PhaseStr,
     ) -> None:
         """Called when fit, validate, test, predict, or tune begins."""
         self.log_dir = get_log_dir(trainer=trainer)
@@ -51,11 +54,17 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
     ): ...
 
     def on_shared_epoch_start(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType], phase: PhaseStr
+        self,
+        trainer: Trainer,
+        pl_module: Algorithm[BatchType, StepOutputType],
+        phase: PhaseStr,
     ) -> None: ...
 
     def on_shared_epoch_end(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType], phase: PhaseStr
+        self,
+        trainer: Trainer,
+        pl_module: Algorithm[BatchType, StepOutputType],
+        phase: PhaseStr,
     ) -> None: ...
 
     @override

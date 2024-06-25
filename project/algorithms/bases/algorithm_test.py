@@ -8,7 +8,7 @@ import typing
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, ClassVar, Generic, Literal, TypeVar
+from typing import Any, ClassVar, Literal
 
 import pytest
 import torch
@@ -22,7 +22,7 @@ from typing_extensions import ParamSpec
 
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
@@ -40,14 +40,14 @@ from project.utils.testutils import (
     get_all_network_names,
     get_type_for_config_name,
 )
-from project.utils.types.protocols import DataModule
+from project.utils.types.protocols import (
+    DataModule,
+)
 
 from .algorithm import Algorithm
 
 logger = get_logger(__name__)
 P = ParamSpec("P")
-
-AlgorithmType = TypeVar("AlgorithmType", bound=Algorithm)
 
 
 SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
@@ -56,7 +56,7 @@ SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 skip_test = pytest.mark.xfail if "-vvv" in sys.argv else pytest.mark.skip
 
 
-class AlgorithmTests(Generic[AlgorithmType]):
+class AlgorithmTests[AlgorithmType: Algorithm]:
     """Unit tests for an algorithm class.
 
     The algorithm creation is parametrized with all the datasets and all the networks, but the

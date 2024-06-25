@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from torch import Tensor
+from torchvision.tv_tensors import Image
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.types import C, H, W
 
-# todo: decide if this should be a protocol or an actual base class (currently a base class).
 
-
-class ImageClassificationDataModule[BatchType: tuple[Tensor, Tensor]](VisionDataModule[BatchType]):
+class ImageClassificationDataModule[BatchType: tuple[Image, Tensor]](VisionDataModule[BatchType]):
     """Lightning data modules for image classification."""
 
     num_classes: int

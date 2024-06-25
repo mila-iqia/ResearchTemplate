@@ -1,6 +1,6 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import Required
+from typing import NotRequired, Required, TypedDict
 
 import torch
 import torchmetrics
@@ -9,17 +9,19 @@ from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
 
 from project.algorithms.bases.algorithm import Algorithm, BatchType
-from project.algorithms.bases.image_classification import StepOutputDict
 from project.algorithms.callbacks.callback import Callback
-from project.utils.types import PhaseStr, StageStr
+from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
 
 logger = get_logger(__name__)
 
 
-class ClassificationOutputs(StepOutputDict):
+class ClassificationOutputs(TypedDict, total=False):
     """The dictionary format that is minimally required to be returned from
     `training/val/test_step` for classification algorithms."""
+
+    loss: NotRequired[torch.Tensor | float]
+    """The loss at this step."""
 
     logits: Required[Tensor]
     """The un-normalized logits."""
@@ -82,7 +84,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         self,
         trainer: Trainer,
         pl_module: Algorithm[BatchType, ClassificationOutputs],
-        stage: StageStr,
+        stage: PhaseStr,
     ) -> None:
         if self.disabled:
             return

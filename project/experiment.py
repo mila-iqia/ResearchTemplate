@@ -19,12 +19,15 @@ from torch import nn
 
 from project.algorithms import Algorithm
 from project.configs.config import Config
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass
-from project.utils.types.protocols import DataModule, Module
+from project.utils.types.protocols import (
+    DataModule,
+    Module,
+)
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)

@@ -21,7 +21,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
@@ -40,7 +40,9 @@ from project.utils.testutils import (
     default_marks_for_config_name,
 )
 from project.utils.types import is_sequence_of
-from project.utils.types.protocols import DataModule
+from project.utils.types.protocols import (
+    DataModule,
+)
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet

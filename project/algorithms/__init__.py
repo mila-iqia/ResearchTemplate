@@ -4,7 +4,6 @@ from project.algorithms.jax_algo import JaxAlgorithm
 from project.algorithms.no_op import NoOp
 
 from .bases.algorithm import Algorithm
-from .bases.image_classification import ImageClassificationAlgorithm
 from .example_algo import ExampleAlgorithm
 from .manual_optimization_example import ManualGradientsExample
 
@@ -26,6 +25,6 @@ algorithm_store.add_to_hydra_store()
 __all__ = [
     "Algorithm",
     "ExampleAlgorithm",
-    "ImageClassificationAlgorithm",
     "ManualGradientsExample",
+    "JaxAlgorithm",
 ]

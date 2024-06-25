@@ -3,34 +3,88 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
+import torch
+from lightning import LightningDataModule
+from lightning.fabric.utilities.exceptions import MisconfigurationException
+from lightning.pytorch.trainer.states import RunningStage
 from tensor_regression.fixture import (
     TensorRegressionFixture,
     get_test_source_and_temp_file_paths,
 )
 from torch import Tensor
 
+from project.datamodules.vision import VisionDataModule
 from project.utils.testutils import run_for_all_datamodules
 from project.utils.types import is_sequence_of
-
-from ..utils.types.protocols import DataModule
-
+from project.utils.types.protocols import ImageClassificationDataModule
 
 # @pytest.mark.timeout(25, func_only=True)
+
+
+# @use_overrides(["datamodule.num_workers=0"])
 @pytest.mark.slow
+@pytest.mark.parametrize(
+    "stage",
+    [
+        RunningStage.TRAINING,
+        RunningStage.VALIDATING,
+        RunningStage.TESTING,
+        pytest.param(
+            RunningStage.PREDICTING,
+            marks=pytest.mark.xfail(
+                reason="Might not be implemented by the datamodule.",
+                raises=MisconfigurationException,
+            ),
+        ),
+    ],
+)
 @run_for_all_datamodules()
 def test_first_batch(
-    datamodule: DataModule,
+    datamodule: LightningDataModule,
     request: pytest.FixtureRequest,
     tensor_regression: TensorRegressionFixture,
     original_datadir: Path,
+    stage: RunningStage,
     datadir: Path,
 ):
     # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
     datamodule.prepare_data()
-    datamodule.setup("fit")
 
-    batch = next(iter(datamodule.train_dataloader()))
+    if stage == RunningStage.TRAINING:
+        datamodule.setup("fit")
+        dataloader = datamodule.train_dataloader()
+    elif stage in [RunningStage.VALIDATING, RunningStage.SANITY_CHECKING]:
+        datamodule.setup("validate")
+        dataloader = datamodule.val_dataloader()
+    elif stage == RunningStage.TESTING:
+        datamodule.setup("test")
+        dataloader = datamodule.test_dataloader()
+    else:
+        assert stage == RunningStage.PREDICTING
+        datamodule.setup("predict")
+        dataloader = datamodule.predict_dataloader()
+
+    batch = next(iter(dataloader))
+
+    from torchvision.tv_tensors import Image
+
+    if isinstance(datamodule, ImageClassificationDataModule):
+        assert isinstance(batch, list | tuple) and len(batch) == 2
+        # todo: if we tighten this and make it so vision datamodules return Images, then we should
+        # have strict asserts here that check that batch[0] is an Image. It doesn't seem to be the case though.
+        # assert isinstance(batch[0], Image)
+        assert isinstance(batch[0], torch.Tensor)
+        assert isinstance(batch[1], torch.Tensor)
+    elif isinstance(datamodule, VisionDataModule):
+        if isinstance(batch, list | tuple):
+            # assert isinstance(batch[0], Image)
+            assert isinstance(batch[0], torch.Tensor)
+        else:
+            assert isinstance(batch, torch.Tensor)
+            assert isinstance(batch, Image)
+
     if isinstance(batch, dict):
+        # fixme: leftover from the RL datamodule proof-of-concept.
         if "infos" in batch:
             # todo: fix this, unsupported because of `object` dtype.
             batch.pop("infos")

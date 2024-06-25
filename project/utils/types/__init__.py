@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     Any,
     Literal,
@@ -24,7 +24,11 @@ H = NewType("H", int)
 W = NewType("W", int)
 S = NewType("S", int)
 
-StageStr = Literal["fit", "validate", "test", "predict"]
+
+# todo: Fix this. Why do we have these enums? Are they necessary? Could we use the same ones as PL if we wanted to?
+# from lightning.pytorch.trainer.states import RunningStage as PhaseStr
+# from lightning.pytorch.trainer.states import TrainerFn as StageStr
+
 PhaseStr = Literal["train", "val", "test"]
 """The trainer phases.
 
@@ -39,7 +43,7 @@ T = TypeVar("T", default=Tensor)
 
 type NestedDict[K, V] = dict[K, V | NestedDict[K, V]]
 type NestedMapping[K, V] = Mapping[K, V | NestedMapping[K, V]]
-type PyTree[T] = T | tuple[PyTree[T], ...] | list[PyTree[T]] | Mapping[Any, PyTree[T]]
+type PyTree[T] = T | Iterable[PyTree[T]] | Mapping[Any, PyTree[T]]
 
 
 def is_list_of[V](object: Any, item_type: type[V] | tuple[type[V], ...]) -> TypeGuard[list[V]]:

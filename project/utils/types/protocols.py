@@ -3,12 +3,9 @@ from __future__ import annotations
 import dataclasses
 import typing
 from collections.abc import Iterable
-from typing import ClassVar, Protocol, runtime_checkable
+from typing import ClassVar, Literal, Protocol, runtime_checkable
 
 from torch import nn
-
-if typing.TYPE_CHECKING:
-    from project.utils.types import StageStr
 
 
 class Dataclass(Protocol):
@@ -52,20 +49,23 @@ class HasInputOutputShapes(Module, Protocol):
 
 @runtime_checkable
 class DataModule[BatchType](Protocol):
-    """Protocol that shows the expected attributes / methods of the `LightningDataModule` class.
+    """Protocol that shows the minimal attributes / methods of the `LightningDataModule` class.
 
     This is used to type hint the batches that are yielded by the DataLoaders.
     """
 
-    # batch_size: int
-
     def prepare_data(self) -> None: ...
 
-    def setup(self, stage: StageStr) -> None: ...
+    def setup(self, stage: Literal["train", "validate", "test", "predict"]) -> None: ...
 
     def train_dataloader(self) -> Iterable[BatchType]: ...
 
 
 @runtime_checkable
 class ClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
+    num_classes: int
+
+
+@runtime_checkable
+class ImageClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
     num_classes: int

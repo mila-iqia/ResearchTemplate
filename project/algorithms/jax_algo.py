@@ -16,7 +16,9 @@ from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 from project.algorithms.bases.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.datamodules.image_classification.base import ImageClassificationDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
