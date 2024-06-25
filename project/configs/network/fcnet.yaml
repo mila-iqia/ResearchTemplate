@@ -1,0 +1,5 @@
+_target_: project.networks.fcnet.FcNet
+output_dims: ${instance_attr:datamodule.num_classes}
+input_shape: ${instance_attr:datamodule.dims}
+hparams:
+  _target_: project.networks.fcnet.HParams

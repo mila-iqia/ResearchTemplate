@@ -1,20 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import (
-    Any,
-    Literal,
-    NewType,
-    TypeGuard,
-    Unpack,
-)
+from typing import Annotated, Any, Literal, NewType, TypeGuard, Unpack
 
+import annotated_types
 from torch import Tensor
-from typing_extensions import (
-    ParamSpec,
-    TypeVar,
-    TypeVarTuple,
-)
+from typing_extensions import TypeVar, TypeVarTuple
 
 from .protocols import Dataclass, DataModule, HasInputOutputShapes, Module
 
@@ -35,8 +26,9 @@ PhaseStr = Literal["train", "val", "test"]
 TODO: There has to exist an enum for it somewhere in PyTorch Lightning.
 """
 
-P = ParamSpec("P", default=[Tensor])
-R = ParamSpec("R")
+# Types used with pydantic:
+FloatBetween0And1 = Annotated[float, annotated_types.Ge(0), annotated_types.Le(1)]
+
 OutT = TypeVar("OutT", default=Tensor, covariant=True)
 Ts = TypeVarTuple("Ts", default=Unpack[tuple[Tensor, ...]])
 T = TypeVar("T", default=Tensor)

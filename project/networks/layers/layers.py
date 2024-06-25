@@ -174,6 +174,8 @@ class Merge(nn.Module, Module[[tuple[Tensor, ...] | dict[str, Tensor]], OutT]):
 
 
 class Sample(Lambda, Module[[torch.distributions.Distribution], Tensor]):
+    """Layer that samples from a distribution."""
+
     def __init__(self, differentiable: bool = False) -> None:
         super().__init__(f=operator.methodcaller("rsample" if differentiable else "sample"))
         self._differentiable = differentiable
