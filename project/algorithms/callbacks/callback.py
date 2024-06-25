@@ -19,7 +19,18 @@ logger = get_logger(__name__)
 class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | StepOutputDict](
     pl.Callback
 ):
-    """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class."""
+    """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class.
+
+    Adds the following typing information:
+    - The type of inputs that the algorithm takes
+    - The type of outputs that are returned by the algorithm's `[training/validation/test]_step` methods.
+
+    Adds the following methods:
+    - `on_shared_batch_start`: called by `on_[train/validation/test]_batch_start`
+    - `on_shared_batch_end`: called by `on_[train/validation/test]_batch_end`
+    - `on_shared_epoch_start`: called by `on_[train/validation/test]_epoch_start`
+    - `on_shared_epoch_end`: called by `on_[train/validation/test]_epoch_end`
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -43,7 +54,11 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
         batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
-    ): ...
+    ):
+        """Shared hook, called by `on_[train/validation/test]_batch_start`.
+
+        Use this if you want to do something at the start of batches in more than one phase.
+        """
 
     def on_shared_batch_end(
         self,
@@ -54,21 +69,33 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
         batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
-    ): ...
+    ):
+        """Shared hook, called by `on_[train/validation/test]_batch_end`.
+
+        Use this if you want to do something at the end of batches in more than one phase.
+        """
 
     def on_shared_epoch_start(
         self,
         trainer: Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
         phase: PhaseStr,
-    ) -> None: ...
+    ) -> None:
+        """Shared hook, called by `on_[train/validation/test]_epoch_start`.
+
+        Use this if you want to do something at the start of epochs in more than one phase.
+        """
 
     def on_shared_epoch_end(
         self,
         trainer: Trainer,
         pl_module: Algorithm[BatchType, StepOutputType],
         phase: PhaseStr,
-    ) -> None: ...
+    ) -> None:
+        """Shared hook, called by `on_[train/validation/test]_epoch_end`.
+
+        Use this if you want to do something at the end of epochs in more than one phase.
+        """
 
     @override
     def on_train_batch_end(

@@ -1,4 +1,5 @@
 import time
+from typing import override
 
 from lightning import LightningModule, Trainer
 from torch import Tensor
@@ -16,6 +17,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
         self.last_update_time: dict[int, float | None] = {}
         self.num_optimizers: int | None = None
 
+    @override
     def on_shared_epoch_start(
         self,
         trainer: Trainer,
@@ -31,6 +33,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
             else:
                 self.num_optimizers = len(optimizer_or_optimizers)
 
+    @override
     def on_shared_batch_end(
         self,
         trainer: Trainer,
@@ -66,6 +69,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
             # todo: support other kinds of batches
         self.last_step_times[phase] = now
 
+    @override
     def on_before_optimizer_step(
         self, trainer: Trainer, pl_module: LightningModule, optimizer: Optimizer, opt_idx: int = 0
     ) -> None:

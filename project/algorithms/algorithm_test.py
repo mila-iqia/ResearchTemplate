@@ -639,7 +639,6 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
     def __init__(self, exceptions: Sequence[str] = ()) -> None:
         super().__init__()
         self.exceptions = exceptions
-
         self.gradients: dict[str, Tensor] = {}
 
     def on_train_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -655,7 +654,7 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
     def on_train_batch_end(
         self,
         trainer: Trainer,
-        pl_module: LightningModule,
+        pl_module: Algorithm,
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_index: int,
