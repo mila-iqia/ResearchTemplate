@@ -1,6 +1,6 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import NotRequired, Required, TypedDict
+from typing import NotRequired, Required, TypedDict, override
 
 import torch
 import torchmetrics
@@ -80,6 +80,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
     def _get_metric(pl_module: LightningModule, name: str):
         return getattr(pl_module, name)
 
+    @override
     def setup(
         self,
         trainer: Trainer,
@@ -103,6 +104,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         num_classes = datamodule.num_classes
         self.add_metrics_to(pl_module, num_classes=num_classes)
 
+    @override
     def on_shared_batch_end(
         self,
         trainer: Trainer,
@@ -151,7 +153,6 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         accuracy(probs, y)
         top5_accuracy(probs, y)
         prog_bar = phase == "train"
-
         pl_module.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
         pl_module.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
 

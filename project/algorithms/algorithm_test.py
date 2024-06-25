@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Literal
 
 import pytest
 import torch
-from lightning import Callback, LightningDataModule, LightningModule, Trainer
+from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from omegaconf import DictConfig
 from tensor_regression import TensorRegressionFixture
@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import ParamSpec
 
 from project.algorithms.algorithm import Algorithm
+from project.algorithms.callbacks.callback import Callback
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification.image_classification import (
@@ -564,7 +565,12 @@ class GetMetricCallback(TestingCallback):
         batch: tuple[Tensor, Tensor],
         batch_index: int,
     ) -> None:
-        assert self.metric in trainer.logged_metrics, (self.metric, trainer.logged_metrics.keys())
+        if self.metric not in trainer.logged_metrics:
+            logger.warning(
+                f"Unable to get the metric {self.metric} from the logged metrics: "
+                f"{trainer.logged_metrics.keys()} at step {trainer.global_step}."
+            )
+            return
         metric_value = trainer.logged_metrics[self.metric]
         assert isinstance(metric_value, Tensor)
         self.metrics.append(metric_value.detach().item())

@@ -114,6 +114,6 @@ class ManualGradientsExample(Algorithm):
         return torch.optim.SGD(self.parameters(), lr=self.hp.lr)
 
     def configure_callbacks(self):
-        return [
+        return super().configure_callbacks() + [
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         ]

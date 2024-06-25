@@ -24,6 +24,8 @@ from project.utils.types.protocols import (
     ClassificationDataModule,
 )
 
+# Having tuple[torch.Tensor, torch.Tensor] as the batch type isn't ideal.
+
 
 class ClassificationAlgorithmTests[
     AlgorithmType: Algorithm[tuple[torch.Tensor, torch.Tensor], ClassificationOutputs]
@@ -119,6 +121,7 @@ class ClassificationAlgorithmTests[
         tmp_path: Path,
     ):
         """Perform `n_updates` training steps on exactly the same batch of training data."""
+
         testing_callbacks = self.get_testing_callbacks() + [
             CheckBatchesAreTheSameAtEachStep(),
             MetricShouldImprove(metric=self.metric_name, lower_is_better=self.lower_is_better),
