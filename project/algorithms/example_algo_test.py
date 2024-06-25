@@ -2,7 +2,7 @@ from typing import ClassVar
 
 import torch
 
-from project.algorithms.bases.classification_tests import ClassificationAlgorithmTests
+from project.algorithms.classification_tests import ClassificationAlgorithmTests
 
 from .example_algo import ExampleAlgorithm
 
