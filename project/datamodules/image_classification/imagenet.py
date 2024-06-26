@@ -22,7 +22,7 @@ from torchvision.models.resnet import ResNet152_Weights
 from torchvision.transforms import v2 as transform_lib
 
 from project.datamodules.vision import VisionDataModule
-from project.utils.env_vars import DATA_DIR, NUM_WORKERS
+from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
 from project.utils.types import C, H, W
 from project.utils.types.protocols import Module
 
@@ -118,7 +118,16 @@ class ImageNetDataModule(VisionDataModule):
         # self.test_dataset_cls = UnlabeledImagenet
 
     def prepare_data(self) -> None:
-        network_imagenet_dir = Path("/network/datasets/imagenet")
+        if (
+            not NETWORK_DIR
+            or not (network_imagenet_dir := NETWORK_DIR / "datasets" / "imagenet").exists()
+        ):
+            raise NotImplementedError(
+                "Assuming that the imagenet dataset can be found at "
+                "${NETWORK_DIR:-/network}/datasets/imagenet, (using $NETWORK_DIR if set, else "
+                "'/network'), but this path doesn't exist!"
+            )
+
         logger.debug(f"Preparing ImageNet train split in {self.data_dir}...")
         prepare_imagenet(
             self.data_dir,
@@ -239,8 +248,9 @@ class ImageNetDataModule(VisionDataModule):
 
 def prepare_imagenet(
     root: Path,
+    *,
     split: Literal["train", "val"] = "train",
-    network_imagenet_dir: Path = Path("/network/datasets/imagenet"),
+    network_imagenet_dir: Path,
 ) -> None:
     """Custom preparation function for ImageNet, using @obilaniu's tar magic in Python form.
 
