@@ -388,7 +388,8 @@ def run_for_all_configs_in_group(
             k: default_marks_for_config_name.get(k, [])
             for k in get_all_configs_in_group(group_name)
         }
-
+    # Parametrize the fixture (e.g. datamodule_name) indirectly, which will make it take each group
+    # member (e.g. datamodule config name), each with a parameterized mark.
     return pytest.mark.parametrize(
         f"{group_name}_name",
         [
