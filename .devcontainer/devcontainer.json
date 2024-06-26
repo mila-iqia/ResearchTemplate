@@ -60,7 +60,8 @@
 	},
 	"containerEnv": {
 		"SCRATCH": "/home/vscode/scratch",
-		"SLURM_TMPDIR": "/tmp"
+		"SLURM_TMPDIR": "/tmp",
+		"NETWORK_DIR": "/network"
 	},
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
