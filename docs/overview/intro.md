@@ -22,6 +22,7 @@ You are welcome (and encouraged) to use other similar templates which, at the ti
 - Tailor-made for ML researchers that run their jobs on SLURM clusters (with default configurations for the [Mila](https://docs.mila.quebec) and [DRAC](https://docs.alliancecan.ca) clusters.)
 - Rich typing of all parts of the source code using Python 3.12's new type annotation syntax
 - A comprehensive suite of automated tests for new algorithms, datasets and networks
+- Automatically creates Yaml Schemas for your Hydra config files (as soon as #7 is merged)
 
 This template is geared specifically for ML researchers that run their jobs on SLURM clusters.
 A particular emphasis  for development specifically with a SLURM cluster, and more particularly still, with the Mila and DRAC clusters in mind. The target audience is (currently) limited to Mila researchers, but there's no reason why this
