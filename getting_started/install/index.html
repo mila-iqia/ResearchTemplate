@@ -3,22 +3,23 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://mila-iqia.github.io/ResearchTemplate/install/" />
-      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://mila-iqia.github.io/ResearchTemplate/getting_started/install/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
     <title>Installation instructions - Research Project Template</title>
-    <link rel="stylesheet" href="../css/theme.css" />
-    <link rel="stylesheet" href="../css/theme_extra.css" />
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
     
       <script>
         // Current page data
         var mkdocs_page_name = "Installation instructions";
-        var mkdocs_page_input_path = "install.md";
-        var mkdocs_page_url = "/ResearchTemplate/install/";
+        var mkdocs_page_input_path = "getting_started/install.md";
+        var mkdocs_page_url = "/ResearchTemplate/getting_started/install/";
       </script>
     
     <!--[if lt IE 9]>
-      <script src="../js/html5shiv.min.js"></script>
+      <script src="../../js/html5shiv.min.js"></script>
     <![endif]-->
       <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
       <script>hljs.highlightAll();</script> 
@@ -30,9 +31,9 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Research Project Template
+          <a href="../.." class="icon icon-home"> Research Project Template
         </a><div role="search">
-  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
   </form>
 </div>
@@ -40,25 +41,71 @@
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
                 </li>
               </ul>
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../overview/intro/">Introduction</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation instructions</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation instructions</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#using-conda-and-pip">Using Conda and pip</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#using-a-development-container">Using a development container</a>
     </li>
     </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" >Project</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../reference/project/experiment/">Experiment</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../reference/project/main/">Main</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" >Utils</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../reference/project/utils/types/">Types</a>
+                </li>
+    </ul>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Examples</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../examples/SUMMARY/">SUMMARY</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../examples/examples/">Examples</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../examples/jax/">Jax</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../tests/">Tests</a>
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../examples/">Examples</a>
+                <li class="toctree-l1"><a class="reference internal" href="../../related/">Related projects</a>
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../related/">Related</a>
+                <li class="toctree-l1"><a class="reference internal" href="../../help/">Getting Help</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributing</a>
                 </li>
               </ul>
       </div>
@@ -68,13 +115,14 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Research Project Template</a>
+          <a href="../..">Research Project Template</a>
         
       </nav>
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Getting Started</li>
       <li class="breadcrumb-item active">Installation instructions</li>
     <li class="wy-breadcrumbs-aside">
     </li>
@@ -97,39 +145,39 @@
 <ol>
 <li>Clone the repository and navigate to the root directory:</li>
 </ol>
-<pre><code class="language-bash">git clone https://www.github.com/mila-iqia/ResearchTemplate
-cd ResearchTemplate
-</code></pre>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://www.github.com/mila-iqia/ResearchTemplate
+<span class="nb">cd</span><span class="w"> </span>ResearchTemplate
+</code></pre></div>
 <ol>
 <li>Create a conda environment</li>
 </ol>
-<pre><code class="language-bash">conda create -n research_template python=3.12
-conda activate research_template
-</code></pre>
-<pre><code>Notes:
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>research_template<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12
+conda<span class="w"> </span>activate<span class="w"> </span>research_template
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Notes:
 
-- If you don't Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
-- If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python &gt;= 3.12.
-&lt;!-- TODO: - If you're on the `mila` cluster, you can run this setup script: (...) --&gt;
-</code></pre>
+- If you don&#39;t Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
+- If you&#39;d rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python &gt;= 3.12.
+&lt;!-- TODO: - If you&#39;re on the `mila` cluster, you can run this setup script: (...) --&gt;
+</code></pre></div>
 <ol>
 <li>Install the package using pip:</li>
 </ol>
-<pre><code class="language-bash">pip install -e .
-</code></pre>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div>
 <p>Optionally, you can also install the package using <a href="https://pdm-project.org/en/latest/">PDM</a>. This makes it easier to add or change the dependencies later on:</p>
-<pre><code class="language-bash">pip install pdm
-pdm install
-</code></pre>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>pdm
+pdm<span class="w"> </span>install
+</code></pre></div>
 <h2 id="using-a-development-container">Using a development container<a class="headerlink" href="#using-a-development-container" title="Permanent link">#</a></h2>
 <p>This repo provides a <a href="https://code.visualstudio.com/docs/remote/containers">Devcontainer</a> configuration for <a href="https://code.visualstudio.com/">Visual Studio Code</a> to use a Docker container as a pre-configured development environment. This avoids struggles setting up a development environment and makes them reproducible and consistent.  and make yourself familiar with the <a href="https://code.visualstudio.com/docs/remote/containers-tutorial">container tutorials</a> if you want to use them. In order to use GPUs, you can enable them within the <code>.devcontainer/devcontainer.json</code> file.</p>
 <ol>
 <li>Setup Docker on your local machine</li>
 </ol>
 <p>On an Linux machine where you have root access, you can install Docker using the following commands:</p>
-<pre><code class="language-bash">curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-</code></pre>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://get.docker.com<span class="w"> </span>-o<span class="w"> </span>get-docker.sh
+sudo<span class="w"> </span>sh<span class="w"> </span>get-docker.sh
+</code></pre></div>
 <p>On Windows or Mac, follow <a href="https://code.visualstudio.com/docs/remote/containers#_installation">these installation instructions</a></p>
 <ol>
 <li>
@@ -148,8 +196,8 @@ sudo sh get-docker.sh
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../examples/" class="btn btn-neutral float-right" title="Examples">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../../overview/intro/" class="btn btn-neutral float-left" title="Introduction"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../reference/project/experiment/" class="btn btn-neutral float-right" title="Experiment">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -176,18 +224,18 @@ sudo sh get-docker.sh
         </span>
     
     
-      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../../overview/intro/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../examples/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../../reference/project/experiment/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
-    <script src="../js/jquery-3.6.0.min.js"></script>
-    <script>var base_url = "..";</script>
-    <script src="../js/theme_extra.js"></script>
-    <script src="../js/theme.js"></script>
-      <script src="../search/main.js"></script>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {
             SphinxRtdTheme.Navigation.enable(true);

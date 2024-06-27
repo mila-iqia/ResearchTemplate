@@ -6,17 +6,72 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://mila-iqia.github.io/ResearchTemplate/examples/</loc>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/SUMMARY/</loc>
          <lastmod>2024-06-27</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://mila-iqia.github.io/ResearchTemplate/install/</loc>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/contributing/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/help/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/reference/</loc>
          <lastmod>2024-06-27</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mila-iqia.github.io/ResearchTemplate/related/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/tests/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/examples/SUMMARY/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/examples/examples/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/examples/jax/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/getting_started/install/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/overview/intro/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/reference/project/experiment/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/reference/project/main/</loc>
+         <lastmod>2024-06-27</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://mila-iqia.github.io/ResearchTemplate/reference/project/utils/types/</loc>
          <lastmod>2024-06-27</lastmod>
          <changefreq>daily</changefreq>
     </url>
