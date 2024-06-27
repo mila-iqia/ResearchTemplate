@@ -7,7 +7,7 @@
     * reference/*
   * Examples
     * examples/*
-  - [Tests](tests.md)
-  - [Related projects](related.md)
-  - [Getting Help](help.md)
-  - [Contributing](contributing.md)
+* [Tests](tests.md)
+* [Related projects](related.md)
+* [Getting Help](help.md)
+* [Contributing](contributing.md)
