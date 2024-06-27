@@ -1,4 +1,28 @@
 site_name: Research Project Template
+site_description: A project template and directory structure for Python data science projects.
+site_url: https://mila-iqia.github.io/ResearchTemplate/
+repo_url: https://www.github.com/mila-iqia/ResearchTemplate
+# edit_uri: edit/master/docs
+theme: readthedocs
 nav:
   - Home: index.md
-  - Installation: install.md
+  - install.md
+  - examples.md
+  - related.md
+markdown_extensions:
+  - toc:
+      permalink: "#"
+      toc_depth: 2
+
+# todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
+#   - admonition
+#   - pymdownx.details
+#   - pymdownx.superfences
+#   - pymdownx.tabbed:
+#       alternate_style: true
+#       slugify: !!python/object/apply:pymdownx.slugs.slugify
+#         kwds:
+#           case: lower
+#   - tables
+#   - toc:
+#       toc_depth: 2

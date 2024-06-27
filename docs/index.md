@@ -7,15 +7,27 @@
 
 Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
 
+This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
+
+Please follow the installation instructions [here](install.md)
+
 ## Overview
 
-This is a research project template. It is meant to be a starting point for ML researchers at Mila. It is based on the [Cookiecutter Data Science](https://drivendata.github.io/cookiecutter-data-science/) project template.
+This project makes use of the following libraries:
 
-## [Installation Instructions](install.md)
+- [Hydra](https://hydra.cc/) is used to configure the project. It allows you to define configuration files and override them from the command line.
+- [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) is used to as the training framework. It provides a high-level interface to organize ML research code.
+  - Please note: This repo does not restrict you to use PyTorch. You can also use Jax, as is shown in the [Jax example](https://www.github.com/mila-iqia/ResearchTemplate/tree/master/project/algorithms/jax_algo.py)
+- [Weights & Biases](wandb.ai) is used to log metrics and visualize results.
+- [pytest](https://docs.pytest.org/en/stable/) is used for testing.
 
 ## Usage
 
-## Commands
+To see all available options:
+
+```bash
+python project/main.py --help
+```
 
 todo
 
@@ -27,18 +39,22 @@ todo
 ## Project layout
 
 ```
-mkdocs.yml    # The configuration file.
-docs/
-    index.md  # The documentation homepage.
-    ...       # Other markdown pages, images and other files.
+pyproject.toml   # Project metadata and dependencies
+project/
+    main.py      # main entry-point
+    algorithms/  # learning algorithms
+    datamodules/ # datasets, processing and loading
+    networks/    # Neural networks used by algorithms
+    configs/     # configuration files
+docs/            # documentation
+conftest.py      # Test fixtures and utilities
 ```
 
-todo
-
+<!--
 ## How does it work?
 
-todo
+todo  -->
 
 ## Running tests
 
-todo
+todo -->
