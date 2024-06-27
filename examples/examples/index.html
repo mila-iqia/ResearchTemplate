@@ -73,25 +73,15 @@
               </ul>
               <p class="caption"><span class="caption-text">Examples</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../SUMMARY/">SUMMARY</a>
-                  </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Examples</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#simple-run">Simple run</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#running-a-hyper-parameter-sweep-on-a-slurm-cluster">Running a Hyper-Parameter sweep on a SLURM cluster</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#using-jax">Using Jax</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example-algorithm-that-uses-jax">Example Algorithm that uses Jax</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example-datamodule-that-uses-jax">Example datamodule that uses Jax</a>
-    </li>
-        </ul>
-    </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../jax/">Jax</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../jax/">Using Jax</a>
                   </li>
               </ul>
               <ul>
@@ -152,23 +142,12 @@
 <h2 id="running-a-hyper-parameter-sweep-on-a-slurm-cluster">Running a Hyper-Parameter sweep on a SLURM cluster<a class="headerlink" href="#running-a-hyper-parameter-sweep-on-a-slurm-cluster" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>project/main.py<span class="w"> </span><span class="nv">experiment</span><span class="o">=</span>cluster_sweep_example
 </code></pre></div>
-<h2 id="using-jax">Using Jax<a class="headerlink" href="#using-jax" title="Permanent link">#</a></h2>
-<p>You can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.</p>
-<p>How does this work?
-Well, we use <a href="https://www.github.com/lebrice/torch_jax_interop">torch-jax-interop</a>, another package developed here at Mila, which allows easy interop between torch and jax code. See the readme on that repo for more details.</p>
-<h3 id="example-algorithm-that-uses-jax">Example Algorithm that uses Jax<a class="headerlink" href="#example-algorithm-that-uses-jax" title="Permanent link">#</a></h3>
-<p>You can use Jax for your training step, but not the entire training loop (since that is handled by Lightning).
-There are a few good reasons why you should let Lightning handle the training loop, most notably the fact that it handles all the logging, checkpointing, and other stuff that you'd lose if you swapped out the entire training framework for something based on Jax.</p>
-<p>In this <a href="https://www.github.com/mila-iqia/ResearchTemplate/tree/master/project/algorithms/jax_algo.py">example Jax algorithm</a>,
-a Neural network written in Jax (using <a href="https://flax.readthedocs.io/en/latest/">flax</a>) is wrapped using the <code>torch_jax_interop.JaxFunction</code>, so that its parameters are learnable. The parameters are saved on the LightningModule as nn.Parameters (which use the same underlying memory as the jax arrays). In this example, the loss function is written in PyTorch, while the network forward and backward passes are written in Jax.</p>
-<h3 id="example-datamodule-that-uses-jax">Example datamodule that uses Jax<a class="headerlink" href="#example-datamodule-that-uses-jax" title="Permanent link">#</a></h3>
-<p>(todo)</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../SUMMARY/" class="btn btn-neutral float-left" title="SUMMARY"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../jax/" class="btn btn-neutral float-right" title="Jax">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../../reference/project/utils/types/" class="btn btn-neutral float-left" title="Types"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../jax/" class="btn btn-neutral float-right" title="Using Jax">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -195,7 +174,7 @@ a Neural network written in Jax (using <a href="https://flax.readthedocs.io/en/l
         </span>
     
     
-      <span><a href="../SUMMARY/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../../reference/project/utils/types/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../jax/" style="color: #fcfcfc">Next &raquo;</a></span>
