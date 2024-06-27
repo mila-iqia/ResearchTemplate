@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:0583dfb699b8e7d536f66af019078ca7e3c904edcc5fb0b590ce618860115052"
+content_hash = "sha256:e2030c17d26c0683ced30d293ab7680e57e9de489b6cdf1d2e4127668cb5547a"
 
 [[package]]
 name = "absl-py"
@@ -170,6 +170,28 @@ files = [
 ]
 
 [[package]]
+name = "black"
+version = "24.4.2"
+requires_python = ">=3.8"
+summary = "The uncompromising code formatter."
+groups = ["dev"]
+dependencies = [
+    "click>=8.0.0",
+    "mypy-extensions>=0.4.3",
+    "packaging>=22.0",
+    "pathspec>=0.9.0",
+    "platformdirs>=2",
+]
+files = [
+    {file = "black-24.4.2-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:accf49e151c8ed2c0cdc528691838afd217c50412534e876a19270fea1e28e2d"},
+    {file = "black-24.4.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:88c57dc656038f1ab9f92b3eb5335ee9b021412feaa46330d5eba4e51fe49b04"},
+    {file = "black-24.4.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:be8bef99eb46d5021bf053114442914baeb3649a89dc5f3a555c88737e5e98fc"},
+    {file = "black-24.4.2-cp312-cp312-win_amd64.whl", hash = "sha256:415e686e87dbbe6f4cd5ef0fbf764af7b89f9057b97c908742b6008cc554b9c0"},
+    {file = "black-24.4.2-py3-none-any.whl", hash = "sha256:d36ed1124bb81b32f8614555b34cc4259c3fbc7eec17870e8ff8ded335b58d8c"},
+    {file = "black-24.4.2.tar.gz", hash = "sha256:c872b53057f000085da66a19c55d68f6f8ddcac2642392ad3a355878406fbd4d"},
+]
+
+[[package]]
 name = "blessed"
 version = "1.20.0"
 requires_python = ">=2.7"
@@ -194,6 +216,17 @@ groups = ["default"]
 files = [
     {file = "blinker-1.8.2-py3-none-any.whl", hash = "sha256:1779309f71bf239144b9399d06ae925637cf6634cf6bd131104184531bf67c01"},
     {file = "blinker-1.8.2.tar.gz", hash = "sha256:8f77b09d3bf7c795e969e9486f39c2c5e9c39d4ee07424be2bc594ece9642d83"},
+]
+
+[[package]]
+name = "bracex"
+version = "2.4"
+requires_python = ">=3.8"
+summary = "Bash style brace expander."
+groups = ["dev"]
+files = [
+    {file = "bracex-2.4-py3-none-any.whl", hash = "sha256:efdc71eff95eaff5e0f8cfebe7d01adf2c8637c8c92edaf63ef348c241a82418"},
+    {file = "bracex-2.4.tar.gz", hash = "sha256:a27eaf1df42cf561fed58b7a8f3fdf129d1ea16a81e1fadd1d17989bc6384beb"},
 ]
 
 [[package]]
@@ -369,7 +402,6 @@ version = "0.4.6"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 summary = "Cross-platform colored terminal text."
 groups = ["default", "dev"]
-marker = "sys_platform == \"win32\" or platform_system == \"Windows\""
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
@@ -936,6 +968,20 @@ files = [
     {file = "glfw-2.7.0-py2.py27.py3.py30.py31.py32.py33.py34.py35.py36.py37.py38-none-win32.whl", hash = "sha256:ff92d14ac1c7afa9c5deb495c335b485868709880e6e080e99ace7026d74c756"},
     {file = "glfw-2.7.0-py2.py27.py3.py30.py31.py32.py33.py34.py35.py36.py37.py38-none-win_amd64.whl", hash = "sha256:20d4b31a5a6a61fb787b25f8408204e0e248313cc500953071d13d30a2e5cc9d"},
     {file = "glfw-2.7.0.tar.gz", hash = "sha256:0e209ad38fa8c5be67ca590d7b17533d95ad1eb57d0a3f07b98131db69b79000"},
+]
+
+[[package]]
+name = "griffe"
+version = "0.47.0"
+requires_python = ">=3.8"
+summary = "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API."
+groups = ["dev"]
+dependencies = [
+    "colorama>=0.4",
+]
+files = [
+    {file = "griffe-0.47.0-py3-none-any.whl", hash = "sha256:07a2fd6a8c3d21d0bbb0decf701d62042ccc8a576645c7f8799fe1f10de2b2de"},
+    {file = "griffe-0.47.0.tar.gz", hash = "sha256:95119a440a3c932b13293538bdbc405bee4c36428547553dc6b327e7e7d35e5a"},
 ]
 
 [[package]]
@@ -1542,6 +1588,52 @@ files = [
 ]
 
 [[package]]
+name = "mkdocs-autorefs"
+version = "1.0.1"
+requires_python = ">=3.8"
+summary = "Automatically link across pages in MkDocs."
+groups = ["dev"]
+dependencies = [
+    "Markdown>=3.3",
+    "markupsafe>=2.0.1",
+    "mkdocs>=1.1",
+]
+files = [
+    {file = "mkdocs_autorefs-1.0.1-py3-none-any.whl", hash = "sha256:aacdfae1ab197780fb7a2dac92ad8a3d8f7ca8049a9cbe56a4218cd52e8da570"},
+    {file = "mkdocs_autorefs-1.0.1.tar.gz", hash = "sha256:f684edf847eced40b570b57846b15f0bf57fb93ac2c510450775dcf16accb971"},
+]
+
+[[package]]
+name = "mkdocs-awesome-pages-plugin"
+version = "2.9.2"
+requires_python = ">=3.7"
+summary = "An MkDocs plugin that simplifies configuring page titles and their order"
+groups = ["dev"]
+dependencies = [
+    "mkdocs>=1",
+    "natsort>=8.1.0",
+    "wcmatch>=7",
+]
+files = [
+    {file = "mkdocs_awesome_pages_plugin-2.9.2-py3-none-any.whl", hash = "sha256:9c795587695bd1ee85a8b7e43293005418df5a8b9ef296a3e628be427b693b4d"},
+    {file = "mkdocs_awesome_pages_plugin-2.9.2.tar.gz", hash = "sha256:c3f7d366ecfe99b64524c49a84d8e13c576c19a918ea2e6f59bb486a259313af"},
+]
+
+[[package]]
+name = "mkdocs-gen-files"
+version = "0.5.0"
+requires_python = ">=3.7"
+summary = "MkDocs plugin to programmatically generate documentation pages during the build"
+groups = ["dev"]
+dependencies = [
+    "mkdocs>=1.0.3",
+]
+files = [
+    {file = "mkdocs_gen_files-0.5.0-py3-none-any.whl", hash = "sha256:7ac060096f3f40bd19039e7277dd3050be9a453c8ac578645844d4d91d7978ea"},
+    {file = "mkdocs_gen_files-0.5.0.tar.gz", hash = "sha256:4c7cf256b5d67062a788f6b1d035e157fc1a9498c2399be9af5257d4ff4d19bc"},
+]
+
+[[package]]
 name = "mkdocs-get-deps"
 version = "0.2.0"
 requires_python = ">=3.8"
@@ -1555,6 +1647,72 @@ dependencies = [
 files = [
     {file = "mkdocs_get_deps-0.2.0-py3-none-any.whl", hash = "sha256:2bf11d0b133e77a0dd036abeeb06dec8775e46efa526dc70667d8863eefc6134"},
     {file = "mkdocs_get_deps-0.2.0.tar.gz", hash = "sha256:162b3d129c7fad9b19abfdcb9c1458a651628e4b1dea628ac68790fb3061c60c"},
+]
+
+[[package]]
+name = "mkdocs-literate-nav"
+version = "0.6.1"
+requires_python = ">=3.7"
+summary = "MkDocs plugin to specify the navigation in Markdown instead of YAML"
+groups = ["dev"]
+dependencies = [
+    "mkdocs>=1.0.3",
+]
+files = [
+    {file = "mkdocs_literate_nav-0.6.1-py3-none-any.whl", hash = "sha256:e70bdc4a07050d32da79c0b697bd88e9a104cf3294282e9cb20eec94c6b0f401"},
+    {file = "mkdocs_literate_nav-0.6.1.tar.gz", hash = "sha256:78a7ab6d878371728acb0cdc6235c9b0ffc6e83c997b037f4a5c6ff7cef7d759"},
+]
+
+[[package]]
+name = "mkdocstrings"
+version = "0.25.1"
+requires_python = ">=3.8"
+summary = "Automatic documentation from sources, for MkDocs."
+groups = ["dev"]
+dependencies = [
+    "Jinja2>=2.11.1",
+    "Markdown>=3.3",
+    "MarkupSafe>=1.1",
+    "click>=7.0",
+    "mkdocs-autorefs>=0.3.1",
+    "mkdocs>=1.4",
+    "platformdirs>=2.2.0",
+    "pymdown-extensions>=6.3",
+]
+files = [
+    {file = "mkdocstrings-0.25.1-py3-none-any.whl", hash = "sha256:da01fcc2670ad61888e8fe5b60afe9fee5781017d67431996832d63e887c2e51"},
+    {file = "mkdocstrings-0.25.1.tar.gz", hash = "sha256:c3a2515f31577f311a9ee58d089e4c51fc6046dbd9e9b4c3de4c3194667fe9bf"},
+]
+
+[[package]]
+name = "mkdocstrings-python"
+version = "1.10.5"
+requires_python = ">=3.8"
+summary = "A Python handler for mkdocstrings."
+groups = ["dev"]
+dependencies = [
+    "griffe>=0.47",
+    "mkdocstrings>=0.25",
+]
+files = [
+    {file = "mkdocstrings_python-1.10.5-py3-none-any.whl", hash = "sha256:92e3c588ef1b41151f55281d075de7558dd8092e422cb07a65b18ee2b0863ebb"},
+    {file = "mkdocstrings_python-1.10.5.tar.gz", hash = "sha256:acdc2a98cd9d46c7ece508193a16ca03ccabcb67520352b7449f84b57c162bdf"},
+]
+
+[[package]]
+name = "mkdocstrings"
+version = "0.25.1"
+extras = ["python"]
+requires_python = ">=3.8"
+summary = "Automatic documentation from sources, for MkDocs."
+groups = ["dev"]
+dependencies = [
+    "mkdocstrings-python>=0.5.2",
+    "mkdocstrings==0.25.1",
+]
+files = [
+    {file = "mkdocstrings-0.25.1-py3-none-any.whl", hash = "sha256:da01fcc2670ad61888e8fe5b60afe9fee5781017d67431996832d63e887c2e51"},
+    {file = "mkdocstrings-0.25.1.tar.gz", hash = "sha256:c3a2515f31577f311a9ee58d089e4c51fc6046dbd9e9b4c3de4c3194667fe9bf"},
 ]
 
 [[package]]
@@ -1727,6 +1885,28 @@ files = [
     {file = "multidict-6.0.5-cp312-cp312-win_amd64.whl", hash = "sha256:01265f5e40f5a17f8241d52656ed27192be03bfa8764d88e8220141d1e4b3556"},
     {file = "multidict-6.0.5-py3-none-any.whl", hash = "sha256:0d63c74e3d7ab26de115c49bffc92cc77ed23395303d496eae515d4204a625e7"},
     {file = "multidict-6.0.5.tar.gz", hash = "sha256:f7e301075edaf50500f0b341543c41194d8df3ae5caf4702f2095f3ca73dd8da"},
+]
+
+[[package]]
+name = "mypy-extensions"
+version = "1.0.0"
+requires_python = ">=3.5"
+summary = "Type system extensions for programs checked with the mypy type checker."
+groups = ["dev"]
+files = [
+    {file = "mypy_extensions-1.0.0-py3-none-any.whl", hash = "sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d"},
+    {file = "mypy_extensions-1.0.0.tar.gz", hash = "sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782"},
+]
+
+[[package]]
+name = "natsort"
+version = "8.4.0"
+requires_python = ">=3.7"
+summary = "Simple yet flexible natural sorting in Python."
+groups = ["dev"]
+files = [
+    {file = "natsort-8.4.0-py3-none-any.whl", hash = "sha256:4732914fb471f56b5cce04d7bae6f164a592c7712e1c85f9ef585e197299521c"},
+    {file = "natsort-8.4.0.tar.gz", hash = "sha256:45312c4a0e5507593da193dedd04abb1469253b601ecaf63445ad80f0a1ea581"},
 ]
 
 [[package]]
@@ -3254,6 +3434,20 @@ files = [
     {file = "watchdog-4.0.1-py3-none-win_amd64.whl", hash = "sha256:7577b3c43e5909623149f76b099ac49a1a01ca4e167d1785c76eb52fa585745a"},
     {file = "watchdog-4.0.1-py3-none-win_ia64.whl", hash = "sha256:d7b9f5f3299e8dd230880b6c55504a1f69cf1e4316275d1b215ebdd8187ec88d"},
     {file = "watchdog-4.0.1.tar.gz", hash = "sha256:eebaacf674fa25511e8867028d281e602ee6500045b57f43b08778082f7f8b44"},
+]
+
+[[package]]
+name = "wcmatch"
+version = "8.5.2"
+requires_python = ">=3.8"
+summary = "Wildcard/glob file name matcher."
+groups = ["dev"]
+dependencies = [
+    "bracex>=2.1.1",
+]
+files = [
+    {file = "wcmatch-8.5.2-py3-none-any.whl", hash = "sha256:17d3ad3758f9d0b5b4dedc770b65420d4dac62e680229c287bf24c9db856a478"},
+    {file = "wcmatch-8.5.2.tar.gz", hash = "sha256:a70222b86dea82fb382dd87b73278c10756c138bd6f8f714e2183128887b9eb2"},
 ]
 
 [[package]]
