@@ -1,10 +1,11 @@
 import time
+from typing import override
 
 from lightning import LightningModule, Trainer
-from torch import Tensor, nn
+from torch import Tensor
 from torch.optim import Optimizer
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputDict
+from project.algorithms.algorithm import Algorithm, BatchType, StepOutputDict
 from project.algorithms.callbacks.callback import Callback
 from project.utils.types import PhaseStr, is_sequence_of
 
@@ -16,10 +17,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
         self.last_update_time: dict[int, float | None] = {}
         self.num_optimizers: int | None = None
 
+    @override
     def on_shared_epoch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputDict, nn.Module],
+        pl_module: Algorithm[BatchType, StepOutputDict],
         phase: PhaseStr,
     ) -> None:
         self.last_update_time.clear()
@@ -31,10 +33,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
             else:
                 self.num_optimizers = len(optimizer_or_optimizers)
 
+    @override
     def on_shared_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputDict, nn.Module],
+        pl_module: Algorithm[BatchType, StepOutputDict],
         outputs: StepOutputDict,
         batch: BatchType,
         batch_index: int,
@@ -66,6 +69,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputDict]):
             # todo: support other kinds of batches
         self.last_step_times[phase] = now
 
+    @override
     def on_before_optimizer_step(
         self, trainer: Trainer, pl_module: LightningModule, optimizer: Optimizer, opt_idx: int = 0
     ) -> None:

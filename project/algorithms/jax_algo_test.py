@@ -6,7 +6,7 @@ import torch
 
 from project.algorithms.jax_algo import JaxAlgorithm
 
-from .bases.algorithm_test import AlgorithmTests
+from .algorithm_test import AlgorithmTests
 
 
 class TestJaxAlgorithm(AlgorithmTests[JaxAlgorithm]):

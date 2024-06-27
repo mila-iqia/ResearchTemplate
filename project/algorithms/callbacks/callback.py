@@ -2,21 +2,35 @@ from __future__ import annotations
 
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import override
+from typing import Literal, override
 
+import torch
 from lightning import Trainer
 from lightning import pytorch as pl
 from typing_extensions import Generic  # noqa
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType, StepOutputType
-from project.utils.types import PhaseStr, StageStr
+from project.algorithms.algorithm import Algorithm, BatchType, StepOutputDict, StepOutputType
+from project.utils.types import PhaseStr, PyTree
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
 
 
-class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
-    """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class."""
+class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | StepOutputDict](
+    pl.Callback
+):
+    """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class.
+
+    Adds the following typing information:
+    - The type of inputs that the algorithm takes
+    - The type of outputs that are returned by the algorithm's `[training/validation/test]_step` methods.
+
+    Adds the following methods:
+    - `on_shared_batch_start`: called by `on_[train/validation/test]_batch_start`
+    - `on_shared_batch_end`: called by `on_[train/validation/test]_batch_end`
+    - `on_shared_epoch_start`: called by `on_[train/validation/test]_epoch_start`
+    - `on_shared_epoch_end`: called by `on_[train/validation/test]_epoch_end`
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -24,9 +38,12 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
 
     @override
     def setup(
-        self, trainer: pl.Trainer, pl_module: Algorithm[BatchType, StepOutputType], stage: StageStr
+        self,
+        trainer: pl.Trainer,
+        pl_module: Algorithm[BatchType, StepOutputType],
+        # todo: "tune" is mentioned in the docstring, is it still used?
+        stage: Literal["fit", "validate", "test", "predict", "tune"],
     ) -> None:
-        """Called when fit, validate, test, predict, or tune begins."""
         self.log_dir = get_log_dir(trainer=trainer)
 
     def on_shared_batch_start(
@@ -37,7 +54,11 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
-    ): ...
+    ):
+        """Shared hook, called by `on_[train/validation/test]_batch_start`.
+
+        Use this if you want to do something at the start of batches in more than one phase.
+        """
 
     def on_shared_batch_end(
         self,
@@ -48,15 +69,33 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         batch_index: int,
         phase: PhaseStr,
         dataloader_idx: int | None = None,
-    ): ...
+    ):
+        """Shared hook, called by `on_[train/validation/test]_batch_end`.
+
+        Use this if you want to do something at the end of batches in more than one phase.
+        """
 
     def on_shared_epoch_start(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType], phase: PhaseStr
-    ) -> None: ...
+        self,
+        trainer: Trainer,
+        pl_module: Algorithm[BatchType, StepOutputType],
+        phase: PhaseStr,
+    ) -> None:
+        """Shared hook, called by `on_[train/validation/test]_epoch_start`.
+
+        Use this if you want to do something at the start of epochs in more than one phase.
+        """
 
     def on_shared_epoch_end(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType], phase: PhaseStr
-    ) -> None: ...
+        self,
+        trainer: Trainer,
+        pl_module: Algorithm[BatchType, StepOutputType],
+        phase: PhaseStr,
+    ) -> None:
+        """Shared hook, called by `on_[train/validation/test]_epoch_end`.
+
+        Use this if you want to do something at the end of epochs in more than one phase.
+        """
 
     @override
     def on_train_batch_end(
@@ -70,7 +109,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         super().on_train_batch_end(
             trainer=trainer,
             pl_module=pl_module,
-            outputs=outputs,  # type: ignore
+            outputs=outputs,
             batch=batch,
             batch_idx=batch_index,
         )

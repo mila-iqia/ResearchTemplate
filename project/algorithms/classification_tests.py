@@ -1,33 +1,42 @@
 from __future__ import annotations
 
-import itertools
 from pathlib import Path
-from typing import ClassVar, TypeVar
+from typing import ClassVar
 
 import pytest
 import torch.testing
 from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from project.algorithms.bases.algorithm_test import (
+from project.algorithms.algorithm import Algorithm
+from project.algorithms.algorithm_test import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
     MetricShouldImprove,
 )
-from project.algorithms.bases.image_classification import ImageClassificationAlgorithm
-from project.datamodules.image_classification import (
+from project.algorithms.callbacks.classification_metrics import ClassificationOutputs
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import DataModule
+from project.utils.types.protocols import (
+    ClassificationDataModule,
+)
 
-ImageAlgorithmType = TypeVar("ImageAlgorithmType", bound=ImageClassificationAlgorithm)
+# Having tuple[torch.Tensor, torch.Tensor] as the batch type isn't ideal.
 
 
-class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
+class ClassificationAlgorithmTests[
+    AlgorithmType: Algorithm[tuple[Tensor, Tensor], ClassificationOutputs]
+](AlgorithmTests[AlgorithmType]):
+    """Test suite for (image) classification algorithms."""
+
     unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
-    _supported_datamodule_types: ClassVar[list[type[ImageClassificationDataModule]]] = [
-        ImageClassificationDataModule
+    _supported_datamodule_types: ClassVar[list[type[ClassificationDataModule]]] = [
+        # VisionDataModule,
+        ClassificationDataModule,  # type: ignore (we actually support this case).
+        # ImageClassificationDataModule,
     ]
 
     metric_name: ClassVar[str] = "train/accuracy"
@@ -36,7 +45,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
 
     def test_output_shapes(
         self,
-        algorithm: ImageAlgorithmType,
+        algorithm: AlgorithmType,
         training_batch: tuple[Tensor, Tensor],
     ):
         """Tests that the output of the algorithm has the correct shape."""
@@ -47,6 +56,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
         else:
             y_pred = output
         assert isinstance(y_pred, Tensor)
+        assert isinstance(algorithm.datamodule, ClassificationDataModule)
         if y_pred.dtype.is_floating_point:
             # y_pred should be the logits.
             assert y_pred.shape == (y.shape[0], algorithm.datamodule.num_classes)
@@ -68,8 +78,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
     @pytest.fixture(scope="class")
     def repeat_first_batch_dataloader(
         self,
-        # algorithm: ImageAlgorithmType,
-        datamodule: ImageClassificationDataModule,
+        training_batch: tuple[Tensor, Tensor],
         n_updates: int,
     ):
         """Returns a dataloader that yields a exactly the same batch over and over again.
@@ -81,28 +90,21 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
         """
         # Doing this just in case the algorithm wraps the datamodule somehow.
         # dm = getattr(algorithm, "datamodule", datamodule)
-        dm = datamodule
-        dm.prepare_data()
-        dm.setup("fit")
+        assert len(training_batch)
+        dataset = TensorDataset(*training_batch)
+        # need `start` to be of the same type, and it's hard to make an empty TensorDataset.
+        n_batches_dataset = sum([dataset] * (n_updates - 1), start=dataset)
 
-        train_dataloader = dm.train_dataloader()
-        assert isinstance(train_dataloader, DataLoader)
-        batch = next(iter(train_dataloader))
-        batches = list(itertools.repeat(batch, n_updates))
-        n_batches_dataset = TensorDataset(
-            *(torch.concatenate([b[i] for b in batches]) for i in range(len(batches[0])))
-        )
-        train_dl = DataLoader(
-            n_batches_dataset, batch_size=train_dataloader.batch_size, shuffle=False
-        )
-        torch.testing.assert_close(next(iter(train_dl)), batch)
+        batch_size = training_batch[0].shape[0]
+        train_dl = DataLoader(n_batches_dataset, batch_size=batch_size, shuffle=False)
+        torch.testing.assert_close(next(iter(train_dl)), training_batch)
         return train_dl
 
     @pytest.mark.slow
     @pytest.mark.timeout(10)
     def test_overfit_exact_same_training_batch(
         self,
-        algorithm: ImageAlgorithmType,
+        algorithm: AlgorithmType,
         repeat_first_batch_dataloader: DataLoader,
         accelerator: str,
         devices: list[int],
@@ -110,6 +112,7 @@ class ImageClassificationAlgorithmTests(AlgorithmTests[ImageAlgorithmType]):
         tmp_path: Path,
     ):
         """Perform `n_updates` training steps on exactly the same batch of training data."""
+
         testing_callbacks = self.get_testing_callbacks() + [
             CheckBatchesAreTheSameAtEachStep(),
             MetricShouldImprove(metric=self.metric_name, lower_is_better=self.lower_is_better),

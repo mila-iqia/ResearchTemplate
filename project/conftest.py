@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import random
 import sys
 import typing
 import warnings
@@ -21,7 +20,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
@@ -38,9 +37,12 @@ from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     default_marks_for_config_combinations,
     default_marks_for_config_name,
+    fork_rng,
 )
 from project.utils.types import is_sequence_of
-from project.utils.types.protocols import DataModule
+from project.utils.types.protocols import (
+    DataModule,
+)
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
@@ -142,15 +144,9 @@ def seed(request: pytest.FixtureRequest):
     """Fixture that seeds everything for reproducibility and yields the random seed used."""
     random_seed = getattr(request, "param", DEFAULT_SEED)
     assert isinstance(random_seed, int) or random_seed is None
-
-    random_state = random.getstate()
-    np_random_state = np.random.get_state()
-    with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+    with fork_rng():
         seed_everything(random_seed, workers=True)
         yield random_seed
-
-    random.setstate(random_state)
-    np.random.set_state(np_random_state)
 
 
 @pytest.fixture(scope="session")

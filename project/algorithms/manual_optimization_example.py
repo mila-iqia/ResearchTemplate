@@ -5,22 +5,23 @@ from dataclasses import dataclass
 import torch
 from torch import Tensor, nn
 
-from project.algorithms.bases.image_classification import (
+from project.algorithms.algorithm import Algorithm
+from project.algorithms.callbacks.classification_metrics import (
+    ClassificationMetricsCallback,
     ClassificationOutputs,
-    ImageClassificationAlgorithm,
 )
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import PhaseStr
 
 
-class ManualGradientsExample(ImageClassificationAlgorithm):
+class ManualGradientsExample(Algorithm):
     """Example of an algorithm that calculates the gradients manually instead of having PL do the
     backward pass."""
 
     @dataclass
-    class HParams(ImageClassificationAlgorithm.HParams):
+    class HParams(Algorithm.HParams):
         """Hyper-parameters of this example algorithm."""
 
         lr: float = 0.1
@@ -34,7 +35,10 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
         network: nn.Module,
         hp: ManualGradientsExample.HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, network=network, hp=hp or self.HParams())
+        super().__init__()
+        self.datamodule = datamodule
+        self.network = network
+        self.hp = hp or self.HParams()
         # Just to let the type checker know the right type.
         self.hp: ManualGradientsExample.HParams
 
@@ -44,6 +48,9 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
         self.automatic_optimization = False
 
         # Instantiate any lazy weights with a dummy forward pass (optional).
+        self.example_input_array = torch.zeros(
+            (datamodule.batch_size, *datamodule.dims), device=self.device
+        )
         self.network(self.example_input_array)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -62,14 +69,7 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
     def shared_step(
         self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
     ) -> ClassificationOutputs:
-        """Performs a training/validation/test step.
-
-        This must return a dictionary with at least the 'y' and 'logits' keys, and an optional
-        `loss` entry. This is so that the training of the model is easier to parallelize the
-        training across GPUs:
-        - the cross entropy loss gets calculated using the global batch size
-        - the main metrics are logged inside `training_step_end` (supposed to be better for DP/DDP)
-        """
+        """Performs a training/validation/test step."""
         x, y = batch
         logits = self(x)
 
@@ -92,11 +92,10 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
 
             # NOTE: You don't need to call `loss.backward()`, you could also just set .grads
             # directly!
-            loss.backward()
+            self.manual_backward(loss)
 
             for name, parameter in self.named_parameters():
-                if parameter.grad is None:
-                    continue
+                assert parameter.grad is not None, name
                 parameter.grad += self.hp.gradient_noise_std * torch.randn_like(parameter.grad)
 
             optimizer.step()
@@ -106,3 +105,8 @@ class ManualGradientsExample(ImageClassificationAlgorithm):
     def configure_optimizers(self):
         """Creates the optimizer(s) and learning rate scheduler(s)."""
         return torch.optim.SGD(self.parameters(), lr=self.hp.lr)
+
+    def configure_callbacks(self):
+        return super().configure_callbacks() + [
+            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+        ]

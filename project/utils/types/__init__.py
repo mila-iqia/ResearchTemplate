@@ -1,20 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import (
-    Any,
-    Literal,
-    NewType,
-    TypeGuard,
-    Unpack,
-)
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Annotated, Any, Literal, NewType, TypeGuard, Unpack
 
+import annotated_types
 from torch import Tensor
-from typing_extensions import (
-    ParamSpec,
-    TypeVar,
-    TypeVarTuple,
-)
+from typing_extensions import TypeVar, TypeVarTuple
 
 from .protocols import Dataclass, DataModule, HasInputOutputShapes, Module
 
@@ -24,22 +15,27 @@ H = NewType("H", int)
 W = NewType("W", int)
 S = NewType("S", int)
 
-StageStr = Literal["fit", "validate", "test", "predict"]
+
+# todo: Fix this. Why do we have these enums? Are they necessary? Could we use the same ones as PL if we wanted to?
+# from lightning.pytorch.trainer.states import RunningStage as PhaseStr
+# from lightning.pytorch.trainer.states import TrainerFn as StageStr
+
 PhaseStr = Literal["train", "val", "test"]
 """The trainer phases.
 
 TODO: There has to exist an enum for it somewhere in PyTorch Lightning.
 """
 
-P = ParamSpec("P", default=[Tensor])
-R = ParamSpec("R")
+# Types used with pydantic:
+FloatBetween0And1 = Annotated[float, annotated_types.Ge(0), annotated_types.Le(1)]
+
 OutT = TypeVar("OutT", default=Tensor, covariant=True)
 Ts = TypeVarTuple("Ts", default=Unpack[tuple[Tensor, ...]])
 T = TypeVar("T", default=Tensor)
 
 type NestedDict[K, V] = dict[K, V | NestedDict[K, V]]
 type NestedMapping[K, V] = Mapping[K, V | NestedMapping[K, V]]
-type PyTree[T] = T | tuple[PyTree[T], ...] | list[PyTree[T]] | Mapping[Any, PyTree[T]]
+type PyTree[T] = T | Iterable[PyTree[T]] | Mapping[Any, PyTree[T]]
 
 
 def is_list_of[V](object: Any, item_type: type[V] | tuple[type[V], ...]) -> TypeGuard[list[V]]:

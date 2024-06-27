@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+import typing
 import warnings
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import field
@@ -17,14 +19,27 @@ from torch import Tensor
 from torch.nn.parameter import Parameter
 from torchvision import transforms
 
-from project.datamodules.image_classification import (
-    ImageClassificationDataModule,
+from project.utils.types.protocols import (
+    DataModule,
+    Module,
 )
-from project.utils.types.protocols import DataModule, Module
 
 from .types import NestedDict, NestedMapping
 
 logger = get_logger(__name__)
+
+
+# todo: doesn't work? keeps logging each time!
+@functools.cache
+def log_once(message: str, level: int) -> None:
+    """Logs a message once per logger instance. The message is logged at the specified level.
+
+    Args:
+        logger: The logger instance to use.
+        message: The message to log.
+        level: The logging level to use.
+    """
+    logger.log(level=level, msg=message, stacklevel=2)
 
 
 def get_shape_ish(t: Tensor) -> tuple[int | Literal["?"], ...]:
@@ -89,6 +104,15 @@ def get_devices(mod: Module) -> set[torch.device]:
     return set(p.device for p in mod.parameters())
 
 
+if typing.TYPE_CHECKING:
+    from project.datamodules.image_classification.image_classification import (
+        ImageClassificationDataModule,
+    )
+
+
+# todo: shouldn't be here, should be done in `VisionDataModule` or in the configs:
+# If `normalize=False`, and there is a normalization transform in the train transforms, then an
+# error should be raised.
 def _remove_normalization_from_transforms(
     datamodule: ImageClassificationDataModule,
 ) -> None:
@@ -116,6 +140,10 @@ def validate_datamodule[DM: DataModule | LightningDataModule](datamodule: DM) ->
 
     Returns the same datamodule.
     """
+    from project.datamodules.image_classification.image_classification import (
+        ImageClassificationDataModule,
+    )
+
     if isinstance(datamodule, ImageClassificationDataModule) and not datamodule.normalize:
         _remove_normalization_from_transforms(datamodule)
     else:

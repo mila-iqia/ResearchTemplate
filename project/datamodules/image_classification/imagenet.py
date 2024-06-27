@@ -22,8 +22,8 @@ from torchvision.models.resnet import ResNet152_Weights
 from torchvision.transforms import v2 as transform_lib
 
 from project.datamodules.vision import VisionDataModule
-from project.utils.env_vars import DATA_DIR, NUM_WORKERS
-from project.utils.types import C, H, StageStr, W
+from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
+from project.utils.types import C, H, W
 from project.utils.types.protocols import Module
 
 logger = get_logger(__name__)
@@ -108,7 +108,7 @@ class ImageNetDataModule(VisionDataModule):
             drop_last=drop_last,
             train_transforms=train_transforms or self.train_transform(),
             val_transforms=val_transforms or self.val_transform(),
-            test_transforms=test_transforms,
+            test_transforms=test_transforms or self.test_transform(),
             **kwargs,
         )
         self.dims = (C(3), H(self.image_size), W(self.image_size))
@@ -118,7 +118,16 @@ class ImageNetDataModule(VisionDataModule):
         # self.test_dataset_cls = UnlabeledImagenet
 
     def prepare_data(self) -> None:
-        network_imagenet_dir = Path("/network/datasets/imagenet")
+        if (
+            not NETWORK_DIR
+            or not (network_imagenet_dir := NETWORK_DIR / "datasets" / "imagenet").exists()
+        ):
+            raise NotImplementedError(
+                "Assuming that the imagenet dataset can be found at "
+                "${NETWORK_DIR:-/network}/datasets/imagenet, (using $NETWORK_DIR if set, else "
+                "'/network'), but this path doesn't exist!"
+            )
+
         logger.debug(f"Preparing ImageNet train split in {self.data_dir}...")
         prepare_imagenet(
             self.data_dir,
@@ -134,7 +143,7 @@ class ImageNetDataModule(VisionDataModule):
 
         super().prepare_data()
 
-    def setup(self, stage: StageStr | None = None) -> None:
+    def setup(self, stage: Literal["fit", "validate", "test", "predict"] | None = None) -> None:
         logger.debug(f"Setup ImageNet datamodule for {stage=}")
         super().setup(stage)
 
@@ -233,11 +242,15 @@ class ImageNetDataModule(VisionDataModule):
             ]
         )
 
+    # todo: what should be the default transformations for the test set? Same as validation, right?
+    test_transform = val_transform
+
 
 def prepare_imagenet(
     root: Path,
+    *,
     split: Literal["train", "val"] = "train",
-    network_imagenet_dir: Path = Path("/network/datasets/imagenet"),
+    network_imagenet_dir: Path,
 ) -> None:
     """Custom preparation function for ImageNet, using @obilaniu's tar magic in Python form.
 

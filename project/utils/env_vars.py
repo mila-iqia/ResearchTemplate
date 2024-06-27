@@ -21,6 +21,12 @@ NETWORK_DIR = (
     if (_network_dir := Path("/network")).exists()
     else None
 )
+"""The (read-only) network directory that contains datasets/weights/etc.
+
+todo: adapt this for the DRAC clusters.
+
+When running outside of the mila/DRAC clusters, this will be `None`, but can be mocked by setting the `NETWORK_DIR` environment variable.
+"""
 
 REPO_ROOTDIR = Path(__file__).parent
 for level in range(5):

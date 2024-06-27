@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 import gdown
 import numpy as np
@@ -19,7 +19,7 @@ from torchvision.transforms import v2 as transforms
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, SCRATCH
-from project.utils.types import C, H, StageStr, W
+from project.utils.types import C, H, W
 
 logger = getLogger(__name__)
 
@@ -233,11 +233,8 @@ class ImageNet32DataModule(VisionDataModule):
         """Saves files to data_dir."""
         super().prepare_data()
 
-    def setup(self, stage: StageStr | None = None) -> None:
-        """Creates train, val, and test dataset."""
-        if stage not in ["fit", "validate", "val", "test", None]:
-            raise ValueError(f"Invalid stage: {stage}")
-
+    def setup(self, stage: Literal["fit", "validate", "test", "predict"] | None = None) -> None:
+        # """Creates train, val, and test dataset."""
         if stage:
             logger.debug(f"Setting up for stage {stage}")
         else:
@@ -269,7 +266,7 @@ class ImageNet32DataModule(VisionDataModule):
                 self.dataset_train = self._split_dataset(base_dataset_train, train=True)
                 self.dataset_val = self._split_dataset(base_dataset_valid, train=False)
 
-        if stage in ["test", None]:
+        if stage in ["test", "predict", None]:
             test_transforms = self.test_transforms or self.default_transforms()
             self.dataset_test = self.dataset_cls(
                 self.data_dir, train=False, transform=test_transforms, **self.EXTRA_ARGS

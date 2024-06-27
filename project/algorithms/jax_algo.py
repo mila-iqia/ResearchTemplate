@@ -6,9 +6,6 @@ from typing import Concatenate, Literal
 
 import flax.linen
 import jax
-import lightning
-import lightning.pytorch
-import lightning.pytorch.callbacks
 import rich
 import rich.logging
 import torch
@@ -16,10 +13,12 @@ import torch.distributed
 from lightning import Callback, Trainer
 from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
-from project.algorithms.bases.algorithm import Algorithm
+from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.datamodules.image_classification.base import ImageClassificationDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
@@ -196,11 +195,13 @@ def main():
     logging.basicConfig(
         level=logging.INFO, format="%(message)s", handlers=[rich.logging.RichHandler()]
     )
+    from lightning.pytorch.callbacks import RichProgressBar
+
     trainer = Trainer(
         devices="auto",
         max_epochs=10,
         accelerator="auto",
-        callbacks=[lightning.pytorch.callbacks.RichProgressBar()],
+        callbacks=[RichProgressBar()],
     )
     datamodule = MNISTDataModule(num_workers=4, batch_size=512)
     network = CNN(num_classes=datamodule.num_classes)

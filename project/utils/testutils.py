@@ -27,7 +27,7 @@ from torch import Tensor, nn
 from torch.optim import Optimizer
 
 from project.configs import Config
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
@@ -35,7 +35,9 @@ from project.experiment import instantiate_trainer
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_attr, get_outer_class
 from project.utils.types import PhaseStr
-from project.utils.types.protocols import DataModule
+from project.utils.types.protocols import (
+    DataModule,
+)
 from project.utils.utils import get_device
 
 logger = get_logger(__name__)
@@ -386,7 +388,8 @@ def run_for_all_configs_in_group(
             k: default_marks_for_config_name.get(k, [])
             for k in get_all_configs_in_group(group_name)
         }
-
+    # Parametrize the fixture (e.g. datamodule_name) indirectly, which will make it take each group
+    # member (e.g. datamodule config name), each with a parameterized mark.
     return pytest.mark.parametrize(
         f"{group_name}_name",
         [
@@ -624,7 +627,7 @@ def assert_no_nans_in_params_or_grads(module: nn.Module):
 
 @contextlib.contextmanager
 def fork_rng():
-    with torch.random.fork_rng():
+    with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
         random_state = random.getstate()
         np_random_state = np.random.get_state()
         yield

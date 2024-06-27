@@ -1,6 +1,6 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import Any, Required
+from typing import NotRequired, Required, TypedDict, override
 
 import torch
 import torchmetrics
@@ -8,18 +8,20 @@ from lightning import LightningModule, Trainer
 from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
 
-from project.algorithms.bases.algorithm import Algorithm, BatchType
-from project.algorithms.bases.image_classification import StepOutputDict
+from project.algorithms.algorithm import Algorithm, BatchType
 from project.algorithms.callbacks.callback import Callback
-from project.utils.types import PhaseStr, StageStr
+from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
 
 logger = get_logger(__name__)
 
 
-class ClassificationOutputs(StepOutputDict):
+class ClassificationOutputs(TypedDict, total=False):
     """The dictionary format that is minimally required to be returned from
     `training/val/test_step` for classification algorithms."""
+
+    loss: NotRequired[torch.Tensor | float]
+    """The loss at this step."""
 
     logits: Required[Tensor]
     """The un-normalized logits."""
@@ -78,11 +80,12 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
     def _get_metric(pl_module: LightningModule, name: str):
         return getattr(pl_module, name)
 
+    @override
     def setup(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, ClassificationOutputs, Any],
-        stage: StageStr,
+        pl_module: Algorithm[BatchType, ClassificationOutputs],
+        stage: PhaseStr,
     ) -> None:
         if self.disabled:
             return
@@ -101,10 +104,11 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         num_classes = datamodule.num_classes
         self.add_metrics_to(pl_module, num_classes=num_classes)
 
+    @override
     def on_shared_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, ClassificationOutputs, Any],
+        pl_module: Algorithm[BatchType, ClassificationOutputs],
         outputs: ClassificationOutputs,
         batch: BatchType,
         batch_index: int,
@@ -149,7 +153,6 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         accuracy(probs, y)
         top5_accuracy(probs, y)
         prog_bar = phase == "train"
-
         pl_module.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
         pl_module.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
 

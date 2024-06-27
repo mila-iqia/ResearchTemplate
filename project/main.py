@@ -14,7 +14,7 @@ from lightning import LightningDataModule
 from omegaconf import DictConfig
 
 from project.configs.config import Config
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.experiment import Experiment, setup_experiment

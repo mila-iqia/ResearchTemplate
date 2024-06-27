@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from typing import Any
 
+import torch
 from hydra_zen import instantiate
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor
@@ -18,29 +19,29 @@ from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.bases.image_classification import (
+from project.algorithms.algorithm import Algorithm
+from project.algorithms.callbacks.classification_metrics import (
+    ClassificationMetricsCallback,
     ClassificationOutputs,
-    ImageClassificationAlgorithm,
 )
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.types import PhaseStr
-from project.utils.types.protocols import Module
 
 logger = getLogger(__name__)
 
 
-class ExampleAlgorithm(ImageClassificationAlgorithm):
+class ExampleAlgorithm(Algorithm):
     """Example algorithm for image classification."""
 
     # TODO: Make this less specific to Image classification once we add other supervised learning
     # settings.
 
     @dataclass
-    class HParams(ImageClassificationAlgorithm.HParams):
+    class HParams(Algorithm.HParams):
         """Hyper-Parameters of the baseline model."""
 
         # Arguments to be passed to the LR scheduler.
@@ -68,16 +69,23 @@ class ExampleAlgorithm(ImageClassificationAlgorithm):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: Module[[Tensor], Tensor],
+        network: torch.nn.Module,
         hp: ExampleAlgorithm.HParams | None = None,
     ):
-        super().__init__(datamodule=datamodule, network=network, hp=hp)
-        self.datamodule: ImageClassificationDataModule
-        self.hp: ExampleAlgorithm.HParams
+        super().__init__()
+        self.datamodule = datamodule
+        self.network = network
+        self.hp = hp or self.HParams()
+
         self.automatic_optimization = True
 
-        # Initialize any lazy weights.
+        # Used by PL to compute the input/output shapes of the network.
+        self.example_input_array = torch.zeros(
+            (datamodule.batch_size, *datamodule.dims), device=self.device
+        )
+        # Initialize any lazy weights. Necessary for distributed training and to infer shapes.
         _ = self.network(self.example_input_array)
+        # Save hyper-parameters.
         self.save_hyperparameters({"hp": dataclasses.asdict(self.hp)})
 
     def forward(self, input: Tensor) -> Tensor:
@@ -92,20 +100,10 @@ class ExampleAlgorithm(ImageClassificationAlgorithm):
     ) -> ClassificationOutputs:
         x, y = batch
         logits = self(x)
-        # reduction=none to get the proper gradients in a backward pass when using multiple gpus.
-        loss = F.cross_entropy(logits, y, reduction="none")
+        loss = F.cross_entropy(logits, y, reduction="mean")
         self.log(f"{phase}/loss", loss.detach().mean())
-
-        # probs = torch.softmax(logits, -1)
-        # accuracy = getattr(self, f"{phase}_accuracy")
-        # top5_accuracy = getattr(self, f"{phase}_top5_accuracy")
-
-        # # TODO: It's a bit confusing, not sure if this is the right way to use this:
-        # accuracy(probs, y)
-        # top5_accuracy(probs, y)
-        # prog_bar = phase == "train"
-        # self.log(f"{phase}/accuracy", accuracy, prog_bar=prog_bar, sync_dist=True)
-        # self.log(f"{phase}/top5_accuracy", top5_accuracy, prog_bar=prog_bar, sync_dist=True)
+        acc = logits.detach().argmax(-1).eq(y).float().mean()
+        self.log(f"{phase}/accuracy", acc)
         return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self) -> dict:
@@ -128,7 +126,9 @@ class ExampleAlgorithm(ImageClassificationAlgorithm):
         return optimizers
 
     def configure_callbacks(self) -> list[Callback]:
-        callbacks: list[Callback] = super().configure_callbacks()
+        callbacks: list[Callback] = [
+            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+        ]
         if self.hp.early_stopping_patience != 0:
             # If early stopping is enabled, add a PL Callback for it:
             callbacks.append(

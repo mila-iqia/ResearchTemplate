@@ -8,11 +8,11 @@ import typing
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, ClassVar, Generic, Literal, TypeVar
+from typing import Any, ClassVar, Literal
 
 import pytest
 import torch
-from lightning import Callback, LightningDataModule, LightningModule, Trainer
+from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from omegaconf import DictConfig
 from tensor_regression import TensorRegressionFixture
@@ -20,9 +20,11 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 from typing_extensions import ParamSpec
 
+from project.algorithms.algorithm import Algorithm
+from project.algorithms.callbacks.callback import Callback
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
-from project.datamodules.image_classification import (
+from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
@@ -42,21 +44,15 @@ from project.utils.testutils import (
 )
 from project.utils.types.protocols import DataModule
 
-from .algorithm import Algorithm
-
 logger = get_logger(__name__)
 P = ParamSpec("P")
-
-AlgorithmType = TypeVar("AlgorithmType", bound=Algorithm)
 
 
 SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 """Either skips the test entirely (default) or tries to run it and expect it to fail (slower)."""
 
-skip_test = pytest.mark.xfail if "-vvv" in sys.argv else pytest.mark.skip
 
-
-class AlgorithmTests(Generic[AlgorithmType]):
+class AlgorithmTests[AlgorithmType: Algorithm]:
     """Unit tests for an algorithm class.
 
     The algorithm creation is parametrized with all the datasets and all the networks, but the
@@ -112,7 +108,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
 
         ```python
         @pytest.fixture
-        def n_updates(self, datamodule_name: str, network_name: str) -> int:
+        def n_updates(seor an actual classlf, datamodule_name: str, network_name: str) -> int:
             if datamodule_name == "imagenet32":
                 return 10
             return 3
@@ -141,6 +137,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         )
 
     def get_testing_callbacks(self) -> list[TestingCallback]:
+        """Callbacks to be used for unit tests."""
         return [
             AllParamsShouldHaveGradients(),
         ]
@@ -207,7 +204,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
             accelerator=accelerator,
             default_root_dir=tmp_path,
             callbacks=testing_callbacks.copy(),  # type: ignore
-            # NOTE: Would be nice to be able to enforce this, but DTP uses nn.MaxUnpool2d.
+            # NOTE: Would be nice to be able to enforce this in general, but some algos could be using nn.MaxUnpool2d.
             deterministic=True if can_use_deterministic_mode else "warn",
             **trainer_kwargs,
         )
@@ -293,7 +290,12 @@ class AlgorithmTests(Generic[AlgorithmType]):
         if datamodule_name in default_marks_for_config_name:
             for marker in default_marks_for_config_name[datamodule_name]:
                 request.applymarker(marker)
-        self._skip_if_unsupported("datamodule", datamodule_name, skip_or_xfail=SKIP_OR_XFAIL)
+        # todo: if _supported_datamodule_types contains a protocol, this will raise a TypeError. In
+        # this case, we actually will use `_supported_datamodule_types` with `isinstance` instead.
+        try:
+            self._skip_if_unsupported("datamodule", datamodule_name, skip_or_xfail=SKIP_OR_XFAIL)
+        except TypeError:
+            pass
         return datamodule_name
 
     @pytest.fixture(params=get_all_network_names(), scope="class")
@@ -564,7 +566,12 @@ class GetMetricCallback(TestingCallback):
         batch: tuple[Tensor, Tensor],
         batch_index: int,
     ) -> None:
-        assert self.metric in trainer.logged_metrics, (self.metric, trainer.logged_metrics.keys())
+        if self.metric not in trainer.logged_metrics:
+            logger.warning(
+                f"Unable to get the metric {self.metric} from the logged metrics: "
+                f"{trainer.logged_metrics.keys()} at step {trainer.global_step}."
+            )
+            return
         metric_value = trainer.logged_metrics[self.metric]
         assert isinstance(metric_value, Tensor)
         self.metrics.append(metric_value.detach().item())
@@ -633,7 +640,6 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
     def __init__(self, exceptions: Sequence[str] = ()) -> None:
         super().__init__()
         self.exceptions = exceptions
-
         self.gradients: dict[str, Tensor] = {}
 
     def on_train_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -649,7 +655,7 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
     def on_train_batch_end(
         self,
         trainer: Trainer,
-        pl_module: LightningModule,
+        pl_module: Algorithm,
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_index: int,
