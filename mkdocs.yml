@@ -6,13 +6,17 @@ repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 theme: readthedocs
 nav:
   - Home: index.md
-  - install.md
+  - intro.md
   - examples.md
+  - install.md
+  - tests.md
   - related.md
+  - help.md
+  - contributing.md
 markdown_extensions:
   - toc:
       permalink: "#"
-      toc_depth: 2
+      toc_depth: 3
 
 # todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
 #   - admonition
