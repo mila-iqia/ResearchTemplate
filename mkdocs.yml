@@ -1,0 +1,4 @@
+site_name: Research Project Template
+nav:
+  - Home: index.md
+  - Installation: install.md
