@@ -74,7 +74,7 @@
 		// FIXME: This assumes that either the NETWORK_DIR environment variable is set on the host, or
 		// that the /network directory exists.
 		"source=${localEnv:NETWORK_DIR:/network},target=/network,type=bind,readonly",
-		// Mount a /tmp on the host machine to /tmp/slurm_tmpdir in the container.
+		// Mount $SLURM_TMPDIR on the host machine to /tmp/slurm_tmpdir in the container.
 		// note: there's also a SLURM_TMPDIR env variable set to /tmp/slurm_tmpdir in the container.
 		// NOTE: this assumes that either $SLURM_TMPDIR is set on the host machine (e.g. a compute node)
 		// or that `/tmp/slurm_tmpdir` exists on the host machine.
@@ -89,7 +89,7 @@
 	// doesn't fail.
 	"initializeCommand": {
 		"create pdm install cache": "mkdir -p ${SCRATCH?need the SCRATCH environment variable to be set.}/.cache/pdm",      // todo: put this on $SCRATCH on the host (e.g. compute node)
-		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR?need the SLURM_TMPDIR environment variable to be set.}"  // this is fine on compute nodes
+		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}"  // this is fine on compute nodes
 	},
 	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pdm to
 	// .cache/pdm in the container. Therefore, here I'm making a symlink from ~/.cache/pdm to
