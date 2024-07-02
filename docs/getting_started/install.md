@@ -15,38 +15,37 @@ You need to have [Conda](https://docs.conda.io/en/latest/) installed on your mac
 
 1. Clone the repository and navigate to the root directory:
 
-```bash
-git clone https://www.github.com/mila-iqia/ResearchTemplate
-cd ResearchTemplate
-```
+    ```bash
+    git clone https://www.github.com/mila-iqia/ResearchTemplate
+    cd ResearchTemplate
+    ```
 
-1. Create a conda environment
+2. Create a conda environment
 
-```bash
-conda create -n research_template python=3.12
-conda activate research_template
-```
+    ```bash
+    conda create -n research_template python=3.12
+    conda activate research_template
+    ```
 
-```
-Notes:
+    Notes:
 
-- If you don't Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
-- If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
-<!-- TODO: - If you're on the `mila` cluster, you can run this setup script: (...) -->
-```
+    - If you don't Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
+    - If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
 
-1. Install the package using pip:
+    <!-- TODO: - If you're on the `mila` cluster, you can run this setup script: (...) -->
 
-```bash
-pip install -e .
-```
+3. Install the package using pip:
 
-Optionally, you can also install the package using [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or change the dependencies later on:
+    ```bash
+    pip install -e .
+    ```
 
-```bash
-pip install pdm
-pdm install
-```
+    Optionally, you can also install the package using [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or change the dependencies later on:
+
+    ```bash
+    pip install pdm
+    pdm install
+    ```
 
 ## Using a development container
 
@@ -54,20 +53,20 @@ This repo provides a [Devcontainer](https://code.visualstudio.com/docs/remote/co
 
 1. Setup Docker on your local machine
 
-On an Linux machine where you have root access, you can install Docker using the following commands:
+    On an Linux machine where you have root access, you can install Docker using the following commands:
 
-```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-```
+    ```bash
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    ```
 
-On Windows or Mac, follow [these installation instructions](https://code.visualstudio.com/docs/remote/containers#_installation)
+    On Windows or Mac, follow [these installation instructions](https://code.visualstudio.com/docs/remote/containers#_installation)
 
-1. (optional) Install the [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to use your local machine's GPU(s).
+2. (optional) Install the [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to use your local machine's GPU(s).
 
-2. Install the [Dev Containers extension](vscode:extension/ms-vscode-remote.remote-containers) for Visual Studio Code.
+3. Install the [Dev Containers extension](vscode:extension/ms-vscode-remote.remote-containers) for Visual Studio Code.
 
-3. When opening repository in Visual Studio Code, you should be prompted to reopen the repository in a container:
+4. When opening repository in Visual Studio Code, you should be prompted to reopen the repository in a container:
 
 ![VsCode popup image](https://github.com/mila-iqia/ResearchTemplate/assets/13387299/37d00ce7-1214-44b2-b1d6-411ee286999f)
 

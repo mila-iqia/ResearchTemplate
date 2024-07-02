@@ -24,8 +24,8 @@ You are welcome (and encouraged) to use other similar templates which, at the ti
 - A comprehensive suite of automated tests for new algorithms, datasets and networks
 - Automatically creates Yaml Schemas for your Hydra config files (as soon as #7 is merged)
 
-This template is geared specifically for ML researchers that run their jobs on SLURM clusters.
-A particular emphasis  for development specifically with a SLURM cluster, and more particularly still, with the Mila and DRAC clusters in mind. The target audience is (currently) limited to Mila researchers, but there's no reason why this
+This template is aimed for ML researchers that run their jobs on SLURM clusters.
+The target audience is researchers and students at [Mila](https://mila.quebec). This template should still be useful for others outside of Mila that use PyTorch-Lightning and Hydra.
 
 ## Main concepts
 
