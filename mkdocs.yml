@@ -1,26 +1,10 @@
-site_name: Research Project Template
-site_description: A project template and directory structure for Python data science projects.
+site_name: Research Project Template (wip)
+site_description: A project template and directory structure for Python data science projects. (Work-in-Progress)
 site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
-theme: material
-# nav:
-#   - Home: index.md
-#   # see https://github.com/lukasgeiter/mkdocs-awesome-pages-plugin?tab=readme-ov-file#rest
-#   - ... | overview/*
-#   - ... | getting_started/*
-#   - reference.md
-#   - ... | reference/*
 
-#   # - examples.md
-#   # - install.md
-#   # - api_reference.md
-#   - ...
-#   # - reference.md
-#   - tests.md
-#   - related.md
-#   - help.md
-#   - contributing.md
+theme: material
 markdown_extensions:
   - toc:
       permalink: "#"
