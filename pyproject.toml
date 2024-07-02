@@ -64,6 +64,7 @@ dev = [
     "black>=24.4.2",
     "mkdocs-awesome-pages-plugin>=2.9.2",
     "mkdocs-literate-nav>=0.6.1",
+    "mkdocs-material>=9.5.28",
 ]
 
 [[tool.pdm.source]]
