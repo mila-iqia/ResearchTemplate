@@ -76,7 +76,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - run: pip install pdm
     - name: Install dependencies
-      run: pdm install
+      run: pdm config install.cache true && pdm install
 
     - name: Test with pytest
       run: pdm run pytest -v --cov=project --cov-report=xml --cov-append
