@@ -128,7 +128,7 @@ jobs:
         path: ./coverage.xml
 
 
-      
+
   # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
   upload-coverage-codecov:
     needs: [local_integration_tests]
