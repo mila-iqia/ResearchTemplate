@@ -17,7 +17,7 @@ This project makes use of the following libraries:
 
 - [Hydra](https://hydra.cc/) is used to configure the project. It allows you to define configuration files and override them from the command line.
 - [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) is used to as the training framework. It provides a high-level interface to organize ML research code.
-    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as is shown in the [Jax example](examples/examples.md#using-jax) 🔥
+    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as is shown in the [Jax example](examples/jax.md) 🔥
 - [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
 - [pytest](https://docs.pytest.org/en/stable/) is used for testing.
 
