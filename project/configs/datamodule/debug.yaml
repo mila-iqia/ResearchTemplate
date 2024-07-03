@@ -1,0 +1,24 @@
+# _target_: lightning.pytorch.core.LightningDataModule.from_datasets
+_target_: project.configs.datamodule.from_datasets
+train_dataset:
+  _target_: torchvision.datasets.FakeData
+  size: 1000
+  image_size: ${..dims}
+  num_classes: ${..num_classes}
+  transform:
+    _target_: torchvision.transforms.Compose
+    transforms:
+    # transforms.Compose(
+    #         [transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]
+    #     )
+    - _target_: torchvision.transforms.v2.ToImage
+    - _target_: torchvision.transforms.v2.ToDtype
+      dtype: ${get:torch.float32}
+      scale: true
+val_dataset: ${.train_dataset}
+batch_size: 32
+num_classes: 10
+dims:
+- 3
+- 224
+- 224

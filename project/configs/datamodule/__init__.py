@@ -1,7 +1,9 @@
+import importlib
 from logging import getLogger as get_logger
 from pathlib import Path
 
 from hydra_zen import store
+from lightning import LightningDataModule
 
 from project.utils.env_vars import NETWORK_DIR
 
@@ -36,6 +38,25 @@ datamodule_store = store(group="datamodule")
 #     drop_last: bool = False
 
 #     __call__ = instantiate
+
+
+def just(object_path: str):
+    parts = object_path.split(".")
+    mod = importlib.import_module(parts[0])
+    for part in parts[1:]:
+        mod = getattr(mod, part)
+    return mod
+
+
+def from_datasets(
+    *args, num_classes: int | None = None, dims: tuple[int, ...] | None = None, **kwargs
+):
+    datamodule = LightningDataModule.from_datasets(*args, **kwargs)
+    if num_classes is not None:
+        datamodule.num_classes = num_classes  # type: ignore
+    if dims is not None:
+        datamodule.dims = dims  # type: ignore
+    return datamodule
 
 
 # datamodule_store(VisionDataModuleConfig, name="vision")

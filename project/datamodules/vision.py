@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import inspect
 import os
-from abc import abstractmethod
 from collections.abc import Callable
+from functools import cached_property
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import ClassVar, Concatenate, Literal
@@ -111,6 +111,15 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.valid_kwargs["train"] = True
             self.test_kwargs["train"] = False
 
+    @cached_property
+    def dims(self) -> tuple[C, H, W]:
+        dims_from_class = getattr(type(self), "dims", None)
+        if dims_from_class is not None:
+            return dims_from_class
+        if self.dataset_train is not None:
+            return self.dataset_train[0][0].shape
+        raise ValueError("Could not infer dims from the class or the dataset.")
+
     def prepare_data(self) -> None:
         """Saves files to data_dir."""
         # Call with `train=True` and `train=False` if there is such an argument.
@@ -183,9 +192,11 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
 
         return splits
 
-    @abstractmethod
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
+        return transforms.Compose(
+            [transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]
+        )
 
     def train_dataloader[**P](
         self,

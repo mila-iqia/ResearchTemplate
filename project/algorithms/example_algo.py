@@ -78,10 +78,10 @@ class ExampleAlgorithm(Algorithm):
         self.hp = hp or self.HParams()
 
         self.automatic_optimization = True
-
+        self.datamodule.batch_size = self.hp.batch_size
         # Used by PL to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
-            (datamodule.batch_size, *datamodule.dims), device=self.device
+            (self.hp.batch_size, *datamodule.dims), device=self.device
         )
         # Initialize any lazy weights. Necessary for distributed training and to infer shapes.
         _ = self.network(self.example_input_array)

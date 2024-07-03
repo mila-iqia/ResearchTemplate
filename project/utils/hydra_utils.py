@@ -175,11 +175,27 @@ def register_instance_attr_resolver(instantiated_objects_cache: dict[str, Any]) 
     )
 
 
+def get(object_path: str):
+    parts = object_path.split(".")
+    mod = importlib.import_module(parts[0])
+    for part in parts[1:]:
+        mod = getattr(mod, part)
+    return mod
+
+
+def register_get_resolver() -> None:
+    OmegaConf.register_new_resolver(
+        "get",
+        get,
+    )
+
+
 def resolve_dictconfig(dict_config: DictConfig) -> Config:
     # Important: Register this fancy little resolver here so we can get attributes of the
     # instantiated objects, not just the configs!
     instantiated_objects_cache: dict[str, Any] = {}
     register_instance_attr_resolver(instantiated_objects_cache)
+    register_get_resolver()
     # Convert the "raw" DictConfig (which uses the `Config` class to define it's structure)
     # into an actual `Config` object:
     config = OmegaConf.to_object(dict_config)

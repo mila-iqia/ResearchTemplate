@@ -68,7 +68,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
     if cutoff_time is not None:
         if config.getoption("--slow"):
             raise RuntimeError(
-                "Can't use both --shorter-than (a cutoff time) and --slow (also run slow tests) since slow tests have no cutoff time!"
+                "Can't use both --shorter-than (a cutoff time) and --slow (also run slow tests) "
+                "since slow tests have no cutoff time!"
             )
 
     # This -m flag could also be something more complicated like 'fast and not slow', but
