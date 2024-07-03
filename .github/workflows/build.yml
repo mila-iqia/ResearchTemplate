@@ -94,26 +94,32 @@ jobs:
   launch-slurm-actions-runner:
     needs: [local_integration_tests]
     runs-on: self-hosted
+    strategy:
+      max-parallel: 5
+      matrix:
+        cluster: ['mila'] #, 'narval', 'beluga']
     steps:
       - name: Copy job script to the cluster
-        run: scp actions-runner-job.sh mila
+        run: scp actions-runner-job.sh ${{ matrix.cluster }}
 
       - name: Launch Slurm Actions Runner
-        run: ssh mila sbatch actions-runner-job.sh
+      # todo: for DRAC clusters, the account needs to be set somehow.
+        run: ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch $HOME/actions-runner-job.sh'
 
   slurm_integration_tests:
     needs: [local_integration_tests]
-    runs-on: [self-hosted, mila]
+    runs-on: [self-hosted, "${{ matrix.cluster }}"]
     strategy:
-      max-parallel: 1
+      max-parallel: 5
       matrix:
-        python-version: ['3.12']
+        # todo: this should be tied to the same setting in the `launch-slurm-actions-runner` job.
+        cluster: ['mila'] #, 'narval', 'beluga']
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.12
     - run: pip install pdm
     - name: Install dependencies
       run: pdm install
@@ -127,10 +133,8 @@ jobs:
     - name: Store coverage report as an artifact
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-reports-integration-tests-${{ matrix.python-version }}
+        name: coverage-reports-slurm-integration-tests-${{ matrix.cluster }}
         path: ./coverage.xml
-
-
 
   # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
   upload-coverage-codecov:
