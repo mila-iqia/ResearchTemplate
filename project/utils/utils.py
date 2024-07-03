@@ -35,7 +35,6 @@ def log_once(message: str, level: int) -> None:
     """Logs a message once per logger instance. The message is logged at the specified level.
 
     Args:
-        logger: The logger instance to use.
         message: The message to log.
         level: The logging level to use.
     """
