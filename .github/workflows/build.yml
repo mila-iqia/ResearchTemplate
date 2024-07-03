@@ -95,8 +95,11 @@ jobs:
     needs: [local_integration_tests]
     runs-on: self-hosted
     steps:
+      - name: Copy job script to the cluster
+        run: scp actions-runner-job.sh mila
+
       - name: Launch Slurm Actions Runner
-        run: ssh mila "sbatch ~/repos/ResearchTemplate/actions-runner-job.sh"
+        run: ssh mila sbatch actions-runner-job.sh
 
   slurm_integration_tests:
     needs: [local_integration_tests]
