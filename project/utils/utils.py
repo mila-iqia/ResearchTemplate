@@ -214,10 +214,9 @@ def print_config(
     TAKEN FROM https://github.com/ashleve/lightning-hydra-template/blob/6a92395ed6afd573fa44dd3a054a603acbdcac06/src/utils/__init__.py#L56
 
     Args:
-        config (DictConfig): Configuration composed by Hydra.
-        print_order (Sequence[str], optional): Determines in what order config components are
-        printed.
-        resolve (bool, optional): Whether to resolve reference fields of DictConfig.
+        config: Configuration composed by Hydra.
+        print_order: Determines in what order config components are printed.
+        resolve: Whether to resolve reference fields of DictConfig.
     """
 
     style = "dim"

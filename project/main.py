@@ -1,3 +1,5 @@
+"""Main entry-point."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -35,6 +37,7 @@ project_name = Path(__file__).parent.name
     version_base="1.2",
 )
 def main(dict_config: DictConfig) -> dict:
+    """Main entry point for training a model."""
     print_config(dict_config, resolve=False)
     config: Config = resolve_dictconfig(dict_config)
 

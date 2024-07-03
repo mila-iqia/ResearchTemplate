@@ -1,0 +1,54 @@
+site_name: Research Project Template (wip)
+site_description: A project template and directory structure for Python data science projects. (Work-in-Progress)
+site_url: https://mila-iqia.github.io/ResearchTemplate/
+repo_url: https://www.github.com/mila-iqia/ResearchTemplate
+# edit_uri: edit/master/docs
+
+theme: material
+markdown_extensions:
+  - toc:
+      permalink: "#"
+      toc_depth: 3
+  - pymdownx.highlight
+  - pymdownx.magiclink
+  - pymdownx.superfences
+
+plugins:
+- search
+- literate-nav:
+    nav_file: SUMMARY.md
+- awesome-pages
+- gen-files:
+    # https://oprypin.github.io/mkdocs-gen-files/#usage
+    scripts:
+      - docs/generate_reference_docs.py
+- mkdocstrings:
+    handlers:
+      python:
+        import:
+        - https://docs.python-requests.org/en/master/objects.inv
+        options:
+          docstring_style: google
+          members_order: source
+          annotations_path: brief
+          show_docstring_attributes: true
+          modernize_annotations: true
+          show_source: false
+          show_submodules: false
+          separate_signature: true
+          signature_crossrefs: true
+          show_signature_annotations: true
+          allow_inspection: true
+
+# todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
+#   - admonition
+#   - pymdownx.details
+#   - pymdownx.superfences
+#   - pymdownx.tabbed:
+#       alternate_style: true
+#       slugify: !!python/object/apply:pymdownx.slugs.slugify
+#         kwds:
+#           case: lower
+#   - tables
+#   - toc:
+#       toc_depth: 2
