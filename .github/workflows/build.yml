@@ -4,6 +4,9 @@
 name: Python application
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
 
 permissions:
