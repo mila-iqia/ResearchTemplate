@@ -9,7 +9,7 @@ Please note: This is a Work-in-Progress. The goal is to make a first release by 
 
 This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
 
-Please follow the installation instructions [here](getting_started/install.md)
+For more context, see [this  introduction to the project.](overview/intro.md).
 
 ## Overview
 
