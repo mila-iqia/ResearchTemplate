@@ -103,7 +103,7 @@ jobs:
         cluster: ['mila'] #, 'narval', 'beluga']
     steps:
       - name: Copy job script to the cluster
-        run: scp actions-runner-job.sh ${{ matrix.cluster }}
+        run: "scp actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
 
       - name: Launch Slurm Actions Runner
       # todo: for DRAC clusters, the account needs to be set somehow.
