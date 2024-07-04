@@ -17,7 +17,7 @@ if [ ! -f "$SCRATCH/$archive" ]; then
         -L "https://github.com/actions/runner/releases/download/v2.317.0/$archive"
 fi
 # Make a symbolic link in SLURM_TMPDIR.
-ln --symbolic $SCRATCH/$archive $SLURM_TMPDIR/$archive
+ln --symbolic --force $SCRATCH/$archive $SLURM_TMPDIR/$archive
 
 cd $SLURM_TMPDIR
 
@@ -29,10 +29,14 @@ tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
 # NOTE: Could use this to get a token programmatically!
 # https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-an-organization
 
+# cluster=${SLURM_CLUSTER_NAME:-local}
+cluster=${SLURM_CLUSTER_NAME:-`hostname`}
+
+# https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/autoscaling-with-self-hosted-runners
+
 # Create the runner and configure it programmatically
-# todo: seems like --emphemeral isn't supported?
 ./config.sh --url https://github.com/mila-iqia/ResearchTemplate --token $TOKEN \
-    --unattended --replace --name $SLURM_CLUSTER_NAME --labels $SLURM_CLUSTER_NAME
+    --unattended --replace --name $cluster --labels $cluster --ephemeral
 
 # Launch the actions runner.
 ./run.sh

@@ -101,22 +101,30 @@ jobs:
       max-parallel: 5
       matrix:
         cluster: ['mila'] #, 'narval', 'beluga']
+    outputs:
+      job_id: ${{ steps.sbatch.outputs.stdout }}
     steps:
       - name: Copy job script to the cluster
-        run: "scp actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
+        run: "scp .github/actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
 
       - name: Launch Slurm Actions Runner
-      # todo: for DRAC clusters, the account needs to be set somehow.
-        run: ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch $HOME/actions-runner-job.sh'
+        id: sbatch
+        # TODO: for DRAC clusters, the account needs to be set somehow (and obviously not be hard-coded here).
+        # Output the job ID to a file so that the next step can use it.
+        # NOTE: Could also use the --wait flag to wait for the job to finish (and have this run at the same time as the other step).
+        run: ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --parsable $HOME/actions-runner-job.sh' >> "$GITHUB_OUTPUT"
 
+  # This step runs in a self-hosted Github Actions runner inside a SLURM job on the compute node of the cluster.
   slurm_integration_tests:
+    name: Run integration tests on the ${{ matrix.cluster }} cluster in job ${{ needs.launch-slurm-actions-runner.outputs.job_id}}
     needs: [launch-slurm-actions-runner]
     runs-on: ${{ matrix.cluster }}
     strategy:
       max-parallel: 5
       matrix:
-        # todo: this should be tied to the same setting in the `launch-slurm-actions-runner` job.
-        cluster: ['mila'] #, 'narval', 'beluga']
+        # TODO: this should be tied to the same setting in the `launch-slurm-actions-runner` job.
+        # cluster: ${{ needs.launch-slurm-actions-runner.strategy.matrix.cluster }}
+        cluster: ['mila']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.12
