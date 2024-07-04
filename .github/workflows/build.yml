@@ -44,12 +44,17 @@ jobs:
         python-version: ['3.12']
     steps:
     - uses: actions/checkout@v4
+    - name: Install poetry
+      # needs to be installed for the cache below to be used, which seems a bit weird (since the
+      # python version might be wrong?)
+      run: pip install poetry
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         cache: poetry
-    - run: pip install poetry
+
     - name: Install dependencies
       run: poetry install
     - name: Test with pytest (very fast)
@@ -76,6 +81,11 @@ jobs:
         python-version: ['3.12']
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install poetry
+      # See note above.
+      run: pip install poetry
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
