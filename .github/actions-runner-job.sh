@@ -71,7 +71,7 @@ TOKEN=`curl -L \
 
 # Create the runner and configure it programmatically
 ./config.sh --url https://github.com/mila-iqia/ResearchTemplate --token $TOKEN \
-    --unattended --replace --name $cluster --labels $cluster --ephemeral
+    --unattended --replace --name $cluster --labels $cluster $SLURM_JOB_ID --ephemeral
 
 # Launch the actions runner.
 ./run.sh
