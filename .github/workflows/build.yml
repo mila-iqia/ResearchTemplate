@@ -112,7 +112,9 @@ jobs:
         # TODO: for DRAC clusters, the account needs to be set somehow (and obviously not be hard-coded here).
         # Output the job ID to a file so that the next step can use it.
         # NOTE: Could also use the --wait flag to wait for the job to finish (and have this run at the same time as the other step).
-        run: ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --parsable $HOME/actions-runner-job.sh' >> "$GITHUB_OUTPUT"
+        run: |
+          job_id=`ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --parsable $HOME/actions-runner-job.sh'`
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
 
   # This step runs in a self-hosted Github Actions runner inside a SLURM job on the compute node of the cluster.
   slurm_integration_tests:
