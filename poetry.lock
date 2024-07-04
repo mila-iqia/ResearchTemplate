@@ -3540,6 +3540,22 @@ files = [
 ]
 
 [[package]]
+name = "tensor-regression"
+version = "0.0.4"
+description = "A small wrapper around pytest_regressions for Tensors"
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "tensor_regression-0.0.4-py3-none-any.whl", hash = "sha256:a638b11b6cc2e2f2543fc939cd4729917588894842e661c7b5e431c2cbde146f"},
+    {file = "tensor_regression-0.0.4.tar.gz", hash = "sha256:fc0a3d754e0a6f20b5764e371fefde7aae013374a0bab9887082e719f478c89c"},
+]
+
+[package.dependencies]
+numpy = ">=1.26.4,<2.0.0"
+pytest-regressions = ">=2.5.0,<3.0.0"
+torch = ">=2.0.0,<3.0.0"
+
+[[package]]
 name = "tensorboard"
 version = "2.17.0"
 description = "TensorBoard lets you watch Tensors Flow"
@@ -4039,4 +4055,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "3061fc1c4210daf3ab74dea8a2fe2a19059ace92e17ba84d8a42188cef0c5a9a"
+content-hash = "5f7a79c9aaf80ba241ae9aaf69b46e70b58f927b888bb38f42026598daacf86b"
