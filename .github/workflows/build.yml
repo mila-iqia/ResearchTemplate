@@ -110,8 +110,8 @@ jobs:
         run: ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch $HOME/actions-runner-job.sh'
 
   slurm_integration_tests:
-    needs: [local_integration_tests]
-    runs-on: [self-hosted, "${{ matrix.cluster }}"]
+    needs: [launch-slurm-actions-runner]
+    runs-on: ${{ matrix.cluster }}
     strategy:
       max-parallel: 5
       matrix:
