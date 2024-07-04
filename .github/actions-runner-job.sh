@@ -8,7 +8,13 @@
 #SBATCH --dependency=singleton
 #SBATCH --output=logs/runner_%j.out
 
+
 set -eof pipefail
+
+module --quiet purge
+# module load cuda/12.2.2
+
+
 
 archive="actions-runner-linux-x64-2.317.0.tar.gz"
 # Look for the actions-runner archive on $SCRATCH first. Download it if it doesn't exist.
@@ -45,6 +51,15 @@ cluster=${SLURM_CLUSTER_NAME:-`hostname`}
 #   "token": "XXXXX",
 #   "expires_at": "2020-01-22T12:13:35.123-08:00"
 # }
+
+
+if ! command -v jq &> /dev/null; then
+    # TODO: this assumes that ~/.local/bin is in $PATH, I'm not 100% sure that this is standard.
+    echo "jq is not installed. Installing it."
+    mkdir -p ~/.local/bin
+    wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -O ~/.local/bin/jq
+    chmod +x ~/.local/bin/jq
+fi
 
 TOKEN=`curl -L \
   -X POST \
