@@ -105,7 +105,7 @@ jobs:
       job_id: ${{ steps.sbatch.outputs.stdout }}
     steps:
       - name: Copy job script to the cluster
-        run: "scp .github/actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
+        run: "scp actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
 
       - name: Launch Slurm Actions Runner
         id: sbatch
