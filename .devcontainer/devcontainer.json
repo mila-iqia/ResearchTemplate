@@ -6,7 +6,7 @@
 	"image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-		"ghcr.io/devcontainers-contrib/features/pdm:2": {},
+		"ghcr.io/devcontainers-contrib/features/poetry:2": {"version": "1.8.3"},
 		"ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
 		"ghcr.io/devcontainers-contrib/features/apt-get-packages": {
 			"packages": "vim"
@@ -65,22 +65,26 @@
 	},
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
-		// Mount a directory which will contain the pdm installation cache (shared with the host machine).
-		// This will use $SCRATCH/.cache/pdm, otherwise
+		// Mount a directory which will contain the poetry installation cache (shared with the host machine).
 		// Mount a "$SCRATCH" directory in the host to ~/scratch in the container.
 		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
-		"source=${localEnv:SCRATCH}/.cache/pdm,target=/home/vscode/.pdm_install_cache,type=bind,consistency=cached",
+		// NOTE: Mounting the hosts's ~/.cache/pypoetry dir to ~/.poetry_cache in the container because
+		// it causes issues to try to map it to ~/.cache/pypoetry directly (since ~/.cache doesn't
+		// exist initially, it seems to cause some permission issues?). Later below we
+		// `mkdir -p ~/.cache` and make a symlink to from ~/.cache/pypoetry to ~/.poetry_cache.
+		"source=${localEnv:SCRATCH}/.cache/pypoetry,target=/home/vscode/.poetry_cache,type=bind,consistency=cached",
 		// Mount a /network to match the /network directory on the host.
 		// FIXME: This assumes that either the NETWORK_DIR environment variable is set on the host, or
 		// that the /network directory exists.
 		"source=${localEnv:NETWORK_DIR:/network},target=/network,type=bind,readonly",
 		// Mount $SLURM_TMPDIR on the host machine to /tmp/slurm_tmpdir in the container.
 		// note: there's also a SLURM_TMPDIR env variable set to /tmp/slurm_tmpdir in the container.
-		// NOTE: this assumes that either $SLURM_TMPDIR is set on the host machine (e.g. a compute node)
+		// This assumes that either $SLURM_TMPDIR is set on the host machine (e.g. a compute node)
 		// or that `/tmp/slurm_tmpdir` exists on the host machine.
 		"source=${localEnv:SLURM_TMPDIR:/tmp/slurm_tmpdir},target=/tmp,type=bind,consistency=cached",
 		// Mount the ssh directory on the host machine to the container.
 		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
+		
 	],
 	"runArgs": [
 		"--gpus",
@@ -90,28 +94,29 @@
 	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
 	// doesn't fail.
 	"initializeCommand": {
-		"create pdm install cache": "mkdir -p ${SCRATCH?need the SCRATCH environment variable to be set.}/.cache/pdm",      // todo: put this on $SCRATCH on the host (e.g. compute node)
+		"create the poetry install cache dir if needed": "mkdir -p ${SCRATCH?need the SCRATCH environment variable to be set.}/.cache/pypoetry",      // todo: put this on $SCRATCH on the host (e.g. compute node)
+		// Create the dirs so the mount above doesn't fail.
+		// Note: here we use /tmp/slurm_tmpdir if $SLURM_TMPDIR is not set. This is fine for Mila compute nodes. 
 		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}",  // this is fine on compute nodes
+		// Create the ssh cache dir where ssh multiplexing sockets will be placed (to reuse connections).
 		"create ssh cache dir": "mkdir -p ~/.cache/ssh"
 	},
-	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pdm to
-	// .cache/pdm in the container. Therefore, here I'm making a symlink from ~/.cache/pdm to
-	// ~/.pdm_install_cache so the ~/.cache directory is writeable by the container.
+	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pypoetry to
+	// .cache/pypoetry in the container. Therefore, here I'm making a symlink from ~/.cache/pypoetry to
+	// ~/.poetry_cache so the ~/.cache directory is writeable by the container.
 	"onCreateCommand": {
-		"setup_pdm_install_cache": "mkdir -p ~/.cache && ln -s /home/vscode/.pdm_install_cache /home/vscode/.cache/pdm",
+		"setup_pdm_install_cache": "mkdir -p ~/.cache && ln -s /home/vscode/.poetry_install_cache /home/vscode/.cache/pypoetry",
 		"pre-commit": "pre-commit install --install-hooks",
-		"setup_pdm_config": "pdm config install.cache true && pdm config venv.with_pip true && pdm config venv.in_project false"
+		"setup_pdm_config": "poetry config cache-dir /home/vscode/.poetry_cache && poetry config virtualenvs.in-project false "
 	},
 	"updateContentCommand": {
-		"pdm_install": "pdm install"
+		"pdm_install": "poetry install"
 	},
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "pip3 install --user -r requirements.txt",
 	"postCreateCommand": {
-		// NOTE: This sets up the python interpreter correctly, but the shell doesn't show the
-		// environment name, which isn't a big deal.
-		"setup_venv_shell": "pdm venv activate >> ~/.bash_aliases && chmod +x ~/.bash_aliases",
+		"setup_venv_shell": "echo \"source `poetry env info --path`/bin/activate\" >> ~/.bash_aliases && chmod +x ~/.bash_aliases",
 		// "pdm-pep-582": "pdm --pep582 >> ~/.bash_profile",
 		// "pdm": "pdm config install.cache false && pdm config venv.in_project false && pdm install",
 		// "pre-commit": "pre-commit install --install-hooks"

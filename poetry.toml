@@ -1,0 +1,3 @@
+cache-dir = "/home/vscode/.poetry_cache"
+[virtualenvs]
+in-project = false
