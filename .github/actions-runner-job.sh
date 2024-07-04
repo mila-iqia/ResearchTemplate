@@ -32,7 +32,27 @@ tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
 # cluster=${SLURM_CLUSTER_NAME:-local}
 cluster=${SLURM_CLUSTER_NAME:-`hostname`}
 
-# https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/autoscaling-with-self-hosted-runners
+# https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-a-repository
+# curl -L \
+#   -X POST \
+#   -H "Accept: application/vnd.github+json" \
+#   -H "Authorization: Bearer <YOUR-TOKEN>" \
+#   -H "X-GitHub-Api-Version: 2022-11-28" \
+#   https://api.github.com/repos/OWNER/REPO/actions/runners/registration-token
+
+# Example output:
+# {
+#   "token": "XXXXX",
+#   "expires_at": "2020-01-22T12:13:35.123-08:00"
+# }
+
+TOKEN=`curl -L \
+  -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer ${SH_TOKEN:?Need to set the SH_TOKEN environment variable}" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/mila-iqia/ResearchTemplate/actions/runners/registration-token | jq -r .token`
+
 
 # Create the runner and configure it programmatically
 ./config.sh --url https://github.com/mila-iqia/ResearchTemplate --token $TOKEN \
