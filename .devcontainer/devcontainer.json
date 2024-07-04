@@ -52,9 +52,9 @@
 				"ms-python.vscode-pylance",
 				"charliermarsh.ruff",
 				"GitHub.copilot",
-				"knowsuchagency.pdm-task-provider",
 				"GitHub.copilot-chat",
-				"mutantdino.resourcemonitor"
+				"mutantdino.resourcemonitor",
+				"tamasfe.even-better-toml"
 			]
 		}
 	},
@@ -105,22 +105,16 @@
 	// .cache/pypoetry in the container. Therefore, here I'm making a symlink from ~/.cache/pypoetry to
 	// ~/.poetry_cache so the ~/.cache directory is writeable by the container.
 	"onCreateCommand": {
-		"setup_pdm_install_cache": "mkdir -p ~/.cache && ln -s /home/vscode/.poetry_install_cache /home/vscode/.cache/pypoetry",
-		"pre-commit": "pre-commit install --install-hooks",
-		"setup_pdm_config": "poetry config cache-dir /home/vscode/.poetry_cache && poetry config virtualenvs.in-project false "
+		"Setup the poetry install cache": "mkdir -p ~/.cache && ln -s /home/vscode/.poetry_install_cache /home/vscode/.cache/pypoetry",
+		"Install pre-commit hooks": "pre-commit install --install-hooks"
 	},
 	"updateContentCommand": {
 		"pdm_install": "poetry install"
 	},
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
 	"postCreateCommand": {
-		"setup_venv_shell": "echo \"source `poetry env info --path`/bin/activate\" >> ~/.bash_aliases && chmod +x ~/.bash_aliases",
-		// "pdm-pep-582": "pdm --pep582 >> ~/.bash_profile",
-		// "pdm": "pdm config install.cache false && pdm config venv.in_project false && pdm install",
-		// "pre-commit": "pre-commit install --install-hooks"
-		// "activate_venv": "source .venv/bin/activate"
+		"Setup shell to use the venv": "echo \"source `poetry env info --path`/bin/activate\" >> ~/.bash_aliases && chmod +x ~/.bash_aliases",
 	}
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
