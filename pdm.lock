@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:9e1397c47b842e910d32a691bc3082a1bf8b4224e82c49e442d43c4f44e66e12"
+content_hash = "sha256:38b63d21f324b3175fbab149dc73a8788f919359b21e2bce5c7f226e27d99bfc"
 
 [[package]]
 name = "absl-py"
@@ -1313,7 +1313,7 @@ files = [
 
 [[package]]
 name = "jaxlib"
-version = "0.4.28+cuda12.cudnn89"
+version = "0.4.28"
 requires_python = ">=3.9"
 summary = "XLA library for JAX"
 groups = ["default"]
@@ -3210,16 +3210,18 @@ files = [
 
 [[package]]
 name = "tensor-regression"
-version = "0.0.2.post3.dev0"
-requires_python = "<4.0,>=3.11"
-git = "https://www.github.com/lebrice/tensor_regression"
-revision = "7b3a07ae924eaeacde6ebeade2efcd7f8ce526d5"
+version = "0.0.4"
+requires_python = "<4.0,>=3.10"
 summary = "A small wrapper around pytest_regressions for Tensors"
 groups = ["default", "dev"]
 dependencies = [
     "numpy<2.0.0,>=1.26.4",
     "pytest-regressions<3.0.0,>=2.5.0",
     "torch<3.0.0,>=2.0.0",
+]
+files = [
+    {file = "tensor_regression-0.0.4-py3-none-any.whl", hash = "sha256:a638b11b6cc2e2f2543fc939cd4729917588894842e661c7b5e431c2cbde146f"},
+    {file = "tensor_regression-0.0.4.tar.gz", hash = "sha256:fc0a3d754e0a6f20b5764e371fefde7aae013374a0bab9887082e719f478c89c"},
 ]
 
 [[package]]
@@ -3334,10 +3336,8 @@ files = [
 
 [[package]]
 name = "torch-jax-interop"
-version = "0.0.4.post7.dev0"
-requires_python = ">=3.11,<4.0"
-git = "https://www.github.com/lebrice/torch_jax_interop"
-revision = "3a4261f949d739cfe684280203137114b169e70e"
+version = "0.0.6"
+requires_python = "<4.0,>=3.10"
 summary = "Utility to convert Tensors from Jax to Torch and vice-versa"
 groups = ["default"]
 dependencies = [
@@ -3345,6 +3345,10 @@ dependencies = [
     "jax[cuda12]<0.5.0,>=0.4.28",
     "pytorch2jax<0.2.0,>=0.1.0",
     "torch<3.0.0,>=2.0.0",
+]
+files = [
+    {file = "torch_jax_interop-0.0.6-py3-none-any.whl", hash = "sha256:733a61abe56ce7003b046790d9ca8360da5c197802849895cac28837b2d8753a"},
+    {file = "torch_jax_interop-0.0.6.tar.gz", hash = "sha256:5a50b8144410a419ed57c735df0c9c7e6ae08430834de078b4cffd78d67d71fc"},
 ]
 
 [[package]]
