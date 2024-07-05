@@ -9,9 +9,9 @@
 #SBATCH --output=logs/runner_%j.out
 
 
-set -eof pipefail
+set -euo pipefail
 
-module --quiet purge
+# module --quiet purge
 # module load cuda/12.2.2
 
 
@@ -54,20 +54,25 @@ cluster=${SLURM_CLUSTER_NAME:-`hostname`}
 
 
 if ! command -v jq &> /dev/null; then
-    # TODO: this assumes that ~/.local/bin is in $PATH, I'm not 100% sure that this is standard.
-    echo "jq is not installed. Installing it."
-    mkdir -p ~/.local/bin
-    wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -O ~/.local/bin/jq
-    chmod +x ~/.local/bin/jq
+    echo "the jq command doesn't seem to be installed."
+
+    if ! test -f ~/.local/bin/jq; then
+        echo "jq is not found at ~/.local/bin/jq, downloading it."
+        # TODO: this assumes that ~/.local/bin is in $PATH, I'm not 100% sure that this is standard.
+        mkdir -p ~/.local/bin
+        wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -O ~/.local/bin/jq
+        chmod +x ~/.local/bin/jq
+    fi
 fi
+
+source ~/.bash_aliases
 
 TOKEN=`curl -L \
   -X POST \
   -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer ${SH_TOKEN:?Need to set the SH_TOKEN environment variable}" \
+  -H "Authorization: Bearer ${SH_TOKEN:?The SH_TOKEN env variable is not set}" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/mila-iqia/ResearchTemplate/actions/runners/registration-token | ~/local/bin/jq -r .token`
-
+  https://api.github.com/repos/mila-iqia/ResearchTemplate/actions/runners/registration-token | ~/.local/bin/jq -r .token`
 
 # Create the runner and configure it programmatically
 ./config.sh --url https://github.com/mila-iqia/ResearchTemplate --token $TOKEN \
