@@ -4,6 +4,9 @@
 name: Python application
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
 
 permissions:
@@ -61,7 +64,7 @@ jobs:
         name: coverage-reports-unit-tests-${{ matrix.platform }}-${{ matrix.python-version }}
         path: ./coverage.xml
 
-  integration_tests:
+  local_integration_tests:
     needs: [unit_tests]
     runs-on: self-hosted
     strategy:
@@ -91,9 +94,66 @@ jobs:
         name: coverage-reports-integration-tests-${{ matrix.python-version }}
         path: ./coverage.xml
 
+  launch-slurm-actions-runner:
+    needs: [local_integration_tests]
+    runs-on: self-hosted
+    strategy:
+      max-parallel: 5
+      matrix:
+        cluster: ['mila'] #, 'narval', 'beluga']
+    outputs:
+      job_id: ${{ steps.sbatch.outputs.stdout }}
+    steps:
+      - name: Copy job script to the cluster
+        run: "scp actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
+
+      - name: Launch Slurm Actions Runner
+        id: sbatch
+        # TODO: for DRAC clusters, the account needs to be set somehow (and obviously not be hard-coded here).
+        # Output the job ID to a file so that the next step can use it.
+        # NOTE: Could also use the --wait flag to wait for the job to finish (and have this run at the same time as the other step).
+        run: |
+          job_id=`ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --parsable $HOME/actions-runner-job.sh'`
+          echo "Submitted job $job_id on the ${{ matrix.cluster }} cluster!"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+
+  # This step runs in a self-hosted Github Actions runner inside a SLURM job on the compute node of the cluster.
+  slurm_integration_tests:
+    name: Run integration tests on the ${{ matrix.cluster }} cluster in job ${{ needs.launch-slurm-actions-runner.outputs.job_id}}
+    needs: [launch-slurm-actions-runner]
+    runs-on: ${{ matrix.cluster }}
+    strategy:
+      max-parallel: 5
+      matrix:
+        # TODO: this should be tied to the same setting in the `launch-slurm-actions-runner` job.
+        # cluster: ${{ needs.launch-slurm-actions-runner.strategy.matrix.cluster }}
+        cluster: ['mila']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+    - run: pip install pdm
+    - name: Install dependencies
+      run: pdm install
+
+    - name: Test with pytest
+      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append
+
+    # TODO: Re-enable this later
+    # - name: Test with pytest (only slow tests)
+    #   run: pdm run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+
+    - name: Store coverage report as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports-slurm-integration-tests-${{ matrix.cluster }}
+        path: ./coverage.xml
+
   # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
   upload-coverage-codecov:
-    needs: [integration_tests]
+    needs: [local_integration_tests, slurm_integration_tests]
     runs-on: ubuntu-latest
     name: Upload coverage reports to Codecov
     steps:
