@@ -84,7 +84,7 @@
 		"source=${localEnv:SLURM_TMPDIR:/tmp/slurm_tmpdir},target=/tmp,type=bind,consistency=cached",
 		// Mount the ssh directory on the host machine to the container.
 		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
-		
+
 	],
 	"runArgs": [
 		"--gpus",
@@ -96,7 +96,7 @@
 	"initializeCommand": {
 		"create the poetry install cache dir if needed": "mkdir -p ${SCRATCH?need the SCRATCH environment variable to be set.}/.cache/pypoetry",      // todo: put this on $SCRATCH on the host (e.g. compute node)
 		// Create the dirs so the mount above doesn't fail.
-		// Note: here we use /tmp/slurm_tmpdir if $SLURM_TMPDIR is not set. This is fine for Mila compute nodes. 
+		// Note: here we use /tmp/slurm_tmpdir if $SLURM_TMPDIR is not set. This is fine for Mila compute nodes.
 		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}",  // this is fine on compute nodes
 		// Create the ssh cache dir where ssh multiplexing sockets will be placed (to reuse connections).
 		"create ssh cache dir": "mkdir -p ~/.cache/ssh"
