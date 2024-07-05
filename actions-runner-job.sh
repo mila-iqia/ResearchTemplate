@@ -1,13 +1,18 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --gpus=rtx8000:1
+#SBATCH --gpus=1
 #SBATCH --time=00:30:00
 #SBATCH --dependency=singleton
 #SBATCH --output=logs/runner_%j.out
-
+#SBATCH --signal=B:TERM@60 # tells the controller to send SIGTERM to the job 1
+                            # min before its time ends to give it a chance for
+                            # better cleanup. If you cancel the job manually,
+                            # make sure that you specify the signal as TERM like
+                            # so `scancel --signal=TERM <jobid>`.
+                            # https://dhruveshp.com/blog/2021/signal-propagation-on-slurm/
 
 set -euo pipefail
 
