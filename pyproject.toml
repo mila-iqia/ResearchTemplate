@@ -60,3 +60,9 @@ enable = true
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
 build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.ruff]
+line-length = 99
+indent-width = 4
+# Add the pyupgrade and isort options in addition to the defaults.
+select = ["E4", "E7", "E9", "F", "I", "UP"]
