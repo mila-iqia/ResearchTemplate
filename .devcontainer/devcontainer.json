@@ -54,7 +54,8 @@
 				"GitHub.copilot",
 				"GitHub.copilot-chat",
 				"mutantdino.resourcemonitor",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
+				"zeshuaro.vscode-python-poetry"
 			]
 		}
 	},
