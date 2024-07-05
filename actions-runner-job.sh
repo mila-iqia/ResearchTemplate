@@ -66,7 +66,7 @@ TOKEN=`curl -L \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer ${SH_TOKEN:?Need to set the SH_TOKEN environment variable}" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/mila-iqia/ResearchTemplate/actions/runners/registration-token | jq -r .token`
+  https://api.github.com/repos/mila-iqia/ResearchTemplate/actions/runners/registration-token | ~/local/bin/jq -r .token`
 
 
 # Create the runner and configure it programmatically
