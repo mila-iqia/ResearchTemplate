@@ -81,18 +81,14 @@ jobs:
         python-version: ['3.12']
     steps:
     - uses: actions/checkout@v4
-
     - name: Install poetry
       # See note above.
       run: pip install poetry
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         cache: poetry
-    - name: Install poetry
-      run: pip install poetry
     - name: Install dependencies
       run: poetry install
 
@@ -145,16 +141,19 @@ jobs:
         cluster: ['mila']
     steps:
     - uses: actions/checkout@v4
+    - name: Install poetry
+      # See note above.
+      run: pip install poetry
     - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
         python-version: 3.12
-    - run: pip install pdm
+        cache: poetry
     - name: Install dependencies
-      run: pdm install
+      run: poetry install
 
     - name: Test with pytest
-      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append
+      run: poetry run pytest -v --cov=project --cov-report=xml --cov-append
 
     # TODO: Re-enable this later
     # - name: Test with pytest (only slow tests)
