@@ -66,3 +66,6 @@ line-length = 99
 indent-width = 4
 # Add the pyupgrade and isort options in addition to the defaults.
 lint.select = ["E4", "E7", "E9", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
