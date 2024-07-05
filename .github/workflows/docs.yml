@@ -22,7 +22,7 @@ jobs:
         run: poetry install
 
       - name: Deploy docs
-        run: mkdocs gh-deploy --force
+        run: poetry run mkdocs gh-deploy --force
         # note: Checking if we really need the one below:
         # uses: mhausenblas/mkdocs-deploy-gh-pages@1.9
         # # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme
