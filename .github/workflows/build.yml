@@ -144,6 +144,8 @@ jobs:
     - name: Install poetry
       # See note above.
       run: pip install poetry
+    - name: Setup the installation cache in $SCRATCH for Poetry
+      run: mkdir -p $SCRATCH/.cache && poetry config cache-dir $SCRATCH/.cache/pypoetry
     - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
