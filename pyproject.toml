@@ -53,6 +53,7 @@ mkdocs-awesome-pages-plugin = "^2.9.2"
 mkdocs-literate-nav = "^0.6.1"
 mkdocs-material = "^9.5.28"
 tensor-regression = "^0.0.4"
+pre-commit = "^3.7.1"
 
 [tool.poetry-dynamic-versioning]
 enable = true
