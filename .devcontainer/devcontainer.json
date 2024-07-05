@@ -106,11 +106,15 @@
 	// .cache/pypoetry in the container. Therefore, here I'm making a symlink from ~/.cache/pypoetry to
 	// ~/.poetry_cache so the ~/.cache directory is writeable by the container.
 	"onCreateCommand": {
+		"Setup poetry completions": "poetry completions bash >> ~/.bash_completion",
+		// todo: doesn't work, getting some permission issues: https://github.com/orgs/python-poetry/discussions/8182
+		// "setup dynamic versioning": "pipx run poetry self add poetry-dynamic-versioning[plugin] && pipx run poetry dynamic-versioning enable",
 		"Setup the poetry install cache": "mkdir -p ~/.cache && ln -s /home/vscode/.poetry_install_cache /home/vscode/.cache/pypoetry",
 		"Install pre-commit hooks": "pre-commit install --install-hooks"
 	},
 	"updateContentCommand": {
-		"pdm_install": "poetry install"
+		"pdm_install": "poetry install",
+		// "poetry dynamic versioning": "poetry dynamic-versioning"
 	},
 
 	// Use 'postCreateCommand' to run commands after the container is created.
