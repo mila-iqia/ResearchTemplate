@@ -1,5 +1,4 @@
 from . import algorithms, configs, datamodules, experiment, main, networks, utils
-from .algorithms import Algorithm
 from .configs import Config
 from .experiment import Experiment
 
@@ -14,7 +13,6 @@ __all__ = [
     "configs",
     "datamodules",
     "networks",
-    "Algorithm",
     "DataModule",
     "utils",
     # "ExampleAlgorithm",

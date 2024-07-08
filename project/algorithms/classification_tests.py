@@ -1,3 +1,17 @@
+"""Suite of example tests for classification algorithms.
+
+You can use this as a template to create tests for your own algorithm by inheriting from the class:
+
+```python
+
+from project.algorithms.classification_tests import ClassificationAlgorithmTests
+
+class TestMyAlgorithm(ClassificationAlgorithmTests[MyAlgorithm]):
+    algorithm_type = MyAlgorithm
+    algorithm_name: str = "my_algo"  # name of your algorithm's config.
+```
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,7 +23,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from project.algorithms.algorithm import Algorithm
-from project.algorithms.algorithm_test import (
+from project.algorithms.algorithm_tests import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
     MetricShouldImprove,
