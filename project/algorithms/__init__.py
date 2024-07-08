@@ -1,6 +1,6 @@
 from hydra_zen import builds, store
 
-from project.algorithms.jax_example import JaxAlgorithm
+from project.algorithms.jax_example import ExampleJaxAlgo
 from project.algorithms.no_op import NoOp
 
 from .algorithm import Algorithm
@@ -18,7 +18,7 @@ algorithm_store = store(group="algorithm")
 algorithm_store(ExampleAlgorithm.HParams(), name="example_algo")
 algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
 algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
-algorithm_store(JaxAlgorithm.HParams(), name="jax_algo")
+algorithm_store(ExampleJaxAlgo.HParams(), name="jax_example")
 
 algorithm_store.add_to_hydra_store()
 
@@ -26,5 +26,5 @@ __all__ = [
     "Algorithm",
     "ExampleAlgorithm",
     "ManualGradientsExample",
-    "JaxAlgorithm",
+    "ExampleJaxAlgo",
 ]

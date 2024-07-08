@@ -4,12 +4,12 @@ import flax
 import flax.linen
 import torch
 
-from project.algorithms.jax_example import JaxAlgorithm
+from project.algorithms.jax_example import ExampleJaxAlgo
 
 from .algorithm_test import AlgorithmTests
 
 
-class TestJaxAlgorithm(AlgorithmTests[JaxAlgorithm]):
+class TestExampleJaxAlgo(AlgorithmTests[ExampleJaxAlgo]):
     """This algorithm only works with Jax modules."""
 
     algorithm_name: ClassVar[str] = "jax_algo"

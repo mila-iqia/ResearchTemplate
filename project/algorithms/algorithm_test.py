@@ -53,7 +53,7 @@ SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 """Either skips the test entirely (default) or tries to run it and expect it to fail (slower)."""
 
 
-class AlgorithmTests[AlgorithmType: Algorithm]:
+class AlgorithmTests[AlgorithmType: LightningModule]:
     """Unit tests for an algorithm class.
 
     The algorithm creation is parametrized with all the datasets and all the networks, but the
