@@ -1,6 +1,6 @@
 from hydra_zen import builds, store
 
-from project.algorithms.jax_algo import JaxAlgorithm
+from project.algorithms.jax_example import JaxAlgorithm
 from project.algorithms.no_op import NoOp
 
 from .algorithm import Algorithm

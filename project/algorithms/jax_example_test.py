@@ -4,7 +4,7 @@ import flax
 import flax.linen
 import torch
 
-from project.algorithms.jax_algo import JaxAlgorithm
+from project.algorithms.jax_example import JaxAlgorithm
 
 from .algorithm_test import AlgorithmTests
 
