@@ -38,7 +38,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         self.disabled = False
 
     @classmethod
-    def attach_to(cls, algorithm: Algorithm, num_classes: int):
+    def attach_to(cls, algorithm: LightningModule, num_classes: int):
         callback = cls()
         callback.add_metrics_to(algorithm, num_classes=num_classes)
         return callback

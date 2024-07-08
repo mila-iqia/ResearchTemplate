@@ -29,6 +29,7 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.datamodules.vision import VisionDataModule
 from project.experiment import (
+    instantiate_algorithm,
     instantiate_datamodule,
     instantiate_network,
 )
@@ -421,8 +422,13 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
         return dict(datamodule=datamodule, network=copy.deepcopy(network), hp=hp)
 
     @pytest.fixture(scope="function")
-    def algorithm(self, algorithm_kwargs: dict) -> AlgorithmType:
-        return self.algorithm_cls(**algorithm_kwargs)
+    def algorithm(
+        self, experiment_config: Config, datamodule: DataModule, network: nn.Module
+    ) -> AlgorithmType:
+        algo = instantiate_algorithm(
+            experiment_config, datamodule=datamodule, network=copy.deepcopy(network)
+        )
+        return algo
 
     @property
     def algorithm_cls(self) -> type[AlgorithmType]:

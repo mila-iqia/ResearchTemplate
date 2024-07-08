@@ -13,7 +13,7 @@ import rich.logging
 import rich.traceback
 import torch
 from hydra.utils import instantiate
-from lightning import Callback, Trainer, seed_everything
+from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
 
@@ -208,7 +208,7 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
 
 def instantiate_algorithm(
     experiment_config: Config, datamodule: DataModule, network: nn.Module
-) -> Algorithm:
+) -> LightningModule:
     # Create the algorithm
     algo_config = experiment_config.algorithm
     if isinstance(algo_config, Algorithm):
@@ -229,9 +229,9 @@ def instantiate_algorithm(
         else:
             algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
 
-        if not isinstance(algorithm, Algorithm):
+        if not isinstance(algorithm, LightningModule):
             raise NotImplementedError(
-                f"The algorithm config didn't create an Algorithm instance:\n"
+                f"The algorithm config didn't create a LightningModule instance:\n"
                 f"{algo_config=}\n"
                 f"{algorithm=}"
             )
@@ -240,10 +240,13 @@ def instantiate_algorithm(
     if hasattr(algo_config, "_target_"):
         # A dataclass of some sort, with a _target_ attribute.
         algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
-        assert isinstance(algorithm, Algorithm)
+        assert isinstance(algorithm, LightningModule)
         return algorithm
 
     if not isinstance(algo_config, Algorithm.HParams):
+        if issubclass(algo_class := get_outer_class(type(algo_config)), LightningModule):
+            return algo_class(datamodule=datamodule, network=network, hp=algo_config)
+
         raise NotImplementedError(
             f"For now the algorithm config can either have a _target_ set to an Algorithm class, "
             f"or configure an inner Algorithm.HParams dataclass. Got:\n{algo_config=}"

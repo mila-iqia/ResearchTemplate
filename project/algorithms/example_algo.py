@@ -7,59 +7,44 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-from dataclasses import dataclass
 from logging import getLogger
-from typing import Any
+from typing import Any, Literal
 
 import torch
 from hydra_zen import instantiate
+from lightning import LightningModule
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.algorithm import Algorithm
-from project.algorithms.callbacks.classification_metrics import (
-    ClassificationMetricsCallback,
-    ClassificationOutputs,
-)
+from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
-from project.utils.types import PhaseStr
+from project.datamodules.image_classification import ImageClassificationDataModule
 
 logger = getLogger(__name__)
 
 
-class ExampleAlgorithm(Algorithm):
-    """Example algorithm for image classification."""
+class ExampleAlgorithm(LightningModule):
+    """Example learning algorithm for image classification."""
 
-    # TODO: Make this less specific to Image classification once we add other supervised learning
-    # settings.
-
-    @dataclass
-    class HParams(Algorithm.HParams):
-        """Hyper-Parameters of the baseline model."""
+    @dataclasses.dataclass
+    class HParams:
+        """Hyper-Parameters."""
 
         # Arguments to be passed to the LR scheduler.
-        lr_scheduler: CosineAnnealingLRConfig = CosineAnnealingLRConfig(T_max=85, eta_min=1e-5)
+        lr_scheduler: Any = CosineAnnealingLRConfig(T_max=85, eta_min=1e-5)
 
         lr_scheduler_interval: str = "epoch"
 
         # Frequency of the LR scheduler. Set to 0 to disable the lr scheduler.
         lr_scheduler_frequency: int = 1
 
-        # Max number of training epochs in total.
-        max_epochs: int = 90
+        # Hyper-parameters for the optimizer
+        optimizer: Any = AdamConfig(lr=3e-4)
 
-        # Hyper-parameters for the forward optimizer
-        # BUG: seems to be reproducible given a seed when using SGD, but not when using Adam!
-        optimizer: AdamConfig = AdamConfig(lr=3e-4)
-
-        # batch size
         batch_size: int = 128
 
         # Max number of epochs to train for without an improvement to the validation
@@ -77,14 +62,14 @@ class ExampleAlgorithm(Algorithm):
         self.network = network
         self.hp = hp or self.HParams()
 
-        self.automatic_optimization = True
-
-        # Used by PL to compute the input/output shapes of the network.
+        # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
-        # Initialize any lazy weights. Necessary for distributed training and to infer shapes.
+        # Do a forward pass to initialize any lazy weights. This is necessary for distributed
+        # training and to infer shapes.
         _ = self.network(self.example_input_array)
+
         # Save hyper-parameters.
         self.save_hyperparameters({"hp": dataclasses.asdict(self.hp)})
 
@@ -92,12 +77,21 @@ class ExampleAlgorithm(Algorithm):
         logits = self.network(input)
         return logits
 
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index=batch_index, phase="train")
+
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index=batch_index, phase="val")
+
+    def test_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index=batch_index, phase="test")
+
     def shared_step(
         self,
         batch: tuple[Tensor, Tensor],
         batch_index: int,
-        phase: PhaseStr,
-    ) -> ClassificationOutputs:
+        phase: Literal["train", "val", "test"],
+    ):
         x, y = batch
         logits = self(x)
         loss = F.cross_entropy(logits, y, reduction="mean")
@@ -107,7 +101,7 @@ class ExampleAlgorithm(Algorithm):
         return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self) -> dict:
-        """Creates the optimizers and the LR schedulers (if needed)."""
+        """Creates the optimizers and the LR scheduler (if needed)."""
         optimizer_partial: functools.partial[Optimizer] = instantiate(self.hp.optimizer)
         lr_scheduler_partial: functools.partial[_LRScheduler] = instantiate(self.hp.lr_scheduler)
         optimizer = optimizer_partial(self.parameters())
@@ -126,11 +120,13 @@ class ExampleAlgorithm(Algorithm):
         return optimizers
 
     def configure_callbacks(self) -> list[Callback]:
-        callbacks: list[Callback] = [
+        callbacks: list[Callback] = []
+        callbacks.append(
+            # Log some classification metrics. (This callback adds some metrics on this module).
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
-        ]
+        )
         if self.hp.early_stopping_patience != 0:
-            # If early stopping is enabled, add a PL Callback for it:
+            # If early stopping is enabled, add a Callback for it:
             callbacks.append(
                 EarlyStopping(
                     "val/accuracy",
@@ -140,3 +136,14 @@ class ExampleAlgorithm(Algorithm):
                 )
             )
         return callbacks
+
+    @property
+    def device(self) -> torch.device:
+        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
+        if self._device.type == "cpu":
+            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
+        device = self._device
+        # make this more explicit to always include the index
+        if device.type == "cuda" and device.index is None:
+            return torch.device("cuda", index=torch.cuda.current_device())
+        return device

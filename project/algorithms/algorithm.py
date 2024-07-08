@@ -23,9 +23,6 @@ class StepOutputDict(TypedDict, total=False):
 
 
 BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
-# StepOutputType = TypeVar(
-#     "StepOutputType", bound=StepOutputDict | PyTree[torch.Tensor], covariant=True
-# )
 StepOutputType = TypeVar(
     "StepOutputType",
     bound=torch.Tensor | StepOutputDict,
