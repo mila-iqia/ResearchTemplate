@@ -4,6 +4,7 @@ version = "0.0.1"
 description = "Research Project Template"
 authors = [
     {name = "Fabrice Normandin", email = "normandf@mila.quebec"},
+    {name = "César Miguel Valdez Córdova", email = "cesar.valdez@mila.quebec"}
 ]
 dependencies = [
     "torch>=2.2.1",
@@ -21,11 +22,11 @@ dependencies = [
     "matplotlib>=3.8.3",
     "moviepy>=1.0.3",
     "pygame==2.5.2",
-    "jax[cuda12]>=0.4.28",
+    "jax>=0.4.28",
     "brax>=0.10.3",
     "tensorboard>=2.16.2",
     "gymnax>=0.0.8",
-    "torch-jax-interop>=0.0.6",
+    "torch-jax-interop @ git+https://www.github.com/lebrice/torch_jax_interop",
     "tensor-regression>=0.0.4",
     "simple-parsing>=0.1.5",
     "pydantic==2.7.4",
@@ -65,6 +66,7 @@ dev = [
     "mkdocs-awesome-pages-plugin>=2.9.2",
     "mkdocs-literate-nav>=0.6.1",
     "mkdocs-material>=9.5.28",
+    "pre-commit>=3.7.1",
 ]
 
 [[tool.pdm.source]]
