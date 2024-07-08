@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import torch
+from lightning import LightningModule
 from torch import Tensor, nn
 
-from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import (
     ClassificationMetricsCallback,
     ClassificationOutputs,
@@ -16,12 +16,12 @@ from project.datamodules.image_classification.image_classification import (
 from project.utils.types import PhaseStr
 
 
-class ManualGradientsExample(Algorithm):
+class ManualGradientsExample(LightningModule):
     """Example of an algorithm that calculates the gradients manually instead of having PL do the
     backward pass."""
 
     @dataclass
-    class HParams(Algorithm.HParams):
+    class HParams:
         """Hyper-parameters of this example algorithm."""
 
         lr: float = 0.1
@@ -56,15 +56,14 @@ class ManualGradientsExample(Algorithm):
     def forward(self, x: Tensor) -> Tensor:
         return self.network(x)
 
-    def training_step(
-        self, batch: tuple[Tensor, Tensor], batch_index: int
-    ) -> ClassificationOutputs:
+    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
         return self.shared_step(batch, batch_index, "train")
 
-    def validation_step(
-        self, batch: tuple[Tensor, Tensor], batch_index: int
-    ) -> ClassificationOutputs:
+    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
         return self.shared_step(batch, batch_index, "val")
+
+    def test_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index, "test")
 
     def shared_step(
         self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
@@ -107,6 +106,17 @@ class ManualGradientsExample(Algorithm):
         return torch.optim.SGD(self.parameters(), lr=self.hp.lr)
 
     def configure_callbacks(self):
-        return super().configure_callbacks() + [
+        return [
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         ]
+
+    @property
+    def device(self) -> torch.device:
+        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
+        if self._device.type == "cpu":
+            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
+        device = self._device
+        # make this more explicit to always include the index
+        if device.type == "cuda" and device.index is None:
+            return torch.device("cuda", index=torch.cuda.current_device())
+        return device

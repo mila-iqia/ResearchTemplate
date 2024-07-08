@@ -1,36 +1,42 @@
-from typing import Any
+from typing import Any, Literal
 
 import torch
-from lightning import Callback
+from lightning import Callback, LightningModule
 from torch import nn
 
-from project.algorithms.algorithm import Algorithm, StepOutputDict
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.utils.types import PhaseStr
 from project.utils.types.protocols import DataModule
 
 
-class NoOp(Algorithm):
+class NoOp(LightningModule):
     """No-op algorithm that does no learning and is used to benchmark the dataloading speed."""
 
     def __init__(self, datamodule: DataModule, network: nn.Module):
         super().__init__(datamodule=datamodule, network=network)
         # Set this so PyTorch-Lightning doesn't try to train the model using our 'loss'
         self.automatic_optimization = False
-        self.last_step_times: dict[PhaseStr, float] = {}
+
+    def training_step(self, batch: Any, batch_index: int):
+        return self.shared_step(batch, batch_index, "train")
+
+    def validation_step(self, batch: Any, batch_index: int):
+        return self.shared_step(batch, batch_index, "val")
+
+    def test_step(self, batch: Any, batch_index: int):
+        return self.shared_step(batch, batch_index, "test")
 
     def shared_step(
         self,
         batch: Any,
         batch_index: int,
-        phase: PhaseStr,
-    ) -> StepOutputDict:
+        phase: Literal["train", "val", "test"],
+    ):
         fake_loss = torch.rand(1)
         self.log(f"{phase}/loss", fake_loss)
-        return {"loss": fake_loss}
+        return fake_loss
 
     def configure_callbacks(self) -> list[Callback]:
-        return super().configure_callbacks() + [MeasureSamplesPerSecondCallback()]
+        return [MeasureSamplesPerSecondCallback()]
 
     def configure_optimizers(self):
         return torch.optim.SGD(self.parameters(), lr=0.123)
