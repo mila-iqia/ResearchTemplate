@@ -23,12 +23,12 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from project.algorithms.algorithm import Algorithm
-from project.algorithms.algorithm_tests import (
+from project.algorithms.callbacks.classification_metrics import ClassificationOutputs
+from project.algorithms.testsuites.algorithm_tests import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
     MetricShouldImprove,
 )
-from project.algorithms.callbacks.classification_metrics import ClassificationOutputs
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )

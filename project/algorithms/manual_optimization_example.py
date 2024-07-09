@@ -10,9 +10,7 @@ from project.algorithms.callbacks.classification_metrics import (
     ClassificationMetricsCallback,
     ClassificationOutputs,
 )
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
+from project.datamodules.image_classification import ImageClassificationDataModule
 from project.utils.types import PhaseStr
 
 

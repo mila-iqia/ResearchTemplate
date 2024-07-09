@@ -2,7 +2,7 @@ from typing import ClassVar
 
 import torch
 
-from project.algorithms.classification_tests import ClassificationAlgorithmTests
+from project.algorithms.testsuites.classification_tests import ClassificationAlgorithmTests
 from project.datamodules.vision import VisionDataModule
 
 from .manual_optimization_example import ManualGradientsExample

@@ -30,7 +30,12 @@ StepOutputType = TypeVar(
 
 
 class Algorithm(Module, Protocol[BatchType, StepOutputType]):
-    """Base class for a learning algorithm.
+    """Protocol that adds more type information to the `lightning.LightningModule` class.
+
+    This adds some type information on top of the LightningModule class, namely:
+    - `BatchType`: The type of batch that is produced by the dataloaders of the datamodule
+    - `StepOutputType`, the output type created by the step methods. This is mainly useful for the Callback class.
+
 
     This is an extension of the LightningModule class from PyTorch Lightning, with some common
     boilerplate code to keep the algorithm implementations as simple as possible.

@@ -8,7 +8,7 @@ import typing
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Generic, Literal, TypeVar
 
 import pytest
 import torch
@@ -18,9 +18,7 @@ from omegaconf import DictConfig
 from tensor_regression import TensorRegressionFixture
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
-from typing_extensions import ParamSpec
 
-from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.callback import Callback
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
@@ -45,14 +43,15 @@ from project.utils.testutils import (
 from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
-P = ParamSpec("P")
 
 
 SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 """Either skips the test entirely (default) or tries to run it and expect it to fail (slower)."""
 
+AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
-class AlgorithmTests[AlgorithmType: Algorithm]:
+
+class AlgorithmTests(Generic[AlgorithmType]):
     """Unit tests for an algorithm class.
 
     The algorithm creation is parametrized with all the datasets and all the networks, but the
@@ -171,7 +170,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
             testing_callbacks=testing_callbacks,
         )
 
-    def _train(
+    def _train[**P](
         self,
         algorithm: AlgorithmType,
         tmp_path: Path,
@@ -662,7 +661,7 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
     def on_train_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm,
+        pl_module: LightningModule,
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_index: int,
