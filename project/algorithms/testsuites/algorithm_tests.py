@@ -20,6 +20,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.algorithms.callbacks.callback import Callback
+from project.algorithms.testsuites.algorithm import Algorithm
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification.image_classification import (
@@ -48,7 +49,7 @@ logger = get_logger(__name__)
 SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 """Either skips the test entirely (default) or tries to run it and expect it to fail (slower)."""
 
-AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
+AlgorithmType = TypeVar("AlgorithmType", bound=Algorithm)
 
 
 class AlgorithmTests(Generic[AlgorithmType]):

@@ -3,7 +3,7 @@ from typing import NotRequired, Protocol, TypedDict
 import torch
 from lightning import Callback, LightningModule, Trainer
 from torch import Tensor
-from typing_extensions import Generic, TypeVar  # noqa
+from typing_extensions import TypeVar
 
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
@@ -21,12 +21,7 @@ class StepOutputDict(TypedDict, total=False):
 
 
 BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
-StepOutputType = TypeVar(
-    "StepOutputType",
-    bound=torch.Tensor | StepOutputDict,
-    default=StepOutputDict,
-    covariant=True,
-)
+StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, covariant=True)
 
 
 class Algorithm(Module, Protocol[BatchType, StepOutputType]):
@@ -34,11 +29,7 @@ class Algorithm(Module, Protocol[BatchType, StepOutputType]):
 
     This adds some type information on top of the LightningModule class, namely:
     - `BatchType`: The type of batch that is produced by the dataloaders of the datamodule
-    - `StepOutputType`, the output type created by the step methods. This is mainly useful for the Callback class.
-
-
-    This is an extension of the LightningModule class from PyTorch Lightning, with some common
-    boilerplate code to keep the algorithm implementations as simple as possible.
+    - `StepOutputType`, the output type created by the step methods.
 
     The networks themselves are created separately and passed as a constructor argument. This is
     meant to make it easier to compare different learning algorithms on the same network

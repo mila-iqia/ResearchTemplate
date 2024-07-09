@@ -22,7 +22,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
-from project.datamodules.image_classification import ImageClassificationDataModule
+from project.utils.types.protocols import DataModule
 
 logger = getLogger(__name__)
 
@@ -53,7 +53,7 @@ class ExampleAlgorithm(LightningModule):
 
     def __init__(
         self,
-        datamodule: ImageClassificationDataModule,
+        datamodule: DataModule[tuple[torch.Tensor, torch.Tensor]],
         network: torch.nn.Module,
         hp: ExampleAlgorithm.HParams | None = None,
     ):

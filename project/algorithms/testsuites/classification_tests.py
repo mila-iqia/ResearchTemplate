@@ -22,8 +22,8 @@ import torch.testing
 from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import ClassificationOutputs
+from project.algorithms.testsuites.algorithm import Algorithm
 from project.algorithms.testsuites.algorithm_tests import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
