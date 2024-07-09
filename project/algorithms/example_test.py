@@ -4,7 +4,7 @@ import torch
 
 from project.algorithms.classification_tests import ClassificationAlgorithmTests
 
-from .example_algo import ExampleAlgorithm
+from .example import ExampleAlgorithm
 
 
 class TestExampleAlgorithm(ClassificationAlgorithmTests[ExampleAlgorithm]):

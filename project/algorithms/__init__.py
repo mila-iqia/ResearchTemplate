@@ -3,7 +3,7 @@ from hydra_zen import builds, store
 from project.algorithms.jax_example import ExampleJaxAlgo
 from project.algorithms.no_op import NoOp
 
-from .example_algo import ExampleAlgorithm
+from .example import ExampleAlgorithm
 from .manual_optimization_example import ManualGradientsExample
 
 # NOTE: This works the same way as creating config files for each algorithm under
