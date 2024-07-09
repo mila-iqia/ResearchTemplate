@@ -4,7 +4,6 @@ from project.algorithms.jax_example import JaxExample
 from project.algorithms.no_op import NoOp
 
 from .example import ExampleAlgorithm
-from .manual_optimization_example import ManualGradientsExample
 
 # NOTE: This works the same way as creating config files for each algorithm under
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
@@ -15,7 +14,6 @@ from .manual_optimization_example import ManualGradientsExample
 # todo: It might be nicer if we did this this `configs/algorithms` instead of here, no?
 algorithm_store = store(group="algorithm")
 algorithm_store(ExampleAlgorithm.HParams(), name="example_algo")
-algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
 algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
 algorithm_store(JaxExample.HParams(), name="jax_example")
 
