@@ -7,7 +7,7 @@ from pathlib import Path
 import hydra_zen
 import pytest
 
-from project.algorithms import Algorithm, ExampleAlgorithm
+from project.algorithms.example_algo import ExampleAlgorithm
 from project.configs.config import Config
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
@@ -63,7 +63,7 @@ def _ids(v):
 )
 def test_setting_algorithm(
     overrides: list[str],
-    expected_type: type[Algorithm.HParams],
+    expected_type: type,
     testing_overrides: list[str],
     tmp_path: Path,
 ) -> None:
