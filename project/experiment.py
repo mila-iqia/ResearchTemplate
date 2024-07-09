@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 import random
@@ -17,7 +18,7 @@ from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
 
-from project.algorithms import Algorithm
+from project.algorithms.algorithm import Algorithm
 from project.configs.config import Config
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
@@ -211,7 +212,7 @@ def instantiate_algorithm(
 ) -> LightningModule:
     # Create the algorithm
     algo_config = experiment_config.algorithm
-    if isinstance(algo_config, Algorithm):
+    if isinstance(algo_config, LightningModule):
         logger.info(
             f"Algorithm was already instantiated (probably to interpolate a field value)."
             f"{algo_config=}"
@@ -243,7 +244,7 @@ def instantiate_algorithm(
         assert isinstance(algorithm, LightningModule)
         return algorithm
 
-    if not isinstance(algo_config, Algorithm.HParams):
+    if not dataclasses.is_dataclass(algo_config):
         if issubclass(algo_class := get_outer_class(type(algo_config)), LightningModule):
             return algo_class(datamodule=datamodule, network=network, hp=algo_config)
 
