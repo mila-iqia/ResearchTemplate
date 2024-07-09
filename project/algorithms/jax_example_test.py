@@ -6,7 +6,7 @@ import torch
 
 from project.algorithms.jax_example import ExampleJaxAlgo
 
-from .algorithm_test import AlgorithmTests
+from .algorithm_tests import AlgorithmTests
 
 
 class TestExampleJaxAlgo(AlgorithmTests[ExampleJaxAlgo]):
