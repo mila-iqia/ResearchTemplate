@@ -9,7 +9,7 @@ from lightning import LightningModule, Trainer
 from lightning import pytorch as pl
 from typing_extensions import TypeVar
 
-from project.utils.types import NestedMapping, PhaseStr, PyTree
+from project.utils.types import PhaseStr, PyTree
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
@@ -17,8 +17,8 @@ logger = get_logger(__name__)
 BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
 StepOutputType = TypeVar(
     "StepOutputType",
-    bound=torch.Tensor | NestedMapping[str, torch.Tensor] | None,
     default=dict[str, torch.Tensor],
+    contravariant=True,
 )
 
 

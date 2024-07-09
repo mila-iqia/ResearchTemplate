@@ -18,17 +18,13 @@ from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
 
-from project.algorithms.algorithm import Algorithm
 from project.configs.config import Config
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass
-from project.utils.types.protocols import (
-    DataModule,
-    Module,
-)
+from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)
@@ -43,7 +39,7 @@ class Experiment:
     come in handy with `submitit` later on.
     """
 
-    algorithm: Algorithm
+    algorithm: LightningModule
     network: nn.Module
     datamodule: DataModule
     trainer: Trainer
@@ -253,7 +249,7 @@ def instantiate_algorithm(
             f"or configure an inner Algorithm.HParams dataclass. Got:\n{algo_config=}"
         )
 
-    algorithm_type: type[Algorithm] = get_outer_class(type(algo_config))
+    algorithm_type: type[LightningModule] = get_outer_class(type(algo_config))
     assert isinstance(
         algo_config,
         algorithm_type.HParams,  # type: ignore

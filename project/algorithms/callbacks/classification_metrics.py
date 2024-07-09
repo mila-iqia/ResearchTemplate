@@ -1,6 +1,6 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import NotRequired, Required, TypedDict, override
+from typing import Literal, NotRequired, Required, TypedDict, override
 
 import torch
 import torchmetrics
@@ -8,8 +8,7 @@ from lightning import LightningModule, Trainer
 from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
 
-from project.algorithms.algorithm import Algorithm, BatchType
-from project.algorithms.callbacks.callback import Callback
+from project.algorithms.callbacks.callback import BatchType, Callback
 from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
 
@@ -17,8 +16,9 @@ logger = get_logger(__name__)
 
 
 class ClassificationOutputs(TypedDict, total=False):
-    """The dictionary format that is minimally required to be returned from
-    `training/val/test_step` for classification algorithms."""
+    """The outputs that should be minimally returned from the training/val/test_step of
+    classification LightningModules so that metrics can be added aumatically by the
+    `ClassificationMetricsCallback`."""
 
     loss: NotRequired[torch.Tensor | float]
     """The loss at this step."""
@@ -31,7 +31,7 @@ class ClassificationOutputs(TypedDict, total=False):
 
 
 class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
-    """Callback that adds classification metrics to the pl module."""
+    """Callback that adds classification metrics to a LightningModule."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -84,8 +84,8 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
     def setup(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, ClassificationOutputs],
-        stage: PhaseStr,
+        pl_module: LightningModule,
+        stage: Literal["fit", "validate", "test", "predict", "tune"],
     ) -> None:
         if self.disabled:
             return
@@ -108,7 +108,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
     def on_shared_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, ClassificationOutputs],
+        pl_module: LightningModule,
         outputs: ClassificationOutputs,
         batch: BatchType,
         batch_index: int,
