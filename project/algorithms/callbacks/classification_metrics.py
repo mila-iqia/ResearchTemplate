@@ -9,7 +9,6 @@ from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
 
 from project.algorithms.callbacks.callback import BatchType, Callback
-from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
 
 logger = get_logger(__name__)
@@ -112,7 +111,7 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         outputs: ClassificationOutputs,
         batch: BatchType,
         batch_index: int,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
         if self.disabled:

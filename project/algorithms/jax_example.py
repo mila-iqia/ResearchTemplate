@@ -73,11 +73,11 @@ def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
     return torch_to_jax(value.data)
 
 
-class ExampleJaxAlgo(LightningModule):
-    """Example of an algorithm that uses Jax.
+class JaxExample(LightningModule):
+    """Example of a learning algorithm (`LightningModule`) that uses Jax.
 
     In this case, the network is a flax.linen.Module, and its forward and backward passes are
-    written in Jax.
+    written in Jax, and the loss function is in pytorch.
     """
 
     @dataclasses.dataclass
@@ -234,7 +234,7 @@ def main():
     datamodule = MNISTDataModule(num_workers=4, batch_size=512)
     network = CNN(num_classes=datamodule.num_classes)
 
-    model = ExampleJaxAlgo(network=network, datamodule=datamodule)
+    model = JaxExample(network=network, datamodule=datamodule)
     trainer.fit(model, datamodule=datamodule)
 
     ...

@@ -1,18 +1,18 @@
 import time
-from typing import override
+from typing import Literal, override
 
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.optim import Optimizer
 
 from project.algorithms.callbacks.callback import BatchType, Callback, StepOutputType
-from project.utils.types import PhaseStr, is_sequence_of
+from project.utils.types import is_sequence_of
 
 
 class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
     def __init__(self):
         super().__init__()
-        self.last_step_times: dict[PhaseStr, float] = {}
+        self.last_step_times: dict[Literal["train", "val", "test"], float] = {}
         self.last_update_time: dict[int, float | None] = {}
         self.num_optimizers: int | None = None
 
@@ -21,7 +21,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
     ) -> None:
         self.last_update_time.clear()
         self.last_step_times.pop(phase, None)
@@ -40,7 +40,7 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         outputs: StepOutputType,
         batch: BatchType,
         batch_index: int,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
         super().on_shared_batch_end(

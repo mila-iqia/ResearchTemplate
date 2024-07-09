@@ -1,4 +1,4 @@
-from typing import NotRequired, Protocol, TypedDict
+from typing import Literal, NotRequired, Protocol, TypedDict
 
 import torch
 from lightning import Callback, LightningModule, Trainer
@@ -8,7 +8,7 @@ from typing_extensions import TypeVar
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.types import PhaseStr, PyTree
+from project.utils.types import PyTree
 from project.utils.types.protocols import DataModule, Module
 
 
@@ -73,7 +73,9 @@ class Algorithm(Module, Protocol[BatchType, StepOutputType]):
         """Performs a test step."""
         return self.shared_step(batch=batch, batch_index=batch_index, phase="test")
 
-    def shared_step(self, batch: BatchType, batch_index: int, phase: PhaseStr) -> StepOutputType:
+    def shared_step(
+        self, batch: BatchType, batch_index: int, phase: Literal["train", "val", "test"]
+    ) -> StepOutputType:
         """Performs a training/validation/test step.
 
         This must return a nested dictionary of tensors matching the `StepOutputType` typedict for

@@ -49,7 +49,8 @@ class ClassificationAlgorithmTests[
     unsupported_network_types: ClassVar[list[type[nn.Module]]] = []
     _supported_datamodule_types: ClassVar[list[type[ClassificationDataModule]]] = [
         # VisionDataModule,
-        ClassificationDataModule,  # type: ignore (we actually support this case).
+        # (we actually support this case).
+        ClassificationDataModule,  # type: ignore
         # ImageClassificationDataModule,
     ]
 

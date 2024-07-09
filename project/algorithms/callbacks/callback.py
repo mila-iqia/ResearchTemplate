@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Generic, Literal, override
+from typing import Any, Generic, Literal, override
 
 import torch
 from lightning import LightningModule, Trainer
 from lightning import pytorch as pl
 from typing_extensions import TypeVar
 
-from project.utils.types import PhaseStr, PyTree
+from project.utils.types import PyTree
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
@@ -17,6 +18,7 @@ logger = get_logger(__name__)
 BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
 StepOutputType = TypeVar(
     "StepOutputType",
+    bound=torch.Tensor | Mapping[str, Any] | None,
     default=dict[str, torch.Tensor],
     contravariant=True,
 )
@@ -56,7 +58,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         pl_module: LightningModule,
         batch: BatchType,
         batch_index: int,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
         """Shared hook, called by `on_[train/validation/test]_batch_start`.
@@ -71,7 +73,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         outputs: StepOutputType,
         batch: BatchType,
         batch_index: int,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
         """Shared hook, called by `on_[train/validation/test]_batch_end`.
@@ -83,7 +85,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
     ) -> None:
         """Shared hook, called by `on_[train/validation/test]_epoch_start`.
 
@@ -94,7 +96,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
     ) -> None:
         """Shared hook, called by `on_[train/validation/test]_epoch_end`.
 

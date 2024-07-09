@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Annotated, Any, Literal, NewType, TypeGuard, Unpack
+from typing import Annotated, Any, NewType, TypeGuard, Unpack
 
 import annotated_types
 from torch import Tensor
@@ -15,16 +15,6 @@ H = NewType("H", int)
 W = NewType("W", int)
 S = NewType("S", int)
 
-
-# todo: Fix this. Why do we have these enums? Are they necessary? Could we use the same ones as PL if we wanted to?
-# from lightning.pytorch.trainer.states import RunningStage as PhaseStr
-# from lightning.pytorch.trainer.states import TrainerFn as StageStr
-
-PhaseStr = Literal["train", "val", "test"]
-"""The trainer phases.
-
-TODO: There has to exist an enum for it somewhere in PyTorch Lightning.
-"""
 
 # Types used with pydantic:
 FloatBetween0And1 = Annotated[float, annotated_types.Ge(0), annotated_types.Le(1)]

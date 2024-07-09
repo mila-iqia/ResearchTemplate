@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import torch
 from lightning import LightningModule
@@ -11,7 +12,6 @@ from project.algorithms.callbacks.classification_metrics import (
     ClassificationOutputs,
 )
 from project.datamodules.image_classification import ImageClassificationDataModule
-from project.utils.types import PhaseStr
 
 
 class ManualGradientsExample(LightningModule):
@@ -64,7 +64,10 @@ class ManualGradientsExample(LightningModule):
         return self.shared_step(batch, batch_index, "test")
 
     def shared_step(
-        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+        self,
+        batch: tuple[Tensor, Tensor],
+        batch_index: int,
+        phase: Literal["train", "val", "test"],
     ) -> ClassificationOutputs:
         """Performs a training/validation/test step."""
         x, y = batch
