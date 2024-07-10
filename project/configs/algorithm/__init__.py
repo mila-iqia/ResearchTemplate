@@ -1,11 +1,12 @@
 from hydra_zen import make_custom_builds_fn, store
-from hydra_zen.third_party.pydantic import pydantic_parser
 
 from .lr_scheduler import lr_scheduler_store
 from .optimizer import optimizer_store
 
 builds_fn = make_custom_builds_fn(
-    zen_partial=True, populate_full_signature=True, zen_wrappers=pydantic_parser
+    zen_partial=True,
+    populate_full_signature=True,
+    zen_exclude=["datamodule", "network"],
 )
 
 

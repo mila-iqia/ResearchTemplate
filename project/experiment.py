@@ -237,9 +237,12 @@ def instantiate_algorithm(
 
     if hasattr(algo_config, "_target_"):
         # A dataclass of some sort, with a _target_ attribute.
-        algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
-        if isinstance(algorithm, functools.partial):
-            algorithm = algorithm()
+        if hydra_zen.is_partial_builds(algo_config):
+            algo_partial = instantiate(algo_config)
+            assert isinstance(algo_partial, functools.partial)
+            algorithm = algo_partial(network=network, datamodule=datamodule)
+        else:
+            algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
         assert isinstance(algorithm, LightningModule), algorithm
         return algorithm
 

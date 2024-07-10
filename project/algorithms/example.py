@@ -10,10 +10,12 @@ import functools
 from logging import getLogger
 from typing import Any, Literal
 
+import pydantic
 import torch
 from hydra_zen import instantiate
 from lightning import LightningModule
 from lightning.pytorch.callbacks import Callback, EarlyStopping
+from pydantic import NonNegativeInt, PositiveInt
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
@@ -30,26 +32,26 @@ logger = getLogger(__name__)
 class ExampleAlgorithm(LightningModule):
     """Example learning algorithm for image classification."""
 
-    @dataclasses.dataclass(frozen=True)
+    @pydantic.dataclasses.dataclass(frozen=True)
     class HParams:
         """Hyper-Parameters."""
 
         # Arguments to be passed to the LR scheduler.
         lr_scheduler: Any = CosineAnnealingLRConfig(T_max=85, eta_min=1e-5)
 
-        lr_scheduler_interval: str = "epoch"
+        lr_scheduler_interval: Literal["step", "epoch"] = "epoch"
 
         # Frequency of the LR scheduler. Set to 0 to disable the lr scheduler.
-        lr_scheduler_frequency: int = 1
+        lr_scheduler_frequency: NonNegativeInt = 1
 
         # Hyper-parameters for the optimizer
         optimizer: Any = AdamConfig(lr=3e-4)
 
-        batch_size: int = 128
+        batch_size: PositiveInt = 128
 
         # Max number of epochs to train for without an improvement to the validation
         # accuracy before the training is stopped.
-        early_stopping_patience: int = 0
+        early_stopping_patience: NonNegativeInt = 0
 
     def __init__(
         self,
