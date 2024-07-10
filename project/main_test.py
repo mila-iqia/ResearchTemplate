@@ -40,7 +40,10 @@ def set_testing_hydra_dir():
 
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
-    assert isinstance(experiment_config.algorithm, ExampleAlgorithm.HParams)
+    assert (
+        hydra_zen.is_partial_builds(experiment_config.algorithm)
+        and hydra_zen.get_target(experiment_config.algorithm) is ExampleAlgorithm
+    )
     assert (
         isinstance(experiment_config.datamodule, CIFAR10DataModule)
         or hydra_zen.get_target(experiment_config.datamodule) is CIFAR10DataModule

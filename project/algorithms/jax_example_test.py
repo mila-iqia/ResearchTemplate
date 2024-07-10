@@ -12,6 +12,5 @@ from .testsuites.algorithm_tests import AlgorithmTests
 class TestJaxExample(AlgorithmTests[JaxExample]):
     """This algorithm only works with Jax modules."""
 
-    algorithm_name: ClassVar[str] = "jax_example"
     unsupported_network_types: ClassVar[list[type]] = [torch.nn.Module]
     _supported_network_types: ClassVar[list[type]] = [flax.linen.Module]

@@ -1,4 +1,5 @@
 defaults:
+  - ExampleAlgorithm  # start from the config for the ExampleAlgorithm.
   # Apply the `algorithm/optimizer/Adam` config at `hp.optimizer` in this config.
   - optimizer/Adam@hp.optimizer
   - lr_scheduler/StepLR@hp.lr_scheduler

@@ -70,7 +70,11 @@ class AlgorithmTests(Generic[AlgorithmType]):
     """
 
     algorithm_type: type[AlgorithmType]
-    algorithm_name: ClassVar[str]
+    algorithm_config_name: ClassVar[str | None] = None
+    """Name of the config to use for the algorithm.
+
+    Defaults to the algorithm class name.
+    """
 
     unsupported_datamodule_names: ClassVar[list[str]] = []
     unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
@@ -241,7 +245,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
-        algorithm_name = self.algorithm_name or self.algorithm_cls.__name__.lower()
+        algorithm_name = self.algorithm_config_name or self.algorithm_cls.__name__
         assert isinstance(algorithm_name, str)
         assert isinstance(datamodule_name, str)
         assert isinstance(network_name, str)
@@ -333,8 +337,7 @@ class AlgorithmTests(Generic[AlgorithmType]):
         if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
-        # todo: Get the name of the algorithm from the hydra config?
-        algorithm_name = self.algorithm_name
+        algorithm_name = self.algorithm_config_name or self.algorithm_type.__name__
 
         combination = set([datamodule_name, network_name, algorithm_name])
         for configs, marks in default_marks_for_config_combinations.items():
