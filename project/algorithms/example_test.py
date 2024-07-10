@@ -9,6 +9,6 @@ from .example import ExampleAlgorithm
 
 class TestExampleAlgorithm(ClassificationAlgorithmTests[ExampleAlgorithm]):
     algorithm_type = ExampleAlgorithm
-    algorithm_name: str = "example_algo"
+    algorithm_name: str = "example"
     unsupported_datamodule_names: ClassVar[list[str]] = ["rl"]
     _supported_network_types: ClassVar[list[type]] = [torch.nn.Module]

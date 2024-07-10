@@ -80,7 +80,7 @@ class JaxExample(LightningModule):
     written in Jax, and the loss function is in pytorch.
     """
 
-    @dataclasses.dataclass
+    @dataclasses.dataclass(frozen=True)
     class HParams:
         """Hyper-parameters of the algo."""
 
@@ -93,7 +93,7 @@ class JaxExample(LightningModule):
         *,
         network: flax.linen.Module,
         datamodule: ImageClassificationDataModule,
-        hp: HParams | None = None,
+        hp: HParams = HParams(),
     ):
         super().__init__()
         self.datamodule = datamodule

@@ -1,0 +1,7 @@
+defaults:
+  - optimizer/adam@hp.optimizer
+  - lr_scheduler/step_lr@hp.lr_scheduler
+_target_: project.algorithms.example.ExampleAlgorithm
+_partial_: true
+hp:
+  _target_: project.algorithms.example.ExampleAlgorithm.HParams

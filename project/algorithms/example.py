@@ -20,9 +20,9 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
-from project.configs.algorithm.optimizer import AdamConfig
-from project.utils.types.protocols import DataModule
+from project.configs.lr_scheduler import CosineAnnealingLRConfig
+from project.configs.optimizer import AdamConfig
+from project.datamodules.image_classification import ImageClassificationDataModule
 
 logger = getLogger(__name__)
 
@@ -30,7 +30,7 @@ logger = getLogger(__name__)
 class ExampleAlgorithm(LightningModule):
     """Example learning algorithm for image classification."""
 
-    @dataclasses.dataclass
+    @dataclasses.dataclass(frozen=True)
     class HParams:
         """Hyper-Parameters."""
 
@@ -53,9 +53,9 @@ class ExampleAlgorithm(LightningModule):
 
     def __init__(
         self,
-        datamodule: DataModule[tuple[torch.Tensor, torch.Tensor]],
+        datamodule: ImageClassificationDataModule,
         network: torch.nn.Module,
-        hp: ExampleAlgorithm.HParams | None = None,
+        hp: ExampleAlgorithm.HParams = HParams(),
     ):
         super().__init__()
         self.datamodule = datamodule
@@ -102,11 +102,19 @@ class ExampleAlgorithm(LightningModule):
 
     def configure_optimizers(self) -> dict:
         """Creates the optimizers and the LR scheduler (if needed)."""
-        optimizer_partial: functools.partial[Optimizer] = instantiate(self.hp.optimizer)
-        lr_scheduler_partial: functools.partial[_LRScheduler] = instantiate(self.hp.lr_scheduler)
+        optimizer_partial: functools.partial[Optimizer]
+        if isinstance(self.hp.optimizer, functools.partial):
+            optimizer_partial = self.hp.optimizer
+        else:
+            optimizer_partial = instantiate(self.hp.optimizer)
         optimizer = optimizer_partial(self.parameters())
-
         optimizers: dict[str, Any] = {"optimizer": optimizer}
+
+        lr_scheduler_partial: functools.partial[_LRScheduler]
+        if isinstance(self.hp.lr_scheduler, functools.partial):
+            lr_scheduler_partial = self.hp.lr_scheduler
+        else:
+            lr_scheduler_partial = instantiate(self.hp.lr_scheduler)
 
         if self.hp.lr_scheduler_frequency != 0:
             lr_scheduler = lr_scheduler_partial(optimizer)

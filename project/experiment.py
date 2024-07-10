@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import logging
 import os
 import random
@@ -237,7 +238,9 @@ def instantiate_algorithm(
     if hasattr(algo_config, "_target_"):
         # A dataclass of some sort, with a _target_ attribute.
         algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
-        assert isinstance(algorithm, LightningModule)
+        if isinstance(algorithm, functools.partial):
+            algorithm = algorithm()
+        assert isinstance(algorithm, LightningModule), algorithm
         return algorithm
 
     if not dataclasses.is_dataclass(algo_config):
