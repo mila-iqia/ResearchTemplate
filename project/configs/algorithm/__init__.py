@@ -13,7 +13,7 @@ builds_fn = make_custom_builds_fn(
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
 # well as structured config (dataclasses).
 
-# If you add a configuration file under `configs/algorithm`, it will also be available as an option
+# If you add a configuration file under `project/configs/algorithm`, it will also be available as an option
 # from the command-line, and can use these configs in their default list.
 algorithm_store = store(group="algorithm")
 

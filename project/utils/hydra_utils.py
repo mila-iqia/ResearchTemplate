@@ -15,7 +15,9 @@ from typing import (
     TypeVar,
 )
 
+import hydra_zen.structured_configs._utils
 from hydra_zen import instantiate
+from hydra_zen.structured_configs._utils import safe_name
 from hydra_zen.typing._implementations import Partial as _Partial
 from omegaconf import DictConfig, OmegaConf
 
@@ -25,6 +27,28 @@ if typing.TYPE_CHECKING:
 logger = get_logger(__name__)
 
 T = TypeVar("T")
+
+
+def patched_safe_name(obj: Any, repr_allowed: bool = True):
+    """Patches a bug in Hydra-zen where the _target_ of inner classes is incorrect:
+    https://github.com/mit-ll-responsible-ai/hydra-zen/issues/705
+    """
+
+    if not hasattr(obj, "__qualname__"):
+        return safe_name(obj, repr_allowed=repr_allowed)
+
+    name = safe_name(obj, repr_allowed=repr_allowed)
+    qualname = obj.__qualname__
+    assert isinstance(qualname, str)
+
+    if name != qualname and qualname.endswith("." + name):
+        logger.debug(f"Using patched fn: returning {qualname} for target {obj}")
+        return qualname
+
+    return name
+
+
+hydra_zen.structured_configs._utils.safe_name = patched_safe_name
 
 
 def interpolate_config_attribute(*attributes: str, default: Any | Literal[MISSING] = MISSING):
