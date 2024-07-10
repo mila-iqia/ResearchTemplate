@@ -1,7 +1,10 @@
 defaults:
-  - optimizer/adam@hp.optimizer
-  - lr_scheduler/step_lr@hp.lr_scheduler
+  # Apply the `algorithm/optimizer/Adam` config at `hp.optimizer` in this config.
+  - optimizer/Adam@hp.optimizer
+  - lr_scheduler/StepLR@hp.lr_scheduler
 _target_: project.algorithms.example.ExampleAlgorithm
 _partial_: true
 hp:
   _target_: project.algorithms.example.ExampleAlgorithm.HParams
+  lr_scheduler:
+    step_size: 1  # Required argument for the StepLR scheduler. (reduce LR every {step_size} epochs)

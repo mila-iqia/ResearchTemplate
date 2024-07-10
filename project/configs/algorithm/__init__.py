@@ -1,6 +1,9 @@
 from hydra_zen import make_custom_builds_fn, store
 from hydra_zen.third_party.pydantic import pydantic_parser
 
+from .lr_scheduler import lr_scheduler_store
+from .optimizer import optimizer_store
+
 builds_fn = make_custom_builds_fn(
     zen_partial=True, populate_full_signature=True, zen_wrappers=pydantic_parser
 )
@@ -15,10 +18,14 @@ builds_fn = make_custom_builds_fn(
 algorithm_store = store(group="algorithm")
 
 
-def populate_algorithm_store():
+def register_algorithm_configs():
     # Note: import here to avoid circular imports.
     from project.algorithms import ExampleAlgorithm, JaxExample, NoOp
 
-    algorithm_store(builds_fn(ExampleAlgorithm), name="example_algo")
+    algorithm_store(builds_fn(ExampleAlgorithm), name="example")
     algorithm_store(builds_fn(NoOp), name="no_op")
     algorithm_store(builds_fn(JaxExample), name="jax_example")
+
+    optimizer_store.add_to_hydra_store()
+    lr_scheduler_store.add_to_hydra_store()
+    algorithm_store.add_to_hydra_store()

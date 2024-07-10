@@ -20,8 +20,8 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.configs.lr_scheduler import CosineAnnealingLRConfig
-from project.configs.optimizer import AdamConfig
+from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
+from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 
 logger = getLogger(__name__)
@@ -133,6 +133,10 @@ class ExampleAlgorithm(LightningModule):
             # Log some classification metrics. (This callback adds some metrics on this module).
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         )
+        if self.hp.lr_scheduler_frequency != 0:
+            from lightning.pytorch.callbacks import LearningRateMonitor
+
+            callbacks.append(LearningRateMonitor())
         if self.hp.early_stopping_patience != 0:
             # If early stopping is enabled, add a Callback for it:
             callbacks.append(

@@ -1,3 +1,4 @@
+# todo: This config should not show up as an option on the command-line.
 _target_: project.datamodules.VisionDataModule
 data_dir: ${constant:DATA_DIR}
 num_workers: ${constant:NUM_WORKERS}

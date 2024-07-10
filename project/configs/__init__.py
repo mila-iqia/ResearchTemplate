@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
 
-from project.configs.algorithm import algorithm_store, populate_algorithm_store
+from project.configs.algorithm import register_algorithm_configs
 from project.configs.config import Config
 from project.configs.datamodule import datamodule_store
-from project.configs.lr_scheduler import lr_scheduler_store
 from project.configs.network import network_store
-from project.configs.optimizer import optimizer_store
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID, SLURM_TMPDIR
 
 cs = ConfigStore.instance()
@@ -17,10 +15,7 @@ cs.store(name="base_config", node=Config)
 def add_configs_to_hydra_store():
     datamodule_store.add_to_hydra_store()
     network_store.add_to_hydra_store()
-    optimizer_store.add_to_hydra_store()
-    lr_scheduler_store.add_to_hydra_store()
-    populate_algorithm_store()
-    algorithm_store.add_to_hydra_store()
+    register_algorithm_configs()
 
 
 # todo: move the algorithm_store.add_to_hydra_store() here?
