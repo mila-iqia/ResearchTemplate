@@ -12,7 +12,9 @@ class NoOp(LightningModule):
     """No-op algorithm that does no learning and is used to benchmark the dataloading speed."""
 
     def __init__(self, datamodule: DataModule, network: nn.Module):
-        super().__init__(datamodule=datamodule, network=network)
+        super().__init__()
+        self.datamodule = datamodule
+        self.network = network
         # Set this so PyTorch-Lightning doesn't try to train the model using our 'loss'
         self.automatic_optimization = False
 
