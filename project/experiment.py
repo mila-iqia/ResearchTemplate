@@ -32,6 +32,7 @@ from project.utils.utils import validate_datamodule
 logger = get_logger(__name__)
 
 
+# todo: fix this.
 def _use_pydantic[C: Callable](fn: C) -> C:
     return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
 

@@ -5,14 +5,11 @@ import functools
 import hydra_zen
 import pytest
 import torch
+from hydra_zen.third_party.pydantic import pydantic_parser
 from hydra_zen.typing import PartialBuilds
 
-from project.configs.algorithm.lr_scheduler import (
-    get_all_scheduler_configs as get_all_scheduler_configs,
-)
-from project.configs.algorithm.optimizer import (
-    get_all_optimizer_configs as get_all_optimizer_configs,
-)
+from project.configs.algorithm.lr_scheduler import get_all_scheduler_configs
+from project.configs.algorithm.optimizer import get_all_optimizer_configs
 from project.utils.testutils import seeded
 
 
@@ -96,8 +93,10 @@ def test_scheduler_configs(
 
     assert issubclass(target, torch.optim.lr_scheduler.LRScheduler)
 
-    scheduler_partial = hydra_zen.instantiate(scheduler_config)
+    scheduler_partial = hydra_zen.instantiate(
+        scheduler_config, _target_wrapper_=pydantic_parser, **default_kwargs.get(target, {})
+    )
     assert isinstance(scheduler_partial, functools.partial)
 
-    lr_scheduler = scheduler_partial(_optim, **default_kwargs.get(target, {}))
+    lr_scheduler = scheduler_partial(_optim)
     assert isinstance(lr_scheduler, target)
