@@ -115,6 +115,8 @@ jobs:
     outputs:
       job_id: ${{ steps.sbatch.outputs.stdout }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Copy job script to the cluster
         run: "scp .github/actions-runner-job.sh ${{ matrix.cluster }}:"
 
