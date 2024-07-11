@@ -5,6 +5,7 @@ import functools
 import logging
 import os
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
 from typing import Any
@@ -14,6 +15,7 @@ import rich.console
 import rich.logging
 import rich.traceback
 import torch
+from hydra_zen.third_party.pydantic import pydantic_parser
 from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
@@ -22,12 +24,19 @@ from project.configs.config import Config
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.hydra_utils import get_outer_class, instantiate
+from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass
 from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)
+
+
+def _use_pydantic[C: Callable](fn: C) -> C:
+    return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+
+
+instantiate = _use_pydantic(hydra_zen.instantiate)
 
 
 @dataclass
@@ -156,7 +165,7 @@ def instantiate_datamodule(experiment_config: Config) -> DataModule:
         )
         datamodule = datamodule_config
     else:
-        datamodule = instantiate(datamodule_config, **datamodule_overrides)
+        datamodule = hydra_zen.instantiate(datamodule_config, **datamodule_overrides)
         assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)

@@ -16,6 +16,7 @@ from typing import (
 )
 
 import hydra_zen.structured_configs._utils
+from hydra_zen import instantiate
 from hydra_zen.structured_configs._utils import safe_name
 from hydra_zen.third_party.pydantic import pydantic_parser
 from hydra_zen.typing._implementations import Partial as _Partial
@@ -26,12 +27,6 @@ if typing.TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
-def _use_pydantic[C: Callable](fn: C) -> C:
-    return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
-
-
-instantiate = _use_pydantic(hydra_zen.instantiate)
 
 T = TypeVar("T")
 
