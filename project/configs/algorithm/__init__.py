@@ -1,8 +1,10 @@
 from hydra_zen import make_custom_builds_fn, store
 from lightning import LightningModule
 
-from .lr_scheduler import lr_scheduler_store
-from .optimizer import optimizer_store
+from project.utils.hydra_utils import make_config_and_store
+
+from .lr_scheduler import add_configs_for_all_torch_schedulers, lr_scheduler_store
+from .optimizer import add_configs_for_all_torch_optimizers, optimizers_store
 
 build_algorithm_config_fn = make_custom_builds_fn(
     zen_partial=True,
@@ -20,8 +22,12 @@ build_algorithm_config_fn = make_custom_builds_fn(
 algorithm_store = store(group="algorithm")
 
 
-def register_algorithm_configs():
-    optimizer_store.add_to_hydra_store()
+def register_algorithm_configs(with_dynamic_configs: bool = True):
+    if with_dynamic_configs:
+        add_configs_for_all_torch_optimizers()
+        add_configs_for_all_torch_schedulers()
+
+    optimizers_store.add_to_hydra_store()
     lr_scheduler_store.add_to_hydra_store()
 
     import inspect
@@ -34,11 +40,14 @@ def register_algorithm_configs():
         for (k, v) in vars(project.algorithms).items()
         if inspect.isclass(v) and issubclass(v, LightningModule)
     ]:
-        config_class_name = f"{algo_name}Config"
-        config_class = build_algorithm_config_fn(
-            algo_class, zen_dataclass={"cls_name": config_class_name}
+        make_config_and_store(
+            algo_class, store=algorithm_store, zen_exclude=["datamodule", "network"]
         )
-        algorithm_store(config_class, name=algo_name)
+        # config_class_name = f"{algo_name}Config"
+        # config_class = build_algorithm_config_fn(
+        #     algo_class, zen_dataclass={"cls_name": config_class_name}
+        # )
+        # algorithm_store(config_class, name=algo_name)
 
     # from project.algorithms import ExampleAlgorithm, JaxExample, NoOp
     # algorithm_store(build_algorithm_config_fn(ExampleAlgorithm), name="example")

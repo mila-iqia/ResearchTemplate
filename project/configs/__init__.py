@@ -12,10 +12,10 @@ cs = ConfigStore.instance()
 cs.store(name="base_config", node=Config)
 
 
-def add_configs_to_hydra_store():
+def add_configs_to_hydra_store(with_dynamic_configs: bool = True):
     datamodule_store.add_to_hydra_store()
     network_store.add_to_hydra_store()
-    register_algorithm_configs()
+    register_algorithm_configs(with_dynamic_configs=with_dynamic_configs)
 
 
 # todo: move the algorithm_store.add_to_hydra_store() here?

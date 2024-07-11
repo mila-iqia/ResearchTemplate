@@ -7,8 +7,12 @@ import pytest
 import torch
 from hydra_zen.typing import PartialBuilds
 
-from project.configs.algorithm.lr_scheduler import get_all_configs as get_all_scheduler_configs
-from project.configs.algorithm.optimizer import get_all_configs as get_all_optimizer_configs
+from project.configs.algorithm.lr_scheduler import (
+    get_all_scheduler_configs as get_all_scheduler_configs,
+)
+from project.configs.algorithm.optimizer import (
+    get_all_optimizer_configs as get_all_optimizer_configs,
+)
 from project.utils.testutils import seeded
 
 

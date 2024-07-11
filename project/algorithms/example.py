@@ -3,12 +3,10 @@
 Uses regular backpropagation.
 """
 
-from __future__ import annotations
-
 import dataclasses
 import functools
 from logging import getLogger
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import pydantic
 import torch
@@ -28,6 +26,8 @@ from project.datamodules.image_classification import ImageClassificationDataModu
 
 logger = getLogger(__name__)
 
+LRSchedulerConfig = Annotated[Any, pydantic.Field(default_factory=CosineAnnealingLRConfig)]
+
 
 class ExampleAlgorithm(LightningModule):
     """Example learning algorithm for image classification."""
@@ -37,7 +37,10 @@ class ExampleAlgorithm(LightningModule):
         """Hyper-Parameters."""
 
         # Arguments to be passed to the LR scheduler.
-        lr_scheduler: Any = CosineAnnealingLRConfig(T_max=85, eta_min=1e-5)
+        lr_scheduler: LRSchedulerConfig = dataclasses.field(
+            default=CosineAnnealingLRConfig(T_max=85, eta_min=1e-5),
+            metadata={"omegaconf_ignore": True},
+        )
 
         lr_scheduler_interval: Literal["step", "epoch"] = "epoch"
 
@@ -57,7 +60,7 @@ class ExampleAlgorithm(LightningModule):
         self,
         datamodule: ImageClassificationDataModule,
         network: torch.nn.Module,
-        hp: ExampleAlgorithm.HParams = HParams(),
+        hp: HParams = HParams(),
     ):
         super().__init__()
         self.datamodule = datamodule

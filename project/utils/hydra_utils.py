@@ -16,8 +16,8 @@ from typing import (
 )
 
 import hydra_zen.structured_configs._utils
-from hydra_zen import instantiate
 from hydra_zen.structured_configs._utils import safe_name
+from hydra_zen.third_party.pydantic import pydantic_parser
 from hydra_zen.typing._implementations import Partial as _Partial
 from omegaconf import DictConfig, OmegaConf
 
@@ -25,6 +25,13 @@ if typing.TYPE_CHECKING:
     from project.configs.config import Config
 
 logger = get_logger(__name__)
+
+
+def _use_pydantic[C: Callable](fn: C) -> C:
+    return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+
+
+instantiate = _use_pydantic(hydra_zen.instantiate)
 
 T = TypeVar("T")
 
@@ -401,3 +408,37 @@ def _default_factory(
     if default_factory is not dataclasses.MISSING:
         return default_factory()
     return default  # type: ignore
+
+
+def make_config_and_store[Target](
+    target: Callable[..., Target], *, store: hydra_zen.ZenStore, **overrides
+):
+    """Creates a config dataclass for the given target and stores it in the config store.
+
+    This uses [hydra_zen.builds](https://mit-ll-responsible-ai.github.io/hydra-zen/generated/hydra_zen.builds.html)
+    to create the config dataclass and stores it at the name `config_name`, or `target.__name__`.
+    """
+    _current_frame = inspect.currentframe()
+    assert _current_frame
+    _calling_module = inspect.getmodule(_current_frame.f_back)
+    assert _calling_module
+
+    config = hydra_zen.builds(
+        target,
+        populate_full_signature=True,
+        zen_partial=True,
+        zen_dataclass={
+            "cls_name": f"{target.__name__}Config",
+            # BUG: Causes issues, tries to get the config from the module again, which re-creates
+            # it?
+            # "module": _calling_module.__name__,
+            # TODO: Seems to be causing issues with `_target_` being overwritten?
+            "frozen": False,
+        },
+        zen_wrappers=pydantic_parser,
+        **overrides,
+    )
+    name_of_config_in_store = target.__name__
+    logger.warning(f"Created a config entry {name_of_config_in_store} for {target.__qualname__}")
+    store(config, name=name_of_config_in_store)
+    return config

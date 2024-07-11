@@ -1,11 +1,17 @@
 defaults:
-  - ExampleAlgorithm  # start from the config for the ExampleAlgorithm.
-  # Apply the `algorithm/optimizer/Adam` config at `hp.optimizer` in this config.
-  - optimizer/Adam@hp.optimizer
+  # Use the example as a schema for this config, and inherit its default values.
+  # BUG: This doesn't work when the lr scheduler or optimizer types change from their defaults,
+  # because OmegaConf seems to use the type of the value (not of the field?) when merging configs.
+  # - ExampleAlgorithm
+
+  # Use a custom config for the Adam optimizer (optimizer/custom_adam.yaml) at hp.optimizer
+  - optimizer/custom_adam@hp.optimizer
+  # Apply the config for the StepLR learning rate scheduler at `hp.lr_scheduler` in this config.
   - lr_scheduler/StepLR@hp.lr_scheduler
+
 _target_: project.algorithms.example.ExampleAlgorithm
 _partial_: true
 hp:
   _target_: project.algorithms.example.ExampleAlgorithm.HParams
   lr_scheduler:
-    step_size: 1  # Required argument for the StepLR scheduler. (reduce LR every {step_size} epochs)
+    step_size: 5  # Required argument for the StepLR scheduler.
