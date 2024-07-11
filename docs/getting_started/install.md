@@ -40,11 +40,11 @@ You need to have [Conda](https://docs.conda.io/en/latest/) installed on your mac
     pip install -e .
     ```
 
-    Optionally, you can also install the package using [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or change the dependencies later on:
+    Optionally, you can also install the package using [Poetry](https://python-poetry.org/). This makes it easier to add or change the package dependencies later on:
 
     ```bash
-    pip install pdm
-    pdm install
+    pip install poetry
+    poetry install
     ```
 
 ## Using a development container

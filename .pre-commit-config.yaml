@@ -63,10 +63,10 @@ repos:
         require_serial: true
 
   # Dependency management
-  - repo: https://github.com/pdm-project/pdm
-    rev: 2.12.4
+  - repo: https://github.com/python-poetry/poetry
+    rev: 1.8.3
     hooks:
-      - id: pdm-lock-check
+      - id: poetry-check
         require_serial: true
 
 
