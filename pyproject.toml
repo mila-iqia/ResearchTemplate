@@ -39,6 +39,11 @@ license = {text = "MIT"}
 [project.scripts]
 project = "project:main.main"
 
+[project.optional-dependencies]
+gpu = [
+    "jax[cuda12]>=0.4.28",
+]
+
 [tool.setuptools]
 packages = ["project"]
 

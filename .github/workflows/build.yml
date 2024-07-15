@@ -106,6 +106,7 @@ jobs:
     outputs:
       job_id: ${{ steps.sbatch.outputs.stdout }}
     steps:
+      - uses: actions/checkout@v4
       - name: Copy job script to the cluster
         run: "scp actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
 
@@ -132,14 +133,16 @@ jobs:
         cluster: ['mila']
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.12
+    - name: Loading the anaconda module
+      run: module load anaconda/3
+    - name: Load the cuda module
+      run: module load cuda/12.0
+    - name: Set up a conda env with python 3.12
+      run: conda create --yes --prefix /tmp/env python=3.12
+    - run: conda activate /tmp/env
     - run: pip install pdm
     - name: Install dependencies
       run: pdm install
-
     - name: Test with pytest
       run: pdm run pytest -v --cov=project --cov-report=xml --cov-append
 
