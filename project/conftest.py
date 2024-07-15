@@ -1,3 +1,9 @@
+"""Fixtures and test utilities.
+
+This module contains [PyTest fixtures](https://docs.pytest.org/en/6.2.x/fixture.html) that are used
+by tests.
+"""
+
 from __future__ import annotations
 
 import os

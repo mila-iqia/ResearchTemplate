@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
+import functools
 import logging
 import os
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
 from typing import Any
@@ -12,25 +15,29 @@ import rich.console
 import rich.logging
 import rich.traceback
 import torch
-from hydra.utils import instantiate
-from lightning import Callback, Trainer, seed_everything
+from hydra_zen.third_party.pydantic import pydantic_parser
+from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
 
-from project.algorithms import Algorithm
 from project.configs.config import Config
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.hydra_utils import get_outer_class
 from project.utils.types import Dataclass
-from project.utils.types.protocols import (
-    DataModule,
-    Module,
-)
+from project.utils.types.protocols import DataModule, Module
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)
+
+
+# todo: fix this.
+def _use_pydantic[C: Callable](fn: C) -> C:
+    return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+
+
+instantiate = _use_pydantic(hydra_zen.instantiate)
 
 
 @dataclass
@@ -42,7 +49,7 @@ class Experiment:
     come in handy with `submitit` later on.
     """
 
-    algorithm: Algorithm
+    algorithm: LightningModule
     network: nn.Module
     datamodule: DataModule
     trainer: Trainer
@@ -159,7 +166,7 @@ def instantiate_datamodule(experiment_config: Config) -> DataModule:
         )
         datamodule = datamodule_config
     else:
-        datamodule = instantiate(datamodule_config, **datamodule_overrides)
+        datamodule = hydra_zen.instantiate(datamodule_config, **datamodule_overrides)
         assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)
@@ -208,10 +215,10 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
 
 def instantiate_algorithm(
     experiment_config: Config, datamodule: DataModule, network: nn.Module
-) -> Algorithm:
+) -> LightningModule:
     # Create the algorithm
     algo_config = experiment_config.algorithm
-    if isinstance(algo_config, Algorithm):
+    if isinstance(algo_config, LightningModule):
         logger.info(
             f"Algorithm was already instantiated (probably to interpolate a field value)."
             f"{algo_config=}"
@@ -229,9 +236,9 @@ def instantiate_algorithm(
         else:
             algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
 
-        if not isinstance(algorithm, Algorithm):
+        if not isinstance(algorithm, LightningModule):
             raise NotImplementedError(
-                f"The algorithm config didn't create an Algorithm instance:\n"
+                f"The algorithm config didn't create a LightningModule instance:\n"
                 f"{algo_config=}\n"
                 f"{algorithm=}"
             )
@@ -239,17 +246,25 @@ def instantiate_algorithm(
 
     if hasattr(algo_config, "_target_"):
         # A dataclass of some sort, with a _target_ attribute.
-        algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
-        assert isinstance(algorithm, Algorithm)
+        if hydra_zen.is_partial_builds(algo_config):
+            algo_partial = instantiate(algo_config)
+            assert isinstance(algo_partial, functools.partial)
+            algorithm = algo_partial(network=network, datamodule=datamodule)
+        else:
+            algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
+        assert isinstance(algorithm, LightningModule), algorithm
         return algorithm
 
-    if not isinstance(algo_config, Algorithm.HParams):
+    if not dataclasses.is_dataclass(algo_config):
+        if issubclass(algo_class := get_outer_class(type(algo_config)), LightningModule):
+            return algo_class(datamodule=datamodule, network=network, hp=algo_config)
+
         raise NotImplementedError(
             f"For now the algorithm config can either have a _target_ set to an Algorithm class, "
             f"or configure an inner Algorithm.HParams dataclass. Got:\n{algo_config=}"
         )
 
-    algorithm_type: type[Algorithm] = get_outer_class(type(algo_config))
+    algorithm_type: type[LightningModule] = get_outer_class(type(algo_config))
     assert isinstance(
         algo_config,
         algorithm_type.HParams,  # type: ignore

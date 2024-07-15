@@ -1,24 +1,30 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Literal, override
+from typing import Any, Generic, Literal, override
 
 import torch
-from lightning import Trainer
+from lightning import LightningModule, Trainer
 from lightning import pytorch as pl
-from typing_extensions import Generic  # noqa
+from typing_extensions import TypeVar
 
-from project.algorithms.algorithm import Algorithm, BatchType, StepOutputDict, StepOutputType
-from project.utils.types import PhaseStr, PyTree
+from project.utils.types import PyTree
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
 
+BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
+StepOutputType = TypeVar(
+    "StepOutputType",
+    bound=torch.Tensor | Mapping[str, Any] | None,
+    default=dict[str, torch.Tensor],
+    contravariant=True,
+)
 
-class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | StepOutputDict](
-    pl.Callback
-):
+
+class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
     """Adds a bit of typing info and shared functions to the PyTorch Lightning Callback class.
 
     Adds the following typing information:
@@ -40,7 +46,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def setup(
         self,
         trainer: pl.Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         # todo: "tune" is mentioned in the docstring, is it still used?
         stage: Literal["fit", "validate", "test", "predict", "tune"],
     ) -> None:
@@ -49,10 +55,10 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_shared_batch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         batch: BatchType,
         batch_index: int,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
         """Shared hook, called by `on_[train/validation/test]_batch_start`.
@@ -63,11 +69,11 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_shared_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         outputs: StepOutputType,
         batch: BatchType,
         batch_index: int,
-        phase: PhaseStr,
+        phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
         """Shared hook, called by `on_[train/validation/test]_batch_end`.
@@ -78,8 +84,8 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_shared_epoch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
-        phase: PhaseStr,
+        pl_module: LightningModule,
+        phase: Literal["train", "val", "test"],
     ) -> None:
         """Shared hook, called by `on_[train/validation/test]_epoch_start`.
 
@@ -89,8 +95,8 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_shared_epoch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
-        phase: PhaseStr,
+        pl_module: LightningModule,
+        phase: Literal["train", "val", "test"],
     ) -> None:
         """Shared hook, called by `on_[train/validation/test]_epoch_end`.
 
@@ -101,7 +107,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_train_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         outputs: StepOutputType,
         batch: BatchType,
         batch_index: int,
@@ -126,7 +132,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_validation_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         outputs: StepOutputType,
         batch: BatchType,
         batch_index: int,
@@ -154,7 +160,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_test_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         outputs: StepOutputType,
         batch: BatchType,
         batch_index: int,
@@ -182,7 +188,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_train_batch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         batch: BatchType,
         batch_index: int,
     ) -> None:
@@ -199,7 +205,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_validation_batch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         batch: BatchType,
         batch_index: int,
         dataloader_idx: int = 0,
@@ -218,7 +224,7 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
     def on_test_batch_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[BatchType, StepOutputType],
+        pl_module: LightningModule,
         batch: BatchType,
         batch_index: int,
         dataloader_idx: int = 0,
@@ -234,43 +240,31 @@ class Callback[BatchType: PyTree[torch.Tensor], StepOutputType: torch.Tensor | S
         )
 
     @override
-    def on_train_epoch_start(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType]
-    ) -> None:
+    def on_train_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_train_epoch_start(trainer, pl_module)
         self.on_shared_epoch_start(trainer, pl_module, phase="train")
 
     @override
-    def on_validation_epoch_start(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType]
-    ) -> None:
+    def on_validation_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_validation_epoch_start(trainer, pl_module)
         self.on_shared_epoch_start(trainer, pl_module, phase="val")
 
     @override
-    def on_test_epoch_start(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType]
-    ) -> None:
+    def on_test_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_test_epoch_start(trainer, pl_module)
         self.on_shared_epoch_start(trainer, pl_module, phase="test")
 
     @override
-    def on_train_epoch_end(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType]
-    ) -> None:
+    def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_train_epoch_end(trainer, pl_module)
         self.on_shared_epoch_end(trainer, pl_module, phase="train")
 
     @override
-    def on_validation_epoch_end(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType]
-    ) -> None:
+    def on_validation_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_validation_epoch_end(trainer, pl_module)
         self.on_shared_epoch_end(trainer, pl_module, phase="val")
 
     @override
-    def on_test_epoch_end(
-        self, trainer: Trainer, pl_module: Algorithm[BatchType, StepOutputType]
-    ) -> None:
+    def on_test_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_test_epoch_end(trainer, pl_module)
         self.on_shared_epoch_end(trainer, pl_module, phase="test")

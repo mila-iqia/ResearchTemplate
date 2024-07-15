@@ -7,7 +7,7 @@ from pathlib import Path
 import hydra_zen
 import pytest
 
-from project.algorithms import Algorithm, ExampleAlgorithm
+from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
 from project.conftest import setup_hydra_for_tests_and_compose, use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
@@ -40,7 +40,10 @@ def set_testing_hydra_dir():
 
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
-    assert isinstance(experiment_config.algorithm, ExampleAlgorithm.HParams)
+    assert (
+        hydra_zen.is_partial_builds(experiment_config.algorithm)
+        and hydra_zen.get_target(experiment_config.algorithm) is ExampleAlgorithm
+    )
     assert (
         isinstance(experiment_config.datamodule, CIFAR10DataModule)
         or hydra_zen.get_target(experiment_config.datamodule) is CIFAR10DataModule
@@ -63,7 +66,7 @@ def _ids(v):
 )
 def test_setting_algorithm(
     overrides: list[str],
-    expected_type: type[Algorithm.HParams],
+    expected_type: type,
     testing_overrides: list[str],
     tmp_path: Path,
 ) -> None:

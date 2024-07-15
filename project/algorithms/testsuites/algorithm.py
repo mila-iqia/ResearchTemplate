@@ -1,16 +1,14 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import NotRequired, TypedDict
+from typing import Literal, NotRequired, Protocol, TypedDict
 
 import torch
 from lightning import Callback, LightningModule, Trainer
 from torch import Tensor
-from typing_extensions import Generic, TypeVar  # noqa
+from typing_extensions import TypeVar
 
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.types import PhaseStr, PyTree
+from project.utils.types import PyTree
 from project.utils.types.protocols import DataModule, Module
 
 
@@ -23,43 +21,36 @@ class StepOutputDict(TypedDict, total=False):
 
 
 BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
-# StepOutputType = TypeVar(
-#     "StepOutputType", bound=StepOutputDict | PyTree[torch.Tensor], covariant=True
-# )
-StepOutputType = TypeVar(
-    "StepOutputType",
-    bound=torch.Tensor | StepOutputDict,
-    default=StepOutputDict,
-    covariant=True,
-)
+StepOutputType = TypeVar("StepOutputType", bound=StepOutputDict, covariant=True)
 
 
-class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
-    """Base class for a learning algorithm.
+class Algorithm(Module, Protocol[BatchType, StepOutputType]):
+    """Protocol that adds more type information to the `lightning.LightningModule` class.
 
-    This is an extension of the LightningModule class from PyTorch Lightning, with some common
-    boilerplate code to keep the algorithm implementations as simple as possible.
+    This adds some type information on top of the LightningModule class, namely:
+    - `BatchType`: The type of batch that is produced by the dataloaders of the datamodule
+    - `StepOutputType`, the output type created by the step methods.
 
     The networks themselves are created separately and passed as a constructor argument. This is
     meant to make it easier to compare different learning algorithms on the same network
     architecture.
     """
 
-    @dataclass
-    class HParams:
-        """Hyper-parameters of the algorithm."""
+    datamodule: DataModule[BatchType]
+    network: Module
+
+    example_input_array = LightningModule.example_input_array
+    _device: torch.device | None = None
 
     def __init__(
         self,
         *,
-        datamodule: DataModule[BatchType] | None = None,
-        network: Module | None = None,
-        hp: HParams | None = None,
+        datamodule: DataModule[BatchType],
+        network: Module,
     ):
         super().__init__()
         self.datamodule = datamodule
         self.network = network
-        self.hp = hp or self.HParams()
         # fix for `self.device` property which defaults to cpu.
         self._device = None
 
@@ -82,7 +73,9 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
         """Performs a test step."""
         return self.shared_step(batch=batch, batch_index=batch_index, phase="test")
 
-    def shared_step(self, batch: BatchType, batch_index: int, phase: PhaseStr) -> StepOutputType:
+    def shared_step(
+        self, batch: BatchType, batch_index: int, phase: Literal["train", "val", "test"]
+    ) -> StepOutputType:
         """Performs a training/validation/test step.
 
         This must return a nested dictionary of tensors matching the `StepOutputType` typedict for
@@ -94,11 +87,9 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def configure_optimizers(self):
         # """Creates the optimizers and the learning rate schedulers."""'
-        # super().configure_optimizers()
-        ...
+        raise NotImplementedError
 
     def forward(self, x: Tensor) -> Tensor:
         """Performs a forward pass.
@@ -107,47 +98,6 @@ class Algorithm(LightningModule, ABC, Generic[BatchType, StepOutputType]):
         """
         assert self.network is not None
         return self.network(x)
-
-    def training_step_end(self, step_output: StepOutputDict) -> StepOutputDict:
-        """Called with the results of each worker / replica's output.
-
-        See the `training_step_end` of pytorch-lightning for more info.
-        """
-        return self.shared_step_end(step_output, phase="train")
-
-    def validation_step_end[Out: torch.Tensor | StepOutputDict](self, step_output: Out) -> Out:
-        return self.shared_step_end(step_output, phase="val")
-
-    def test_step_end[Out: torch.Tensor | StepOutputDict](self, step_output: Out) -> Out:
-        return self.shared_step_end(step_output, phase="test")
-
-    def shared_step_end[Out: torch.Tensor | StepOutputDict](
-        self, step_output: Out, phase: PhaseStr
-    ) -> Out:
-        """This is a default implementation for `[train/validation/test]_step_end`.
-
-        This does the following:
-        - Averages out the `loss` tensor if it was left unreduced.
-        - the main metrics are logged inside `training_step_end` (supposed to be better for DP/DDP)
-        """
-
-        if (
-            isinstance(step_output, dict)
-            and isinstance((loss := step_output.get("loss")), torch.Tensor)
-            and loss.shape
-        ):
-            # Replace the loss with its mean. This is useful when automatic
-            # optimization is enabled, for example in the example algo, where each replica
-            # returns the un-reduced cross-entropy loss. Here we need to reduce it to a scalar.
-            # todo: find out if this was already logged, to not log it twice.
-            # self.log(f"{phase}/loss", loss.mean(), sync_dist=True)
-            return step_output | {"loss": loss.mean()}
-
-        elif isinstance(step_output, torch.Tensor) and (loss := step_output).shape:
-            return loss.mean()
-
-        # self.log(f"{phase}/loss", torch.as_tensor(loss).mean(), sync_dist=True)
-        return step_output
 
     def configure_callbacks(self) -> list[Callback]:
         """Use this to add some callbacks that should always be included with the model."""

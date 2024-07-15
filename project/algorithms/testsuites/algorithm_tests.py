@@ -8,7 +8,7 @@ import typing
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Generic, Literal, TypeVar
 
 import pytest
 import torch
@@ -18,17 +18,16 @@ from omegaconf import DictConfig
 from tensor_regression import TensorRegressionFixture
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
-from typing_extensions import ParamSpec
 
-from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.callback import Callback
+from project.algorithms.testsuites.algorithm import Algorithm
 from project.configs import Config, cs
 from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision import VisionDataModule
 from project.experiment import (
+    instantiate_algorithm,
     instantiate_datamodule,
     instantiate_network,
 )
@@ -45,14 +44,15 @@ from project.utils.testutils import (
 from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
-P = ParamSpec("P")
 
 
 SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 """Either skips the test entirely (default) or tries to run it and expect it to fail (slower)."""
 
+AlgorithmType = TypeVar("AlgorithmType", bound=Algorithm)
 
-class AlgorithmTests[AlgorithmType: Algorithm]:
+
+class AlgorithmTests(Generic[AlgorithmType]):
     """Unit tests for an algorithm class.
 
     The algorithm creation is parametrized with all the datasets and all the networks, but the
@@ -70,7 +70,11 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
     """
 
     algorithm_type: type[AlgorithmType]
-    algorithm_name: ClassVar[str]
+    algorithm_config_name: ClassVar[str | None] = None
+    """Name of the config to use for the algorithm.
+
+    Defaults to the algorithm class name.
+    """
 
     unsupported_datamodule_names: ClassVar[list[str]] = []
     unsupported_datamodule_types: ClassVar[list[type[DataModule]]] = []
@@ -171,7 +175,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
             testing_callbacks=testing_callbacks,
         )
 
-    def _train(
+    def _train[**P](
         self,
         algorithm: AlgorithmType,
         tmp_path: Path,
@@ -241,7 +245,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
         if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
-        algorithm_name = self.algorithm_name or self.algorithm_cls.__name__.lower()
+        algorithm_name = self.algorithm_config_name or self.algorithm_cls.__name__
         assert isinstance(algorithm_name, str)
         assert isinstance(datamodule_name, str)
         assert isinstance(network_name, str)
@@ -333,8 +337,7 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
         if "resnet" in network_name and datamodule_name in ["mnist", "fashion_mnist"]:
             pytest.skip(reason="ResNet's can't be used on MNIST datasets.")
 
-        # todo: Get the name of the algorithm from the hydra config?
-        algorithm_name = self.algorithm_name
+        algorithm_name = self.algorithm_config_name or self.algorithm_type.__name__
 
         combination = set([datamodule_name, network_name, algorithm_name])
         for configs, marks in default_marks_for_config_combinations.items():
@@ -401,28 +404,33 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
             network = network.to(device=device)
         return network
 
-    @pytest.fixture(scope="class")
-    def hp(self, experiment_config: Config) -> Algorithm.HParams:  # type: ignore
-        """The hyperparameters for the algorithm.
+    # @pytest.fixture(scope="class")
+    # def hp(self, experiment_config: Config) -> Algorithm.HParams:  # type: ignore
+    #     """The hyperparameters for the algorithm.
 
-        NOTE: This should ideally be parametrized to test different hyperparameter settings.
-        """
-        return experiment_config.algorithm
-        # return self.algorithm_cls.HParams()
+    #     NOTE: This should ideally be parametrized to test different hyperparameter settings.
+    #     """
+    #     return experiment_config.algorithm
+    # return self.algorithm_cls.HParams()
+
+    # @pytest.fixture(scope="function")
+    # def algorithm_kwargs(
+    #     self, datamodule: VisionDataModule, network: nn.Module, hp: Algorithm.HParams
+    # ):
+    #     """Fixture that gives the keyword arguments to use to create the algorithm.
+
+    #     NOTE: This should be further parametrized by base classes as needed.
+    #     """
+    #     return dict(datamodule=datamodule, network=copy.deepcopy(network), hp=hp)
 
     @pytest.fixture(scope="function")
-    def algorithm_kwargs(
-        self, datamodule: VisionDataModule, network: nn.Module, hp: Algorithm.HParams
-    ):
-        """Fixture that gives the keyword arguments to use to create the algorithm.
-
-        NOTE: This should be further parametrized by base classes as needed.
-        """
-        return dict(datamodule=datamodule, network=copy.deepcopy(network), hp=hp)
-
-    @pytest.fixture(scope="function")
-    def algorithm(self, algorithm_kwargs: dict) -> AlgorithmType:
-        return self.algorithm_cls(**algorithm_kwargs)
+    def algorithm(
+        self, experiment_config: Config, datamodule: DataModule, network: nn.Module
+    ) -> AlgorithmType:
+        algo = instantiate_algorithm(
+            experiment_config, datamodule=datamodule, network=copy.deepcopy(network)
+        )
+        return algo
 
     @property
     def algorithm_cls(self) -> type[AlgorithmType]:
@@ -445,7 +453,9 @@ class AlgorithmTests[AlgorithmType: Algorithm]:
         from typing import get_args
 
         class_under_test = get_args(cls.__orig_bases__[0])[0]  # type: ignore
-        if not (inspect.isclass(class_under_test) and issubclass(class_under_test, Algorithm)):
+        if not (
+            inspect.isclass(class_under_test) and issubclass(class_under_test, LightningModule)
+        ):
             raise RuntimeError(
                 "Your test class needs to pass the class under test to the generic base class.\n"
                 "for example: `class TestMyAlgorithm(AlgorithmTests[MyAlgorithm]):`\n"
@@ -655,7 +665,7 @@ class AllParamsShouldHaveGradients(GetGradientsCallback):
     def on_train_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm,
+        pl_module: LightningModule,
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_index: int,

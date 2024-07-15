@@ -2,7 +2,7 @@ defaults:
   - base_config
   - _self_
   - datamodule: cifar10
-  - algorithm: example_algo
+  - algorithm: ExampleAlgorithm
   - network: resnet18
   - trainer: default.yaml
   - trainer/callbacks: default.yaml

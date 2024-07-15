@@ -10,17 +10,15 @@ import rich
 import rich.logging
 import torch
 import torch.distributed
-from lightning import Callback, Trainer
+from lightning import Callback, LightningModule, Trainer
 from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
-from project.algorithms.algorithm import Algorithm
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.image_classification.mnist import MNISTDataModule
-from project.utils.types import PhaseStr
 from project.utils.types.protocols import ClassificationDataModule
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -75,15 +73,17 @@ def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
     return torch_to_jax(value.data)
 
 
-class JaxAlgorithm(Algorithm):
-    """Example of an algorithm that uses Jax.
+class JaxExample(LightningModule):
+    """Example of a learning algorithm (`LightningModule`) that uses Jax.
 
     In this case, the network is a flax.linen.Module, and its forward and backward passes are
-    written in Jax.
+    written in Jax, and the loss function is in pytorch.
     """
 
-    @dataclasses.dataclass
-    class HParams(Algorithm.HParams):
+    @dataclasses.dataclass(frozen=True)
+    class HParams:
+        """Hyper-parameters of the algo."""
+
         lr: float = 1e-3
         seed: int = 123
         debug: bool = True
@@ -93,10 +93,11 @@ class JaxAlgorithm(Algorithm):
         *,
         network: flax.linen.Module,
         datamodule: ImageClassificationDataModule,
-        hp: HParams | None = None,
+        hp: HParams = HParams(),
     ):
-        super().__init__(datamodule=datamodule)
-        self.hp: JaxAlgorithm.HParams = hp or self.HParams()
+        super().__init__()
+        self.datamodule = datamodule
+        self.hp = hp or self.HParams()
 
         example_input = torch.zeros(
             (datamodule.batch_size, *datamodule.dims),
@@ -117,8 +118,24 @@ class JaxAlgorithm(Algorithm):
 
         self.example_input_array = example_input
 
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        logits = self.network(input)
+        return logits
+
+    def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index=batch_index, phase="train")
+
+    def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index=batch_index, phase="val")
+
+    def test_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_index: int):
+        return self.shared_step(batch, batch_index=batch_index, phase="test")
+
     def shared_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor], batch_index: int, phase: PhaseStr
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+        batch_index: int,
+        phase: Literal["train", "val", "test"],
     ):
         x, y = batch
         assert not x.requires_grad
@@ -137,10 +154,21 @@ class JaxAlgorithm(Algorithm):
 
     def configure_callbacks(self) -> list[Callback]:
         assert isinstance(self.datamodule, ClassificationDataModule)
-        return super().configure_callbacks() + [
+        return [
             MeasureSamplesPerSecondCallback(),
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes),
         ]
+
+    @property
+    def device(self) -> torch.device:
+        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
+        if self._device.type == "cpu":
+            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
+        device = self._device
+        # make this more explicit to always include the index
+        if device.type == "cuda" and device.index is None:
+            return torch.device("cuda", index=torch.cuda.current_device())
+        return device
 
 
 def is_channels_first(shape: tuple[int, ...]) -> bool:
@@ -206,7 +234,7 @@ def main():
     datamodule = MNISTDataModule(num_workers=4, batch_size=512)
     network = CNN(num_classes=datamodule.num_classes)
 
-    model = JaxAlgorithm(network=network, datamodule=datamodule)
+    model = JaxExample(network=network, datamodule=datamodule)
     trainer.fit(model, datamodule=datamodule)
 
     ...

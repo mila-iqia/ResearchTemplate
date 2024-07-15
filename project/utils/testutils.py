@@ -13,7 +13,7 @@ from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 import hydra_zen
 import numpy as np
@@ -34,7 +34,6 @@ from project.datamodules.vision import VisionDataModule
 from project.experiment import instantiate_trainer
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_attr, get_outer_class
-from project.utils.types import PhaseStr
 from project.utils.types.protocols import (
     DataModule,
 )
@@ -427,7 +426,10 @@ class AutoEncoder(LightningModule):
         return self.shared_step(batch, batch_index, phase="val")
 
     def shared_step(
-        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+        self,
+        batch: tuple[Tensor, Tensor],
+        batch_index: int,
+        phase: Literal["train", "val", "test"],
     ) -> Tensor:
         x, _y = batch
         latents = self.inf_network(x)
@@ -461,7 +463,10 @@ class AutoEncoderClassifier(AutoEncoder):
         return output
 
     def shared_step(
-        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+        self,
+        batch: tuple[Tensor, Tensor],
+        batch_index: int,
+        phase: Literal["train", "val", "test"],
     ) -> Tensor:
         x, y = batch
         latents = self.inf_network(x)
@@ -500,7 +505,10 @@ class ImageClassifier(LightningModule):
         return self.shared_step(batch, batch_index, phase="val")
 
     def shared_step(
-        self, batch: tuple[Tensor, Tensor], batch_index: int, phase: PhaseStr
+        self,
+        batch: tuple[Tensor, Tensor],
+        batch_index: int,
+        phase: Literal["train", "val", "test"],
     ) -> Tensor:
         x, y = batch
         logits = self.network(x)

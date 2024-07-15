@@ -15,7 +15,10 @@ from typing import (
     TypeVar,
 )
 
+import hydra_zen.structured_configs._utils
 from hydra_zen import instantiate
+from hydra_zen.structured_configs._utils import safe_name
+from hydra_zen.third_party.pydantic import pydantic_parser
 from hydra_zen.typing._implementations import Partial as _Partial
 from omegaconf import DictConfig, OmegaConf
 
@@ -24,7 +27,30 @@ if typing.TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+
 T = TypeVar("T")
+
+
+def patched_safe_name(obj: Any, repr_allowed: bool = True):
+    """Patches a bug in Hydra-zen where the _target_ of inner classes is incorrect:
+    https://github.com/mit-ll-responsible-ai/hydra-zen/issues/705
+    """
+
+    if not hasattr(obj, "__qualname__"):
+        return safe_name(obj, repr_allowed=repr_allowed)
+
+    name = safe_name(obj, repr_allowed=repr_allowed)
+    qualname = obj.__qualname__
+    assert isinstance(qualname, str)
+
+    if name != qualname and qualname.endswith("." + name):
+        logger.debug(f"Using patched fn: returning {qualname} for target {obj}")
+        return qualname
+
+    return name
+
+
+hydra_zen.structured_configs._utils.safe_name = patched_safe_name
 
 
 def interpolate_config_attribute(*attributes: str, default: Any | Literal[MISSING] = MISSING):
@@ -377,3 +403,37 @@ def _default_factory(
     if default_factory is not dataclasses.MISSING:
         return default_factory()
     return default  # type: ignore
+
+
+def make_config_and_store[Target](
+    target: Callable[..., Target], *, store: hydra_zen.ZenStore, **overrides
+):
+    """Creates a config dataclass for the given target and stores it in the config store.
+
+    This uses [hydra_zen.builds](https://mit-ll-responsible-ai.github.io/hydra-zen/generated/hydra_zen.builds.html)
+    to create the config dataclass and stores it at the name `config_name`, or `target.__name__`.
+    """
+    _current_frame = inspect.currentframe()
+    assert _current_frame
+    _calling_module = inspect.getmodule(_current_frame.f_back)
+    assert _calling_module
+
+    config = hydra_zen.builds(
+        target,
+        populate_full_signature=True,
+        zen_partial=True,
+        zen_dataclass={
+            "cls_name": f"{target.__name__}Config",
+            # BUG: Causes issues, tries to get the config from the module again, which re-creates
+            # it?
+            # "module": _calling_module.__name__,
+            # TODO: Seems to be causing issues with `_target_` being overwritten?
+            "frozen": False,
+        },
+        zen_wrappers=pydantic_parser,
+        **overrides,
+    )
+    name_of_config_in_store = target.__name__
+    logger.warning(f"Created a config entry {name_of_config_in_store} for {target.__qualname__}")
+    store(config, name=name_of_config_in_store)
+    return config

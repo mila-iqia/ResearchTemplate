@@ -1,30 +1,10 @@
-from hydra_zen import builds, store
-
-from project.algorithms.jax_algo import JaxAlgorithm
+from project.algorithms.jax_example import JaxExample
 from project.algorithms.no_op import NoOp
 
-from .algorithm import Algorithm
-from .example_algo import ExampleAlgorithm
-from .manual_optimization_example import ManualGradientsExample
-
-# NOTE: This works the same way as creating config files for each algorithm under
-# `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
-# well as structured config (dataclasses).
-
-# If you add a configuration file under `configs/algorithm`, it will also be available as an option
-# from the command-line, and be validated against the schema.
-# todo: It might be nicer if we did this this `configs/algorithms` instead of here, no?
-algorithm_store = store(group="algorithm")
-algorithm_store(ExampleAlgorithm.HParams(), name="example_algo")
-algorithm_store(ManualGradientsExample.HParams(), name="manual_optimization")
-algorithm_store(builds(NoOp, populate_full_signature=False), name="no_op")
-algorithm_store(JaxAlgorithm.HParams(), name="jax_algo")
-
-algorithm_store.add_to_hydra_store()
+from .example import ExampleAlgorithm
 
 __all__ = [
-    "Algorithm",
     "ExampleAlgorithm",
-    "ManualGradientsExample",
-    "JaxAlgorithm",
+    "JaxExample",
+    "NoOp",
 ]
