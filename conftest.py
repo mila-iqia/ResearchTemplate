@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser):
     parser.addoption(
         "--shorter-than",
         action="store",
