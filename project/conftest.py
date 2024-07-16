@@ -10,6 +10,7 @@ import os
 import sys
 import typing
 import warnings
+from collections import defaultdict
 from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
@@ -599,3 +600,112 @@ def pytest_runtest_setup(item):
             # if name found, test has failed for the combination of class name & test name
             if test_name is not None:
                 pytest.xfail(f"previous test failed ({test_name})")
+
+
+PARAM_WHEN_USED_MARK_NAME = "parametrize_when_used"
+
+
+def parametrize_when_used(
+    arg_name_or_fixture: str | typing.Callable, values: list
+) -> pytest.MarkDecorator:
+    """Fixture that applies `pytest.mark.parametrize` only when the argument is used (directly or
+    indirectly).
+
+    When `pytest.mark.parametrize` is applied to a class, all test methods in that class need to
+    use the parametrized argument, otherwise an error is raised. This function exists to work around
+    this and allows writing test methods that don't use the parametrized argument.
+
+    For example, this works, but would not be possible with `pytest.mark.parametrize`:
+
+    ```python
+    import pytest
+
+    @parametrize_when_used("value", [1, 2, 3])
+    class TestFoo:
+        def test_foo(self, value):
+            ...
+
+        def test_bar(self, value):
+            ...
+
+        def test_something_else(self):  # This will cause an error!
+            pass
+    ```
+
+    Parameters
+    ----------
+    arg_name_or_fixture: The name of the argument to parametrize, or a fixture to parametrize \
+        indirectly.
+    values: The values to be used to parametrize the test.
+
+    Returns
+    -------
+    A `pytest.MarkDecorator` that parametrizes the test with the given values only when the argument
+    is used (directly or indirectly) by the test.
+    """
+    indirect = not isinstance(arg_name_or_fixture, str)
+    arg_name = (
+        arg_name_or_fixture
+        if isinstance(arg_name_or_fixture, str)
+        else arg_name_or_fixture.__name__
+    )
+    mark_fn = getattr(pytest.mark, PARAM_WHEN_USED_MARK_NAME)
+    return mark_fn(arg_name, values, indirect=indirect)
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Allows one to define custom parametrization schemes or extensions.
+
+    See
+    https://docs.pytest.org/en/7.1.x/how-to/parametrize.html#how-to-parametrize-fixtures-and-test-functions
+    """
+    # IDEA: Accumulate the parametrizations values from multiple calls, instead of doing like
+    # `pytest.mark.parametrize`, which only allows one parametrization.
+    args_to_parametrized_values: dict[str, list] = defaultdict(list)
+    args_to_be_parametrized_markers: dict[str, list[pytest.Mark]] = defaultdict(list)
+    arg_can_be_parametrized: dict[str, bool] = {}
+    for marker in metafunc.definition.iter_markers(name=PARAM_WHEN_USED_MARK_NAME):
+        assert len(marker.args) == 2
+        argnames = marker.args[0]
+        argvalues = marker.args[1]
+        assert isinstance(argnames, str), argnames
+
+        from _pytest.mark.structures import ParameterSet
+
+        argnames, _parametersets = ParameterSet._for_parametrize(
+            argnames,
+            argvalues,
+            metafunc.function,
+            metafunc.config,
+            nodeid=metafunc.definition.nodeid,
+        )
+        from _pytest.outcomes import Failed
+
+        assert len(argnames) == 1
+        argname = argnames[0]
+
+        if arg_can_be_parametrized.get(argname):
+            args_to_parametrized_values[argname].extend(argvalues)
+            args_to_be_parametrized_markers[argname].append(marker)
+            continue
+
+        # We don't know if the test uses that argument yet, so we check using the same logic as
+        # pytest.mark.parametrize would.
+        try:
+            metafunc._validate_if_using_arg_names(
+                argnames, indirect=marker.kwargs.get("indirect", False)
+            )
+        except Failed:
+            # Test doesn't use that argument, dont parametrize it.
+            arg_can_be_parametrized[argname] = False
+        else:
+            arg_can_be_parametrized[argname] = True
+            args_to_parametrized_values[argname].extend(argvalues)
+            args_to_be_parametrized_markers[argname].append(marker)
+
+    for arg_name, arg_values in args_to_parametrized_values.items():
+        # Test uses that argument, parametrize it.
+        # TODO: unsure what mark to pass here, if there were multiple marks for the same argument..
+        marker = args_to_be_parametrized_markers[arg_name][-1]
+        indirect = marker.kwargs.get("indirect", False)
+        metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)

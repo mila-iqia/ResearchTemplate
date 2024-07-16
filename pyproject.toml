@@ -87,6 +87,10 @@ build-backend = "setuptools.build_meta"
 testpaths = ["project"]
 # todo: look into using https://github.com/scientific-python/pytest-doctestplus
 addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
+markers = [
+    "incremental: incremental testing support",
+    "parametrize_when_used: Parametrize a test only when the argument is used."
+]
 
 [tool.ruff]
 line-length = 99

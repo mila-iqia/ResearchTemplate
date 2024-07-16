@@ -5,6 +5,7 @@ import inspect
 import operator
 import sys
 import typing
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -26,6 +27,7 @@ from project.conftest import setup_hydra_for_tests_and_compose
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
@@ -41,6 +43,7 @@ from project.utils.testutils import (
     get_all_network_names,
     get_type_for_config_name,
 )
+from project.utils.types import is_sequence_of
 from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
@@ -52,7 +55,8 @@ SKIP_OR_XFAIL = pytest.xfail if "-vvv" in sys.argv else pytest.skip
 AlgorithmType = TypeVar("AlgorithmType", bound=Algorithm)
 
 
-class AlgorithmTests(Generic[AlgorithmType]):
+@pytest.mark.incremental
+class AlgorithmTests(Generic[AlgorithmType], ABC):
     """Unit tests for an algorithm class.
 
     The algorithm creation is parametrized with all the datasets and all the networks, but the
@@ -128,6 +132,23 @@ class AlgorithmTests(Generic[AlgorithmType]):
     @pytest.mark.xfail(
         raises=NotImplementedError, reason="TODO: Implement this test.", strict=True
     )
+    @abstractmethod
+    def test_forward_pass_is_reproducible(
+        self,
+        algorithm: AlgorithmType,
+        datamodule: LightningDataModule,
+        seed: int,
+        tensor_regression: TensorRegressionFixture,
+    ):
+        raise NotImplementedError(
+            "TODO: Add tests that checks that the input batch, initialization and loss are "
+            "reproducible."
+        )
+
+    @pytest.mark.xfail(
+        raises=NotImplementedError, reason="TODO: Implement this test.", strict=True
+    )
+    @abstractmethod
     def test_loss_is_reproducible(
         self,
         algorithm: AlgorithmType,
@@ -431,6 +452,31 @@ class AlgorithmTests(Generic[AlgorithmType]):
             experiment_config, datamodule=datamodule, network=copy.deepcopy(network)
         )
         return algo
+
+    @pytest.fixture(scope="class")
+    def train_dataloader(self, datamodule: DataModule) -> DataLoader:
+        if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
+            datamodule.num_workers = 0  # type: ignore
+        datamodule.prepare_data()
+        datamodule.setup("fit")
+        train_dataloader = datamodule.train_dataloader()
+        assert isinstance(train_dataloader, DataLoader)
+        return train_dataloader
+
+    @pytest.fixture(scope="class")
+    def training_batch(
+        self, train_dataloader: DataLoader, device: torch.device
+    ) -> tuple[Tensor, ...] | dict[str, Tensor]:
+        # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
+        dataloader_iterator = iter(train_dataloader)
+        batch = next(dataloader_iterator)
+        if is_sequence_of(batch, Tensor):
+            batch = tuple(t.to(device=device) for t in batch)
+            return batch
+        else:
+            assert isinstance(batch, dict) and is_sequence_of(batch.values(), Tensor)
+            batch = {k: v.to(device=device) for k, v in batch.items()}
+            return batch
 
     @property
     def algorithm_cls(self) -> type[AlgorithmType]:
