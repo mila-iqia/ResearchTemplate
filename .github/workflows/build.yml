@@ -108,7 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Copy job script to the cluster
-        run: "scp actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
+        run: "scp .github/actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
 
       - name: Launch Slurm Actions Runner
         id: sbatch
