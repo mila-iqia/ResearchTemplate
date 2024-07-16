@@ -55,7 +55,7 @@ def add_configs_for_all_torch_schedulers():
         and _scheduler_type not in configured_schedulers
     }
     for scheduler_name, scheduler_type in missing_torch_schedulers.items():
-        _logger.warning(f"Making a config for {scheduler_type=}")
+        _logger.debug(f"Making a config for {scheduler_type=}")
         _config = make_config_and_store(scheduler_type, store=lr_scheduler_group_store)
 
 

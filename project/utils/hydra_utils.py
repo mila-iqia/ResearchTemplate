@@ -434,6 +434,6 @@ def make_config_and_store[Target](
         **overrides,
     )
     name_of_config_in_store = target.__name__
-    logger.warning(f"Created a config entry {name_of_config_in_store} for {target.__qualname__}")
+    logger.debug(f"Created a config entry {name_of_config_in_store} for {target.__qualname__}")
     store(config, name=name_of_config_in_store)
     return config
