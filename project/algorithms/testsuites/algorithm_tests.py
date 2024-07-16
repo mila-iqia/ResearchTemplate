@@ -41,7 +41,7 @@ from project.utils.testutils import (
     fork_rng,
     get_all_datamodule_names_params,
     get_all_network_names,
-    get_type_for_config_name,
+    get_target_of_config,
 )
 from project.utils.types import is_sequence_of
 from project.utils.types.protocols import DataModule
@@ -540,7 +540,7 @@ class AlgorithmTests(Generic[AlgorithmType], ABC):
         if not unsupported_types and not supported_types:
             return
 
-        config_type: type = get_type_for_config_name(group, config_name, _cs=cs)
+        config_type: type = get_target_of_config(group, config_name, _cs=cs)
         if not inspect.isclass(config_type):
             config_return_type = typing.get_type_hints(config_type).get("return")
             if config_return_type and inspect.isclass(config_return_type):

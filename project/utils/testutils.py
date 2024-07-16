@@ -7,15 +7,18 @@ import copy
 import dataclasses
 import hashlib
 import importlib
+import inspect
 import os
 import random
-from collections.abc import Mapping, Sequence
+import typing
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
 import hydra_zen
+import lightning
 import numpy as np
 import pytest
 import torch
@@ -102,7 +105,7 @@ def parametrized_fixture(name: str, values: Sequence, ids=None, **kwargs):
     return _parametrized_fixture
 
 
-class ParametrizedFixture:
+class ParametrizedFixture[T]:
     """Small helper function that creates a parametrized pytest fixture for the given values.
 
     The name of the fixture will be the name that is used for this variable on a class.
@@ -128,7 +131,7 @@ class ParametrizedFixture:
     ```
     """
 
-    def __init__(self, values: list, name: str | None = None, **fixture_kwargs):
+    def __init__(self, values: list[T], name: str | None = None, **fixture_kwargs):
         self.values = values
         self.fixture_kwargs = fixture_kwargs
         self.name = name
@@ -178,9 +181,9 @@ def get_all_algorithm_names() -> list[str]:
     return get_all_configs_in_group("algorithm")
 
 
-def get_type_for_config_name(
+def get_target_of_config(
     config_group: str, config_name: str, _cs: ConfigStore | None = None
-) -> type:
+) -> Callable:
     """Returns the class that is to be instantiated by the given config name.
 
     In the case of inner dataclasses (e.g. Model.HParams), this returns the outer class (Model).
@@ -192,20 +195,33 @@ def get_type_for_config_name(
     _, caching_repo = config_loader._parse_overrides_and_create_caching_repo(
         config_name=None, overrides=[]
     )
-    config_result = caching_repo.load_config(f"{config_group}/{config_name}.yaml")
-    if config_result is not None:
+    # todo: support both `.yml` and `.yaml` extensions for config files.
+    for extension in ["yaml", "yml"]:
+        config_result = caching_repo.load_config(f"{config_group}/{config_name}.{extension}")
+        if config_result is None:
+            continue
         try:
             return hydra_zen.get_target(config_result.config)  # type: ignore
         except TypeError:
             pass
+    from hydra.plugins.config_source import ConfigLoadError
 
-    config_node = _cs._load(f"{config_group}/{config_name}.yaml")
+    try:
+        config_node = _cs._load(f"{config_group}/{config_name}.yaml")
+    except ConfigLoadError as error_yaml:
+        try:
+            config_node = _cs._load(f"{config_group}/{config_name}.yml")
+        except ConfigLoadError:
+            raise ConfigLoadError(
+                f"Unable to find a config {config_group}/{config_name}.yaml or {config_group}/{config_name}.yml!"
+            ) from error_yaml
 
     if "_target_" in config_node.node:
         target: str = config_node.node["_target_"]
         module_name, _, class_name = target.rpartition(".")
         module = importlib.import_module(module_name)
-        return getattr(module, class_name)
+        target = getattr(module, class_name)
+        return target
     # If it doesn't have a target, then assume that it's an inner dataclass like this:
     """
     ```python
@@ -221,12 +237,46 @@ def get_type_for_config_name(
     return target_type
 
 
-def get_all_configs_in_group_for_subclasses_of(group_name: str, base_class: type) -> list[str]:
-    datamodule_names = get_all_configs_in_group(group_name)
-    names_to_types = {
-        config_name: get_type_for_config_name(group_name, config_name)
-        for config_name in datamodule_names
+def get_all_configs_in_group_with_target(group_name: str, some_type: type) -> list[str]:
+    """Retrieves the names of all the configs in the given group that are used to construct objects
+    of the given type."""
+    config_names = get_all_configs_in_group(group_name)
+    names_to_target = {
+        config_name: get_target_of_config(group_name, config_name) for config_name in config_names
     }
+    return [name for name, object_type in names_to_target.items() if object_type == some_type]
+
+
+def get_all_configs_in_group_for_subclasses_of(group_name: str, base_class: type) -> list[str]:
+    config_names = get_all_configs_in_group(group_name)
+    names_to_targets = {
+        config_name: get_target_of_config(group_name, config_name) for config_name in config_names
+    }
+    names_to_types: dict[str, type] = {}
+    for name, target in names_to_targets.items():
+        if inspect.isclass(target):
+            names_to_types[name] = target
+            continue
+
+        if (
+            inspect.isfunction(target)
+            and (annotations := typing.get_type_hints(target))
+            and (return_type := annotations.get("return"))
+            and inspect.isclass(return_type)
+        ):
+            logger.info(
+                f"Assuming that the function {target} creates objects of type {return_type} based "
+                f"on its return type annotation."
+            )
+            names_to_types[name] = return_type
+            continue
+
+        logger.warning(
+            RuntimeWarning(
+                f"Unable to tell what kind of object will be created by the target {target} of config {name} in group {group_name}. This config will be skipepd in tests."
+            )
+        )
+
     return [
         name for name, object_type in names_to_types.items() if issubclass(object_type, base_class)
     ]
@@ -365,16 +415,76 @@ def run_for_all_vision_datamodules():
     return run_for_all_subclasses_of("datamodule", VisionDataModule)
 
 
-def run_for_all_subclasses_of(group_name: str, config_target_type: type):
-    config_names = get_all_configs_in_group_for_subclasses_of(group_name, config_target_type)
+def run_for_all_subclasses_of(config_group: str, config_target_type: type):
+    """Parametrizes a test to run with all the configs in the given group that have targets which
+    are subclasses of the given type.
+
+    For example:
+
+    ```python
+    @run_for_all_subclasses_of("network", torch.nn.Module)
+    def test_something_about_the_network(network: torch.nn.Module):
+        ''' This test will run with all the configs in the 'network' group that produce nn.Modules! '''
+    ```
+    """
+    config_names = get_all_configs_in_group_for_subclasses_of(config_group, config_target_type)
     config_name_to_marks = {
         name: default_marks_for_config_name.get(name, []) for name in config_names
     }
-    return run_for_all_configs_in_group(group_name, config_name_to_marks=config_name_to_marks)
+    return run_for_all_configs_in_group(config_group, config_name_to_marks=config_name_to_marks)
 
 
 def run_for_all_image_classification_datamodules():
     return run_for_all_subclasses_of("datamodule", ImageClassificationDataModule)
+
+
+def parametrize_when_used(
+    arg_name_or_fixture: str | typing.Callable, values: list, indirect: bool | None = None
+) -> pytest.MarkDecorator:
+    """Fixture that applies `pytest.mark.parametrize` only when the argument is used (directly or
+    indirectly).
+
+    When `pytest.mark.parametrize` is applied to a class, all test methods in that class need to
+    use the parametrized argument, otherwise an error is raised. This function exists to work around
+    this and allows writing test methods that don't use the parametrized argument.
+
+    For example, this works, but would not be possible with `pytest.mark.parametrize`:
+
+    ```python
+    import pytest
+
+    @parametrize_when_used("value", [1, 2, 3])
+    class TestFoo:
+        def test_foo(self, value):
+            ...
+
+        def test_bar(self, value):
+            ...
+
+        def test_something_else(self):  # This will cause an error!
+            pass
+    ```
+
+    Parameters
+    ----------
+    arg_name_or_fixture: The name of the argument to parametrize, or a fixture to parametrize \
+        indirectly.
+    values: The values to be used to parametrize the test.
+
+    Returns
+    -------
+    A `pytest.MarkDecorator` that parametrizes the test with the given values only when the argument
+    is used (directly or indirectly) by the test.
+    """
+    if indirect is None:
+        indirect = not isinstance(arg_name_or_fixture, str)
+    arg_name = (
+        arg_name_or_fixture
+        if isinstance(arg_name_or_fixture, str)
+        else arg_name_or_fixture.__name__
+    )
+    mark_fn = getattr(pytest.mark, PARAM_WHEN_USED_MARK_NAME)
+    return mark_fn(arg_name, values, indirect=indirect)
 
 
 def run_for_all_configs_in_group(
@@ -389,12 +499,12 @@ def run_for_all_configs_in_group(
         }
     # Parametrize the fixture (e.g. datamodule_name) indirectly, which will make it take each group
     # member (e.g. datamodule config name), each with a parameterized mark.
-    return pytest.mark.parametrize(
+    return parametrize_when_used(
         f"{group_name}_name",
         [
             pytest.param(
                 config_name,
-                marks=marks,
+                marks=tuple(marks) if isinstance(marks, list) else marks,
                 # id=f"{group_name}={config_name}",
             )
             for config_name, marks in config_name_to_marks.items()
@@ -635,15 +745,58 @@ def assert_no_nans_in_params_or_grads(module: nn.Module):
 
 @contextlib.contextmanager
 def fork_rng():
-    with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
-        random_state = random.getstate()
-        np_random_state = np.random.get_state()
-        yield
-        np.random.set_state(np_random_state)
-        random.setstate(random_state)
+    """Forks the RNG, so that when you return, the RNG is reset to the state that it was previously
+    in."""
+    rng_state = RngState.get()
+    yield
+    rng_state.set()
 
 
 @contextmanager
-def seeded(seed: int = 42):
+def seeded_rng(seed: int = 42):
+    """Forks the RNG and seeds the torch, numpy, and random RNGs while inside the block."""
     with fork_rng():
-        yield
+        random_state = RngState.seed(seed)
+        yield random_state
+
+
+def _get_cuda_rng_states():
+    return tuple(
+        torch.cuda.get_rng_state(torch.device("cuda", index=index))
+        for index in range(torch.cuda.device_count())
+    )
+
+
+@dataclasses.dataclass(frozen=True)
+class RngState:
+    random_state: tuple[Any, ...] = dataclasses.field(default_factory=random.getstate)
+    numpy_random_state: dict[str, Any] = dataclasses.field(default_factory=np.random.get_state)
+
+    torch_cpu_rng_state: torch.Tensor = torch.get_rng_state()
+    torch_device_rng_states: tuple[torch.Tensor, ...] = dataclasses.field(
+        default_factory=_get_cuda_rng_states
+    )
+
+    @classmethod
+    def get(cls):
+        # do a deepcopy just in case the libraries return the rng state "by reference" and keep
+        # modifying it.
+        return copy.deepcopy(cls())
+
+    def set(self):
+        random.setstate(self.random_state)
+        np.random.set_state(self.numpy_random_state)
+        torch.set_rng_state(self.torch_cpu_rng_state)
+        for index, state in enumerate(self.torch_device_rng_states):
+            torch.cuda.set_rng_state(state, torch.device("cuda", index=index))
+
+    @classmethod
+    def seed(cls, base_seed: int):
+        lightning.seed_everything(base_seed, workers=True)
+        # random.seed(base_seed)
+        # np.random.seed(base_seed)
+        # torch.random.manual_seed(base_seed)
+        return cls()
+
+
+PARAM_WHEN_USED_MARK_NAME = "parametrize_when_used"
