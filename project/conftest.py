@@ -16,12 +16,12 @@ from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
 
+import flax.linen
 import lightning.pytorch as pl
 import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize_config_module
-from lightning import seed_everything
 from omegaconf import DictConfig, open_dict
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
@@ -45,7 +45,7 @@ from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
-    fork_rng,
+    seeded_rng,
 )
 from project.utils.types import is_sequence_of
 from project.utils.types.protocols import (
@@ -152,8 +152,9 @@ def seed(request: pytest.FixtureRequest):
     """Fixture that seeds everything for reproducibility and yields the random seed used."""
     random_seed = getattr(request, "param", DEFAULT_SEED)
     assert isinstance(random_seed, int) or random_seed is None
-    with fork_rng():
-        seed_everything(random_seed, workers=True)
+    # with fork_rng():
+    #     seed_everything(random_seed, workers=True)
+    with seeded_rng(random_seed):
         yield random_seed
 
 
@@ -273,6 +274,15 @@ def use_overrides(command_line_overrides: Param | list[Param], ids=None):
         ...
     ```
     """
+    # todo: Use some parametrize_when_used with some additional arg that says that multiple
+    # invocations of this should be appended together instead of added to the list. For example:
+    # @use_overrides("algorithm=my_algo network=fcnet")
+    # @use_overrides("network=bar")
+    # should end up doing
+    # ```
+    # pytest.mark.parametrize("overrides", ["algorithm=my_algo network=fcnet network=bar"], indirect=True)
+    # ```
+
     return pytest.mark.parametrize(
         overrides.__name__,
         (
@@ -513,6 +523,11 @@ def network(
 ):
     with device:
         network = instantiate_network(experiment_config, datamodule=datamodule)
+
+    if isinstance(network, flax.linen.Module):
+        return network
+
+    # a bit ugly, but necessary.
     try:
         _ = network(input)
     except RuntimeError as err:
@@ -663,7 +678,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         # Test uses that argument, parametrize it.
 
         # remove duplicates and order the parameters deterministically.
-        arg_values = sorted(set(arg_values), key=str)
+        try:
+            arg_values = sorted(set(arg_values), key=str)
+        except TypeError:
+            pass
 
         # TODO: unsure what mark to pass here, if there were multiple marks for the same argument..
         marker = args_to_be_parametrized_markers[arg_name][-1]

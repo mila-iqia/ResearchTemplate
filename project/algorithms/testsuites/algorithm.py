@@ -1,7 +1,7 @@
-from typing import Literal, NotRequired, Protocol, TypedDict
+from typing import NotRequired, Protocol, TypedDict
 
 import torch
-from lightning import Callback, Trainer
+from lightning import LightningDataModule, LightningModule, Trainer
 from torch import Tensor
 from typing_extensions import TypeVar
 
@@ -33,7 +33,7 @@ class Algorithm(Module, Protocol[BatchType, StepOutputType]):
     architecture.
     """
 
-    datamodule: DataModule[BatchType]
+    datamodule: LightningDataModule | DataModule[BatchType]
     network: Module
 
     def __init__(
@@ -47,57 +47,5 @@ class Algorithm(Module, Protocol[BatchType, StepOutputType]):
         self.network = network
         self.trainer: Trainer
 
-    def training_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
-        """Performs a training step.
-
-        See `LightningModule.training_step` for more information.
-        """
-        return self.shared_step(batch=batch, batch_index=batch_index, phase="train")
-
-    def validation_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
-        """Performs a validation step."""
-        return self.shared_step(batch=batch, batch_index=batch_index, phase="val")
-
-    def test_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
-        """Performs a test step."""
-        return self.shared_step(batch=batch, batch_index=batch_index, phase="test")
-
-    def shared_step(
-        self, batch: BatchType, batch_index: int, phase: Literal["train", "val", "test"]
-    ) -> StepOutputType:
-        """Performs a training/validation/test step.
-
-        This must return a nested dictionary of tensors matching the `StepOutputType` typedict for
-        this algorithm. By default,
-        `loss` entry. This is so that the training of the model is easier to parallelize the
-        training across GPUs:
-        - the cross entropy loss gets calculated using the global batch size
-        - the main metrics are logged inside `training_step_end` (supposed to be better for DP/DDP)
-        """
-        raise NotImplementedError
-
-    def configure_optimizers(self):
-        # """Creates the optimizers and the learning rate schedulers."""'
-        raise NotImplementedError
-
-    def forward(self, x: Tensor) -> Tensor:
-        """Performs a forward pass.
-
-        Feel free to overwrite this to do whatever you'd like.
-        """
-        assert self.network is not None
-        return self.network(x)
-
-    def configure_callbacks(self) -> list[Callback]:
-        """Use this to add some callbacks that should always be included with the model."""
-        return []
-
-    @property
-    def device(self) -> torch.device:
-        if self._device is None:
-            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
-        device = self._device
-        # make this more explicit to always include the index
-        if device.type == "cuda" and device.index is None:
-            return torch.device("cuda", index=torch.cuda.current_device())
-        return device
+    training_step = LightningModule.training_step
+    # validation_step = LightningModule.validation_step

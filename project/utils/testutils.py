@@ -412,10 +412,10 @@ def run_for_all_datamodules(
 
 
 def run_for_all_vision_datamodules():
-    return run_for_all_subclasses_of("datamodule", VisionDataModule)
+    return run_for_all_configs_of_type("datamodule", VisionDataModule)
 
 
-def run_for_all_subclasses_of(config_group: str, config_target_type: type):
+def run_for_all_configs_of_type(config_group: str, config_target_type: type):
     """Parametrizes a test to run with all the configs in the given group that have targets which
     are subclasses of the given type.
 
@@ -435,7 +435,7 @@ def run_for_all_subclasses_of(config_group: str, config_target_type: type):
 
 
 def run_for_all_image_classification_datamodules():
-    return run_for_all_subclasses_of("datamodule", ImageClassificationDataModule)
+    return run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 
 
 def parametrize_when_used(
@@ -779,11 +779,16 @@ class RngState:
 
     @classmethod
     def get(cls):
-        # do a deepcopy just in case the libraries return the rng state "by reference" and keep
-        # modifying it.
+        """Gets the state of the random/numpy/torch random number generators.
+
+        Note: do a deepcopy just in case the libraries return the rng state "by reference" and keep
+        modifying it.
+        """
         return copy.deepcopy(cls())
 
     def set(self):
+        """Resets the state of the random/numpy/torch random number generators with the contents of
+        `self`."""
         random.setstate(self.random_state)
         np.random.set_state(self.numpy_random_state)
         torch.set_rng_state(self.torch_cpu_rng_state)

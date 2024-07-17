@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from project.algorithms.callbacks.classification_metrics import ClassificationOutputs
 from project.algorithms.testsuites.algorithm import Algorithm
-from project.algorithms.testsuites.algorithm_tests import (
+from project.algorithms.testsuites.old_algorithm_tests import (
     AlgorithmTests,
     CheckBatchesAreTheSameAtEachStep,
     MetricShouldImprove,
