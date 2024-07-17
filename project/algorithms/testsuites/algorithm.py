@@ -1,13 +1,10 @@
 from typing import Literal, NotRequired, Protocol, TypedDict
 
 import torch
-from lightning import Callback, LightningModule, Trainer
+from lightning import Callback, Trainer
 from torch import Tensor
 from typing_extensions import TypeVar
 
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
 from project.utils.types import PyTree
 from project.utils.types.protocols import DataModule, Module
 
@@ -39,9 +36,6 @@ class Algorithm(Module, Protocol[BatchType, StepOutputType]):
     datamodule: DataModule[BatchType]
     network: Module
 
-    example_input_array = LightningModule.example_input_array
-    _device: torch.device | None = None
-
     def __init__(
         self,
         *,
@@ -51,18 +45,13 @@ class Algorithm(Module, Protocol[BatchType, StepOutputType]):
         super().__init__()
         self.datamodule = datamodule
         self.network = network
-        # fix for `self.device` property which defaults to cpu.
-        self._device = None
-
-        if isinstance(datamodule, ImageClassificationDataModule):
-            self.example_input_array = torch.zeros(
-                (datamodule.batch_size, *datamodule.dims), device=self.device
-            )
-
         self.trainer: Trainer
 
     def training_step(self, batch: BatchType, batch_index: int) -> StepOutputType:
-        """Performs a training step."""
+        """Performs a training step.
+
+        See `LightningModule.training_step` for more information.
+        """
         return self.shared_step(batch=batch, batch_index=batch_index, phase="train")
 
     def validation_step(self, batch: BatchType, batch_index: int) -> StepOutputType:

@@ -3,6 +3,7 @@
 
 
 import textwrap
+from logging import getLogger as get_logger
 from pathlib import Path
 
 import mkdocs_gen_files
@@ -10,18 +11,20 @@ import mkdocs_gen_files.nav
 
 from project.utils.env_vars import REPO_ROOTDIR
 
+logger = get_logger(__name__)
+
 module = "project"
 modules = [
     "project/main.py",
     "project/experiment.py",
 ]
-submodules = [
-    "project.algorithms",
-    "project.configs",
-    "project.datamodules",
-    "project.networks",
-    "project.utils",
-]
+# submodules = [
+#     "project.algorithms",
+#     "project.configs",
+#     "project.datamodules",
+#     "project.networks",
+#     "project.utils",
+# ]
 
 
 def _get_import_path(module_path: Path) -> str:
@@ -42,7 +45,7 @@ def main():
 def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None:
     """TODO."""
 
-    assert module_path.is_dir() and (module_path / "__init__.py").exists(), module_path
+    assert module_path.is_dir()  # and (module_path / "__init__.py").exists(), module_path
 
     children = list(
         p
@@ -52,7 +55,7 @@ def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None
     for child_module_path in children:
         child_module_import_path = _get_import_path(child_module_path)
         doc_file = child_module_path.relative_to(REPO_ROOTDIR).with_suffix(".md")
-        write_doc_file = f"reference/{doc_file}"
+        write_doc_file = "reference" / doc_file
 
         nav[tuple(child_module_import_path.split("."))] = f"{doc_file}"
 
@@ -71,11 +74,12 @@ def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None
         p
         for p in module_path.iterdir()
         if p.is_dir()
-        and (p / "__init__.py").exists()
+        and ((p / "__init__.py").exists() or len(list(p.glob("*.py"))) > 0)
         and not p.name.endswith("_test")
         and not p.name.startswith((".", "__"))
     )
     for submodule in submodules:
+        logger.info(f"Creating doc for {submodule}")
         add_doc_for_module(submodule, nav)
 
 
