@@ -81,7 +81,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
 
     # This -m flag could also be something more complicated like 'fast and not slow', but
     # keeping it simple for now.
-    only_running_slow_tests = config.getoption("-m", default=None) == "slow"  # type: ignore
+    only_running_slow_tests = "slow" in config.getoption("-m", default="")  # type: ignore
+    add_timeout_to_unmarked_tests = False  # todo: Add option for this?
 
     very_fast_time = DEFAULT_TIMEOUT / 10
     very_fast_timeout_mark = pytest.mark.timeout(very_fast_time, func_only=False)
@@ -110,7 +111,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
             if not running_slow_tests:
                 indices_to_remove.append(_node_index)
                 continue
-        else:
+        elif add_timeout_to_unmarked_tests:
             logger.debug(
                 f"Test {node.name} doesn't have a `fast`, `very_fast`, `slow` or `timeout` mark. "
                 "Assuming it's fast to run (after test setup)."

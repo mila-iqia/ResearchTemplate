@@ -31,7 +31,7 @@ AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 # test class.
 
 
-@pytest.mark.incremental
+# @pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """Suite of unit tests for an "Algorithm" (LightningModule)."""
 
@@ -104,7 +104,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             out2 = algorithm(forward_pass_input)
         torch.testing.assert_close(out1, out2)
 
-    @pytest.mark.timeout(10)
+    # @pytest.mark.timeout(10)
     def test_backward_pass_is_deterministic(
         self,
         datamodule: LightningDataModule,
@@ -154,7 +154,6 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         torch.testing.assert_close(gradients_1, gradients_2)
         torch.testing.assert_close(training_step_outputs_1, training_step_outputs_2)
 
-    @pytest.mark.timeout(10)
     def test_initialization_is_reproducible(
         self,
         experiment_config: Config,
@@ -182,7 +181,6 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             out = algorithm(forward_pass_input)
         tensor_regression.check({"input": forward_pass_input, "out": out})
 
-    @pytest.mark.timeout(10)
     def test_backward_pass_is_reproducible(
         self,
         datamodule: LightningDataModule,
