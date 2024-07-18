@@ -32,7 +32,7 @@ class ExampleAlgorithm(LightningModule):
 
     @pydantic.dataclasses.dataclass(frozen=True)
     class HParams:
-        """Hyper-Parameters."""
+        """Dataclass containing the hyper-parameters of the learning algorithm."""
 
         # Arguments to be passed to the LR scheduler.
         lr_scheduler: Any = CosineAnnealingLRConfig(T_max=85, eta_min=1e-5)

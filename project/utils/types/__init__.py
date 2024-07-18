@@ -7,7 +7,7 @@ import annotated_types
 from torch import Tensor
 from typing_extensions import TypeVar, TypeVarTuple
 
-from .protocols import Dataclass, DataModule, HasInputOutputShapes, Module
+from .protocols import Dataclass, DataModule, Module
 
 # These are used to show which dim is which.
 C = NewType("C", int)
