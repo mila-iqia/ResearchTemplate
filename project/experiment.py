@@ -247,6 +247,7 @@ def instantiate_algorithm(
     if hasattr(algo_config, "_target_"):
         # A dataclass of some sort, with a _target_ attribute.
         if hydra_zen.is_partial_builds(algo_config):
+            logger.info(f"Instantiating partial for algorithm {hydra_zen.get_target(algo_config)}")
             algo_partial = instantiate(algo_config)
             assert isinstance(algo_partial, functools.partial)
             algorithm = algo_partial(network=network, datamodule=datamodule)

@@ -14,9 +14,9 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
+from project.utils.hydra_config_utils import get_all_configs_in_group_with_target
 from project.utils.testutils import (
     ParametrizedFixture,
-    get_all_configs_in_group_with_target,
     seeded_rng,
 )
 from project.utils.types import PyTree, is_sequence_of
@@ -35,7 +35,7 @@ AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """Suite of unit tests for an "Algorithm" (LightningModule)."""
 
-    algorithm_name: ParametrizedFixture[str]
+    algorithm_config: ParametrizedFixture[str]
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
@@ -44,8 +44,9 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         configs_for_this_algorithm = get_all_configs_in_group_with_target(
             "algorithm", algorithm_under_test
         )
-        cls.algorithm_name = ParametrizedFixture(
-            name="algorithm_name",
+        assert not hasattr(cls, "algorithm_config"), cls
+        cls.algorithm_config = ParametrizedFixture(
+            name="algorithm_config",
             values=configs_for_this_algorithm,
             ids=str,
             scope="session",

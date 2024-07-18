@@ -72,6 +72,7 @@ dev = [
     "mkdocs-literate-nav>=0.6.1",
     "mkdocs-material>=9.5.28",
     "pre-commit>=3.7.1",
+    "mktestdocs @ git+https://github.com/koaning/mktestdocs.git@0b67d24e8a7bf315ffdf5bce979bc148e9c1d48a",
 ]
 
 [[tool.pdm.source]]
@@ -84,7 +85,7 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-testpaths = ["project"]
+testpaths = ["project", "docs"]
 # todo: look into using https://github.com/scientific-python/pytest-doctestplus
 addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
 markers = [

@@ -4,8 +4,8 @@
 [metadata]
 groups = ["default", "dev", "gpu"]
 strategy = ["cross_platform", "inherit_metadata"]
-lock_version = "4.4.2"
-content_hash = "sha256:6a9d84c72b01c85f82a09a45dc6035aa38bfc1592f2527dd9f49a068c4a4c632"
+lock_version = "4.4.1"
+content_hash = "sha256:c741d22bbb8f5ed071560de691f5e309fd0b94a9d8a2b9664daac0df40b2eb42"
 
 [[package]]
 name = "absl-py"
@@ -1344,7 +1344,7 @@ files = [
 
 [[package]]
 name = "jaxlib"
-version = "0.4.28+cuda12.cudnn89"
+version = "0.4.28"
 requires_python = ">=3.9"
 summary = "XLA library for JAX"
 groups = ["default", "gpu"]
@@ -1809,6 +1809,15 @@ files = [
     {file = "mkl-2021.4.0-py2.py3-none-win32.whl", hash = "sha256:439c640b269a5668134e3dcbcea4350459c4a8bc46469669b2d67e07e3d330e8"},
     {file = "mkl-2021.4.0-py2.py3-none-win_amd64.whl", hash = "sha256:ceef3cafce4c009dd25f65d7ad0d833a0fbadc3d8903991ec92351fe5de1e718"},
 ]
+
+[[package]]
+name = "mktestdocs"
+version = "0.2.1"
+git = "https://github.com/koaning/mktestdocs.git"
+ref = "0b67d24e8a7bf315ffdf5bce979bc148e9c1d48a"
+revision = "0b67d24e8a7bf315ffdf5bce979bc148e9c1d48a"
+summary = ""
+groups = ["dev"]
 
 [[package]]
 name = "ml-collections"

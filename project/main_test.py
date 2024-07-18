@@ -1,6 +1,7 @@
 # ADAPTED FROM https://github.com/facebookresearch/hydra/blob/main/examples/advanced/hydra_app_example/tests/test_example.py
 from __future__ import annotations
 
+import shutil
 import typing
 from pathlib import Path
 
@@ -18,6 +19,22 @@ if typing.TYPE_CHECKING:
     pass
 
 TEST_SEED = 123
+
+
+def test_jax_can_use_the_GPU():
+    import jax.numpy
+
+    device = jax.numpy.array([1, 2, 3]).devices().pop()
+    if shutil.which("nvidia-smi"):
+        assert device.type == "GPU"
+    else:
+        assert device.type == "CPU"
+
+
+def test_torch_can_use_the_GPU():
+    import torch
+
+    assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
 
 
 @pytest.fixture

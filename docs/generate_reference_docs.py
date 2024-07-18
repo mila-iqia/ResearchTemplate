@@ -13,19 +13,6 @@ from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
 
-module = "project"
-modules = [
-    "project/main.py",
-    "project/experiment.py",
-]
-# submodules = [
-#     "project.algorithms",
-#     "project.configs",
-#     "project.datamodules",
-#     "project.networks",
-#     "project.utils",
-# ]
-
 
 def _get_import_path(module_path: Path) -> str:
     """Returns the path to use to import a given (internal) module."""
@@ -47,11 +34,12 @@ def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None
 
     assert module_path.is_dir()  # and (module_path / "__init__.py").exists(), module_path
 
-    children = list(
-        p
-        for p in module_path.glob("*.py")
-        if not p.name.startswith("__") and not p.name.endswith("_test.py")
-    )
+    def is_module(p: Path) -> bool:
+        return (
+            p.suffix == ".py" and not p.name.startswith("__") and not p.name.endswith("_test.py")
+        )
+
+    children = list(p for p in module_path.glob("*.py") if is_module(p))
     for child_module_path in children:
         child_module_import_path = _get_import_path(child_module_path)
         doc_file = child_module_path.relative_to(REPO_ROOTDIR).with_suffix(".md")
