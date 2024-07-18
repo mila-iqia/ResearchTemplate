@@ -525,11 +525,12 @@ def network(
         try:
             _ = network(input)
         except RuntimeError as err:
+            # TODO: Investigate the false positives with example_from_config, resnets, cifar10
             logger.error(f"Error when running the network: {err}")
             request.node.add_marker(
                 pytest.mark.xfail(
                     raises=RuntimeError,
-                    reason="Network doesn't seem compatible this dataset.",
+                    reason="Network doesn't seem to be compatible this dataset.",
                 )
             )
     return network

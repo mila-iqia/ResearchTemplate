@@ -1,4 +1,6 @@
+import itertools
 import pathlib
+from inspect import getmembers
 
 import pytest
 from mktestdocs import check_docstring, check_md_file
@@ -19,7 +21,11 @@ def get_pretty_id(obj):
 
 
 # todo: do we want to run the tests here? or do we just test the doc pages?
-@pytest.mark.parametrize("obj", [project, project.configs, project.algorithms], ids=get_pretty_id)
+@pytest.mark.parametrize(
+    "obj",
+    list(itertools.chain(map(getmembers, [project, project.configs, project.algorithms]))),
+    ids=get_pretty_id,
+)
 def test_member(obj):
     check_docstring(obj)
 

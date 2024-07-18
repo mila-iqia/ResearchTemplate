@@ -24,7 +24,7 @@ TEST_SEED = 123
 def test_jax_can_use_the_GPU():
     import jax.numpy
 
-    device = jax.numpy.array([1, 2, 3]).devices().pop()
+    device = jax.numpy.zeros(1).devices().pop()
     if shutil.which("nvidia-smi"):
         assert device.type == "GPU"
     else:

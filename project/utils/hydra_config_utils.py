@@ -125,7 +125,7 @@ def import_object(target_path: str):
 
 
 def get_all_configs_in_group_of_type(
-    group_name: str, config_target_type: type, include_subclasses: bool = True
+    group_name: str, config_target_type: type | tuple[type, ...], include_subclasses: bool = True
 ) -> list[str]:
     """Returns the names of all the configs in the given config group that have this target or a
     subclass of it."""
@@ -164,6 +164,8 @@ def get_all_configs_in_group_of_type(
         if (
             issubclass(object_type, config_target_type)
             if include_subclasses
+            else object_type in config_target_type
+            if isinstance(config_target_type, tuple)
             else object_type is config_target_type
         )
     ]

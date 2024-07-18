@@ -21,9 +21,11 @@ import torch
 import torchvision.models
 from torch import nn
 
+from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_config_utils import (
@@ -88,7 +90,9 @@ default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDec
         ]
         for resnet_config, mnist_dataset_config in itertools.product(
             get_all_configs_in_group_of_type("network", torchvision.models.ResNet),
-            [],
+            get_all_configs_in_group_of_type(
+                "datamodule", (MNISTDataModule, FashionMNISTDataModule)
+            ),
         )
     },
 }
