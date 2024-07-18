@@ -26,9 +26,9 @@ def test_jax_can_use_the_GPU():
 
     device = jax.numpy.zeros(1).devices().pop()
     if shutil.which("nvidia-smi"):
-        assert device.type == "GPU"
+        assert str(device) == "cuda:0"
     else:
-        assert device.type == "CPU"
+        assert str(device) == "cpu"
 
 
 def test_torch_can_use_the_GPU():
