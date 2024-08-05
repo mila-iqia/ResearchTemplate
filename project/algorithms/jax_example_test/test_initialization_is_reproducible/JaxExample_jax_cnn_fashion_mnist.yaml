@@ -1,0 +1,81 @@
+GPU: NVIDIA TITAN RTX
+network.params.0:
+  device: cuda:0
+  hash: -4218701300434786233
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 32
+  sum: 0.0
+network.params.1:
+  device: cuda:0
+  hash: -6994565112611325531
+  max: 0.728
+  mean: -0.001
+  min: -0.745
+  shape:
+  - 3
+  - 3
+  - 1
+  - 32
+  sum: -0.281
+network.params.2:
+  device: cuda:0
+  hash: -5258163774450544391
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 64
+  sum: 0.0
+network.params.3:
+  device: cuda:0
+  hash: -1432036051605170042
+  max: 0.134
+  mean: 0.0
+  min: -0.134
+  shape:
+  - 3
+  - 3
+  - 32
+  - 64
+  sum: 8.325
+network.params.4:
+  device: cuda:0
+  hash: 3505480816438514598
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 256
+  sum: 0.0
+network.params.5:
+  device: cuda:0
+  hash: -8723646238921158471
+  max: 0.041
+  mean: 0.0
+  min: -0.041
+  shape:
+  - 3136
+  - 256
+  sum: 15.701
+network.params.6:
+  device: cuda:0
+  hash: -7222447081605638768
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 10
+  sum: 0.0
+network.params.7:
+  device: cuda:0
+  hash: -6734713663960465238
+  max: 0.142
+  mean: 0.001
+  min: -0.142
+  shape:
+  - 256
+  - 10
+  sum: 1.842

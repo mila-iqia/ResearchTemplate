@@ -1,0 +1,23 @@
+GPU: NVIDIA TITAN RTX
+input:
+  device: cuda:0
+  hash: 8611995894311838429
+  max: 2.821
+  mean: 0.014
+  min: -0.424
+  shape:
+  - 128
+  - 1
+  - 28
+  - 28
+  sum: 1437.149
+out:
+  device: cuda:0
+  hash: 4665969865513006818
+  max: 1.85
+  mean: 0.067
+  min: -1.919
+  shape:
+  - 128
+  - 10
+  sum: 85.857
