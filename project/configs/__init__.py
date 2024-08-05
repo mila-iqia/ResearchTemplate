@@ -13,6 +13,7 @@ cs.store(name="base_config", node=Config)
 
 
 def add_configs_to_hydra_store(with_dynamic_configs: bool = True):
+    """Adds all configs to the Hydra Config store."""
     datamodule_store.add_to_hydra_store()
     network_store.add_to_hydra_store()
     register_algorithm_configs(with_dynamic_configs=with_dynamic_configs)

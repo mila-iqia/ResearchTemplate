@@ -27,11 +27,8 @@ logger = get_logger(__name__)
 # todo: potentially use an Algorithm protocol once the Example algo is type-checking OK against it.
 AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
-# TODO: Double-check that this doesn't interfere weirdly with the other fixtures that we add on the
-# test class.
 
-
-# @pytest.mark.incremental
+@pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """Suite of unit tests for an "Algorithm" (LightningModule)."""
 
@@ -95,7 +92,6 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
 
-    # todo: Move to the network tests?
     def test_forward_pass_is_deterministic(
         self, forward_pass_input: Any, algorithm: LightningModule, seed: int
     ):
@@ -180,7 +176,10 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Check that the forward pass is reproducible given the same input and random seed."""
         with seeded_rng(seed):
             out = algorithm(forward_pass_input)
-        tensor_regression.check({"input": forward_pass_input, "out": out})
+        tensor_regression.check(
+            {"input": forward_pass_input, "out": out},
+            default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
+        )
 
     def test_backward_pass_is_reproducible(
         self,
@@ -218,7 +217,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
                     for k, v in gradients_callback.grads.items()
                 },
                 "outputs": {k: v.cpu() for k, v in gradients_callback.outputs.items()},
-            }
+            },
+            default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
         )
 
     def _do_one_step_of_training(

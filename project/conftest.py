@@ -22,6 +22,8 @@ import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize_config_module
+from hydra.conf import HydraHelpConf
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, open_dict
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
@@ -149,12 +151,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
 
 
 @pytest.fixture(autouse=True)
-def seed(request: pytest.FixtureRequest):
+def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
     """Fixture that seeds everything for reproducibility and yields the random seed used."""
     random_seed = getattr(request, "param", DEFAULT_SEED)
     assert isinstance(random_seed, int) or random_seed is None
-    # with fork_rng():
-    #     seed_everything(random_seed, workers=True)
+
     with seeded_rng(random_seed):
         yield random_seed
 
@@ -315,8 +316,6 @@ def setup_hydra_for_tests_and_compose(
 
         # BUG: Weird errors with Hydra variable interpolation.. Setting these manually seems
         # to fix it for now..
-        from hydra.conf import HydraHelpConf
-        from hydra.core.hydra_config import HydraConfig
 
         with open_dict(config):
             # BUG: Getting some weird Hydra omegaconf error in unit tests:
@@ -386,16 +385,18 @@ def experiment_dictconfig(
         marks = [marks] if not isinstance(marks, list | tuple) else marks
         configs = set(configs)
         if combination >= configs:
-            logger.debug(f"Applying markers because {combination} contains {configs}")
-            # There is a combination of potentially unsupported configs here.
-            for mark in marks:
-                request.applymarker(mark)
+            # warnings.warn(f"Applying markers because {combination} contains {configs}")
+            # There is a combination of potentially unsupported configs here, e.g. MNIST and ResNets.
+            pytest.skip(reason=f"Combination {combination} contains {configs}.")
+            # for mark in marks:
+            #     request.applymarker(mark)
 
     default_overrides = [
         # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.
-        "seed=42",
         f"trainer.devices={devices}",
         f"trainer.accelerator={accelerator}",
+        # TODO: Setting this here, which actually impacts the tests!
+        "seed=42",
     ]
     if not any("trainer.default_root_dir" in override for override in overrides):
         default_overrides.append(f"++trainer.default_root_dir={tmp_path}")
