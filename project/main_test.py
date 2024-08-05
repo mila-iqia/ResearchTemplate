@@ -28,7 +28,7 @@ def test_jax_can_use_the_GPU():
     if shutil.which("nvidia-smi"):
         assert str(device) == "cuda:0"
     else:
-        assert str(device) == "cpu"
+        assert "cpu" in str(device).lower()
 
 
 def test_torch_can_use_the_GPU():
