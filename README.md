@@ -7,7 +7,8 @@
 
 Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
 
-This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
+This is a template repository for a research project in machine learning. It is meant to be a starting point for new ML researchers that run jobs on SLURM clusters.
+The main target audience is [Mila](https://mila.quebec/en) researchers and students, but this should still be useful to anyone that uses PyTorch-Lightning with Hydra.
 
 For more context, see [this  introduction to the project.](https://mila-iqia.github.io/ResearchTemplate/overview/intro).
 
@@ -20,6 +21,19 @@ This project makes use of the following libraries:
     - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as is shown in the [Jax example](https://mila-iqia.github.io/ResearchTemplate/examples/jax) 🔥
 - [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
 - [pytest](https://docs.pytest.org/en/stable/) is used for testing.
+
+## Why use this template?
+
+Why should you use this template (instead of another)?
+
+Here are some of the advantages to using this template compared to [some of the other templates out there](https://mila-iqia.github.io/ResearchTemplate/related):
+
+- ❗Support for both Jax and Torch with PyTorch-Lightning ❗
+- Easy development inside a [Development Container](https://code.visualstudio.com/docs/remote/containers) with [VsCode](https://code.visualstudio.com/)
+- Tailor-made for ML researchers that run their jobs on SLURM clusters (with default configurations for the [Mila](https://docs.mila.quebec) and [DRAC](https://docs.alliancecan.ca) clusters.)
+- Rich typing and documentation of all parts of the source code using Python 3.12's new type annotation syntax
+- A comprehensive suite of automated tests for all algorithms, datasets and networks that are easy to reuse and extend
+- Automatically creates Yaml Schemas for your Hydra config files (as soon as #7 is merged)
 
 ## Usage
 
