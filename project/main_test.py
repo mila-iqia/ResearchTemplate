@@ -37,15 +37,6 @@ def test_torch_can_use_the_GPU():
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
 
 
-@pytest.fixture
-def testing_overrides():
-    """Fixture that gives normal command-line overrides to use during unit testing."""
-    return [
-        f"seed={TEST_SEED}",
-        "trainer=debug",
-    ]
-
-
 @pytest.fixture(autouse=True, scope="session")
 def set_testing_hydra_dir():
     """TODO: Set the hydra configuration for unit testing, so temporary directories are used.
@@ -77,18 +68,17 @@ def _ids(v):
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=example_algo"], ExampleAlgorithm.HParams),
+        ([f"algorithm={ExampleAlgorithm.__name__}"], ExampleAlgorithm.HParams),
     ],
     ids=_ids,
 )
 def test_setting_algorithm(
     overrides: list[str],
     expected_type: type,
-    testing_overrides: list[str],
     tmp_path: Path,
 ) -> None:
     with setup_hydra_for_tests_and_compose(
-        all_overrides=testing_overrides + overrides, tmp_path=tmp_path
+        all_overrides=overrides, tmp_path=tmp_path
     ) as dictconfig:
         assert dictconfig.seed == TEST_SEED  # note: from the testing_overrides above.
         config = resolve_dictconfig(dictconfig)
@@ -107,12 +97,11 @@ def test_setting_algorithm(
 def test_setting_network(
     overrides: list[str],
     expected_type: type,
-    testing_overrides: list[str],
     tmp_path: Path,
 ) -> None:
     # NOTE: Still unclear on the difference between initialize and initialize_config_module
     with setup_hydra_for_tests_and_compose(
-        all_overrides=testing_overrides + overrides, tmp_path=tmp_path
+        all_overrides=overrides, tmp_path=tmp_path
     ) as dictconfig:
         options = resolve_dictconfig(dictconfig)
     assert isinstance(options, Config)
