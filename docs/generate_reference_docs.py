@@ -7,30 +7,19 @@ from logging import getLogger as get_logger
 from pathlib import Path
 
 import mkdocs_gen_files
-import mkdocs_gen_files.nav
 
 from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
 
 
-def _get_import_path(module_path: Path) -> str:
-    """Returns the path to use to import a given (internal) module."""
-    return ".".join(module_path.relative_to(REPO_ROOTDIR).with_suffix("").parts)
-
-
 def main():
-    nav = mkdocs_gen_files.nav.Nav()
-
-    add_doc_for_module(REPO_ROOTDIR / "project", nav)
-
-    # with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
-    #     # assert False, "\n".join(nav.build_literate_nav())
-    #     nav_file.writelines(nav.build_literate_nav())
+    add_doc_for_module(REPO_ROOTDIR / "project")
 
 
-def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None:
-    """TODO."""
+def add_doc_for_module(module_path: Path) -> None:
+    """Creates a markdown file in the "reference" section for this module and its submodules
+    recursively."""
 
     assert module_path.is_dir()  # and (module_path / "__init__.py").exists(), module_path
 
@@ -45,18 +34,13 @@ def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None
         doc_file = child_module_path.relative_to(REPO_ROOTDIR).with_suffix(".md")
         write_doc_file = "reference" / doc_file
 
-        nav[tuple(child_module_import_path.split("."))] = f"{doc_file}"
-
-        with mkdocs_gen_files.open(write_doc_file, "w") as f:
+        with mkdocs_gen_files.editor.FilesEditor.current().open(str(write_doc_file), "w") as f:
             print(
                 textwrap.dedent(f"""\
                 ::: {child_module_import_path}
                 """),
                 file=f,
             )
-        docs_dir = REPO_ROOTDIR / "docs"
-        module_path_relative_to_docs_dir = child_module_path.relative_to(docs_dir, walk_up=True)
-        mkdocs_gen_files.set_edit_path(write_doc_file, str(module_path_relative_to_docs_dir))
 
     submodules = list(
         p
@@ -68,7 +52,12 @@ def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None
     )
     for submodule in submodules:
         logger.info(f"Creating doc for {submodule}")
-        add_doc_for_module(submodule, nav)
+        add_doc_for_module(submodule)
+
+
+def _get_import_path(module_path: Path) -> str:
+    """Returns the path to use to import a given (internal) module."""
+    return ".".join(module_path.relative_to(REPO_ROOTDIR).with_suffix("").parts)
 
 
 if __name__ in ["__main__", "<run_path>"]:
