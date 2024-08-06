@@ -54,7 +54,7 @@ jobs:
     - name: Test with pytest (very fast)
       env:
         JAX_PLATFORMS: cpu
-      run: pdm run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append --gen-missing
+      run: pdm run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append --skip-if-files-missing
     - name: Test with pytest (fast)
       env:
         JAX_PLATFORMS: cpu
