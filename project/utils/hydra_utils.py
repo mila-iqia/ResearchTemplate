@@ -1,4 +1,4 @@
-"""Utility functions related to working with [Hydra](hydra.cc)."""
+"""Utility functions related to working with [Hydra](https://hydra.cc)."""
 
 from __future__ import annotations
 
