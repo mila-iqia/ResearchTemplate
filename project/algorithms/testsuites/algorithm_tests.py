@@ -164,7 +164,11 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             algorithm = instantiate_algorithm(
                 experiment_config, datamodule=datamodule, network=network
             )
-        tensor_regression.check(algorithm.state_dict())
+        tensor_regression.check(
+            algorithm.state_dict(),
+            # Save the regression files on a different subfolder for each device (cpu / cuda)
+            additional_label=next(algorithm.parameters()).device.type,
+        )
 
     def test_forward_pass_is_reproducible(
         self,
@@ -179,6 +183,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
+            # Save the regression files on a different subfolder for each device (cpu / cuda)
+            additional_label=next(algorithm.parameters()).device.type,
         )
 
     def test_backward_pass_is_reproducible(
@@ -219,6 +225,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
                 "outputs": {k: v.cpu() for k, v in gradients_callback.outputs.items()},
             },
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
+            # Save the regression files on a different subfolder for each device (cpu / cuda)
+            additional_label=next(algorithm.parameters()).device.type,
         )
 
     def _do_one_step_of_training(

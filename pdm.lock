@@ -3292,7 +3292,7 @@ files = [
 
 [[package]]
 name = "tensor-regression"
-version = "0.0.4"
+version = "0.0.5"
 requires_python = "<4.0,>=3.10"
 summary = "A small wrapper around pytest_regressions for Tensors"
 groups = ["default", "dev"]
@@ -3302,8 +3302,8 @@ dependencies = [
     "torch<3.0.0,>=2.0.0",
 ]
 files = [
-    {file = "tensor_regression-0.0.4-py3-none-any.whl", hash = "sha256:a638b11b6cc2e2f2543fc939cd4729917588894842e661c7b5e431c2cbde146f"},
-    {file = "tensor_regression-0.0.4.tar.gz", hash = "sha256:fc0a3d754e0a6f20b5764e371fefde7aae013374a0bab9887082e719f478c89c"},
+    {file = "tensor_regression-0.0.5-py3-none-any.whl", hash = "sha256:3d959209bba698a2e7dc41f28ded47ca359ca0616728ed785789be8e31201bc1"},
+    {file = "tensor_regression-0.0.5.tar.gz", hash = "sha256:cd90182d443749e16e38946e92c53319c5c1ea9cbe936ba4b0009ed45616197b"},
 ]
 
 [[package]]
