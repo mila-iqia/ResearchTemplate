@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import typing
-import warnings
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import field
 from logging import getLogger as get_logger
@@ -61,7 +60,7 @@ def relative_if_possible(p: Path) -> Path:
 
 
 def get_log_dir(trainer: Trainer | None) -> Path:
-    """Gives back the default directory to use when `trainer.log_dir` is None (no logger used?)"""
+    """Gives back the default directory to use when `trainer.log_dir` is None (no logger used)."""
     # TODO: This isn't great.. It could probably be a property on the Algorithm class or
     # customizable somehow.
     # ALSO: This
@@ -72,10 +71,10 @@ def get_log_dir(trainer: Trainer | None) -> Path:
             return Path(trainer.log_dir)
     base = Path(trainer.default_root_dir) if trainer else Path.cwd() / "logs"
     log_dir = base / "default"
-    warnings.warn(
+    logger.warning(
         RuntimeWarning(
             f"Using the default log directory of {log_dir} because the trainer.log_dir is None. "
-            f"Consider setting `trainer.logger` (e.g. `trainer.logger=wandb`) so this is set!"
+            f"Consider using a logger (e.g. with 'trainer.logger=wandb' on the command-line)."
         )
     )
     return log_dir
