@@ -1,36 +1,19 @@
 """An example of a simple fully connected network."""
 
 from dataclasses import field
-from functools import singledispatch
 
 import numpy as np
 import pydantic
 import pydantic.generics
-import torch
-from torch import Tensor, nn
+from torch import nn
 
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
+from project.networks.layers.layers import Flatten
 from project.utils.types import FloatBetween0And1
-from project.utils.types.protocols import DataModule
-
-
-class Flatten(nn.Flatten):
-    def forward(self, input: Tensor):
-        # NOTE: The input Should have at least 2 dimensions for `nn.Flatten` to work, but it isn't
-        # the case with a single observation from a single environment.
-        if input.ndim <= 1:
-            return input
-        if input.is_nested:
-            return torch.nested.as_nested_tensor(
-                [input_i.reshape([input_i.shape[0], -1]) for input_i in input.unbind()]
-            )
-        return super().forward(input)
 
 
 class FcNet(nn.Sequential):
-    class HParams(pydantic.BaseModel):
+    @pydantic.dataclasses.dataclass
+    class HParams:
         """Dataclass containing the network hyper-parameters."""
 
         hidden_dims: list[pydantic.PositiveInt] = field(default_factory=[128, 128].copy)
@@ -99,18 +82,6 @@ class FcNet(nn.Sequential):
         super().__init__(*blocks)
 
 
-HParams = FcNet.HParams  # needed for hydra to be able to resolve the class for some reason...
-
-
-@singledispatch
-def make_fcnet_for(datamodule: DataModule, hparams: FcNet.HParams | None = None) -> FcNet:
-    raise NotImplementedError(
-        f"Don't know what the output dimensions are for samples of the given datamodule: {datamodule}"
-    )
-
-
-@make_fcnet_for.register(ImageClassificationDataModule)
-def make_fcnet_for_vision(
-    datamodule: ImageClassificationDataModule, hparams: FcNet.HParams | None = None
-) -> FcNet:
-    return FcNet(input_shape=datamodule.dims, output_dims=datamodule.num_classes, hparams=hparams)
+# There's a bug in Hydra, it can't have a _target_ that is an inner class. Here we do a small trick
+# for it to work.
+HParams = FcNet.HParams

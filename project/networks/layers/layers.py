@@ -20,6 +20,19 @@ P = ParamSpec("P", default=[Tensor])
 logger = get_logger(__name__)
 
 
+class Flatten(nn.Flatten):
+    def forward(self, input: Tensor):
+        # NOTE: The input Should have at least 2 dimensions for `nn.Flatten` to work, but it isn't
+        # the case with a single observation from a single environment.
+        if input.ndim <= 1:
+            return input
+        if input.is_nested:
+            return torch.nested.as_nested_tensor(
+                [input_i.reshape([input_i.shape[0], -1]) for input_i in input.unbind()]
+            )
+        return super().forward(input)
+
+
 class Lambda(nn.Module, Module[..., OutT]):
     """A simple nn.Module wrapping a function.
 
