@@ -6,7 +6,7 @@ _target_: project.algorithms.example.ExampleAlgorithm
 # that will accept the datamodule and network and create the algo.
 _partial_: true
 _recursive_: false
-optimizer:
+optimizer_config:
   _target_: torch.optim.AdamW
   _partial_: true
   lr: 0.001

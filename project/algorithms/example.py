@@ -11,6 +11,7 @@ from typing import Any, Literal
 import torch
 from hydra_zen.typing import HydraPartialBuilds, Partial, PartialBuilds, ZenPartialBuilds  # noqa
 from lightning import LightningModule
+from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
@@ -29,13 +30,24 @@ class ExampleAlgorithm(LightningModule):
         self,
         datamodule: ImageClassificationDataModule,
         network: torch.nn.Module,
-        optimizer: Any = AdamConfig(lr=3e-4),
+        optimizer_config: Any = AdamConfig(lr=3e-4),
     ):
+        """Create a new instance of the algorithm.
+
+        Parameters
+        ----------
+        datamodule: Object used to load train/val/test data. See the lightning docs for the \
+            `LightningDataModule` class more info.
+        network: The network to train.
+        optimizer_config: Configuration options for the Optimizer.
+        """
         super().__init__()
         self.datamodule = datamodule
         self.network = network
-        self.optimizer = optimizer
-        assert dataclasses.is_dataclass(optimizer) or isinstance(optimizer, dict), optimizer
+        self.optimizer_config = optimizer_config
+        assert dataclasses.is_dataclass(optimizer_config) or isinstance(
+            optimizer_config, dict | DictConfig
+        ), optimizer_config
 
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
@@ -78,10 +90,10 @@ class ExampleAlgorithm(LightningModule):
     def configure_optimizers(self):
         optimizer_partial: functools.partial[Optimizer]
         # todo: why are there two cases here? CLI vs programmatically? Why are they different?
-        if isinstance(self.optimizer, functools.partial):
-            optimizer_partial = self.optimizer
+        if isinstance(self.optimizer_config, functools.partial):
+            optimizer_partial = self.optimizer_config
         else:
-            optimizer_partial = instantiate(self.optimizer)
+            optimizer_partial = instantiate(self.optimizer_config)
         optimizer = optimizer_partial(self.parameters())
         return optimizer
 
