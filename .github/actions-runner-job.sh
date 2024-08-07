@@ -43,6 +43,7 @@ tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
 #   "expires_at": "2020-01-22T12:13:35.123-08:00"
 # }
 source ~/.bash_aliases
+module load python/3.10
 
 TOKEN=`curl -L \
   -X POST \
