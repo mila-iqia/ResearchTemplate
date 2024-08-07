@@ -27,7 +27,6 @@ dependencies = [
     "tensorboard>=2.16.2",
     "gymnax>=0.0.8",
     "torch-jax-interop>=0.0.7",
-    "tensor-regression>=0.0.4",
     "simple-parsing>=0.1.5",
     "pydantic==2.7.4",
     "milatools>=0.0.18",
@@ -61,7 +60,7 @@ dev = [
     "ruff>=0.3.3",
     "pytest-benchmark>=4.0.0",
     "pytest-cov>=5.0.0",
-    "tensor-regression>=0.0.2.post3.dev0",
+    "tensor-regression>=0.0.6",
     "pytest-testmon>=2.1.1",
     "mkdocs>=1.6.0",
     "pymdown-extensions>=10.8.1",
@@ -72,6 +71,7 @@ dev = [
     "mkdocs-literate-nav>=0.6.1",
     "mkdocs-material>=9.5.28",
     "pre-commit>=3.7.1",
+    "mktestdocs @ git+https://github.com/koaning/mktestdocs.git@0b67d24e8a7bf315ffdf5bce979bc148e9c1d48a",
 ]
 
 [[tool.pdm.source]]
@@ -84,9 +84,13 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-testpaths = ["project"]
+testpaths = ["project", "docs"]
 # todo: look into using https://github.com/scientific-python/pytest-doctestplus
 addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
+markers = [
+    "incremental: incremental testing support",
+    "parametrize_when_used: Parametrize a test only when the argument is used."
+]
 
 [tool.ruff]
 line-length = 99

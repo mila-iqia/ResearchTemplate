@@ -2,10 +2,3 @@ defaults:
   - default
 
 model_checkpoint: null
-
-# model_summary:
-#   _target_: lightning.pytorch.callbacks.RichModelSummary
-#   max_depth: 1
-
-# rich_progress_bar:
-#   _target_: lightning.pytorch.callbacks.RichProgressBar

@@ -1,3 +1,11 @@
+"""All the configuration classes for the project.
+
+## Algorithm configs
+
+All algorithm classes that are defined in `project/algorithms` and are added to `__all__` in
+[project.algorithms.__init__.py][] will have a configuration class created dynamically.
+"""
+
 from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
@@ -13,6 +21,7 @@ cs.store(name="base_config", node=Config)
 
 
 def add_configs_to_hydra_store(with_dynamic_configs: bool = True):
+    """Adds all configs to the Hydra Config store."""
     datamodule_store.add_to_hydra_store()
     network_store.add_to_hydra_store()
     register_algorithm_configs(with_dynamic_configs=with_dynamic_configs)

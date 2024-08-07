@@ -12,7 +12,7 @@ TODOs:
 ## Simple run
 
 ```bash
-python project/main.py algorithm=example_algo datamodule=mnist network=fcnet
+python project/main.py algorithm=example datamodule=mnist network=fcnet
 ```
 
 ## Running a Hyper-Parameter sweep on a SLURM cluster

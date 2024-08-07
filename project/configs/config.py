@@ -33,9 +33,14 @@ class Config:
     """Keyword arguments for the Trainer constructor."""
 
     log_level: str = "info"
+    """Logging level."""
 
     # Random seed.
     seed: int | None = field(default_factory=lambda: random.randint(0, int(1e5)))
+    """Random seed for reproducibility.
+
+    If None, a random seed is generated.
+    """
 
     # Name for the experiment.
     name: str = "default"

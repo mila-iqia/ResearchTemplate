@@ -6,66 +6,48 @@ Uses regular backpropagation.
 import dataclasses
 import functools
 from logging import getLogger
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-import pydantic
 import torch
-from hydra_zen import instantiate
+from hydra_zen.typing import HydraPartialBuilds, Partial, PartialBuilds, ZenPartialBuilds  # noqa
 from lightning import LightningModule
-from lightning.pytorch.callbacks import Callback, EarlyStopping
-from pydantic import NonNegativeInt, PositiveInt
+from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
+from project.experiment import instantiate
 
 logger = getLogger(__name__)
-
-LRSchedulerConfig = Annotated[Any, pydantic.Field(default_factory=CosineAnnealingLRConfig)]
 
 
 class ExampleAlgorithm(LightningModule):
     """Example learning algorithm for image classification."""
 
-    @pydantic.dataclasses.dataclass(frozen=True)
-    class HParams:
-        """Hyper-Parameters."""
-
-        # Arguments to be passed to the LR scheduler.
-        lr_scheduler: LRSchedulerConfig = dataclasses.field(
-            default=CosineAnnealingLRConfig(T_max=85, eta_min=1e-5),
-            metadata={"omegaconf_ignore": True},
-        )
-
-        lr_scheduler_interval: Literal["step", "epoch"] = "epoch"
-
-        # Frequency of the LR scheduler. Set to 0 to disable the lr scheduler.
-        lr_scheduler_frequency: NonNegativeInt = 1
-
-        # Hyper-parameters for the optimizer
-        optimizer: Any = AdamConfig(lr=3e-4)
-
-        batch_size: PositiveInt = 128
-
-        # Max number of epochs to train for without an improvement to the validation
-        # accuracy before the training is stopped.
-        early_stopping_patience: NonNegativeInt = 0
-
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
         network: torch.nn.Module,
-        hp: HParams = HParams(),
+        optimizer_config: Any = AdamConfig(lr=3e-4),
     ):
+        """Create a new instance of the algorithm.
+
+        Parameters
+        ----------
+        datamodule: Object used to load train/val/test data. See the lightning docs for the \
+            `LightningDataModule` class more info.
+        network: The network to train.
+        optimizer_config: Configuration options for the Optimizer.
+        """
         super().__init__()
         self.datamodule = datamodule
         self.network = network
-        self.hp = hp or self.HParams()
+        self.optimizer_config = optimizer_config
+        assert dataclasses.is_dataclass(optimizer_config) or isinstance(
+            optimizer_config, dict | DictConfig
+        ), optimizer_config
 
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
@@ -76,7 +58,7 @@ class ExampleAlgorithm(LightningModule):
         _ = self.network(self.example_input_array)
 
         # Save hyper-parameters.
-        self.save_hyperparameters({"hp": dataclasses.asdict(self.hp)})
+        self.save_hyperparameters(ignore=["datamodule", "network"])
 
     def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
@@ -98,61 +80,22 @@ class ExampleAlgorithm(LightningModule):
         phase: Literal["train", "val", "test"],
     ):
         x, y = batch
-        logits = self(x)
+        logits: torch.Tensor = self(x)
         loss = F.cross_entropy(logits, y, reduction="mean")
         self.log(f"{phase}/loss", loss.detach().mean())
         acc = logits.detach().argmax(-1).eq(y).float().mean()
         self.log(f"{phase}/accuracy", acc)
         return {"loss": loss, "logits": logits, "y": y}
 
-    def configure_optimizers(self) -> dict:
-        """Creates the optimizers and the LR scheduler (if needed)."""
+    def configure_optimizers(self):
         optimizer_partial: functools.partial[Optimizer]
-        if isinstance(self.hp.optimizer, functools.partial):
-            optimizer_partial = self.hp.optimizer
+        # todo: why are there two cases here? CLI vs programmatically? Why are they different?
+        if isinstance(self.optimizer_config, functools.partial):
+            optimizer_partial = self.optimizer_config
         else:
-            optimizer_partial = instantiate(self.hp.optimizer)
+            optimizer_partial = instantiate(self.optimizer_config)
         optimizer = optimizer_partial(self.parameters())
-        optimizers: dict[str, Any] = {"optimizer": optimizer}
-
-        lr_scheduler_partial: functools.partial[_LRScheduler]
-        if isinstance(self.hp.lr_scheduler, functools.partial):
-            lr_scheduler_partial = self.hp.lr_scheduler
-        else:
-            lr_scheduler_partial = instantiate(self.hp.lr_scheduler)
-
-        if self.hp.lr_scheduler_frequency != 0:
-            lr_scheduler = lr_scheduler_partial(optimizer)
-            optimizers["lr_scheduler"] = {
-                "scheduler": lr_scheduler,
-                # NOTE: These two keys are ignored if doing manual optimization.
-                # https://pytorch-lightning.readthedocs.io/en/stable/common/optimization.html#learning-rate-scheduling
-                "interval": self.hp.lr_scheduler_interval,
-                "frequency": self.hp.lr_scheduler_frequency,
-            }
-        return optimizers
-
-    def configure_callbacks(self) -> list[Callback]:
-        callbacks: list[Callback] = []
-        callbacks.append(
-            # Log some classification metrics. (This callback adds some metrics on this module).
-            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
-        )
-        if self.hp.lr_scheduler_frequency != 0:
-            from lightning.pytorch.callbacks import LearningRateMonitor
-
-            callbacks.append(LearningRateMonitor())
-        if self.hp.early_stopping_patience != 0:
-            # If early stopping is enabled, add a Callback for it:
-            callbacks.append(
-                EarlyStopping(
-                    "val/accuracy",
-                    mode="max",
-                    patience=self.hp.early_stopping_patience,
-                    verbose=True,
-                )
-            )
-        return callbacks
+        return optimizer
 
     @property
     def device(self) -> torch.device:

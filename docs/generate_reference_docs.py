@@ -3,80 +3,78 @@
 
 
 import textwrap
+from logging import getLogger as get_logger
 from pathlib import Path
 
 import mkdocs_gen_files
-import mkdocs_gen_files.nav
 
 from project.utils.env_vars import REPO_ROOTDIR
 
-module = "project"
-modules = [
-    "project/main.py",
-    "project/experiment.py",
-]
-submodules = [
-    "project.algorithms",
-    "project.configs",
-    "project.datamodules",
-    "project.networks",
-    "project.utils",
-]
-
-
-def _get_import_path(module_path: Path) -> str:
-    """Returns the path to use to import a given (internal) module."""
-    return ".".join(module_path.relative_to(REPO_ROOTDIR).with_suffix("").parts)
+logger = get_logger(__name__)
 
 
 def main():
-    nav = mkdocs_gen_files.nav.Nav()
-
-    add_doc_for_module(REPO_ROOTDIR / "project", nav)
-
-    # with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
-    #     # assert False, "\n".join(nav.build_literate_nav())
-    #     nav_file.writelines(nav.build_literate_nav())
+    add_doc_for_module(REPO_ROOTDIR / "project")
 
 
-def add_doc_for_module(module_path: Path, nav: mkdocs_gen_files.nav.Nav) -> None:
-    """TODO."""
+def add_doc_for_module(module_path: Path) -> None:
+    """Creates a markdown file in the "reference" section for this module and its submodules
+    recursively.
 
-    assert module_path.is_dir() and (module_path / "__init__.py").exists(), module_path
+    ## TODOs:
+    - [ ] We don't currently see the docs from the docstrings of __init__.py files.
+    - [ ] Might be nice to show the config files also?
+    """
 
-    children = list(
-        p
-        for p in module_path.glob("*.py")
-        if not p.name.startswith("__") and not p.name.endswith("_test.py")
-    )
+    assert module_path.is_dir()  # and (module_path / "__init__.py").exists(), module_path
+
+    # module_import_path = _get_import_path(module_path)
+    # doc_file = module_path.relative_to(REPO_ROOTDIR).with_suffix(".md")
+    # write_doc_file = "reference" / doc_file
+    # with mkdocs_gen_files.editor.FilesEditor.current().open(str(write_doc_file), "w") as f:
+    #     print(
+    #         textwrap.dedent(f"""\
+    #         ::: {module_import_path}
+
+    #         """),
+    #         file=f,
+    #     )
+
+    def is_module(p: Path) -> bool:
+        return (
+            p.suffix == ".py" and not p.name.startswith("__") and not p.name.endswith("_test.py")
+        )
+
+    children = list(p for p in module_path.glob("*.py") if is_module(p))
     for child_module_path in children:
         child_module_import_path = _get_import_path(child_module_path)
         doc_file = child_module_path.relative_to(REPO_ROOTDIR).with_suffix(".md")
-        write_doc_file = f"reference/{doc_file}"
+        write_doc_file = "reference" / doc_file
 
-        nav[tuple(child_module_import_path.split("."))] = f"{doc_file}"
-
-        with mkdocs_gen_files.open(write_doc_file, "w") as f:
+        with mkdocs_gen_files.editor.FilesEditor.current().open(str(write_doc_file), "w") as f:
             print(
                 textwrap.dedent(f"""\
                 ::: {child_module_import_path}
                 """),
                 file=f,
             )
-        docs_dir = REPO_ROOTDIR / "docs"
-        module_path_relative_to_docs_dir = child_module_path.relative_to(docs_dir, walk_up=True)
-        mkdocs_gen_files.set_edit_path(write_doc_file, str(module_path_relative_to_docs_dir))
 
     submodules = list(
         p
         for p in module_path.iterdir()
         if p.is_dir()
-        and (p / "__init__.py").exists()
+        and ((p / "__init__.py").exists() or len(list(p.glob("*.py"))) > 0)
         and not p.name.endswith("_test")
         and not p.name.startswith((".", "__"))
     )
     for submodule in submodules:
-        add_doc_for_module(submodule, nav)
+        logger.info(f"Creating doc for {submodule}")
+        add_doc_for_module(submodule)
+
+
+def _get_import_path(module_path: Path) -> str:
+    """Returns the path to use to import a given (internal) module."""
+    return ".".join(module_path.relative_to(REPO_ROOTDIR).with_suffix("").parts)
 
 
 if __name__ in ["__main__", "<run_path>"]:

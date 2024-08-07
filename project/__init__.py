@@ -19,13 +19,7 @@ __all__ = [
     "networks",
     "DataModule",
     "utils",
-    # "ExampleAlgorithm",
-    # "ManualGradientsExample",
-    # "NoOp",
     "Config",
-    # "ImageClassificationDataModule",
     "DataModule",
-    # "VisionDataModule",
     "Experiment",
-    # "FcNet",
 ]

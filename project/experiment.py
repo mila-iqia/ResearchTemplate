@@ -5,8 +5,7 @@ import functools
 import logging
 import os
 import random
-from collections.abc import Callable
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from logging import getLogger as get_logger
 from typing import Any
 
@@ -15,7 +14,6 @@ import rich.console
 import rich.logging
 import rich.traceback
 import torch
-from hydra_zen.third_party.pydantic import pydantic_parser
 from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
@@ -32,12 +30,13 @@ from project.utils.utils import validate_datamodule
 logger = get_logger(__name__)
 
 
-# todo: fix this.
-def _use_pydantic[C: Callable](fn: C) -> C:
-    return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+# BUG: Always using the pydantic parser when instantiating things would be nice, but it currently
+# causes issues related to pickling: https://github.com/mit-ll-responsible-ai/hydra-zen/issues/717
+# def _use_pydantic[C: Callable](fn: C) -> C:
+#     return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+# instantiate = _use_pydantic(hydra_zen.instantiate)
 
-
-instantiate = _use_pydantic(hydra_zen.instantiate)
+instantiate = hydra_zen.instantiate
 
 
 @dataclass
@@ -180,37 +179,22 @@ def get_experiment_device(experiment_config: Config | DictConfig) -> torch.devic
 
 
 def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
+    """Create the network given the configs."""
+    # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
     device = get_experiment_device(experiment_config)
 
     network_config = experiment_config.network
-
-    # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
-
-    if isinstance(network_config, dict | DictConfig) or hasattr(network_config, "_target_"):
-        with device:
-            network = hydra_zen.instantiate(network_config)
-    elif is_dataclass(network_config):
-        with device:
-            network = instantiate_network_from_hparams(
-                network_hparams=network_config, datamodule=datamodule
-            )
-        assert isinstance(network, nn.Module)
-    elif isinstance(network_config, nn.Module):
+    if isinstance(network_config, nn.Module):
         logger.warning(
             RuntimeWarning(
                 f"The network config is a nn.Module. Consider using a _target_ or _partial_"
                 f"in a config instead, so the config stays lightweight. (network={network_config})"
             )
         )
-        network = network_config.to(device=device)
-    elif callable(network_config):
-        # for example when using _partial_ in a config.
-        with device:
-            network = network_config()
-    else:
-        raise RuntimeError(f"Unsupported network config passed: {network_config}")
+        return network_config.to(device=device)
 
-    return network
+    with device:
+        return hydra_zen.instantiate(network_config)
 
 
 def instantiate_algorithm(
@@ -247,6 +231,7 @@ def instantiate_algorithm(
     if hasattr(algo_config, "_target_"):
         # A dataclass of some sort, with a _target_ attribute.
         if hydra_zen.is_partial_builds(algo_config):
+            logger.info(f"Instantiating partial for algorithm {hydra_zen.get_target(algo_config)}")
             algo_partial = instantiate(algo_config)
             assert isinstance(algo_partial, functools.partial)
             algorithm = algo_partial(network=network, datamodule=datamodule)
@@ -261,7 +246,8 @@ def instantiate_algorithm(
 
         raise NotImplementedError(
             f"For now the algorithm config can either have a _target_ set to an Algorithm class, "
-            f"or configure an inner Algorithm.HParams dataclass. Got:\n{algo_config=}"
+            f"or configure an inner dataclass of a LightningModule (for example a "
+            f"'MyAlgorithm.HParams'-like dataclass). Got:\n{algo_config=}"
         )
 
     algorithm_type: type[LightningModule] = get_outer_class(type(algo_config))

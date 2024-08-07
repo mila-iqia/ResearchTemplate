@@ -10,17 +10,20 @@ import os
 import sys
 import typing
 import warnings
+from collections import defaultdict
 from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
 
+import flax.linen
 import lightning.pytorch as pl
 import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize_config_module
-from lightning import seed_everything
+from hydra.conf import HydraHelpConf
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, open_dict
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
@@ -41,9 +44,10 @@ from project.experiment import (
 )
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
+    PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
-    fork_rng,
+    seeded_rng,
 )
 from project.utils.types import is_sequence_of
 from project.utils.types.protocols import (
@@ -79,7 +83,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
 
     # This -m flag could also be something more complicated like 'fast and not slow', but
     # keeping it simple for now.
-    only_running_slow_tests = config.getoption("-m", default=None) == "slow"  # type: ignore
+    only_running_slow_tests = "slow" in config.getoption("-m", default="")  # type: ignore
+    add_timeout_to_unmarked_tests = False  # todo: Add option for this?
 
     very_fast_time = DEFAULT_TIMEOUT / 10
     very_fast_timeout_mark = pytest.mark.timeout(very_fast_time, func_only=False)
@@ -108,7 +113,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
             if not running_slow_tests:
                 indices_to_remove.append(_node_index)
                 continue
-        else:
+        elif add_timeout_to_unmarked_tests:
             logger.debug(
                 f"Test {node.name} doesn't have a `fast`, `very_fast`, `slow` or `timeout` mark. "
                 "Assuming it's fast to run (after test setup)."
@@ -146,12 +151,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
 
 
 @pytest.fixture(autouse=True)
-def seed(request: pytest.FixtureRequest):
+def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
     """Fixture that seeds everything for reproducibility and yields the random seed used."""
     random_seed = getattr(request, "param", DEFAULT_SEED)
     assert isinstance(random_seed, int) or random_seed is None
-    with fork_rng():
-        seed_everything(random_seed, workers=True)
+
+    with seeded_rng(random_seed):
         yield random_seed
 
 
@@ -271,6 +276,15 @@ def use_overrides(command_line_overrides: Param | list[Param], ids=None):
         ...
     ```
     """
+    # todo: Use some parametrize_when_used with some additional arg that says that multiple
+    # invocations of this should be appended together instead of added to the list. For example:
+    # @use_overrides("algorithm=my_algo network=fcnet")
+    # @use_overrides("network=bar")
+    # should end up doing
+    # ```
+    # pytest.mark.parametrize("overrides", ["algorithm=my_algo network=fcnet network=bar"], indirect=True)
+    # ```
+
     return pytest.mark.parametrize(
         overrides.__name__,
         (
@@ -302,8 +316,6 @@ def setup_hydra_for_tests_and_compose(
 
         # BUG: Weird errors with Hydra variable interpolation.. Setting these manually seems
         # to fix it for now..
-        from hydra.conf import HydraHelpConf
-        from hydra.core.hydra_config import HydraConfig
 
         with open_dict(config):
             # BUG: Getting some weird Hydra omegaconf error in unit tests:
@@ -326,10 +338,12 @@ def _add_default_marks_for_config_name(config_name: str, request: pytest.Fixture
     if config_name in default_marks_for_config_name:
         for marker in default_marks_for_config_name[config_name]:
             request.applymarker(marker)
+    # TODO: ALSO add all the marks for config combinations that contain this config?
 
 
 @pytest.fixture(scope="session")
-def algorithm_name(request: pytest.FixtureRequest) -> str | None:
+def algorithm_config(request: pytest.FixtureRequest) -> str | None:
+    """The name of the config to use within the "algorithm" group."""
     algorithm_config_name = getattr(request, "param", None)
     if algorithm_config_name:
         _add_default_marks_for_config_name(algorithm_config_name, request)
@@ -337,7 +351,8 @@ def algorithm_name(request: pytest.FixtureRequest) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def datamodule_name(request: pytest.FixtureRequest) -> str | None:
+def datamodule_config(request: pytest.FixtureRequest) -> str | None:
+    """The name of the config to use within the "datamodule" group."""
     datamodule_config_name = getattr(request, "param", None)
     if datamodule_config_name:
         _add_default_marks_for_config_name(datamodule_config_name, request)
@@ -345,7 +360,7 @@ def datamodule_name(request: pytest.FixtureRequest) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def network_name(request: pytest.FixtureRequest) -> str | None:
+def network_config(request: pytest.FixtureRequest) -> str | None:
     network_config_name = getattr(request, "param", None)
     if network_config_name:
         _add_default_marks_for_config_name(network_config_name, request)
@@ -357,37 +372,40 @@ def experiment_dictconfig(
     tmp_path_factory: pytest.TempPathFactory,
     devices: str,
     accelerator: str,
-    algorithm_name: str | None,
-    datamodule_name: str | None,
-    network_name: str | None,
+    algorithm_config: str | None,
+    datamodule_config: str | None,
+    network_config: str | None,
     overrides: tuple[str, ...],
     request: pytest.FixtureRequest,
 ) -> Generator[DictConfig, None, None]:
     tmp_path = tmp_path_factory.mktemp("experiment_testing")
 
-    combination = set([datamodule_name, network_name, algorithm_name])
+    combination = set([datamodule_config, network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
+        marks = [marks] if not isinstance(marks, list | tuple) else marks
         configs = set(configs)
         if combination >= configs:
-            logger.debug(f"Applying markers because {combination} contains {configs}")
-            # There is a combination of potentially unsupported configs here.
-            for mark in marks:
-                request.applymarker(mark)
+            # warnings.warn(f"Applying markers because {combination} contains {configs}")
+            # There is a combination of potentially unsupported configs here, e.g. MNIST and ResNets.
+            pytest.skip(reason=f"Combination {combination} contains {configs}.")
+            # for mark in marks:
+            #     request.applymarker(mark)
 
     default_overrides = [
         # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.
-        "seed=42",
         f"trainer.devices={devices}",
         f"trainer.accelerator={accelerator}",
+        # TODO: Setting this here, which actually impacts the tests!
+        "seed=42",
     ]
     if not any("trainer.default_root_dir" in override for override in overrides):
         default_overrides.append(f"++trainer.default_root_dir={tmp_path}")
-    if algorithm_name:
-        default_overrides.append(f"algorithm={algorithm_name}")
-    if network_name:
-        default_overrides.append(f"network={network_name}")
-    if datamodule_name:
-        default_overrides.append(f"datamodule={datamodule_name}")
+    if algorithm_config:
+        default_overrides.append(f"algorithm={algorithm_config}")
+    if network_config:
+        default_overrides.append(f"network={network_config}")
+    if datamodule_config:
+        default_overrides.append(f"datamodule={datamodule_config}")
 
     all_overrides = default_overrides + list(overrides)
 
@@ -471,19 +489,6 @@ def training_batch(
 
 
 @pytest.fixture(scope="session")
-def x_y(training_batch: tuple[Tensor, ...], datamodule: DataModule) -> tuple[Tensor, Tensor]:
-    """Returns a batch of data from the training set of an image classification datamodule."""
-    if len(training_batch) != 2 or not isinstance(datamodule, ImageClassificationDataModule):
-        pytest.skip(
-            reason=(
-                f"Test requires a batch of classification data (with 2 elements), batch has "
-                f"{len(training_batch)}."
-            )
-        )
-    return training_batch
-
-
-@pytest.fixture(scope="session")
 def num_classes(datamodule: DataModule) -> int:
     """Returns a batch of data from the training set of an image classification datamodule."""
     if not isinstance(datamodule, ImageClassificationDataModule):
@@ -511,41 +516,22 @@ def network(
 ):
     with device:
         network = instantiate_network(experiment_config, datamodule=datamodule)
-    try:
+
+    if isinstance(network, flax.linen.Module):
+        return network
+
+    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
+        # a bit ugly, but we need to initialize any lazy weights before we pass the network
+        # to the tests.
+        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
         _ = network(input)
-    except RuntimeError as err:
-        logger.error(f"Error when running the network: {err}")
-        request.node.add_marker(
-            pytest.mark.xfail(
-                raises=RuntimeError,
-                reason="Network doesn't seem compatible this dataset.",
-            )
-        )
     return network
 
 
 @pytest.fixture(scope="function")
 def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
+    """Fixture that creates an "algorithm" (LightningModule)."""
     return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
-
-
-@pytest.fixture(scope="session")
-def classifier_network(network: nn.Module, x_y: tuple[Tensor, Tensor], datamodule: DataModule):
-    """Renames the "network" fixture to `classifier_network` if it is indeed an image classifier.
-
-    Skips dependent tests if `network` isn't a classifier.
-    """
-    with torch.no_grad():
-        preds = network(x_y[0])
-    if (
-        not isinstance(datamodule, ImageClassificationDataModule)
-        or not isinstance(preds, Tensor)
-        or preds.shape[-1] != datamodule.num_classes
-    ):
-        pytest.skip(
-            reason="The network isn't a classifier or the datamodule isn't an image classification datamodule."
-        )
-    return network
 
 
 @pytest.fixture
@@ -566,6 +552,8 @@ _test_failed_incremental: dict[str, dict[tuple[int, ...], str]] = {}
 
 
 def pytest_runtest_makereport(item, call):
+    """Used to setup the `pytest.mark.incremental` mark, as described in [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)."""
+
     if "incremental" in item.keywords:
         # incremental marker is used
         if call.excinfo is not None:
@@ -585,6 +573,7 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_runtest_setup(item):
+    """Used to setup the `pytest.mark.incremental` mark, as described in [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)."""
     if "incremental" in item.keywords:
         # retrieve the class name of the test
         cls_name = str(item.cls)
@@ -599,3 +588,70 @@ def pytest_runtest_setup(item):
             # if name found, test has failed for the combination of class name & test name
             if test_name is not None:
                 pytest.xfail(f"previous test failed ({test_name})")
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Allows one to define custom parametrization schemes or extensions.
+
+    This is used to implement the `parametrize_when_used` mark, which allows one to parametrize an argument when it is used.
+
+    See
+    https://docs.pytest.org/en/7.1.x/how-to/parametrize.html#how-to-parametrize-fixtures-and-test-functions
+    """
+    # IDEA: Accumulate the parametrizations values from multiple calls, instead of doing like
+    # `pytest.mark.parametrize`, which only allows one parametrization.
+    args_to_parametrized_values: dict[str, list] = defaultdict(list)
+    args_to_be_parametrized_markers: dict[str, list[pytest.Mark]] = defaultdict(list)
+    arg_can_be_parametrized: dict[str, bool] = {}
+    for marker in metafunc.definition.iter_markers(name=PARAM_WHEN_USED_MARK_NAME):
+        assert len(marker.args) == 2
+        argnames = marker.args[0]
+        argvalues = marker.args[1]
+        assert isinstance(argnames, str), argnames
+
+        from _pytest.mark.structures import ParameterSet
+
+        argnames, _parametersets = ParameterSet._for_parametrize(
+            argnames,
+            argvalues,
+            metafunc.function,
+            metafunc.config,
+            nodeid=metafunc.definition.nodeid,
+        )
+        from _pytest.outcomes import Failed
+
+        assert len(argnames) == 1
+        argname = argnames[0]
+
+        if arg_can_be_parametrized.get(argname):
+            args_to_parametrized_values[argname].extend(argvalues)
+            args_to_be_parametrized_markers[argname].append(marker)
+            continue
+
+        # We don't know if the test uses that argument yet, so we check using the same logic as
+        # pytest.mark.parametrize would.
+        try:
+            metafunc._validate_if_using_arg_names(
+                argnames, indirect=marker.kwargs.get("indirect", False)
+            )
+        except Failed:
+            # Test doesn't use that argument, dont parametrize it.
+            arg_can_be_parametrized[argname] = False
+        else:
+            arg_can_be_parametrized[argname] = True
+            args_to_parametrized_values[argname].extend(argvalues)
+            args_to_be_parametrized_markers[argname].append(marker)
+
+    for arg_name, arg_values in args_to_parametrized_values.items():
+        # Test uses that argument, parametrize it.
+
+        # remove duplicates and order the parameters deterministically.
+        try:
+            arg_values = sorted(set(arg_values), key=str)
+        except TypeError:
+            pass
+
+        # TODO: unsure what mark to pass here, if there were multiple marks for the same argument..
+        marker = args_to_be_parametrized_markers[arg_name][-1]
+        indirect = marker.kwargs.get("indirect", False)
+        metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)

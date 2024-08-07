@@ -1,16 +1,21 @@
-from typing import ClassVar
-
 import flax
 import flax.linen
-import torch
 
 from project.algorithms.jax_example import JaxExample
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
+from project.utils.testutils import run_for_all_configs_of_type
 
-from .testsuites.algorithm_tests import AlgorithmTests
+from .testsuites.algorithm_tests import LearningAlgorithmTests
 
 
-class TestJaxExample(AlgorithmTests[JaxExample]):
-    """This algorithm only works with Jax modules."""
+@run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
+@run_for_all_configs_of_type("network", flax.linen.Module)
+class TestJaxExample(LearningAlgorithmTests[JaxExample]):
+    """Tests for the Jax example algorithm.
 
-    unsupported_network_types: ClassVar[list[type]] = [torch.nn.Module]
-    _supported_network_types: ClassVar[list[type]] = [flax.linen.Module]
+    This simply reuses all the tests in the base test suite, specifying that the `datamodule`
+    passed to the ``JaxExample`` should be for image classification and the `network` should be a
+    `flax.linne.Module`.
+    """

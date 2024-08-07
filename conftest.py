@@ -1,6 +1,11 @@
+import os
 from pathlib import Path
 
 import pytest
+import torch
+
+if not torch.cuda.is_available():
+    os.environ["JAX_PLATFORMS"] = "cpu"
 
 
 def pytest_addoption(parser: pytest.Parser):

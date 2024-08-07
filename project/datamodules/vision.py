@@ -111,6 +111,9 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             self.valid_kwargs["train"] = True
             self.test_kwargs["train"] = False
 
+        self.batch_size_per_device: int = batch_size
+        self.save_hyperparameters(logger=False)
+
     def prepare_data(self) -> None:
         """Saves files to data_dir."""
         # Call with `train=True` and `train=False` if there is such an argument.
@@ -156,6 +159,15 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
         if stage == "test" or stage is None:
             logger.debug(f"creating test dataset with kwargs {self.train_kwargs}")
             self.dataset_test = self.test_dataset_cls(str(self.data_dir), **self.test_kwargs)
+
+        # Divide batch size by the number of devices.
+        # Taken from https://github.com/ashleve/lightning-hydra-template/commit/1fb540580602e73ba6481ab5e4e86187690d2dbf
+        if self.trainer is not None:
+            if self.batch_size % self.trainer.world_size != 0:
+                raise RuntimeError(
+                    f"Batch size ({self.batch_size}) is not divisible by the number of devices ({self.trainer.world_size})."
+                )
+            self.batch_size_per_device = self.batch_size // self.trainer.world_size
 
     def _split_dataset(self, dataset: VisionDataset, train: bool = True) -> Dataset:
         """Splits the dataset into train and validation set."""
@@ -248,7 +260,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
     ) -> DataLoader:
         dataloader_kwargs = (
             dict(  # type: ignore
-                batch_size=self.batch_size,
+                batch_size=self.batch_size_per_device,
                 num_workers=self.num_workers,
                 drop_last=self.drop_last,
                 pin_memory=self.pin_memory,

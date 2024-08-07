@@ -10,12 +10,12 @@ from hydra_zen.typing import PartialBuilds
 
 from project.configs.algorithm.lr_scheduler import get_all_scheduler_configs
 from project.configs.algorithm.optimizer import get_all_optimizer_configs
-from project.utils.testutils import seeded
+from project.utils.testutils import seeded_rng
 
 
 @pytest.fixture(scope="session")
 def net(device: torch.device):
-    with seeded(123):
+    with seeded_rng(123):
         net = torch.nn.Linear(10, 1).to(device)
     return net
 
