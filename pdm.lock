@@ -5,7 +5,7 @@
 groups = ["default", "dev", "gpu"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:f08da5dfdfe44b3606f4b96358e55bcd3cf6794edec048ea254dbbc227260ec6"
+content_hash = "sha256:7cdab2243273dabb91eab0318c8f738607c5ff1b726c7da07a7c88863341600e"
 
 [[package]]
 name = "absl-py"
@@ -3292,17 +3292,18 @@ files = [
 
 [[package]]
 name = "tensor-regression"
-version = "0.0.2.post3.dev0"
+version = "0.0.6"
 requires_python = "<4.0,>=3.10"
-git = "https://www.github.com/lebrice/tensor_regression"
-ref = "add-skip-creation"
-revision = "cad4002a45c154f0c0cbace7aadadce4ad7a0b99"
 summary = "A small wrapper around pytest_regressions for Tensors"
 groups = ["dev"]
 dependencies = [
     "numpy<2.0.0,>=1.26.4",
     "pytest-regressions<3.0.0,>=2.5.0",
     "torch<3.0.0,>=2.0.0",
+]
+files = [
+    {file = "tensor_regression-0.0.6-py3-none-any.whl", hash = "sha256:af1082618deda725ad40448deea672fb220bd406e77118fd69b15947eccae577"},
+    {file = "tensor_regression-0.0.6.tar.gz", hash = "sha256:b399e71b10f8c7db78e8e1a50b1c92a1aef62c852d1fe54e4c1cbcc95017aaa5"},
 ]
 
 [[package]]

@@ -30,7 +30,7 @@ def test_torch_can_use_the_GPU():
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
     assert experiment_config.algorithm["_target_"] == (
-        ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__name__
+        ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__qualname__
     )
     assert (
         isinstance(experiment_config.datamodule, CIFAR10DataModule)
