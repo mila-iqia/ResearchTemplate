@@ -20,7 +20,6 @@ from typing import (
 import hydra_zen.structured_configs._utils
 from hydra_zen import instantiate
 from hydra_zen.structured_configs._utils import safe_name
-from hydra_zen.third_party.pydantic import pydantic_parser
 from hydra_zen.typing._implementations import Partial as _Partial
 from omegaconf import DictConfig, OmegaConf
 
@@ -428,11 +427,12 @@ def make_config_and_store[Target](
             "cls_name": f"{target.__name__}Config",
             # BUG: Causes issues, tries to get the config from the module again, which re-creates
             # it?
-            # "module": _calling_module.__name__,
+            "module": _calling_module.__name__,
             # TODO: Seems to be causing issues with `_target_` being overwritten?
             "frozen": False,
         },
-        zen_wrappers=pydantic_parser,
+        # Seems to make things not pickleable!
+        # zen_wrappers=pydantic_parser,
         **overrides,
     )
     name_of_config_in_store = target.__name__

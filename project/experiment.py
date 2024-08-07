@@ -5,7 +5,6 @@ import functools
 import logging
 import os
 import random
-from collections.abc import Callable
 from dataclasses import dataclass, is_dataclass
 from logging import getLogger as get_logger
 from typing import Any
@@ -15,7 +14,6 @@ import rich.console
 import rich.logging
 import rich.traceback
 import torch
-from hydra_zen.third_party.pydantic import pydantic_parser
 from lightning import Callback, LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig
 from torch import nn
@@ -32,12 +30,13 @@ from project.utils.utils import validate_datamodule
 logger = get_logger(__name__)
 
 
-# todo: fix this.
-def _use_pydantic[C: Callable](fn: C) -> C:
-    return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+# BUG: Always using the pydantic parser when instantiating things would be nice, but it currently
+# causes issues related to pickling: https://github.com/mit-ll-responsible-ai/hydra-zen/issues/717
+# def _use_pydantic[C: Callable](fn: C) -> C:
+#     return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
+# instantiate = _use_pydantic(hydra_zen.instantiate)
 
-
-instantiate = _use_pydantic(hydra_zen.instantiate)
+instantiate = hydra_zen.instantiate
 
 
 @dataclass
