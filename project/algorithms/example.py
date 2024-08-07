@@ -8,18 +8,13 @@ import functools
 from logging import getLogger
 from typing import Any, Literal
 
-import pydantic
 import torch
+from hydra_zen.typing import HydraPartialBuilds, Partial, PartialBuilds, ZenPartialBuilds  # noqa
 from lightning import LightningModule
-from lightning.pytorch.callbacks import Callback
-from pydantic import NonNegativeInt, PositiveInt
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
 
-from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import instantiate
@@ -30,32 +25,17 @@ logger = getLogger(__name__)
 class ExampleAlgorithm(LightningModule):
     """Example learning algorithm for image classification."""
 
-    @pydantic.dataclasses.dataclass(frozen=True)
-    class HParams:
-        """Dataclass containing the hyper-parameters of the learning algorithm."""
-
-        # Arguments to be passed to the LR scheduler.
-        lr_scheduler: Any = CosineAnnealingLRConfig(T_max=85, eta_min=1e-5)
-        lr_scheduler_interval: Literal["step", "epoch"] = "epoch"
-
-        # Frequency of the LR scheduler. Set to 0 to disable the lr scheduler.
-        lr_scheduler_frequency: NonNegativeInt = 1
-
-        # Hyper-parameters for the optimizer
-        optimizer: Any = AdamConfig(lr=3e-4)
-
-        batch_size: PositiveInt = 128
-
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
         network: torch.nn.Module,
-        hp: HParams = HParams(),
+        optimizer: Any = AdamConfig(lr=3e-4),
     ):
         super().__init__()
         self.datamodule = datamodule
         self.network = network
-        self.hp = hp or self.HParams()
+        self.optimizer = optimizer
+        assert dataclasses.is_dataclass(optimizer) or isinstance(optimizer, dict), optimizer
 
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
@@ -66,7 +46,7 @@ class ExampleAlgorithm(LightningModule):
         _ = self.network(self.example_input_array)
 
         # Save hyper-parameters.
-        self.save_hyperparameters({"hp": dataclasses.asdict(self.hp)})
+        self.save_hyperparameters(ignore=["datamodule", "network"])
 
     def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
@@ -88,53 +68,22 @@ class ExampleAlgorithm(LightningModule):
         phase: Literal["train", "val", "test"],
     ):
         x, y = batch
-        logits = self(x)
+        logits: torch.Tensor = self(x)
         loss = F.cross_entropy(logits, y, reduction="mean")
         self.log(f"{phase}/loss", loss.detach().mean())
         acc = logits.detach().argmax(-1).eq(y).float().mean()
         self.log(f"{phase}/accuracy", acc)
         return {"loss": loss, "logits": logits, "y": y}
 
-    def configure_optimizers(self) -> dict:
-        """Creates the optimizers and the LR scheduler (if needed)."""
+    def configure_optimizers(self):
         optimizer_partial: functools.partial[Optimizer]
-
         # todo: why are there two cases here? CLI vs programmatically? Why are they different?
-        if isinstance(self.hp.optimizer, functools.partial):
-            optimizer_partial = self.hp.optimizer
+        if isinstance(self.optimizer, functools.partial):
+            optimizer_partial = self.optimizer
         else:
-            optimizer_partial = instantiate(self.hp.optimizer)
+            optimizer_partial = instantiate(self.optimizer)
         optimizer = optimizer_partial(self.parameters())
-        optimizers: dict[str, Any] = {"optimizer": optimizer}
-
-        lr_scheduler_partial: functools.partial[_LRScheduler]
-        # todo: why are there two cases here? CLI vs programmatically? Why are they different?
-        if isinstance(self.hp.lr_scheduler, functools.partial):
-            lr_scheduler_partial = self.hp.lr_scheduler
-        else:
-            lr_scheduler_partial = instantiate(self.hp.lr_scheduler)
-
-        if self.hp.lr_scheduler_frequency != 0:
-            lr_scheduler = lr_scheduler_partial(optimizer)
-            optimizers["lr_scheduler"] = {
-                "scheduler": lr_scheduler,
-                # NOTE: These two keys are ignored if doing manual optimization.
-                # https://pytorch-lightning.readthedocs.io/en/stable/common/optimization.html#learning-rate-scheduling
-                "interval": self.hp.lr_scheduler_interval,
-                "frequency": self.hp.lr_scheduler_frequency,
-            }
-        return optimizers
-
-    def configure_callbacks(self) -> list[Callback]:
-        # TODO: Get rid of most of this (probably belongs in a config for callbacks?)
-        # Also, we can add callbacks in a smart way (e.g. add classification metrics cb if we have
-        # a classification task) somewhere earlier, like `main.py` or `experiment.py`.
-        callbacks: list[Callback] = []
-        callbacks.append(
-            # Log some classification metrics. (This callback adds some metrics on this module).
-            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
-        )
-        return callbacks
+        return optimizer
 
     @property
     def device(self) -> torch.device:

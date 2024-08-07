@@ -5,7 +5,7 @@
 
 defaults:
   - override /datamodule: cifar10
-  - override /algorithm: ExampleAlgorithm
+  - override /algorithm: example
   - override /network: resnet18
   - override /trainer: default
   - override /trainer/callbacks: default

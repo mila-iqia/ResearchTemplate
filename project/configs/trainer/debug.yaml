@@ -10,7 +10,6 @@ fast_dev_run: true
 overfit_batches: 0
 limit_val_batches: 1.0
 limit_test_batches: 1.0
-track_grad_norm: -1
 detect_anomaly: true
 enable_checkpointing: false
 
