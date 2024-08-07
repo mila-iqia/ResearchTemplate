@@ -90,7 +90,7 @@ def test_setting_algorithm(
 @pytest.mark.parametrize(
     ("overrides", "expected_type"),
     [
-        (["algorithm=example_algo", "network=fcnet"], FcNet),
+        (["algorithm=ExampleAlgorithm", "network=fcnet"], FcNet),
     ],
     ids=_ids,
 )

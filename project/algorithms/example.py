@@ -127,6 +127,9 @@ class ExampleAlgorithm(LightningModule):
         return optimizers
 
     def configure_callbacks(self) -> list[Callback]:
+        # TODO: Get rid of most of this (probably belongs in a config for callbacks?)
+        # Also, we can add callbacks in a smart way (e.g. add classification metrics cb if we have
+        # a classification task) somewhere earlier, like `main.py` or `experiment.py`.
         callbacks: list[Callback] = []
         callbacks.append(
             # Log some classification metrics. (This callback adds some metrics on this module).

@@ -2,7 +2,6 @@
 defaults:
   - example.yaml
   - override /resources: one_gpu.yaml
-  # - override /resources: pack_jobs.yaml
   - override /trainer/logger: wandb
   - override /hydra/launcher: submitit_slurm
   - override /hydra/sweeper: orion

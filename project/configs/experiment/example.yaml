@@ -5,7 +5,7 @@
 
 defaults:
   - override /datamodule: cifar10
-  - override /algorithm: example_algo
+  - override /algorithm: ExampleAlgorithm
   - override /network: resnet18
   - override /trainer: default
   - override /trainer/callbacks: default
@@ -20,15 +20,11 @@ trainer:
   max_epochs: 10
   gradient_clip_val: 0.5
 
-# logger:
-#   wandb:
-#     tags: ["${datamodule}", "${algorithm}", "${network}"]
-#     group: ${datamodule.name}
-
 
 algorithm:
-  optimizer:
-    lr: 0.002
+  hp:
+    optimizer:
+      lr: 0.002
 
 datamodule:
   batch_size: 64

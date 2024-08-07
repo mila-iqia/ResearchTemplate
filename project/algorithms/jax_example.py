@@ -66,13 +66,6 @@ class JaxFcNet(flax.linen.Module):
         return x
 
 
-# Register a handler function to "convert" `torch.nn.Parameter`s to jax Arrays: they can be viewed
-# as jax Arrays by just viewing their data as a jax array.
-@torch_to_jax.register(torch.nn.Parameter)
-def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
-    return torch_to_jax(value.data)
-
-
 class JaxExample(LightningModule):
     """Example of a learning algorithm (`LightningModule`) that uses Jax.
 
@@ -169,6 +162,13 @@ class JaxExample(LightningModule):
         if device.type == "cuda" and device.index is None:
             return torch.device("cuda", index=torch.cuda.current_device())
         return device
+
+
+# Register a handler function to "convert" `torch.nn.Parameter`s to jax Arrays: they can be viewed
+# as jax Arrays by just viewing their data as a jax array.
+@torch_to_jax.register(torch.nn.Parameter)
+def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
+    return torch_to_jax(value.data)
 
 
 def is_channels_first(shape: tuple[int, ...]) -> bool:
