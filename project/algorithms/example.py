@@ -10,9 +10,8 @@ from typing import Any, Literal
 
 import pydantic
 import torch
-from hydra_zen import instantiate
 from lightning import LightningModule
-from lightning.pytorch.callbacks import Callback, EarlyStopping
+from lightning.pytorch.callbacks import Callback
 from pydantic import NonNegativeInt, PositiveInt
 from torch import Tensor
 from torch.nn import functional as F
@@ -23,6 +22,7 @@ from project.algorithms.callbacks.classification_metrics import ClassificationMe
 from project.configs.algorithm.lr_scheduler import CosineAnnealingLRConfig
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
+from project.experiment import instantiate
 
 logger = getLogger(__name__)
 
@@ -45,10 +45,6 @@ class ExampleAlgorithm(LightningModule):
         optimizer: Any = AdamConfig(lr=3e-4)
 
         batch_size: PositiveInt = 128
-
-        # Max number of epochs to train for without an improvement to the validation
-        # accuracy before the training is stopped.
-        early_stopping_patience: NonNegativeInt = 0
 
     def __init__(
         self,
@@ -102,6 +98,8 @@ class ExampleAlgorithm(LightningModule):
     def configure_optimizers(self) -> dict:
         """Creates the optimizers and the LR scheduler (if needed)."""
         optimizer_partial: functools.partial[Optimizer]
+
+        # todo: why are there two cases here? CLI vs programmatically? Why are they different?
         if isinstance(self.hp.optimizer, functools.partial):
             optimizer_partial = self.hp.optimizer
         else:
@@ -110,6 +108,7 @@ class ExampleAlgorithm(LightningModule):
         optimizers: dict[str, Any] = {"optimizer": optimizer}
 
         lr_scheduler_partial: functools.partial[_LRScheduler]
+        # todo: why are there two cases here? CLI vs programmatically? Why are they different?
         if isinstance(self.hp.lr_scheduler, functools.partial):
             lr_scheduler_partial = self.hp.lr_scheduler
         else:
@@ -135,20 +134,6 @@ class ExampleAlgorithm(LightningModule):
             # Log some classification metrics. (This callback adds some metrics on this module).
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         )
-        if self.hp.lr_scheduler_frequency != 0:
-            from lightning.pytorch.callbacks import LearningRateMonitor
-
-            callbacks.append(LearningRateMonitor())
-        if self.hp.early_stopping_patience != 0:
-            # If early stopping is enabled, add a Callback for it:
-            callbacks.append(
-                EarlyStopping(
-                    "val/accuracy",
-                    mode="max",
-                    patience=self.hp.early_stopping_patience,
-                    verbose=True,
-                )
-            )
         return callbacks
 
     @property
