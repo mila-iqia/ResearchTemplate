@@ -29,5 +29,4 @@ algorithm:
 datamodule:
   batch_size: 64
 
-name: "${hydra:runtime.choices.algorithm}-${hydra:runtime.choices.network}-${hydra:runtime.choices.datamodule}"
-# name: example
+name: example

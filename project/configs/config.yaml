@@ -9,11 +9,6 @@ defaults:
   - trainer/logger: null # use logger=wandb to enable wandb logging.
   - hydra: default.yaml
 
-  # NOTE: Overrides for different algorithm / network / datamodule combinations:
-  - optional network_datamodule: ${network}_${datamodule}
-  - optional algorithm_network: ${algorithm}_${network}
-  - optional algorithm_network_datamodule: ${algorithm}_${network}_${datamodule}
-
   # Allows launching LOTS of runs in parallel on a cluster thanks to the submitit launcher.
   - resources: null
 
