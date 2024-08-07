@@ -19,9 +19,26 @@ def main():
 
 def add_doc_for_module(module_path: Path) -> None:
     """Creates a markdown file in the "reference" section for this module and its submodules
-    recursively."""
+    recursively.
+
+    ## TODOs:
+    - [ ] We don't currently see the docs from the docstrings of __init__.py files.
+    - [ ] Might be nice to show the config files also?
+    """
 
     assert module_path.is_dir()  # and (module_path / "__init__.py").exists(), module_path
+
+    # module_import_path = _get_import_path(module_path)
+    # doc_file = module_path.relative_to(REPO_ROOTDIR).with_suffix(".md")
+    # write_doc_file = "reference" / doc_file
+    # with mkdocs_gen_files.editor.FilesEditor.current().open(str(write_doc_file), "w") as f:
+    #     print(
+    #         textwrap.dedent(f"""\
+    #         ::: {module_import_path}
+
+    #         """),
+    #         file=f,
+    #     )
 
     def is_module(p: Path) -> bool:
         return (
