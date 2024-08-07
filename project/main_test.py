@@ -29,9 +29,8 @@ def test_torch_can_use_the_GPU():
 
 @use_overrides([""])
 def test_defaults(experiment_config: Config) -> None:
-    assert (
-        hydra_zen.is_partial_builds(experiment_config.algorithm)
-        and hydra_zen.get_target(experiment_config.algorithm) is ExampleAlgorithm
+    assert experiment_config.algorithm["_target_"] == (
+        ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__name__
     )
     assert (
         isinstance(experiment_config.datamodule, CIFAR10DataModule)
