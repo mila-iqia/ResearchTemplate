@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 from collections.abc import Iterable
-from typing import ClassVar, Literal, Protocol, runtime_checkable
+from typing import ClassVar, Literal, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from torch import nn
 
@@ -12,8 +12,12 @@ class Dataclass(Protocol):
     __dataclass_fields__: ClassVar[dict[str, dataclasses.Field]]
 
 
+P = ParamSpec("P")
+OutT = TypeVar("OutT")
+
+
 @runtime_checkable
-class Module[**P, OutT](Protocol):
+class Module(Protocol[P, OutT]):
     def forward(self, *args: P.args, **kwargs: P.kwargs) -> OutT:
         raise NotImplementedError
 
@@ -34,8 +38,11 @@ class Module[**P, OutT](Protocol):
         to = nn.Module().to
 
 
+BatchType = TypeVar("BatchType")
+
+
 @runtime_checkable
-class DataModule[BatchType](Protocol):
+class DataModule(Protocol[BatchType]):
     """Protocol that shows the minimal attributes / methods of the `LightningDataModule` class.
 
     This is used to type hint the batches that are yielded by the DataLoaders.
@@ -49,7 +56,7 @@ class DataModule[BatchType](Protocol):
 
 
 @runtime_checkable
-class ClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
+class ClassificationDataModule(DataModule[BatchType], Protocol):
     num_classes: int
 
 

@@ -12,7 +12,7 @@ import typing
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from logging import getLogger as get_logger
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 import lightning
 import numpy as np
@@ -111,7 +111,10 @@ def parametrized_fixture(name: str, values: Sequence, ids=None, **kwargs):
     return _parametrized_fixture
 
 
-class ParametrizedFixture[T]:
+T = TypeVar("T")
+
+
+class ParametrizedFixture(Generic[T]):
     """Small helper function that creates a parametrized pytest fixture for the given values.
 
     The name of the fixture will be the name that is used for this variable on a class.

@@ -6,7 +6,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import ClassVar, Concatenate, Literal
+from typing import ClassVar, Concatenate, Literal, ParamSpec, TypeVar
 
 import torch
 from lightning import LightningDataModule
@@ -22,8 +22,11 @@ from project.utils.types.protocols import DataModule
 
 logger = get_logger(__name__)
 
+BatchType_co = TypeVar("BatchType_co", covariant=True)
+P = ParamSpec("P")
 
-class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_co]):
+
+class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
     """A LightningDataModule for image datasets.
 
     (Taken from pl_bolts which is not very well maintained.)
@@ -199,7 +202,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
 
-    def train_dataloader[**P](
+    def train_dataloader(
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -217,7 +220,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             **kwargs,
         )
 
-    def val_dataloader[**P](
+    def val_dataloader(
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -234,7 +237,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             **kwargs,
         )
 
-    def test_dataloader[**P](
+    def test_dataloader(
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -251,7 +254,7 @@ class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_c
             **kwargs,
         )
 
-    def _data_loader[**P](
+    def _data_loader(
         self,
         dataset: Dataset,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,

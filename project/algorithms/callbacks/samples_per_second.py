@@ -1,9 +1,10 @@
 import time
-from typing import Literal, override
+from typing import Literal
 
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.optim import Optimizer
+from typing_extensions import override
 
 from project.algorithms.callbacks.callback import BatchType, Callback, StepOutputType
 from project.utils.types import is_sequence_of
