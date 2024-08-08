@@ -1,9 +1,9 @@
-from typing import NotRequired, Protocol, TypedDict
+from typing import Protocol, TypedDict
 
 import torch
 from lightning import LightningDataModule, LightningModule, Trainer
 from torch import Tensor
-from typing_extensions import TypeVar
+from typing_extensions import NotRequired, TypeVar
 
 from project.utils.types import PyTree
 from project.utils.types.protocols import DataModule, Module

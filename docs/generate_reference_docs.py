@@ -6,8 +6,6 @@ import textwrap
 from logging import getLogger as get_logger
 from pathlib import Path
 
-import mkdocs_gen_files
-
 from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
@@ -25,6 +23,7 @@ def add_doc_for_module(module_path: Path) -> None:
     - [ ] We don't currently see the docs from the docstrings of __init__.py files.
     - [ ] Might be nice to show the config files also?
     """
+    import mkdocs_gen_files
 
     assert module_path.is_dir()  # and (module_path / "__init__.py").exists(), module_path
 

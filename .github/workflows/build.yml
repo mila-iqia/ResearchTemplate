@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.10'
       - run: pip install pre-commit
       - run: pre-commit --version
       - run: pre-commit install
@@ -41,7 +41,7 @@ jobs:
       max-parallel: 4
       matrix:
         platform: [ubuntu-latest]
-        python-version: ['3.12']
+        python-version: ['3.10']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -72,7 +72,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python-version: ['3.12']
+        python-version: ['3.10']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -132,16 +132,16 @@ jobs:
         cluster: ['mila']
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.12
+    - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: 3.12
+        python-version: "3.10"
     - run: pip install pdm
     - name: Install dependencies
       run: pdm install
 
     - name: Test with pytest
-      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --gen-missing
+      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
 
     # TODO: Re-enable this later
     # - name: Test with pytest (only slow tests)

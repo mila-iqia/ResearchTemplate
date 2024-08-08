@@ -3,19 +3,23 @@ from __future__ import annotations
 from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, Literal, override
+from typing import Any, Generic, Literal
 
 import torch
 from lightning import LightningModule, Trainer
 from lightning import pytorch as pl
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar, override
 
-from project.utils.types import PyTree
+from project.utils.types import NestedMapping
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
 
-BatchType = TypeVar("BatchType", bound=PyTree[torch.Tensor], contravariant=True)
+BatchType = TypeVar(
+    "BatchType",
+    bound=torch.Tensor | tuple[torch.Tensor, ...] | NestedMapping[str, torch.Tensor],
+    contravariant=True,
+)
 StepOutputType = TypeVar(
     "StepOutputType",
     bound=torch.Tensor | Mapping[str, Any] | None,

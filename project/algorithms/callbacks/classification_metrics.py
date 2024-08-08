@@ -1,12 +1,13 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import Literal, NotRequired, Required, TypedDict, override
+from typing import Literal, TypedDict
 
 import torch
 import torchmetrics
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
+from typing_extensions import NotRequired, Required, override
 
 from project.algorithms.callbacks.callback import BatchType, Callback
 from project.utils.types.protocols import ClassificationDataModule

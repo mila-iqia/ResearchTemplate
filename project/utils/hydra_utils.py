@@ -406,7 +406,10 @@ def _default_factory(
     return default  # type: ignore
 
 
-def make_config_and_store[Target](
+Target = TypeVar("Target")
+
+
+def make_config_and_store(
     target: Callable[..., Target], *, store: hydra_zen.ZenStore, **overrides
 ):
     """Creates a config dataclass for the given target and stores it in the config store.

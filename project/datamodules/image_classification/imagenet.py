@@ -10,7 +10,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, NewType
 
 import rich
 import rich.logging
@@ -33,8 +33,8 @@ def imagenet_normalization():
     return transform_lib.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
-type ClassIndex = int
-type ImageIndex = int
+ClassIndex = NewType("ClassIndex", int)
+ImageIndex = NewType("ImageIndex", int)
 
 
 class ImageNetDataModule(VisionDataModule):

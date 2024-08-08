@@ -5,6 +5,7 @@ import typing
 from collections.abc import Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
+from typing import TypeVar
 
 import rich
 import rich.syntax
@@ -53,7 +54,10 @@ def get_log_dir(trainer: Trainer | None) -> Path:
     return log_dir
 
 
-def validate_datamodule[DM: DataModule | LightningDataModule](datamodule: DM) -> DM:
+DM = TypeVar("DM", bound=DataModule | LightningDataModule)
+
+
+def validate_datamodule(datamodule: DM) -> DM:
     """Checks that the transforms / things are setup correctly.
 
     Returns the same datamodule.
