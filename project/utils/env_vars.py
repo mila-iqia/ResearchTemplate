@@ -1,7 +1,11 @@
+import importlib
 import os
 from pathlib import Path
 
 import torch
+from logging import getLogger as get_logger
+logger = get_logger(__name__)
+
 
 SLURM_JOB_ID: int | None = (
     int(os.environ["SLURM_JOB_ID"]) if "SLURM_JOB_ID" in os.environ else None
@@ -69,9 +73,37 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", (SLURM_TMPDIR or SCRATCH or REPO_ROOT
 """Local Directory where datasets should be extracted on this machine."""
 
 
-def get_constant(name: str):
+torchvision_dir: Path | None = None
+"""Network directory with torchvision datasets."""
+if (
+    NETWORK_DIR
+    and (_torchvision_dir := NETWORK_DIR / "datasets/torchvision").exists()
+    and _torchvision_dir.is_dir()
+):
+    torchvision_dir = _torchvision_dir
+
+
+def get_constant(*names: str):
     """Resolver for Hydra to get the value of a constant in this file."""
-    return globals()[name]
+    assert names
+    for name in names:
+        if name in globals():
+            obj = globals()[name]
+            if obj is None:
+                logger.debug(f"Value of {name} is None, moving on to the next value.")
+                continue
+            return obj
+        parts = name.split(".")
+        obj = importlib.import_module(parts[0])
+        for part in parts[1:]:
+            obj = getattr(obj, part)
+        if obj is not None:
+            return obj
+        logger.debug(f"Value of {name} is None, moving on to the next value.")
+
+    if len(names) == 1:
+        raise RuntimeError(f"Could not find non-None value for name {names[0]}")
+    raise RuntimeError(f"Could not find non-None value for names {names}")
 
 
 NUM_WORKERS = int(

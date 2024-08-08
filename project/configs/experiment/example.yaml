@@ -9,17 +9,13 @@ defaults:
   - override /network: resnet18
   - override /trainer: default
   - override /trainer/callbacks: default
+  - override /trainer/logger: wandb
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
+name: example
 
 seed: ${oc.env:SLURM_PROCID,12345}
-
-trainer:
-  min_epochs: 1
-  max_epochs: 10
-  gradient_clip_val: 0.5
-
 
 algorithm:
   hp:
@@ -29,4 +25,21 @@ algorithm:
 datamodule:
   batch_size: 64
 
-name: example
+
+trainer:
+  min_epochs: 1
+  max_epochs: 10
+  gradient_clip_val: 0.5
+  logger:
+    wandb:
+      project: "ResearchTemplate"
+      name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
+      save_dir: "${hydra:runtime.output_dir}"
+      offline: False # set True to store all logs only locally
+      id: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID} # pass correct id to resume experiment!
+      # entity: ""  # set to name of your wandb team
+      log_model: False
+      prefix: ""
+      job_type: "train"
+      group: ${oc.env:SLURM_JOB_ID}
+      tags: ["${name}"]

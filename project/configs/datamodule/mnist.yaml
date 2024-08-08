@@ -1,6 +1,7 @@
 defaults:
 - vision
 _target_: project.datamodules.MNISTDataModule
+data_dir: ${constant:torchvision_dir,DATA_DIR}
 normalize: True
 batch_size: 128
 train_transforms:
