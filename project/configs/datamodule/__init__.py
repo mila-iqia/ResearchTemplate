@@ -7,15 +7,6 @@ from project.utils.env_vars import NETWORK_DIR
 
 logger = get_logger(__name__)
 
-torchvision_dir: Path | None = None
-"""Network directory with torchvision datasets."""
-if (
-    NETWORK_DIR
-    and (_torchvision_dir := NETWORK_DIR / "datasets/torchvision").exists()
-    and _torchvision_dir.is_dir()
-):
-    torchvision_dir = _torchvision_dir
-
 
 # TODO: Make it possible to extend a structured base via yaml files as well as adding new fields
 # (for example, ImagetNet32DataModule has a new constructor argument which can't be set atm in the
