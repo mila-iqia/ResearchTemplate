@@ -1,0 +1,234 @@
+from __future__ import annotations
+
+import os
+import shutil
+from logging import getLogger
+from pathlib import Path
+
+import numpy as np
+import torch
+from datasets import DatasetDict, load_dataset
+from lightning import LightningDataModule
+from torch.utils.data import DataLoader
+from transformers import (
+    AutoTokenizer,
+)
+
+from project.utils.env_vars import DATA_DIR
+from project.utils.utils import get_task_info
+
+torch.set_num_threads(
+    1
+)  # https://github.com/Lightning-AI/pytorch-lightning/issues/10389#issuecomment-2310630247
+
+logger = getLogger(__name__)
+
+
+class HFDataModule(LightningDataModule):  ## to be homogenized with the base text class
+    """Lightning data module for HF datasets."""
+
+    def __init__(
+        self,
+        hf_dataset_path: str,
+        tokenizer: str,
+        data_dir: str | Path = DATA_DIR,
+        task_name: str | None = None,
+        task_field_map: dict | None = None,
+        num_labels: int | None = None,
+        loader_columns: list = [
+            "datasets_idx",
+            "input_ids",
+            "token_type_ids",
+            "attention_mask",
+            "start_positions",
+            "end_positions",
+            "labels",
+        ],
+        seed: int = 42,
+        shuffle: bool = True,
+        max_seq_length: int = 128,
+        train_batch_size: int = 32,
+        eval_batch_size: int = 32,
+        num_workers: int = 1,
+        pin_memory: bool = False,
+        dataset_fraction: float
+        | None = None,  # use for debugging; NOT STABLE, may cause memory allocation issues
+        **kwargs,
+    ):
+        super().__init__()
+        self.task_name = task_name
+        self.tokenizer = tokenizer
+        self.loader_columns = loader_columns
+        self.seed = seed
+        self.shuffle = shuffle
+        self.hf_dataset_path = hf_dataset_path
+        self.max_seq_length = max_seq_length
+        self.train_batch_size = train_batch_size
+        self.eval_batch_size = eval_batch_size
+        self.dataset_fraction = dataset_fraction
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+
+        self.data_dir: Path = Path(data_dir or DATA_DIR)
+        self.dataset_path = self.data_dir / f"{self.task_name}_dataset"
+        self.tmp_path = self.data_dir / f"{self.task_name}_tmp"
+
+        if task_name:
+            self.text_fields, self.num_labels = get_task_info(task_name)
+        else:
+            self.text_fields = task_field_map
+            self.num_labels = num_labels
+
+        ## potential inconsistency in text_fields and task_map
+
+        ## todo: verify authentication method setup. Is trust_remote_code the right play here?
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.tokenizer, use_fast=True, cache_dir=self.data_dir, trust_remote_code=True
+        )
+
+        _rng = torch.Generator(device="cpu").manual_seed(self.seed)
+        self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+        self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+        self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
+
+    def prepare_data(self):
+        # Make sure to use $SCRATCH instead of $HOME for the huggingface cache directory"
+        if not self.dataset_path.exists():  # checking dataset hasn't been previously downloaded
+            logger.debug("Loading dataset for the first time.")
+            dataset = load_dataset(
+                self.hf_dataset_path,
+                self.task_name,
+                cache_dir=str(self.data_dir / ".cache/huggingface/datasets"),
+            )
+            # Tokenize and save to $SCRATCH
+            tokenized_dataset = dataset.map(
+                self.convert_to_features, batched=True, remove_columns=["label"]
+            )
+            tokenized_dataset.save_to_disk(self.dataset_path)
+        else:
+            logger.debug(f"Tokenized dataset already exists at {self.dataset_path}")
+
+        slurm_tmpdir_exists = (
+            os.getenv("SLURM_TMPDIR") is not None and not Path(os.getenv("SLURM_TMPDIR")).exists()
+        )
+        ## the SLURM path exists and it wasn't chosen as the DATA_DIR variable by default
+        if slurm_tmpdir_exists:
+            self.tmp_path = Path(os.getenv("SLURM_TMPDIR")) / f"{self.task_name}_tmp"
+            # Copy dataset to the temporary path if not already present
+            logger.debug(f"Copying dataset from {self.dataset_path} to {self.tmp_path}")
+            shutil.copytree(self.dataset_path, self.tmp_path, dirs_exist_ok=True)
+            logger.info(f"Done preparing the dataset to {self.tmp_path}")
+        else:
+            logger.info(f"Done preparing the dataset at {self.dataset_path}")
+
+    def setup(self, stage: str, seed: int = 42):
+        self.dataset = DatasetDict.load_from_disk(self.tmp_path)
+        logger.info(f"Loaded dataset from {self.tmp_path}")
+
+        if self.dataset_fraction is not None:
+            logger.info(f"Reducing dataset to {self.dataset_fraction * 100}% of original size")
+            self.dataset = self._apply_dataset_fraction(self.dataset, self.dataset_fraction, seed)
+
+        for split in self.dataset.keys():
+            self.columns = [
+                c for c in self.dataset[split].column_names if c in self.loader_columns
+            ]
+            logger.info(f"Setting format for {split} split")
+            self.dataset[split].set_format(type="torch", columns=self.columns)
+
+        self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
+        logger.info(f"Setup complete for {self.task_name}")
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.dataset["train"],
+            batch_size=self.train_batch_size,
+            shuffle=self.shuffle,
+            generator=torch.Generator().manual_seed(self.train_dl_rng_seed),
+            num_workers=self.num_workers,
+        )
+
+    def val_dataloader(self):
+        if len(self.eval_splits) == 1:
+            return DataLoader(
+                self.dataset["validation"],
+                batch_size=self.eval_batch_size,
+                shuffle=False,
+                generator=torch.Generator().manual_seed(self.val_dl_rng_seed),
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory,
+            )
+        elif len(self.eval_splits) > 1:
+            return [
+                DataLoader(
+                    self.dataset[x],
+                    batch_size=self.eval_batch_size,
+                    shuffle=False,
+                    generator=torch.Generator().manual_seed(self.val_dl_rng_seed + i),
+                    num_workers=self.num_workers,
+                    pin_memory=self.pin_memory,
+                )
+                for i, x in enumerate(self.eval_splits)
+            ]
+
+    def test_dataloader(self):
+        if len(self.eval_splits) == 1:
+            return DataLoader(
+                self.dataset["test"],
+                batch_size=self.eval_batch_size,
+                shuffle=False,
+                generator=torch.Generator().manual_seed(self.test_dl_rng_seed),
+                num_workers=self.num_workers,
+                pin_memory=self.pin_memory,
+            )
+        elif len(self.eval_splits) > 1:
+            return [
+                DataLoader(
+                    self.dataset[x],
+                    batch_size=self.eval_batch_size,
+                    shuffle=False,
+                    generator=torch.Generator().manual_seed(self.test_dl_rng_seed + i),
+                    num_workers=self.num_workers,
+                    pin_memory=self.pin_memory,
+                )
+                for i, x in enumerate(self.eval_splits)
+            ]
+
+    def convert_to_features(self, example_batch, indices=None):
+        # Either encode single sentence or sentence pairs
+        if len(self.text_fields) > 1:
+            texts_or_text_pairs = list(
+                zip(example_batch[self.text_fields[0]], example_batch[self.text_fields[1]])
+            )
+        else:
+            texts_or_text_pairs = example_batch[self.text_fields[0]]
+
+        # Tokenize the text/text pairs
+        features = self.tokenizer.batch_encode_plus(
+            texts_or_text_pairs,
+            max_length=self.max_seq_length,
+            pad_to_max_length=True,
+            truncation=True,
+        )
+
+        # Rename label to labels to make it easier to pass to model forward
+        features["labels"] = example_batch["label"]
+
+        return features
+
+    def _apply_dataset_fraction(
+        self, dataset: DatasetDict, fraction: float, seed: int
+    ) -> DatasetDict:
+        """Apply dataset fraction to each split in the DatasetDict."""
+        np.random.seed(seed)
+        reduced_dataset = {}
+
+        for split, data in dataset.items():
+            # Sample fraction of the data
+            total_samples = int(len(data) * fraction)
+            indices = np.random.choice(len(data), total_samples, replace=False)
+            indices = list(indices)
+            sampled_data = data.select(indices)
+            reduced_dataset[split] = sampled_data
+
+        return DatasetDict(reduced_dataset)

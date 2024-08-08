@@ -29,6 +29,14 @@ logger = get_logger(__name__)
 AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 
+def forward_pass(algorithm: LightningModule, input: PyTree[torch.Tensor]):
+    """Performs the forward pass with the lightningmodule, unpacking the inputs if necessary."""
+    if len(inspect.signature(algorithm.forward).parameters) == 1:
+        return algorithm(input)
+    assert isinstance(input, dict)
+    return algorithm(**input)
+
+
 @pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """Suite of unit tests for an "Algorithm" (LightningModule).
@@ -64,9 +72,9 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         input."""
 
         with seeded_rng(seed):
-            out1 = algorithm(forward_pass_input)
+            out1 = forward_pass(algorithm, forward_pass_input)
         with seeded_rng(seed):
-            out2 = algorithm(forward_pass_input)
+            out2 = forward_pass(algorithm, forward_pass_input)
         torch.testing.assert_close(out1, out2)
 
     # @pytest.mark.timeout(10)
@@ -147,7 +155,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     ):
         """Check that the forward pass is reproducible given the same input and random seed."""
         with seeded_rng(seed):
-            out = algorithm(forward_pass_input)
+            out = forward_pass(algorithm, forward_pass_input)
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
@@ -179,16 +187,20 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
                 tmp_path=tmp_path,
             )
         # BUG: Fix issue in tensor_regression calling .numpy() on cuda tensors.
-        assert (
-            isinstance(gradients_callback.batch, list | tuple)
-            and len(gradients_callback.batch) == 2
-        )
         assert isinstance(gradients_callback.grads, dict)
         assert isinstance(gradients_callback.outputs, dict)
+        batch = gradients_callback.batch
+        if isinstance(batch, list | tuple) and len(batch) == 2:
+            cpu_batch = {str(i): t.cpu() for i, t in enumerate(batch)}
+        else:
+            assert isinstance(batch, dict) and all(
+                isinstance(v, torch.Tensor) for v in batch.values()
+            )
+            cpu_batch = {k: v.cpu() for k, v in batch.items()}
         tensor_regression.check(
             {
                 # FIXME: This is ugly, and specific to the image classification example.
-                "batch": {str(i): t.cpu() for i, t in enumerate(gradients_callback.batch)},
+                "batch": cpu_batch,
                 "grads": {
                     k: v.cpu() if v is not None else None
                     for k, v in gradients_callback.grads.items()

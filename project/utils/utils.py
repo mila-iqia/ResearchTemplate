@@ -156,3 +156,45 @@ def print_config(
 
     # with open("config_tree.log", "w") as file:
     #     rich.print(tree, file=file)
+
+
+## HF datamodule specific
+
+
+def get_task_info(task_name):
+    task_field_map = {
+        "cola": ["sentence"],
+        "sst2": ["sentence"],
+        "mrpc": ["sentence1", "sentence2"],
+        "qqp": ["question1", "question2"],
+        "stsb": ["sentence1", "sentence2"],
+        "mnli": ["premise", "hypothesis"],
+        "qnli": ["question", "sentence"],
+        "rte": ["sentence1", "sentence2"],
+        "wnli": ["sentence1", "sentence2"],
+        "ax": ["premise", "hypothesis"],
+    }
+
+    num_labels = {
+        "cola": 2,
+        "sst2": 2,
+        "mrpc": 2,
+        "qqp": 2,
+        "stsb": 1,
+        "mnli": 3,
+        "qnli": 2,
+        "rte": 2,
+        "wnli": 2,
+        "ax": 3,
+    }
+
+    task_map = task_field_map.get(task_name, None)
+    num_labels = num_labels.get(task_name, None)
+
+    if task_map is None:
+        raise ValueError(f"Task {task_name} task fields currently not supported.")
+
+    if num_labels is None:
+        raise ValueError(f"Task {task_name} labels currently not supported.")
+
+    return task_map, num_labels
