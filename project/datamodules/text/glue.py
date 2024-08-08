@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-import datasets
-from pytorch_lightning import LightningDataModule
+import os
+import shutil
+
+from datasets import DatasetDict, load_dataset
+from lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from transformers import (
     AutoTokenizer,
 )
+
+SCRATCH = os.environ.get("SCRATCH")
+SLURM_TMPDIR = os.environ.get("SLURM_TMPDIR")
 
 
 class GLUEDataModule(LightningDataModule):  ## to be homogenized with the base text class
@@ -60,18 +66,36 @@ class GLUEDataModule(LightningDataModule):  ## to be homogenized with the base t
         **kwargs,
     ):
         super().__init__()
-        self.model_name_or_path = model_name_or_path
         self.task_name = task_name
+        self.model_name_or_path = model_name_or_path
+        self.dataset_path = os.path.join(SCRATCH, f"{self.task_name}_dataset")
+        self.tmp_path = os.path.join(SLURM_TMPDIR, f"{self.task_name}_tmp")
         self.max_seq_length = max_seq_length
         self.train_batch_size = train_batch_size
         self.eval_batch_size = eval_batch_size
 
         self.text_fields = self.task_text_field_map[task_name]
         self.num_labels = self.glue_task_num_labels[task_name]
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name_or_path, use_fast=True, cache_dir=SCRATCH
+        )
+
+    def prepare_data(self):
+        # Make sure to use $SCRATCH instead of $HOME for the huggingface cache directory.
+        if not os.path.exists(self.dataset_path):
+            dataset = load_dataset("glue", self.task_name, cache_dir=SCRATCH)
+            # Tokenize and save to $SCRATCH
+            tokenized_dataset = dataset.map(self.convert_to_features, batched=True)
+            tokenized_dataset.save_to_disk(self.dataset_path)
+        else:
+            print(f"Tokenized dataset already exists at {self.dataset_path}")
 
     def setup(self, stage: str):
-        self.dataset = datasets.load_dataset("glue", self.task_name)
+        if not os.path.exists(self.tmp_path):
+            # Copy to $SLURM_TMPDIR before being loaded
+            shutil.copytree(self.dataset_path, self.tmp_path)
+
+        self.dataset = DatasetDict.load_from_disk(self.tmp_path)
 
         for split in self.dataset.keys():
             self.dataset[split] = self.dataset[split].map(
@@ -85,10 +109,6 @@ class GLUEDataModule(LightningDataModule):  ## to be homogenized with the base t
             self.dataset[split].set_format(type="torch", columns=self.columns)
 
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
-
-    def prepare_data(self):
-        datasets.load_dataset("glue", self.task_name)
-        AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
 
     def train_dataloader(self):
         return DataLoader(self.dataset["train"], batch_size=self.train_batch_size, shuffle=True)
