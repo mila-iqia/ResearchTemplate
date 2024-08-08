@@ -1,6 +1,3 @@
-
-# @package _global_
-
 model_name_or_path: albert-base-v2
 num_labels: int
 task_name: str
