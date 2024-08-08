@@ -39,12 +39,13 @@ gpu = [
     "jax[cuda12]",
 ]
 docs = [
-    "mkdocstrings>=0.25.2",
+    "mkdocstrings[python]>=0.25.2",
     "mkdocs-gen-files>=0.5.0",
     "mkdocs-awesome-pages-plugin>=2.9.3",
     "mkdocs-literate-nav>=0.6.1",
     "mkdocs-material>=9.5.31",
     "black>=24.8.0",
+    "mkdocs>=1.6.0",
 ]
 
 [tool.setuptools]
