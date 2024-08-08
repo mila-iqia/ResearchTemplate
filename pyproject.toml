@@ -38,6 +38,15 @@ project = "project:main.main"
 gpu = [
     "jax[cuda12]",
 ]
+docs = [
+    "mkdocstrings>=0.25.2",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-awesome-pages-plugin>=2.9.3",
+    "mkdocs-literate-nav>=0.6.1",
+    "mkdocs-material>=9.5.31",
+    "mktestdocs>=0.2.2",
+    "black>=24.8.0",
+]
 
 [tool.setuptools]
 packages = ["project"]
@@ -60,16 +69,11 @@ dev = [
     "pytest-testmon>=2.1.1",
     "mkdocs>=1.6.0",
     "pymdown-extensions>=10.8.1",
-    "mkdocstrings[python]>=0.25.1",
-    "mkdocs-gen-files>=0.5.0",
-    "black>=24.4.2",
-    "mkdocs-awesome-pages-plugin>=2.9.2",
-    "mkdocs-literate-nav>=0.6.1",
-    "mkdocs-material>=9.5.28",
     "pre-commit>=3.7.1",
-    "mktestdocs @ git+https://github.com/koaning/mktestdocs.git@0b67d24e8a7bf315ffdf5bce979bc148e9c1d48a",
 ]
 
+
+# todo: doesn't seem to be required anymore?
 # [[tool.pdm.source]]
 # name = "jax"
 # url = "https://storage.googleapis.com/jax-releases/jax_cuda_releases.html"
