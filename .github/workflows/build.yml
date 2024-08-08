@@ -141,7 +141,7 @@ jobs:
       run: pdm install
 
     - name: Test with pytest
-      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --gen-missing
+      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
 
     # TODO: Re-enable this later
     # - name: Test with pytest (only slow tests)
