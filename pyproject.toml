@@ -23,6 +23,10 @@ dependencies = [
     "torch-jax-interop>=0.0.7",
     "pydantic>=2.8.2",
     "simple-parsing>=0.1.5",
+    "pydantic==2.7.4",
+    "milatools>=0.0.18",
+    "rootutils>=0.0.1",
+    "ipykernel>=6.28.0"
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

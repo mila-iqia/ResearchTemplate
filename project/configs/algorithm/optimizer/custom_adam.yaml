@@ -1,6 +1,6 @@
-defaults:
-  - Adam
-# Learning rate of the optimizer.
-lr: 4e-3
-# Weight decay coefficient.
-weight_decay: 1e-5
+_target_: torch.optim.Adam
+lr: 0.001
+betas: [0.9, 0.999]
+eps: 1e-08
+weight_decay: 0
+amsgrad: false

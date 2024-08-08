@@ -1,12 +1,2 @@
-# This is an example of how you can use a config file to configure a LightningModule.
-# In this case we configure the example algorithm.
-
 _target_: project.algorithms.example.ExampleAlgorithm
-# NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
-# that will accept the datamodule and network and create the algo.
 _partial_: true
-_recursive_: false
-optimizer_config:
-  _target_: torch.optim.AdamW
-  _partial_: true
-  lr: 0.001

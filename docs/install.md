@@ -21,10 +21,8 @@ There are two ways to install this project
 
     1. On your machine:
 
-        ```console
-        curl -sSf https://rye.astral.sh/get | bash
-        rye sync       # Creates a virtual environment and installs dependencies in it.
-        ```
+    - If you don't have Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
+    - If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
 
     2. On the Mila cluster:
 
