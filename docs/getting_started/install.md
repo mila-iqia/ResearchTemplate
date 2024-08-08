@@ -5,47 +5,36 @@ There are two ways to install this project
 1. Using Conda (recommended for newcomers)
 2. Using a development container (recommended if you are able to install Docker on your machine)
 
-## Using Conda and pip
+## Installation
 
-### Prerequisites
-
-You need to have [Conda](https://docs.conda.io/en/latest/) installed on your machine.
-
-### Installation
-
-1. Clone the repository and navigate to the root directory:
+1. Clone the repository:
 
     ```bash
     git clone https://www.github.com/mila-iqia/ResearchTemplate
     cd ResearchTemplate
     ```
 
-2. Create a conda environment
+2. Installing dependencies
 
-    ```bash
-    conda create -n research_template python=3.12
-    conda activate research_template
-    ```
+    You can install the package using `pip install -e .`, although we recommend using a package
+    manager such as [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or
+    change the dependencies later on.
 
-    Notes:
+    1. On your machine:
 
-    - If you don't Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
-    - If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
+        ```console
+        pip install pdm
+        pdm install       # Creates a virtual environment and installs dependencies in it.
+        ```
 
-    <!-- TODO: - If you're on the `mila` cluster, you can run this setup script: (...) -->
+    2. On the Mila cluster:
 
-3. Install the package using pip:
+        If you're on the `mila` cluster, you can run this setup script (on a *compute* node):
 
-    ```bash
-    pip install -e .
-    ```
-
-    Optionally, you can also install the package using [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or change the dependencies later on:
-
-    ```bash
-    pip install pdm
-    pdm install
-    ```
+        ```console
+        salloc --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=1:00:00
+        scripts/setup_mila.sh
+        ```
 
 ## Using a development container
 
