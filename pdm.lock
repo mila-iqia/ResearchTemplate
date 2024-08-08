@@ -5,7 +5,7 @@
 groups = ["default", "dev", "gpu", "docs"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.2"
-content_hash = "sha256:37f28ed2df5a771bb00fc0fa85596ab291be719e4b6c736a76d1d2b77a9898a9"
+content_hash = "sha256:1125089d5885ae5172d29220d153952d8dcfd4000a97211e607babbe02bc22be"
 
 [[package]]
 name = "absl-py"
@@ -1791,7 +1791,7 @@ files = [
 name = "mktestdocs"
 version = "0.2.2"
 summary = ""
-groups = ["docs"]
+groups = ["dev"]
 files = [
     {file = "mktestdocs-0.2.2-py2.py3-none-any.whl", hash = "sha256:b0eea09c14cb9df7bf112f848c3d5069713519eddb3b0b2223211699246c3f1d"},
 ]

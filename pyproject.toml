@@ -44,7 +44,6 @@ docs = [
     "mkdocs-awesome-pages-plugin>=2.9.3",
     "mkdocs-literate-nav>=0.6.1",
     "mkdocs-material>=9.5.31",
-    "mktestdocs>=0.2.2",
     "black>=24.8.0",
 ]
 
@@ -70,6 +69,7 @@ dev = [
     "mkdocs>=1.6.0",
     "pymdown-extensions>=10.8.1",
     "pre-commit>=3.7.1",
+    "mktestdocs>=0.2.2",
 ]
 
 
