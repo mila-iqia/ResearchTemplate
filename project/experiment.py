@@ -16,11 +16,7 @@ import functools
 import logging
 import os
 import random
-<<<<<<< HEAD
 from dataclasses import dataclass
-=======
-from dataclasses import dataclass, is_dataclass
->>>>>>> b7aec3e (add profiling notebook, hotfix a few classes)
 from logging import getLogger as get_logger
 from typing import Any
 
