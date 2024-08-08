@@ -1,3 +1,4 @@
+from project.algorithms.glue_transformer import GLUETransformer
 from project.algorithms.jax_example import JaxExample
 from project.algorithms.no_op import NoOp
 
@@ -7,4 +8,5 @@ __all__ = [
     "ExampleAlgorithm",
     "JaxExample",
     "NoOp",
+    "GLUETransformer",
 ]

@@ -68,8 +68,6 @@ class GLUEDataModule(LightningDataModule):  ## to be homogenized with the base t
         super().__init__()
         self.task_name = task_name
         self.model_name_or_path = model_name_or_path
-        self.dataset_path = os.path.join(SCRATCH, f"{self.task_name}_dataset")
-        self.tmp_path = os.path.join(SLURM_TMPDIR, f"{self.task_name}_tmp")
         self.max_seq_length = max_seq_length
         self.train_batch_size = train_batch_size
         self.eval_batch_size = eval_batch_size
@@ -79,6 +77,9 @@ class GLUEDataModule(LightningDataModule):  ## to be homogenized with the base t
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_name_or_path, use_fast=True, cache_dir=SCRATCH
         )
+
+        self.dataset_path = os.path.join(SCRATCH, f"{self.task_name}_dataset")
+        self.tmp_path = os.path.join(SLURM_TMPDIR, f"{self.task_name}_tmp")
 
     def prepare_data(self):
         # Make sure to use $SCRATCH instead of $HOME for the huggingface cache directory.

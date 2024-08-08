@@ -1,3 +1,3 @@
-from .text import TextDataModule
+from .glue import GLUEDataModule
 
-__all__ = ["TextDataModule"]
+__all__ = ["GLUEDataModule"]

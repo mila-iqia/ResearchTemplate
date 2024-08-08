@@ -1,0 +1,7 @@
+# @package _global_
+_target_: project.datamodules.GLUEDataModule
+model_name_or_path: albert-base-v2
+task_name: cola
+max_seq_length: 128
+train_batch_size: 32
+eval_batch_size: 32

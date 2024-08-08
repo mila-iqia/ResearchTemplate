@@ -1,0 +1,6 @@
+# @package _global_
+
+defaults:
+  - override /datamodule: glue
+  - override /algorithm: GLUETransformer
+  - override /network: albert-base-v2
