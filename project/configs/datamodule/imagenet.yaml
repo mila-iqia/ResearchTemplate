@@ -1,4 +1,7 @@
 defaults:
   - vision
 _target_: project.datamodules.ImageNetDataModule
+batch_size: 128
+train_transforms:
+  _target_: project.datamodules.image_classification.imagenet.imagenet_train_transforms
 # todo: add good configuration options here.

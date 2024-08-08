@@ -29,7 +29,7 @@ You need to have [Conda](https://docs.conda.io/en/latest/) installed on your mac
 
     Notes:
 
-    - If you don't Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
+    - If you don't have Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
     - If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
 
     <!-- TODO: - If you're on the `mila` cluster, you can run this setup script: (...) -->

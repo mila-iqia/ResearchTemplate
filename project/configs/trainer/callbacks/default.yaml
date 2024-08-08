@@ -24,3 +24,6 @@ early_stopping:
 
 model_summary:
   max_depth: 2
+
+throughput:
+  _target_: project.algorithms.callbacks.samples_per_second.MeasureSamplesPerSecondCallback
