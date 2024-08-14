@@ -33,7 +33,7 @@ There are two ways to install this project
 
         ```console
         salloc --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=1:00:00
-        scripts/setup_mila.sh
+        scripts/mila_setup.sh
         ```
 
 ## Using a development container
