@@ -30,10 +30,10 @@ else
     echo "✅ ~/.bash_aliases already contains 'source \"\$HOME/.rye/env\"'"
 fi
 
-if ! grep -q 'export UV_LINK_MODE="symlink"' ~/.bash_aliases; then
-    echo "Adding a line with 'export UV_LINK_MODE=\"symlink\"' to ~/.bash_aliases"
+if ! grep -q 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' ~/.bash_aliases; then
+    echo "Adding a line with 'export UV_LINK_MODE=\${UV_LINK_MODE:-"symlink"}' to ~/.bash_aliases"
     echo '# Setting UV_LINK_MODE to symlink (so that rye can use a cache dir on $SCRATCH)' >> ~/.bash_aliases
-    echo 'export UV_LINK_MODE="symlink"' >> ~/.bash_aliases
+    echo 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' >> ~/.bash_aliases
 else
     echo "✅ ~/.bash_aliases already contains 'export UV_LINK_MODE="symlink"'"
 fi

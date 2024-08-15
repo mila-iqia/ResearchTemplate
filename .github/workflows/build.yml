@@ -44,21 +44,25 @@ jobs:
         python-version: ['3.10']
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Setup Rye with caching of venvs
+      uses: eifinger/setup-rye@v4
+      id: setup-rye
       with:
-        python-version: ${{ matrix.python-version }}
-    - run: pip install pdm
+        enable-cache: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        cache-prefix: ${{ matrix.python-version }}
+    - name: Pin python-version ${{ matrix.python-version }}
+      run: rye pin ${{ matrix.python-version }}
     - name: Install dependencies
-      run: pdm install
+      run: rye sync --no-lock
     - name: Test with pytest (very fast)
       env:
         JAX_PLATFORMS: cpu
-      run: pdm run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append --skip-if-files-missing
+      run: rye run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append --skip-if-files-missing
     - name: Test with pytest (fast)
       env:
         JAX_PLATFORMS: cpu
-      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
+      run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
 
     - name: Store coverage report as an artifact
       uses: actions/upload-artifact@v4
@@ -75,16 +79,21 @@ jobs:
         python-version: ['3.10']
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Setup Rye with caching of venvs
+      uses: eifinger/setup-rye@v4
+      id: setup-rye
       with:
-        python-version: ${{ matrix.python-version }}
-    - run: pip install pdm
+        enable-cache: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        cache-prefix: ${{ matrix.python-version }}
+    - name: Pin python-version ${{ matrix.python-version }}
+      run: rye pin ${{ matrix.python-version }}
+
     - name: Install dependencies
-      run: pdm config install.cache true && pdm install
+      run: rye sync --no-lock
 
     - name: Test with pytest
-      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
+      run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
     # TODO: this is taking too long to run, and is failing consistently. Need to debug this before making it part of the CI again.
     # - name: Test with pytest (only slow tests)
     #   run: pdm run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
@@ -132,16 +141,12 @@ jobs:
         cluster: ['mila']
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
-    - run: pip install pdm
+    - name: Set up the repo using the setup script
+      run: scripts/mila_setup.sh
     - name: Install dependencies
-      run: pdm install
-
+      run: rye sync --no-lock
     - name: Test with pytest
-      run: pdm run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
+      run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
 
     # TODO: Re-enable this later
     # - name: Test with pytest (only slow tests)
