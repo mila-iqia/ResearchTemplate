@@ -12,10 +12,8 @@
 		},
 		"ghcr.io/e-gineering/devcontainer-features/rye:1": {}
 	},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Configure tool-specific properties.
 	"customizations": {
 		// TODO: look into this one.
@@ -67,7 +65,7 @@
 		"SLURM_TMPDIR": "/tmp",
 		"NETWORK_DIR": "/network",
 		// used by rye (fixed issues with symlinked .cache dir to $SCRATCH)
-        "UV_LINK_MODE": "symlink"
+		"UV_LINK_MODE": "symlink"
 	},
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
@@ -95,16 +93,15 @@
 	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
 	// doesn't fail.
 	"initializeCommand": {
-		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}",  // this is fine on compute nodes
+		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}", // this is fine on compute nodes
 		"create ssh cache dir": "mkdir -p ~/.cache/ssh"
 	},
 	"onCreateCommand": {
 		"pre-commit": "pre-commit install --install-hooks"
 	},
 	"updateContentCommand": {
-		"Sync dependencies": "rye sync"
+		// "Sync dependencies": "source ~/.rye/env && rye sync"
 	},
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": {
 		// "pre-commit": "pre-commit install --install-hooks"
