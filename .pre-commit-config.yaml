@@ -62,14 +62,6 @@ repos:
       - id: nbstripout
         require_serial: true
 
-  # Dependency management
-  - repo: https://github.com/pdm-project/pdm
-    rev: 2.17.3
-    hooks:
-      - id: pdm-lock-check
-        require_serial: true
-
-
   # md formatting
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.17

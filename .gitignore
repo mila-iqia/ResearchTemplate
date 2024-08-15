@@ -162,9 +162,10 @@ cython_debug/
 #.idea/
 # ADDED:
 .vscode
-.pdm-python
 wandb
 logs
 lightning_logs
 .vscode
 **.npz
+.python-version
+.testmondata*

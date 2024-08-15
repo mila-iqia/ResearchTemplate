@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Annotated, Any, NewType, TypeAlias, TypeGuard
+from typing import Any, NewType, TypeAlias, TypeGuard
 
-import annotated_types
 from torch import Tensor
 from typing_extensions import TypeVar, TypeVarTuple, Unpack
 
@@ -15,9 +14,6 @@ H = NewType("H", int)
 W = NewType("W", int)
 S = NewType("S", int)
 
-
-# Types used with pydantic:
-FloatBetween0And1 = Annotated[float, annotated_types.Ge(0), annotated_types.Le(1)]
 
 OutT = TypeVar("OutT", default=Tensor, covariant=True)
 Ts = TypeVarTuple("Ts", default=Unpack[tuple[Tensor, ...]])

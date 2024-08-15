@@ -4,11 +4,9 @@ from dataclasses import field
 
 import numpy as np
 import pydantic
-import pydantic.generics
 from torch import nn
 
 from project.networks.layers.layers import Flatten
-from project.utils.types import FloatBetween0And1
 
 
 class FcNet(nn.Sequential):
@@ -20,7 +18,7 @@ class FcNet(nn.Sequential):
 
         use_bias: bool = True
 
-        dropout_rate: FloatBetween0And1 = 0.5
+        dropout_rate: float = 0.5
         """Dropout rate.
 
         Set to 0 to disable dropout.
