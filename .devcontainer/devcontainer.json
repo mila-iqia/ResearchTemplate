@@ -100,7 +100,8 @@
 		"pre-commit": "pre-commit install --install-hooks"
 	},
 	"updateContentCommand": {
-		// "Sync dependencies": "source ~/.rye/env && rye sync"
+		// BUG: doesn't work atm. Perhaps some permission issues?
+		// "Sync dependencies": "rye sync --all-features"
 	},
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": {
