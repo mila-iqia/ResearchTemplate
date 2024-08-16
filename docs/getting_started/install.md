@@ -16,15 +16,14 @@ There are two ways to install this project
 
 2. Installing dependencies
 
-    You can install the package using `pip install -e .`, although we recommend using a package
-    manager such as [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or
-    change the dependencies later on.
+    You can install the package using `pip install -e .`, although we recommend using the [Rye](https://rye.astral.sh/)
+    package manager. This makes it easier to switch python versions and to add or change the dependencies later on.
 
     1. On your machine:
 
         ```console
-        pip install pdm
-        pdm install       # Creates a virtual environment and installs dependencies in it.
+        curl -sSf https://rye.astral.sh/get | bash
+        rye sync       # Creates a virtual environment and installs dependencies in it.
         ```
 
     2. On the Mila cluster:
@@ -32,7 +31,9 @@ There are two ways to install this project
         If you're on the `mila` cluster, you can run this setup script (on a *compute* node):
 
         ```console
+        # Get a compute node to run an interactive job:
         salloc --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=1:00:00
+        # Run the installation script.
         scripts/mila_setup.sh
         ```
 
