@@ -167,5 +167,5 @@ logs
 lightning_logs
 .vscode
 **.npz
-.python-version
+# .python-version
 .testmondata*
