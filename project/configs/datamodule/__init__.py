@@ -1,20 +1,8 @@
 from logging import getLogger as get_logger
-from pathlib import Path
 
 from hydra_zen import store
 
-from project.utils.env_vars import NETWORK_DIR
-
 logger = get_logger(__name__)
-
-torchvision_dir: Path | None = None
-"""Network directory with torchvision datasets."""
-if (
-    NETWORK_DIR
-    and (_torchvision_dir := NETWORK_DIR / "datasets/torchvision").exists()
-    and _torchvision_dir.is_dir()
-):
-    torchvision_dir = _torchvision_dir
 
 
 # TODO: Make it possible to extend a structured base via yaml files as well as adding new fields
