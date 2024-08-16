@@ -25,6 +25,8 @@ annotated-types==0.7.0
 antlr4-python3-runtime==4.9.3
     # via hydra-core
     # via omegaconf
+async-timeout==4.0.3
+    # via aiohttp
 attrs==24.2.0
     # via aiohttp
 babel==2.16.0
@@ -60,7 +62,7 @@ cycler==0.12.1
     # via matplotlib
 docker-pycreds==0.4.0
     # via wandb
-etils==1.9.2
+etils==1.7.0
     # via optax
     # via orbax-checkpoint
 filelock==3.15.4
@@ -344,9 +346,7 @@ sentry-sdk==2.13.0
 setproctitle==1.3.3
     # via wandb
 setuptools==72.2.0
-    # via chex
     # via lightning-utilities
-    # via torch
     # via wandb
 six==1.16.0
     # via docker-pycreds
@@ -362,6 +362,8 @@ sympy==1.13.2
 tensorstore==0.1.64
     # via flax
     # via orbax-checkpoint
+tomli==2.0.1
+    # via black
 toolz==0.12.1
     # via chex
 torch==2.4.0
@@ -387,6 +389,7 @@ tqdm==4.66.5
 triton==3.0.0
     # via torch
 typing-extensions==4.12.2
+    # via black
     # via chex
     # via etils
     # via flax
