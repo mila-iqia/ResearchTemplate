@@ -4,7 +4,7 @@ import functools
 import warnings
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from logging import getLogger as get_logger
-from typing import Any, Generic, Literal, Protocol, override
+from typing import Any, Generic, Literal, Protocol
 
 import gymnasium
 import torch
@@ -13,7 +13,7 @@ from gymnasium.utils.colorize import colorize
 from lightning import LightningDataModule
 from torch import Tensor
 from torch.utils.data import DataLoader
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar, override
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
