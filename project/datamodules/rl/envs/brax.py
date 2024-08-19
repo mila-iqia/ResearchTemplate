@@ -1,3 +1,4 @@
+import dataclasses
 import functools
 from logging import getLogger as get_logger
 from typing import Any, ClassVar
@@ -17,18 +18,15 @@ import torch
 from brax.envs.wrappers.gym import GymWrapper
 from gymnasium.wrappers.compatibility import EnvCompatibility
 from torch_jax_interop import (
-    JaxToTorchMixin,
-    get_backend_from_torch_device,
-    get_torch_device_from_jax_array,
     jax_to_torch,
-    jax_to_torch_tensor,
-    torch_to_jax_tensor,
+    torch_to_jax,
 )
 
 from project.datamodules.rl.types import VectorEnv
-from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, get_torch_dtype
+from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorSpace, get_torch_dtype
 from project.utils.device import default_device
 from project.utils.types import NestedDict
+from project.utils.types.protocols import Dataclass
 
 logger = get_logger(__name__)
 
@@ -45,7 +43,7 @@ def brax_env(
     env = GymWrapper(
         brax_env,  # type: ignore (bad type hint in the brax wrapper constructor)
         seed=seed,
-        backend=get_backend_from_torch_device(device),
+        backend=torch_to_jax(device).platform,
     )
     # Patch for the GymWrapper of brax
     env = BraxToTorchWrapper(env)
@@ -74,6 +72,100 @@ def brax_vectorenv(
     return env
 
 
+
+class _DataclassMeta(type):
+    def __subclasscheck__(self, subclass: type) -> bool:
+        return dataclasses.is_dataclass(subclass) and not dataclasses.is_dataclass(type(subclass))
+
+    def __instancecheck__(self, instance: Any) -> bool:
+        return dataclasses.is_dataclass(instance) and dataclasses.is_dataclass(type(instance))
+
+
+# NOTE: Not using a `runtime_checkable` version of the `Dataclass` protocol here, because it
+# doesn't work correctly in the case of `isinstance(SomeDataclassType, Dataclass)`, which returns
+# `True` when it should be `False` (since it's a dataclass type, not a dataclass instance), and the
+# runtime_checkable decorator doesn't check the type of the attribute (ClassVar vs instance
+# attribute).
+class _DataclassInstance(metaclass=_DataclassMeta): ...
+
+
+@jax_to_torch.register(_DataclassInstance)
+def jax_dataclass_to_torch_dataclass(value: Dataclass) -> NestedDict[str, torch.Tensor]:
+    return jax_to_torch(dataclasses.asdict(value))
+
+
+@torch_to_jax.register(_DataclassInstance)
+def torch_dataclass_to_jax_dataclass(value: Dataclass) -> NestedDict[str, jax.Array]:
+    return torch_to_jax(dataclasses.asdict(value))
+
+
+class JaxToTorchMixin:
+    """A mixin that just implements the step and reset that convert jax arrays into torch tensors.
+
+    TODO: Eventually make this support dict / tuples observations and actions:
+    - use the generic `jax_to_torch` function.
+    - mark this class generic w.r.t. the type of observations and actions
+    """
+
+    env: gymnasium.Env[jax.Array, jax.Array] | VectorEnv[jax.Array, jax.Array]
+    observation_space: TensorSpace
+    action_space: TensorSpace
+
+    def step(
+        self, action: torch.Tensor
+    ) -> tuple[
+        torch.Tensor,
+        jax.Array,
+        bool | jax.Array | torch.Tensor,
+        bool | jax.Array | torch.Tensor,
+        dict[Any, Any],
+    ]:
+        jax_action = torch_to_jax(
+            action.contiguous() if not action.is_contiguous() else action
+        )
+        obs, reward, terminated, truncated, info = self.env.step(jax_action)
+        torch_obs = jax_to_torch(obs)
+
+        # IDEA: Keep the rewards as jax arrays, since most envs / wrappers of Gymnasium assume a jax array?
+        assert isinstance(reward, jax.Array)
+        assert isinstance(terminated, jax.Array | bool), terminated
+        assert isinstance(truncated, jax.Array | bool), truncated
+        # torch_reward = jax_to_torch_tensor(reward)
+        # device = self.observation_space.device
+        # if isinstance(terminated, bool):
+        #     torch_terminated = torch.tensor(terminated, dtype=torch.bool, device=device)
+        # else:
+        #     assert isinstance(terminated, jax.Array)
+        #     torch_terminated = jax_to_torch_tensor(terminated)
+
+        # if isinstance(truncated, bool):
+        #     torch_truncated = torch.tensor(truncated, dtype=torch.bool, device=device)
+        # else:
+        #     assert isinstance(truncated, jax.Array)
+        #     torch_truncated = jax_to_torch_tensor(truncated)
+
+        # Brax has terminated and truncated as 0. and 1., here we convert them to bools instead.
+        if isinstance(terminated, jax.Array) and terminated.dtype != jnp.bool:
+            terminated = terminated.astype(jnp.bool)
+
+        if isinstance(truncated, jax.Array) and truncated.dtype != jnp.bool:
+            truncated = truncated.astype(jnp.bool)
+
+        torch_info = jax_to_torch(info)
+        return torch_obs, reward, terminated, truncated, torch_info
+
+    def reset(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, Any]:
+        obs, info = self.env.reset(seed=seed, options=options)
+        torch_obs = jax_to_torch(obs)
+        torch_info = jax_to_torch(info)
+        return torch_obs, torch_info
+
+
 class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tensor]):
     """Compatibility fixes for the the GymWrapper of brax.
 
@@ -95,7 +187,7 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
         assert isinstance(self.brax_env.action_space, gym.spaces.Box)
         _state = self.brax_env._env.reset(jax.random.key(0))
 
-        device = get_torch_device_from_jax_array(_state.obs)
+        device = jax_to_torch(_state.obs).device
 
         # BUG: The observation space uses np.nan, which is bad!
         # Seems like we could use the DoF to set the limits here:
@@ -138,7 +230,7 @@ class BraxToTorchWrapper(JaxToTorchMixin, gymnasium.Env[torch.Tensor, torch.Tens
         assert not info
         assert self.brax_env._state is not None
         info = {**self.brax_env._state.metrics, **self.brax_env._state.info}
-        torch_obs = jax_to_torch_tensor(obs)
+        torch_obs = jax_to_torch(obs)
         torch_info = jax_to_torch(info)
         return torch_obs, torch_info
 
@@ -191,7 +283,7 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
         self._state = None
 
         obs = jnp.inf * jnp.ones(self._env.observation_size, dtype=jnp.float32)
-        torch_device = get_torch_device_from_jax_array(obs)
+        torch_device = jax_to_torch(obs.devices().pop())
         self.single_observation_space: TensorBox = TensorBox(
             -obs,
             obs,
@@ -238,7 +330,7 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
             # rng into num_envs..
             raise NotImplementedError("This doesn't work with a list of seeds.")
         self._state, obs, info, self._rng_key = env_reset(self._env, self._rng_key)
-        torch_obs = jax_to_torch_tensor(obs)
+        torch_obs = jax_to_torch(obs)
         torch_info = jax_to_torch(info)
 
         # NOTE: We could try to match the same interface as `SyncVectorEnv` here by adding some dummy
@@ -260,15 +352,15 @@ class BraxToTorchVectorEnv(VectorEnv[torch.Tensor, torch.Tensor]):
         NestedDict[str, torch.Tensor | None],
     ]:
         assert self._state is not None
-        jax_action = torch_to_jax_tensor(action)
+        jax_action = torch_to_jax(action)
 
         self._state, obs, reward, terminated, truncated, info = env_step(
             self._env, self._state, jax_action
         )
-        torch_obs = jax_to_torch_tensor(obs)
-        torch_reward = jax_to_torch_tensor(reward)
-        torch_terminated = jax_to_torch_tensor(terminated).bool()
-        torch_truncated = jax_to_torch_tensor(truncated).bool()
+        torch_obs = jax_to_torch(obs)
+        torch_reward = jax_to_torch(reward)
+        torch_terminated = jax_to_torch(terminated).bool()
+        torch_truncated = jax_to_torch(truncated).bool()
         torch_info = jax_to_torch(info)
         # TODO: Figure out which indices were truncated by inspecting stuff in the EpisodeWrapper.
         # Need to figure out where the first obs of the next episode is, and where the last obs of
