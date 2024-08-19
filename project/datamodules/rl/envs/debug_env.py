@@ -167,11 +167,14 @@ class DebugEnv(gymnasium.Env[torch.Tensor, torch.Tensor]):
             reward,
             terminated,
             truncated,
-            {"episode_length": self._episode_length.clone(), "target": self._target.clone()},
+            {
+                "episode_length": self._episode_length.clone(),
+                "target": self._target.clone(),
+            },
         )
 
 
-type bool_mask = np.ndarray[tuple[int], np.dtype[np.bool_]] | jax.Array
+bool_mask = np.ndarray[tuple[int], np.dtype[np.bool_]] | jax.Array
 
 
 class DebugVectorEnvInfo(TypedDict):
@@ -244,7 +247,9 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
             start=torch.full(
                 (self.num_envs,), fill_value=-1, dtype=self.dtype, device=self.device
             ),
-            nvec=torch.full((self.num_envs,), fill_value=3, dtype=self.dtype, device=self.device),
+            nvec=torch.full(
+                (self.num_envs,), fill_value=3, dtype=self.dtype, device=self.device
+            ),
             dtype=self.dtype,
             device=self.device,
         )
@@ -263,9 +268,7 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
         self._target = self._target.expand(self.observation_space.shape)
         self._initial_state = self._initial_state.expand(self.observation_space.shape)
 
-    def step(
-        self, action: torch.Tensor
-    ) -> tuple[
+    def step(self, action: torch.Tensor) -> tuple[
         torch.Tensor,
         SupportsFloat,
         torch.Tensor,
@@ -304,7 +307,9 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
             self._episode_length[env_done] = 0
 
             old_info: DebugEnvInfo = {
-                "episode_length": torch.where(env_done, old_episode_length, self._episode_length),
+                "episode_length": torch.where(
+                    env_done, old_episode_length, self._episode_length
+                ),
                 "target": torch.where(env_done, old_target, self._target),
             }
             # We have to try to match gymnasium.vector.VectorEnv, so the final observations should be a

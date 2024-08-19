@@ -2,7 +2,7 @@ import collections
 import collections.abc
 import copy
 import functools
-from typing import Any, SupportsFloat
+from typing import Any, SupportsFloat, TypeVar
 
 import gymnasium
 import numpy as np
@@ -33,8 +33,11 @@ def _to_tensor(
     return torch.as_tensor(value, dtype=dtype, device=device)
 
 
+T = TypeVar("T")
+
+
 @to_torch.register(type(None))
-def _no_op[T](
+def _no_op(
     value: T, *, dtype: torch.dtype | None = None, device: torch.device | None = None
 ) -> T:
     return value
@@ -42,7 +45,10 @@ def _no_op[T](
 
 @to_torch.register(collections.abc.Mapping)
 def dict_to_torch(
-    value: dict[str, Any], *, dtype: torch.dtype | None = None, device: torch.device | None = None
+    value: dict[str, Any],
+    *,
+    dtype: torch.dtype | None = None,
+    device: torch.device | None = None,
 ) -> dict[str, torch.Tensor | Any]:
     """Converts a dict of jax.Arrays into a dict of PyTorch tensors."""
     return type(value)(**{k: to_torch(v, dtype=dtype, device=device) for k, v in value.items()})  # type: ignore
@@ -70,7 +76,9 @@ class ToTorchWrapper(Wrapper[torch.Tensor, torch.Tensor, np.ndarray, np.ndarray]
             env.observation_space,
             type(env.observation_space),
         )
-        self.observation_space: TensorBox = to_torch(env.observation_space, device=self.device)
+        self.observation_space: TensorBox = to_torch(
+            env.observation_space, device=self.device
+        )
         self.action_space: TensorSpace = to_torch(env.action_space, device=self.device)
 
     def reset(
@@ -96,7 +104,9 @@ class ToTorchWrapper(Wrapper[torch.Tensor, torch.Tensor, np.ndarray, np.ndarray]
         return observation, reward, terminated, truncated, info
 
     def observation(self, observation: np.ndarray) -> Tensor:
-        return torch.as_tensor(observation, dtype=self.observation_space.dtype, device=self.device)
+        return torch.as_tensor(
+            observation, dtype=self.observation_space.dtype, device=self.device
+        )
 
     def info(self, info: dict[str, Any]) -> dict[str, Any]:
         # By default we don't do anything with the info dict.
@@ -174,8 +184,12 @@ def _gymnasium_dict_space_to_tensor(
     )
 
 
-class ToTorchVectorEnvWrapper(ToTorchWrapper, VectorEnvWrapper[Tensor, Tensor, Any, Any]):
+class ToTorchVectorEnvWrapper(
+    ToTorchWrapper, VectorEnvWrapper[Tensor, Tensor, Any, Any]
+):
     def __init__(self, env: VectorEnv[Any, Any], device: torch.device):
         super().__init__(env, device=device)
-        self.single_observation_space = to_torch(env.single_observation_space, device=self.device)
+        self.single_observation_space = to_torch(
+            env.single_observation_space, device=self.device
+        )
         self.single_action_space = to_torch(env.single_action_space, device=self.device)

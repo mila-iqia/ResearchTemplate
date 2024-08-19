@@ -17,9 +17,8 @@ from torch.utils.data import DataLoader
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
 from project.utils.device import default_device
-from project.utils.types import StageStr
 from project.utils.types.protocols import DataModule
-
+from typing_extensions import TypeVar
 from .episode_dataset import EpisodeIterableDataset
 from .types import (
     Actor,
@@ -30,7 +29,8 @@ from .wrappers.to_torch import ToTorchWrapper
 
 logger = get_logger(__name__)
 
-type TensorEnv = gymnasium.Env[Tensor, Tensor]
+TensorEnv = TypeVar("TensorEnv", default=gymnasium.Env[Tensor, Tensor])
+SomeActorOutputType = TypeVar("SomeActorOutputType", bound=dict)
 
 
 class _EnvFn(Protocol):
@@ -107,13 +107,15 @@ class RlDataModule(
         train_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
         valid_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
         test_wrappers: list[Callable[[TensorEnv], TensorEnv]] | None = None,
-        train_dataloader_wrappers: list[
-            Callable[
-                [Iterable[EpisodeBatch[ActorOutput]]],
-                Iterable[EpisodeBatch[ActorOutput]],
+        train_dataloader_wrappers: (
+            list[
+                Callable[
+                    [Iterable[EpisodeBatch[ActorOutput]]],
+                    Iterable[EpisodeBatch[ActorOutput]],
+                ]
             ]
-        ]
-        | None = None,
+            | None
+        ) = None,
         train_seed: int | None = 123,
         val_seed: int = 42,
     ):
@@ -131,16 +133,21 @@ class RlDataModule(
 
         self.env_fn: _EnvFn = (
             functools.partial(
-                make_torch_vectorenv, env_id=env, num_envs=num_parallel_envs, device=self.device
-            )
-            if isinstance(env, str) and num_parallel_envs is not None
-            else functools.partial(
-                make_torch_env,
-                env,
+                make_torch_vectorenv,
+                env_id=env,
+                num_envs=num_parallel_envs,
                 device=self.device,
             )
-            if isinstance(env, str)
-            else env
+            if isinstance(env, str) and num_parallel_envs is not None
+            else (
+                functools.partial(
+                    make_torch_env,
+                    env,
+                    device=self.device,
+                )
+                if isinstance(env, str)
+                else env
+            )
         )
         # todo: remove this, only use it to get the observation and action spaces.
         self.env: TensorEnv = self.env_fn(seed=0)
@@ -174,7 +181,7 @@ class RlDataModule(
 
         self._train_dataloader: EnvDataLoader | None = None
 
-    def set_actor[SomeActorOutputType: dict](
+    def set_actor(
         self, actor: Actor[Tensor, Tensor, SomeActorOutputType]
     ) -> RlDataModule[SomeActorOutputType]:
         """Sets the actor to be used for collecting episodes.
@@ -229,16 +236,28 @@ class RlDataModule(
         """
         if stage in ["fit", None]:
             creating = "Recreating" if self.train_env is not None else "Creating"
-            logger.debug(f"{creating} training environment with wrappers {self.train_wrappers}")
-            self.train_env = self._make_env(wrappers=self.train_wrappers, seed=self.train_seed)
+            logger.debug(
+                f"{creating} training environment with wrappers {self.train_wrappers}"
+            )
+            self.train_env = self._make_env(
+                wrappers=self.train_wrappers, seed=self.train_seed
+            )
         if stage in ["validate", None]:
             creating = "Recreating" if self.valid_env is not None else "Creating"
-            logger.debug(f"{creating} validation environment with wrappers {self.valid_wrappers}")
-            self.valid_env = self._make_env(wrappers=self.valid_wrappers, seed=self.valid_seed)
+            logger.debug(
+                f"{creating} validation environment with wrappers {self.valid_wrappers}"
+            )
+            self.valid_env = self._make_env(
+                wrappers=self.valid_wrappers, seed=self.valid_seed
+            )
         if stage in ["test", None]:
             creating = "Recreating" if self.test_env is not None else "Creating"
-            logger.debug(f"{creating} testing environment with wrappers {self.test_wrappers}")
-            self.test_env = self._make_env(wrappers=self.test_wrappers, seed=self.test_seed)
+            logger.debug(
+                f"{creating} testing environment with wrappers {self.test_wrappers}"
+            )
+            self.test_env = self._make_env(
+                wrappers=self.test_wrappers, seed=self.test_seed
+            )
 
     def train_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
         if self.train_actor is None:
@@ -310,7 +329,9 @@ class RlDataModule(
         return self._train_wrappers
 
     @train_wrappers.setter
-    def train_wrappers(self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]) -> None:
+    def train_wrappers(
+        self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]
+    ) -> None:
         wrappers = tuple(wrappers)
         if self.train_env is not None and wrappers != self._train_wrappers:
             logger.warn("Training wrappers changed, closing the previous environment.")
@@ -323,10 +344,14 @@ class RlDataModule(
         return self._valid_wrappers
 
     @valid_wrappers.setter
-    def valid_wrappers(self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]) -> None:
+    def valid_wrappers(
+        self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]
+    ) -> None:
         wrappers = tuple(wrappers)
         if self.valid_env is not None and wrappers != self._valid_wrappers:
-            logger.warn("validation wrappers changed, closing the previous environment.")
+            logger.warn(
+                "validation wrappers changed, closing the previous environment."
+            )
             self.valid_env.close()
             self.valid_env = None
         self._valid_wrappers = wrappers
@@ -336,7 +361,9 @@ class RlDataModule(
         return self._test_wrappers
 
     @test_wrappers.setter
-    def test_wrappers(self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]) -> None:
+    def test_wrappers(
+        self, wrappers: Sequence[Callable[[TensorEnv], TensorEnv]]
+    ) -> None:
         wrappers = tuple(wrappers)
         if self.test_env is not None and wrappers != self._test_wrappers:
             logger.warn("testing wrappers changed, closing the previous environment.")
@@ -449,7 +476,9 @@ class RlDataModule(
             setattr(self, f"{name}_env", None)
 
 
-def _error_actor_required(dm: RlDataModule[Any], name: Literal["train", "valid", "test"]):
+def _error_actor_required(
+    dm: RlDataModule[Any], name: Literal["train", "valid", "test"]
+):
     return RuntimeError(
         "An actor must be set with before we can gather episodes.\n"
         "Either provide a value to the `actor` constructor argument, or call "

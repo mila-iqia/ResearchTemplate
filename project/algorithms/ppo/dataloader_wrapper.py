@@ -80,7 +80,10 @@ class PpoDataLoaderWrapper(Iterable[PpoEpisodeBatch]):
     def __len__(self) -> int | None:
         if self._max_episode_steps is not None:
             # Adding a +1 here because otherwise the part after the last yield doesn't get run.
-            return math.ceil(self.min_steps_to_collect_per_round / self._max_episode_steps) + 1
+            return (
+                math.ceil(self.min_steps_to_collect_per_round / self._max_episode_steps)
+                + 1
+            )
         if self._episode_lengths:
             return len(self._episode_lengths)
         return None
@@ -118,7 +121,9 @@ class PpoDataLoaderWrapper(Iterable[PpoEpisodeBatch]):
 
         self.rng.shuffle(episode_indices)
         for start in range(0, n_episodes, self.num_episodes_per_batch):
-            episodes_to_yield = episode_indices[start : start + self.num_episodes_per_batch]
+            episodes_to_yield = episode_indices[
+                start : start + self.num_episodes_per_batch
+            ]
             minibatch = dict_slice(self.data, episodes_to_yield)
             _ep_lengths = get_episode_lengths(minibatch)
             self._total_yielded_steps += sum(_ep_lengths)

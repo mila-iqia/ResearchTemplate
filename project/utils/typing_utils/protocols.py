@@ -38,7 +38,7 @@ class Module(Protocol[P, OutT]):
         to = nn.Module().to
 
 
-BatchType = TypeVar("BatchType")
+BatchType = TypeVar("BatchType", covariant=True)
 
 
 @runtime_checkable
