@@ -5,7 +5,7 @@ import dataclasses
 import functools
 import typing
 from collections.abc import Callable
-from typing import Any, Concatenate
+from typing import Any, Concatenate, TypeVar
 
 import chex
 import gymnasium
@@ -77,9 +77,9 @@ def jax_to_torch_tensor(value: jax.Array) -> Tensor:
 torch_to_jax.register(torch.Tensor, torch_to_jax_tensor)
 jax_to_torch.register(jax.Array, jax_to_torch_tensor)
 
-
+K = TypeVar("K")
 @torch_to_jax.register(collections.abc.Mapping)
-def torch_to_jax_dict[K](value: NestedMapping[K, Tensor]) -> NestedMapping[K, jax.Array]:
+def torch_to_jax_dict(value: NestedMapping[K, Tensor]) -> NestedMapping[K, jax.Array]:
     """Converts a dict of PyTorch tensors into a dict of jax.Arrays."""
     return type(value)(**{k: torch_to_jax(v) for k, v in value.items()})  # type: ignore
 

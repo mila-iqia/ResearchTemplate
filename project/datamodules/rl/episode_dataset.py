@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Generic
+from typing import Generic, TypeVar
 
 import gymnasium
 import jax.experimental.compilation_cache.compilation_cache
@@ -24,7 +24,7 @@ from .types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv
 logger = get_logger(__name__)
 eps = np.finfo(np.float32).eps.item()
 
-jax.experimental.compilation_cache.compilation_cache.set_cache_dir(Path.home() / ".cache/jax")
+jax.experimental.compilation_cache.compilation_cache.set_cache_dir(str(Path.home() / ".cache/jax"))
 
 
 @dataclass
@@ -195,8 +195,8 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             discount_factor=self.discount_factor,
         )
 
-
-class VectorEnvEpisodeIterator[ActorOutput: NestedMapping[str, Tensor]](
+ActorOutput = TypeVar("ActorOutput", bound=NestedMapping[str, Tensor])
+class VectorEnvEpisodeIterator(
     Iterator[Episode[ActorOutput]]
 ):
     """Yields one episode at a time from interacting with a vectorized environment."""

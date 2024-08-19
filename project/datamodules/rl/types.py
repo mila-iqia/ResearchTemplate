@@ -5,10 +5,10 @@ import collections.abc
 import dataclasses
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, NotRequired, TypedDict
+from typing import Any, Generic, Literal, TypedDict
 
-import gym
-import gym.spaces
+# import gym
+# import gym.spaces
 import gymnasium.spaces
 import jax
 import numpy as np
@@ -16,18 +16,18 @@ import torch
 from gymnasium import Space
 from numpy.typing import NDArray
 from torch import Tensor
-from typing_extensions import TypeVar
+from typing_extensions import NotRequired, TypeVar, Unpack
 
 from project.utils.types import NestedMapping, is_list_of
 from project.utils.utils import get_shape_ish
 
-type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
-type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
+# type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
+# type _Space[T_cov] = gym.Space[T_cov] | gymnasium.Space[T_cov]
 
-BoxSpace = gym.spaces.Box | gymnasium.spaces.Box
+BoxSpace = gymnasium.spaces.Box
 """A Box space, either from Gym or Gymnasium."""
 
-DiscreteSpace = gym.spaces.Discrete | gymnasium.spaces.Discrete
+DiscreteSpace = gymnasium.spaces.Discrete
 """A Discrete space, from either Gym or Gymnasium."""
 
 
@@ -52,9 +52,10 @@ WrapperActType = TypeVar("WrapperActType")
 
 ### Typing fixes for gymnasium.
 
-
+ObsType = TypeVar("ObsType", default=Any)
+ActType = TypeVar("ActType", default=Any)
 # VectorEnv doesn't have type hints in current gymnasium.
-class VectorEnv[ObsType, ActType](gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]):
+class VectorEnv(gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]):
     observation_space: Space[ObsType]
     action_space: Space[ActType]
 
@@ -208,9 +209,8 @@ class Episode(MappingMixin, Generic[ActorOutput]):
         *full_transitions, last_full_transition, _final_transition = self.as_transitions()
         return full_transitions + [dataclasses.replace(last_full_transition, is_terminal=True)]
 
-
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class Transition[ActorOutput]:
+class Transition(Generic[ActorOutput]):
     observation: Tensor
     info: dict
     action: Tensor
@@ -279,7 +279,7 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
     discount_factors: Tensor | np.ndarray | None
     # todo: Add the returns as part of the episode, or add gamma and compute them lazily?
 
-    def shapes(self) -> dict[str, tuple[int, int | Literal["?"], *tuple[int, ...]]]:
+    def shapes(self) -> dict[str, tuple[int, int | Literal["?"], Unpack[tuple[int, ...]]]]:
         return {k: get_shape_ish(v) for k, v in self.items() if isinstance(v, Tensor)}  # type: ignore
 
     @property
@@ -406,7 +406,7 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
         ]
 
     def to(self, device: torch.device):
-        def _to[V](value: V) -> V:
+        def _to(value: V) -> V:
             if isinstance(value, Tensor):
                 return value.to(device=device)
             if isinstance(value, Mapping):

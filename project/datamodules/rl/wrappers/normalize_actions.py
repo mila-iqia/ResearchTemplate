@@ -1,5 +1,5 @@
 from logging import getLogger as get_logger
-from typing import Any
+from typing import Any, TypeVar
 
 import gymnasium
 import numpy as np
@@ -10,12 +10,13 @@ from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
 
 logger = get_logger(__name__)
 
-
-def _ones_like[T: np.ndarray | torch.Tensor](v: T) -> T:
+T = TypeVar("T", np.ndarray, torch.Tensor)
+def _ones_like(v: T) -> T:
     return np.ones_like(v) if isinstance(v, np.ndarray) else torch.ones_like(v)
 
-
-class NormalizeBoxActionWrapper[ObsType, ActionType: np.ndarray | torch.Tensor](
+ObsType = TypeVar("ObsType")
+ActionType = TypeVar("ActionType", np.ndarray, torch.Tensor)
+class NormalizeBoxActionWrapper(
     gymnasium.ActionWrapper[ObsType, ActionType, ActionType]
 ):
     """Wrapper to normalize gym.spaces.Box actions in [-1, 1].

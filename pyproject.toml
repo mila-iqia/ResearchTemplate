@@ -31,6 +31,8 @@ dependencies = [
     # Only pinning this so that we can install the hydra-orion-sweeper.
     "kaleido==0.2.1",
     "hydra-orion-sweeper>=1.6.4",
+    "gymnasium>=0.29.1",
+    "brax>=0.10.5",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

@@ -5,11 +5,12 @@ import typing
 from collections.abc import Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 import rich
 import rich.syntax
 import rich.tree
+import torch
 from lightning import LightningDataModule, Trainer
 from omegaconf import DictConfig, OmegaConf
 from torchvision import transforms
@@ -156,3 +157,14 @@ def print_config(
 
     # with open("config_tree.log", "w") as file:
     #     rich.print(tree, file=file)
+
+def get_shape_ish(t: torch.Tensor) -> tuple[int | Literal["?"], ...]:
+    if not t.is_nested:
+        return t.shape
+    dim_sizes = []
+    for dim in range(t.ndim):
+        try:
+            dim_sizes.append(t.size(dim))
+        except RuntimeError:
+            dim_sizes.append("?")
+    return tuple(dim_sizes)
