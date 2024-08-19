@@ -8,6 +8,7 @@ import torch
 import torch.utils
 import torch.utils.data
 from pytest_benchmark.fixture import BenchmarkFixture
+from tensor_regression import TensorRegressionFixture
 from torch import Tensor
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
@@ -18,7 +19,6 @@ from project.datamodules.rl.types import (
 )
 from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch_tensor
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete
-from project.utils.tensor_regression import TensorRegressionFixture
 from project.utils.types import NestedDict
 from project.utils.utils import get_shape_ish
 

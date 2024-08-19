@@ -3,9 +3,9 @@ from typing import Any
 
 import pytest
 import torch
+from tensor_regression import TensorRegressionFixture
 
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete, TensorSpace
-from project.utils.tensor_regression import TensorRegressionFixture
 
 
 @pytest.fixture(
