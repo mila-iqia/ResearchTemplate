@@ -1,7 +1,8 @@
 import functools
 from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
-from typing import Any, TypeVar, overload
+from typing import Any, Generic, TypeVar, overload
+from typing_extensions import ParamSpec
 
 import jax
 import numpy as np
@@ -28,8 +29,11 @@ _stacking_fns: dict[type, Callable] = {
 """Mapping from item type to the function to use to stack these items."""
 
 T = TypeVar("T")
+
+
 def register_stacking_fn(item_type: type[T]):
     C = TypeVar("C", bound=Callable[[Sequence], Any])
+
     def _wrapper(fn: C) -> C:
         _stacking_fns[item_type] = fn
         return fn
@@ -48,7 +52,10 @@ def stack(values: list[jax.Array]) -> jax.Array: ...
 @overload
 def stack(values: list[np.ndarray]) -> np.ndarray: ...
 
-M = TypeVar("M", bound= Mapping)
+
+M = TypeVar("M", bound=Mapping)
+
+
 @overload
 def stack(values: list[M]) -> M: ...
 
@@ -58,13 +65,15 @@ def stack(values: list[int] | list[float] | list[bool]) -> np.ndarray: ...
 
 
 def stack(
-    values: list[Tensor]
-    | list[jax.Array]
-    | list[np.ndarray]
-    | list[Mapping]
-    | list[int]
-    | list[float]
-    | list[bool],
+    values: (
+        list[Tensor]
+        | list[jax.Array]
+        | list[np.ndarray]
+        | list[Mapping]
+        | list[int]
+        | list[float]
+        | list[bool]
+    ),
 ) -> Tensor | jax.Array | np.ndarray | Mapping:
     """Generic function for stacking lists of values into tensors or arrays.
 
@@ -98,11 +107,16 @@ def stack_jax_arrays(values: Sequence[jax.Array]) -> torch.Tensor | jax.Array:
     Torch nested tensor."""
     if all(value.shape == values[0].shape for value in values):
         return jax.numpy.stack(values)
-    return torch.nested.as_nested_tensor([jax_to_torch_tensor(value) for value in values])
+    return torch.nested.as_nested_tensor(
+        [jax_to_torch_tensor(value) for value in values]
+    )
+
+
+M = TypeVar("M", bound=Mapping)
 
 
 @register_stacking_fn(Mapping)
-def stack_mappings[M: Mapping](values: Sequence[M]) -> M:
+def stack_mappings(values: Sequence[M]) -> M:
     if not isinstance(values, list):
         values = list(values)
     all_keys = set().union(*[v.keys() for v in values])
@@ -120,10 +134,15 @@ def stack_mappings[M: Mapping](values: Sequence[M]) -> M:
     return result
 
 
+D = TypeVar("D")
+
+
 @register_stacking_fn(torch.distributions.Distribution)
-def stack_distributions[D](values: Sequence[D]) -> D:
+def stack_distributions(values: Sequence[D]) -> D:
     """Stack multiple distributions."""
-    raise NotImplementedError(f"Don't know how to stack distributions of type {type(values[0])}")
+    raise NotImplementedError(
+        f"Don't know how to stack distributions of type {type(values[0])}"
+    )
 
 
 @register_stacking_fn(torch.distributions.Independent)
@@ -137,9 +156,12 @@ def stack_independent_distributions(
     )
 
 
+N = TypeVar("N", bound=torch.distributions.Normal)
+
+
 @register_stacking_fn(torch.distributions.Normal)
-def stack_normal_distributions[D: torch.distributions.Normal](
-    values: Sequence[D],
+def stack_normal_distributions(
+    values: Sequence[N],
 ) -> torch.distributions.Independent:
     assert len(set([type(d) for d in values])) == 1
     loc = stack([v.loc for v in values])
@@ -150,19 +172,25 @@ def stack_normal_distributions[D: torch.distributions.Normal](
     )
 
 
-class NestedDistribution[DistType: torch.distributions.Distribution](
-    torch.distributions.Distribution
-):
-    def __init__[**P](
+DistType = TypeVar("DistType", bound=torch.distributions.Distribution)
+P = ParamSpec("P")
+
+
+class NestedDistribution(torch.distributions.Distribution, Generic[DistType]):
+    def __init__(
         self,
         dist_type: Callable[P, DistType],
         *args: P.args,
         **kwargs: P.kwargs,
     ):
-        assert is_sequence_of(args, torch.Tensor), "expected only nested tensors in args"
+        assert is_sequence_of(
+            args, torch.Tensor
+        ), "expected only nested tensors in args"
         _unbind_args = [arg.unbind() for arg in args]
         _values = kwargs.values()
-        assert is_sequence_of(_values, torch.Tensor), "expected only nested tensors in kwargs"
+        assert is_sequence_of(
+            _values, torch.Tensor
+        ), "expected only nested tensors in kwargs"
         unbind_kwargs = {k: v.unbind() for k, v in zip(kwargs.keys(), _values)}
         n_dists: int | None = None
         for arg in _unbind_args:
@@ -180,7 +208,9 @@ class NestedDistribution[DistType: torch.distributions.Distribution](
                 f"couldn't infer the number of distributions from {args=} and {kwargs=}"
             )
 
-        args_for_each_dist = [tuple(arg_i[j] for arg_i in _unbind_args) for j in range(n_dists)]
+        args_for_each_dist = [
+            tuple(arg_i[j] for arg_i in _unbind_args) for j in range(n_dists)
+        ]
         kwargs_for_each_dist = [
             {k: v[j] for k, v in unbind_kwargs.items()} for j in range(n_dists)
         ]
@@ -188,7 +218,9 @@ class NestedDistribution[DistType: torch.distributions.Distribution](
             dist_type(*args, **kwargs)
             for arg, kwargs in zip(args_for_each_dist, kwargs_for_each_dist)
         ]
-        batch_shape = torch.Size([len(self._distributions), *self._distributions[0].batch_shape])
+        batch_shape = torch.Size(
+            [len(self._distributions), *self._distributions[0].batch_shape]
+        )
         super().__init__(batch_shape=batch_shape, validate_args=False)
 
     def sample(self, sample_shape: torch.Size = torch.Size()) -> Tensor:
@@ -208,7 +240,9 @@ class NestedDistribution[DistType: torch.distributions.Distribution](
 class NestedCategorical(NestedDistribution[torch.distributions.Categorical]):
     def __init__(self, probs: Tensor | None = None, logits: Tensor | None = None):
         if (probs is None) == (logits is None):
-            raise ValueError("Either `probs` or `logits` must be specified, but not both.")
+            raise ValueError(
+                "Either `probs` or `logits` must be specified, but not both."
+            )
         if probs is not None:
             kwargs = {"probs": probs}
         else:
@@ -282,40 +316,53 @@ def _unstack_dict(v: Mapping, n_slices: int) -> list[Mapping]:
 
 @unstack.register(type(None))
 @unstack.register(int | float | str | bool)
-def _unstack_shallow_copy[T](v: T, n_slices: int) -> list[T]:
+def _unstack_shallow_copy(v: T, n_slices: int) -> list[T]:
     return [v for _ in range(n_slices)]
 
 
+Ten = TypeVar("Ten", bound=Tensor | np.ndarray | jax.Array)
+
+
 @unstack.register(Tensor | np.ndarray | jax.Array)
-def _unstack_arraylike[T: Tensor | np.ndarray | jax.Array](v: T, n_slices: int) -> list[T]:
+def _unstack_arraylike(v: Ten, n_slices: int) -> list[Ten]:
     assert v.shape[0] == n_slices
     return list(v)
     # duplicate the value.
     return [v for _ in range(n_slices)]
 
 
+V = TypeVar("V")
+
+
 @unstack.register(list)
-def _unstack_list[V](v: list[V], n_slices: int) -> list[V]:
+def _unstack_list(v: list[V], n_slices: int) -> list[V]:
     assert len(v) == n_slices
     return v.copy()
 
 
+Cat = TypeVar("Cat", bound=torch.distributions.Categorical)
+
+
 @unstack.register(torch.distributions.Categorical)
-def _unstack_categorical[D: torch.distributions.Categorical](v: D, n_slices: int) -> list[D]:
+def _unstack_categorical(v: Cat, n_slices: int) -> list[Cat]:
     return [type(v)(logits=v.logits[i]) for i in range(n_slices)]
 
 
+N = TypeVar("N", bound=torch.distributions.Normal)
+
+
 @unstack.register(torch.distributions.Normal)
-def _unstack_normal[D: torch.distributions.Normal](v: D, n_slices: int) -> list[D]:
+def _unstack_normal(v: N, n_slices: int) -> list[N]:
     loc = unstack(v.loc, n_slices=n_slices)
     scale = unstack(v.scale, n_slices=n_slices)
     return [type(v)(loc=loc[i], scale=scale[i]) for i in range(n_slices)]
 
 
+D = TypeVar("D", bound=torch.distributions.Distribution)
+
+
 @unstack.register(NestedDistribution)
-def _unstack_nested_distribution[D: torch.distributions.Distribution](
-    v: NestedDistribution[D], n_slices: int
-) -> list[D]:
+def _unstack_nested_distribution(v: NestedDistribution[D], n_slices: int) -> list[D]:
     return v._distributions.copy()
 
 
