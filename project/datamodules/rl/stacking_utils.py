@@ -1,7 +1,7 @@
 import functools
 from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
-from typing import Any, overload
+from typing import Any, TypeVar, overload
 
 import jax
 import numpy as np
@@ -27,9 +27,10 @@ _stacking_fns: dict[type, Callable] = {
 }
 """Mapping from item type to the function to use to stack these items."""
 
-
-def register_stacking_fn[T](item_type: type[T]):
-    def _wrapper[C: Callable[[Sequence], Any]](fn: C) -> C:
+T = TypeVar("T")
+def register_stacking_fn(item_type: type[T]):
+    C = TypeVar("C", bound=Callable[[Sequence], Any])
+    def _wrapper(fn: C) -> C:
         _stacking_fns[item_type] = fn
         return fn
 
@@ -47,9 +48,9 @@ def stack(values: list[jax.Array]) -> jax.Array: ...
 @overload
 def stack(values: list[np.ndarray]) -> np.ndarray: ...
 
-
+M = TypeVar("M", bound= Mapping)
 @overload
-def stack[M: Mapping](values: list[M]) -> M: ...
+def stack(values: list[M]) -> M: ...
 
 
 @overload

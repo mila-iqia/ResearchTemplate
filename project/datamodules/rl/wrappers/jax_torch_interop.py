@@ -5,7 +5,7 @@ import dataclasses
 import functools
 import typing
 from collections.abc import Callable
-from typing import Any, Concatenate, TypeVar
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 import chex
 import gymnasium
@@ -226,15 +226,17 @@ def get_backend_from_torch_device(device: torch.device) -> str:
         return "tpu"
     return "cpu"
 
+C = TypeVar("C", bound=Callable)
+P = ParamSpec("P")
 
-def jit[C: Callable, **P](
+def jit(
     c: C, _fn: Callable[Concatenate[C, P], Any] = jax.jit, *args: P.args, **kwargs: P.kwargs
 ) -> C:
     # Fix `jax.jit` so it preserves the jit-ed function's signature and docstring.
     return _fn(c, *args, **kwargs)
 
 
-def chexify[C: Callable, **P](
+def chexify(
     c: C, _fn: Callable[Concatenate[C, P], Any] = chex.chexify, *args: P.args, **kwargs: P.kwargs
 ) -> C:
     # Fix `chex.chexify` so it preserves the jit-ed function's signature and docstring.
