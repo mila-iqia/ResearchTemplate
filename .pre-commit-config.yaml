@@ -32,7 +32,7 @@ repos:
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: "v0.5.1"
+    rev: "v0.5.7"
     hooks:
       - id: ruff
         args: ['--line-length', '99', '--fix']
@@ -61,14 +61,6 @@ repos:
     hooks:
       - id: nbstripout
         require_serial: true
-
-  # Dependency management
-  - repo: https://github.com/pdm-project/pdm
-    rev: 2.16.1
-    hooks:
-      - id: pdm-lock-check
-        require_serial: true
-
 
   # md formatting
   - repo: https://github.com/executablebooks/mdformat

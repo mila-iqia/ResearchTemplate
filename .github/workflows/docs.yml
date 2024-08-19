@@ -11,17 +11,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - name: Setup Rye with caching of venvs
+        uses: eifinger/setup-rye@v4
+        id: setup-rye
         with:
-          python-version: 3.12
-      - name: Install pdm
-        run: pip install pdm
+          enable-cache: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pin python-version
+        run: rye pin 3.10
+
       - name: Install dependencies
-        run: pdm install
+        run: rye sync --no-lock --features docs
 
       - name: Deploy docs
-        run: pdm run mkdocs gh-deploy --force
+        run: rye run mkdocs gh-deploy --force
         # note: Checking if we really need the one below:
         # uses: mhausenblas/mkdocs-deploy-gh-pages@1.9
         # # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme

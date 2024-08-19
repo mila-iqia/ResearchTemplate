@@ -3,19 +3,17 @@
 {
 	"name": "Research Template",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:1-3.10-bullseye",
+	"image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-		"ghcr.io/devcontainers-contrib/features/pdm:2": {},
 		"ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
 		"ghcr.io/devcontainers-contrib/features/apt-get-packages": {
 			"packages": "vim"
-		}
+		},
+		"ghcr.io/e-gineering/devcontainer-features/rye:1": {}
 	},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Configure tool-specific properties.
 	"customizations": {
 		// TODO: look into this one.
@@ -39,12 +37,21 @@
 					"**/CVS": true,
 					"**/.DS_Store": true,
 					"**/Thumbs.db": true,
+					// ADDED:
+					"**/__pycache__": true,
+					".mypy_cache": true,
 					".venv": true,
-					".pdm.toml": true,
-					".pdm-python": true,
-					".pdm-build": true,
+					".pytest_cache": true,
+					".benchmarks": true,
 					".ruff_cache": true
-				}
+				},
+				"python.testing.unittestEnabled": false,
+				"python.testing.pytestEnabled": true,
+				"python.experiments.optOutFrom": [
+					"pythonTerminalEnvVarActivation"
+				],
+				"python.terminal.activateEnvInCurrentTerminal": false,
+				"python.terminal.activateEnvironment": true
 			},
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
@@ -61,7 +68,9 @@
 	"containerEnv": {
 		"SCRATCH": "/home/vscode/scratch",
 		"SLURM_TMPDIR": "/tmp",
-		"NETWORK_DIR": "/network"
+		"NETWORK_DIR": "/network",
+		// used by rye (fixed issues with symlinked .cache dir to $SCRATCH)
+		"UV_LINK_MODE": "symlink"
 	},
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
@@ -69,7 +78,6 @@
 		// This will use $SCRATCH/.cache/pdm, otherwise
 		// Mount a "$SCRATCH" directory in the host to ~/scratch in the container.
 		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
-		"source=${localEnv:SCRATCH}/.cache/pdm,target=/home/vscode/.pdm_install_cache,type=bind,consistency=cached",
 		// Mount a /network to match the /network directory on the host.
 		// FIXME: This assumes that either the NETWORK_DIR environment variable is set on the host, or
 		// that the /network directory exists.
@@ -90,32 +98,19 @@
 	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
 	// doesn't fail.
 	"initializeCommand": {
-		"create pdm install cache": "mkdir -p ${SCRATCH?need the SCRATCH environment variable to be set.}/.cache/pdm",      // todo: put this on $SCRATCH on the host (e.g. compute node)
-		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}",  // this is fine on compute nodes
+		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}", // this is fine on compute nodes
 		"create ssh cache dir": "mkdir -p ~/.cache/ssh"
 	},
-	// NOTE: Getting some permission issues with the .cache dir if mounting .cache/pdm to
-	// .cache/pdm in the container. Therefore, here I'm making a symlink from ~/.cache/pdm to
-	// ~/.pdm_install_cache so the ~/.cache directory is writeable by the container.
 	"onCreateCommand": {
-		"setup_pdm_install_cache": "mkdir -p ~/.cache && ln -s /home/vscode/.pdm_install_cache /home/vscode/.cache/pdm",
-		"pre-commit": "pre-commit install --install-hooks",
-		"setup_pdm_config": "pdm config install.cache true && pdm config venv.with_pip true && pdm config venv.in_project false"
+		"pre-commit": "pre-commit install --install-hooks"
 	},
 	"updateContentCommand": {
-		"pdm_install": "pdm install"
+		// BUG: doesn't work atm. Perhaps some permission issues?
+		// "Sync dependencies": "rye sync --all-features"
 	},
-
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
 	"postCreateCommand": {
-		// NOTE: This sets up the python interpreter correctly, but the shell doesn't show the
-		// environment name, which isn't a big deal.
-		"setup_venv_shell": "pdm venv activate >> ~/.bash_aliases && chmod +x ~/.bash_aliases",
-		// "pdm-pep-582": "pdm --pep582 >> ~/.bash_profile",
-		// "pdm": "pdm config install.cache false && pdm config venv.in_project false && pdm install",
 		// "pre-commit": "pre-commit install --install-hooks"
-		// "activate_venv": "source .venv/bin/activate"
 	}
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
