@@ -2,14 +2,14 @@ import functools
 from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
 from typing import Any, Generic, TypeVar, overload
-from typing_extensions import ParamSpec
 
 import jax
 import numpy as np
 import torch
 from torch import Tensor
+from torch_jax_interop import jax_to_torch
+from typing_extensions import ParamSpec
 
-from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch_tensor
 from project.utils.types import is_sequence_of
 
 from .types import ActorOutput, Episode
@@ -108,7 +108,7 @@ def stack_jax_arrays(values: Sequence[jax.Array]) -> torch.Tensor | jax.Array:
     if all(value.shape == values[0].shape for value in values):
         return jax.numpy.stack(values)
     return torch.nested.as_nested_tensor(
-        [jax_to_torch_tensor(value) for value in values]
+        [jax_to_torch(value) for value in values]
     )
 
 

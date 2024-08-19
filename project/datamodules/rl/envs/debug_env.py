@@ -6,9 +6,9 @@ import gymnasium.envs.registration
 import jax
 import numpy as np
 import torch
+from torch_jax_interop import torch_to_jax_tensor
 
 from project.datamodules.rl.types import VectorEnv
-from project.datamodules.rl.wrappers.jax_torch_interop import torch_to_jax_tensor
 from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorBox,
     TensorDiscrete,

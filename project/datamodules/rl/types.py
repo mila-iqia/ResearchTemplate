@@ -302,10 +302,11 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
         """Collates a list of episodes into an EpisodeBatch object containing (possibly nested)
         tensors."""
         rewards = [ep.rewards for ep in episodes]
-        from project.datamodules.rl.stacking_utils import stack
-        from project.datamodules.rl.wrappers.jax_torch_interop import (
+        from torch_jax_interop import (
             jax_to_torch_tensor,
         )
+
+        from project.datamodules.rl.stacking_utils import stack
 
         stacked_rewards = stack(rewards)  # type: ignore
         assert isinstance(stacked_rewards, np.ndarray | jax.Array | torch.Tensor)

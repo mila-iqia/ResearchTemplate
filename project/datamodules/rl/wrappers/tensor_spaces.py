@@ -16,13 +16,7 @@ import numpy.core.numerictypes
 import numpy.typing
 import torch
 from torch import Tensor
-
-from project.datamodules.rl.wrappers.jax_torch_interop import (
-    chexify,
-    jax_to_torch_tensor,
-    jit,
-    torch_to_jax_tensor,
-)
+from torch_jax_interop import jax_to_torch, torch_to_jax
 
 logger = get_logger(__name__)
 
@@ -91,9 +85,9 @@ class TensorBox(TensorSpace):
         self.dtype: torch.dtype
         self.shape: tuple[int, ...]
         if isinstance(low, jax.Array):
-            low = jax_to_torch_tensor(low)
+            low = jax_to_torch(low)
         if isinstance(high, jax.Array):
-            high = jax_to_torch_tensor(high)
+            high = jax_to_torch(high)
         self.low = torch.as_tensor(low, dtype=self.dtype, device=self.device)
         self.high = torch.as_tensor(high, dtype=self.dtype, device=self.device)
         if self.dtype.is_floating_point:
@@ -111,15 +105,15 @@ class TensorBox(TensorSpace):
 
         assert self.low.shape == shape
         assert self.high.shape == shape
-        self._jax_high = torch_to_jax_tensor(self.high.contiguous())
-        self._jax_low = torch_to_jax_tensor(self.low.contiguous())
+        self._jax_high = torch_to_jax(self.high.contiguous())
+        self._jax_low = torch_to_jax(self.low.contiguous())
         self._jax_dtype = self._jax_low.dtype
 
     def seed(self, seed: int | torch.Tensor) -> None:
         super().seed(seed)
         if not isinstance(seed, int):
             # Make an int based on this `seed` tensor.
-            seed = int(torch.randint(0, 2**32, generator=self._rng).item())
+            seed = int(torch.randint(0, 2**32, size=(), generator=self._rng).item())
         self._key = jax.random.key(seed)
 
     def sample(self) -> Tensor:
@@ -131,14 +125,14 @@ class TensorBox(TensorSpace):
             high=self._jax_high,
         )
         chex.block_until_chexify_assertions_complete()
-        torch_tensor = jax_to_torch_tensor(jax_sample)
+        torch_tensor = jax_to_torch(jax_sample)
         # Seems like the sample can be of dtype torch.float32 even if ours is torch.float64
         return torch_tensor.to(dtype=self.dtype)
 
     def contains(self, x: Any) -> bool:
         # BUG: doesn't work with `nan` values for low or high.
         if isinstance(x, jax.Array):
-            x = jax_to_torch_tensor(x)
+            x = jax_to_torch(x)
         return bool(
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
@@ -165,9 +159,8 @@ class TensorBox(TensorSpace):
             and other.high.equal(self.high)
         )
 
-
-@chexify
-@jit
+@chex.chexify
+@jax.jit
 def box_sample(
     key: jax.Array,
     low: jax.Array,
@@ -273,7 +266,7 @@ class TensorDiscrete(TensorSpace):
 
     def contains(self, x: Any) -> bool:
         if isinstance(x, jax.Array):
-            x = jax_to_torch_tensor(x)
+            x = jax_to_torch(x)
         return (
             isinstance(x, Tensor)
             and torch.can_cast(x.dtype, self.dtype)
@@ -386,7 +379,7 @@ class TensorMultiDiscrete(TensorSpace):
         # if nvec is uint32 and space dtype is uint32, then 0 <= x < self.nvec guarantees that x
         # is within correct bounds for space dtype (even though x does not have to be unsigned)
         if isinstance(x, jax.Array):
-            x = jax_to_torch_tensor(x)
+            x = jax_to_torch(x)
         if not isinstance(x, torch.Tensor):
             return False
         if x.device != self.device:

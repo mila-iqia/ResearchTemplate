@@ -80,7 +80,7 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
 
 
 class RlDataModule(
-    LightningDataModule, DataModule[EpisodeBatch[ActorOutput]], Generic[ActorOutput]
+    LightningDataModule, DataModule[EpisodeBatch[ActorOutput]], Generic[ActorOutput, TensorEnv]
 ):
     """A LightningDataModule for RL environments whose DataLoaders yields batches of episodes.
 

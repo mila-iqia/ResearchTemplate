@@ -16,9 +16,7 @@ import jax.numpy as jnp
 import torch
 from brax.envs.wrappers.gym import GymWrapper
 from gymnasium.wrappers.compatibility import EnvCompatibility
-
-from project.datamodules.rl.types import VectorEnv
-from project.datamodules.rl.wrappers.jax_torch_interop import (
+from torch_jax_interop import (
     JaxToTorchMixin,
     get_backend_from_torch_device,
     get_torch_device_from_jax_array,
@@ -26,6 +24,8 @@ from project.datamodules.rl.wrappers.jax_torch_interop import (
     jax_to_torch_tensor,
     torch_to_jax_tensor,
 )
+
+from project.datamodules.rl.types import VectorEnv
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, get_torch_dtype
 from project.utils.device import default_device
 from project.utils.types import NestedDict
