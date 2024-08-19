@@ -4,7 +4,7 @@ import functools
 import warnings
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from logging import getLogger as get_logger
-from typing import Any, Generic, Literal, Protocol
+from typing import Any, Generic, Literal, Protocol, override
 
 import gymnasium
 import torch
@@ -226,11 +226,13 @@ class RlDataModule(
         self._train_dataloader.on_actor_update()
         self.train_dataset.on_actor_update()
 
+    @override
     def prepare_data(self) -> None:
         # NOTE: We don't use this hook here.
         ...
 
-    def setup(self, stage: StageStr) -> None:
+    @override
+    def setup(self, stage: Literal["fit", "validate", "test", None]) -> None:
         """Sets up the environment(s), applying wrappers and such.
 
         Called at the beginning of each stage (fit, validate, test).
@@ -248,6 +250,7 @@ class RlDataModule(
             logger.debug(f"{creating} testing environment with wrappers {self.test_wrappers}")
             self.test_env = self._make_env(wrappers=self.test_wrappers, seed=self.test_seed)
 
+    @override
     def train_dataloader(self) -> Iterable[EpisodeBatch[ActorOutput]]:
         if self.train_actor is None:
             # warn("No actor was set, using a random policy.", color="red")
@@ -274,6 +277,7 @@ class RlDataModule(
         self._train_dataloader = dataloader
         return dataloader
 
+    @override
     def val_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
         if self.valid_actor is None:
             raise _error_actor_required(self, "valid")
@@ -294,6 +298,7 @@ class RlDataModule(
         )
         return dataloader
 
+    @override
     def test_dataloader(self) -> DataLoader[EpisodeBatch[ActorOutput]]:
         if self.test_actor is None:
             raise _error_actor_required(self, "test")
@@ -421,8 +426,8 @@ class RlDataModule(
             if isinstance(self.trainer.accelerator, CUDAAccelerator)
             else "cpu"
         )
-
-    def teardown(self, stage: StageStr) -> None:
+    @override
+    def teardown(self, stage: Literal["fit", "validate", "test", None]) -> None:
         if stage in ("fit", "validate", None):
             logger.debug("Closing the training environment.")
             self._close(self.train_dataset, self.train_env, "train")

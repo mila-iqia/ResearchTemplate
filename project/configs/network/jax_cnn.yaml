@@ -1,2 +1,2 @@
 _target_: project.algorithms.jax_example.CNN
-num_classes: ${instance_attr:datamodule.num_classes}
+num_classes: ${instance_attr:datamodule.num_classes,datamodule.action_dims}

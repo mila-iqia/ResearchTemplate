@@ -1,14 +1,13 @@
-from typing import ClassVar
+
+import torch
 
 from project.algorithms.ppo.ppo import PPO
-from project.algorithms.rl_example.reinforce_test import TestReinforce as ReinforceTests
+from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.datamodules.rl.datamodule import RlDataModule
-from project.networks.fcnet import FcNet
 from project.utils.testutils import run_for_all_configs_of_type
 
 
 @run_for_all_configs_of_type("datamodule", RlDataModule)
-@run_for_all_configs_of_type("network", FcNet)
-class TestPpo(ReinforceTests):
-    algorithm_type: type[PPO] = PPO
-    algorithm_name: ClassVar[str] = "ppo"
+@run_for_all_configs_of_type("network", torch.nn.Module)
+class TestPpo(LearningAlgorithmTests[PPO]):
+    ...

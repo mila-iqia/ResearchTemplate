@@ -1,0 +1,4 @@
+_target_: project.datamodules.rl.datamodule.RlDataModule
+env: "CartPole-v1"
+episodes_per_epoch: 100
+batch_size: 1

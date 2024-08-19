@@ -1,3 +1,4 @@
+import dataclasses
 import sys
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from torch import Tensor
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.datamodules.rl.datamodule import RlDataModule
+from project.datamodules.rl.types import random_actor
 from project.datamodules.vision import VisionDataModule
 from project.utils.testutils import run_for_all_datamodules
 from project.utils.typing_utils import is_sequence_of
@@ -48,6 +51,11 @@ def test_first_batch(
     stage: RunningStage,
     datadir: Path,
 ):
+
+    if isinstance(datamodule, RlDataModule):
+        datamodule.set_actor(random_actor)
+
+
     # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
     datamodule.prepare_data()
     if stage == RunningStage.TRAINING:
@@ -84,11 +92,14 @@ def test_first_batch(
             assert isinstance(batch, Image)
 
     if isinstance(batch, dict):
-        # fixme: leftover from the RL datamodule proof-of-concept.
-        if "infos" in batch:
-            # todo: fix this, unsupported because of `object` dtype.
-            batch.pop("infos")
         tensor_regression.check(batch)
+    elif dataclasses.is_dataclass(batch):
+        # fixme: leftover from the RL datamodule proof-of-concept.
+        batch_dict =  dataclasses.asdict(batch)
+        # todo: fix this, unsupported because of `object` dtype.
+        batch_dict.pop("infos", None)
+        batch_dict.pop("final_infos", None)
+        tensor_regression.check(batch_dict)
     else:
         assert is_sequence_of(batch, Tensor)
         tensor_regression.check({f"{i}": batch_i for i, batch_i in enumerate(batch)})
