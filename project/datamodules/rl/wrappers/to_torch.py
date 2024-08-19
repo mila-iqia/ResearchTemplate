@@ -26,7 +26,11 @@ def to_torch(
     raise NotImplementedError(f"No handler for values of type {type(value)}")
 
 
-@to_torch.register(torch.Tensor | np.ndarray | int | float | bool)
+@to_torch.register(torch.Tensor)
+@to_torch.register(np.ndarray)
+@to_torch.register(int)
+@to_torch.register(float)
+@to_torch.register(bool)
 def _to_tensor(
     value: Any, *, dtype: torch.dtype | None = None, device: torch.device | None = None
 ) -> Tensor:

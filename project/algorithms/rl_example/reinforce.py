@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import functools
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict, TypeVar
 
 import gymnasium
 import gymnasium.spaces
+import lightning
 import numpy as np
 import torch
 from gymnasium import Space
@@ -19,8 +19,6 @@ from torch import Tensor
 from torch.distributions import Categorical, Normal
 from torch.optim.optimizer import Optimizer
 
-from project.algorithms.bases.algorithm import Algorithm
-from project.algorithms.callbacks.callback import Callback
 from project.datamodules.rl import episode_dataset
 from project.datamodules.rl.datamodule import RlDataModule
 from project.datamodules.rl.envs import make_torch_vectorenv
@@ -42,7 +40,7 @@ from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorSpace,
 )
 from project.utils.device import default_device
-from project.utils.types import NestedMapping, PhaseStr, StepOutputDict
+from project.utils.types import NestedMapping
 from project.utils.types.protocols import Module
 
 logger = get_logger(__name__)
@@ -69,7 +67,7 @@ class ReinforceActorOutput(TypedDict):
     # """The log-probability of the selected action at that step."""
 
 
-class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]]):
+class Reinforce(LightningModule):
     """Example of a Reinforcement Learning algorithm: Reinforce.
 
     IDEA: Make this algorithm applicable in Supervised Learning by wrapping the
@@ -77,7 +75,7 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
     """
 
     @dataclass
-    class HParams(Algorithm.HParams):
+    class HParams:
         gamma: float = 0.99
         learning_rate: float = 1e-2
 
@@ -94,9 +92,10 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         - env: Gym environment to train on.
         - gamma: Discount rate.
         """
-        super().__init__(datamodule=datamodule, network=network, hp=hp)
-        self.hp: Reinforce.HParams
-        self.datamodule: RlDataModule | None
+        super().__init__()
+        self.datamodule = datamodule
+        self.network = network
+        self.hp = hp or self.HParams()
 
     def configure_optimizers(self) -> Any:
         return torch.optim.Adam(self.parameters(), lr=self.hp.learning_rate)
@@ -130,19 +129,19 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
             logger.info("Updating the actor.")
             self.datamodule.on_actor_update()
 
-    def training_step(self, batch: EpisodeBatch) -> StepOutputDict:
+    def training_step(self, batch: EpisodeBatch):
         return self.shared_step(batch, phase="train")
 
     # NOTE: For some reason PL requires us to have a second positional argument for the batch_index
     # even if it isn't used, but the training step doesn't need it.
-    def validation_step(self, batch: EpisodeBatch, batch_index: int) -> StepOutputDict:
+    def validation_step(self, batch: EpisodeBatch, batch_index: int):
         return self.shared_step(batch, phase="val")
 
     # def on_before_batch_transfer(self, batch: EpisodeBatch, dataloader_idx: int) -> EpisodeBatch:
     #     # IDEA: Use this PL hook to annotate the batch however you want.
     #     return batch
 
-    def shared_step(self, batch: EpisodeBatch, phase: PhaseStr) -> StepOutputDict:
+    def shared_step(self, batch: EpisodeBatch, phase: Literal["train", "val", "test"]):
         """Perform a single step of training or validation.
 
         The input is a batch of episodes, and the output is a dictionary with the loss and metrics.
@@ -246,7 +245,7 @@ class Reinforce(Algorithm[EpisodeBatch, StepOutputDict, Module[[Tensor], Tensor]
         if not self.datamodule:
             return []
         if self.datamodule.env.unwrapped.render_mode is not None:
-            wrappers.append(functools.partial(RecordVideo, video_folder=video_folder))
+            wrappers.append(lambda env: RecordVideo(env, video_folder=video_folder))
         return wrappers
 
     @property
@@ -333,7 +332,10 @@ def get_returns(rewards: Tensor, gamma: float, bootstrap_value: Tensor | float =
     )
 
 
-def collect_transitions[ActorOutput: NestedMapping[str, Tensor]](
+ActorOutput = TypeVar("ActorOutput", bound=NestedMapping[str, Tensor])
+
+
+def collect_transitions(
     env_id: str,
     actor: Actor[Tensor, Tensor, ActorOutput],
     num_transitions: int,
@@ -353,7 +355,7 @@ def collect_transitions[ActorOutput: NestedMapping[str, Tensor]](
     return transitions
 
 
-def collect_episodes[ActorOutput: NestedMapping[str, Tensor]](
+def collect_episodes(
     env: gymnasium.Env[Tensor, Tensor] | VectorEnv[Tensor, Tensor],
     *,
     actor: Actor[Tensor, Tensor, ActorOutput],
@@ -373,7 +375,7 @@ def collect_episodes[ActorOutput: NestedMapping[str, Tensor]](
     return EpisodeBatch[ActorOutput].from_episodes(episodes)
 
 
-class MeasureThroughputCallback(Callback[EpisodeBatch, StepOutputDict]):
+class MeasureThroughputCallback(lightning.Callback):
     def __init__(self):
         super().__init__()
         self.total_transitions = 0
@@ -384,7 +386,7 @@ class MeasureThroughputCallback(Callback[EpisodeBatch, StepOutputDict]):
     def on_fit_start(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[EpisodeBatch[dict]],
+        pl_module: LightningModule,
     ) -> None:
         self.total_transitions = 0
         self.total_episodes = 0
@@ -399,8 +401,8 @@ class MeasureThroughputCallback(Callback[EpisodeBatch, StepOutputDict]):
     def on_train_batch_end(
         self,
         trainer: Trainer,
-        pl_module: Algorithm[EpisodeBatch[dict]],
-        outputs: StepOutputDict,
+        pl_module: LightningModule,
+        outputs: dict,
         batch: EpisodeBatch[dict],
         batch_idx: int,
     ) -> None:
@@ -425,7 +427,7 @@ class MeasureThroughputCallback(Callback[EpisodeBatch, StepOutputDict]):
             prog_bar=True,
         )
 
-    def on_fit_end(self, trainer: Trainer, pl_module: Algorithm[EpisodeBatch[dict]]) -> None:
+    def on_fit_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         steps_per_second = self.total_transitions / (time.perf_counter() - self._start)
         updates_per_second = (self._updates) / (time.perf_counter() - self._start)
         episodes_per_second = self.total_episodes / (time.perf_counter() - self._start)

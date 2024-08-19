@@ -22,14 +22,14 @@ from lightning import Trainer
 from matplotlib import pyplot as plt
 from omegaconf import OmegaConf
 from pytest_benchmark.fixture import BenchmarkFixture
-from torch import Tensor, nn
+from torch import Tensor
 
-from project.algorithms.bases.algorithm_test import AlgorithmTests
 from project.algorithms.rl_example.reinforce import (
     MeasureThroughputCallback,
     Reinforce,
     collect_episodes,
 )
+from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.configs.config import Config
 from project.datamodules.rl.datamodule import RlDataModule
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
@@ -37,12 +37,11 @@ from project.datamodules.rl.types import (
     EpisodeBatch,
     random_actor,
 )
-from project.experiment import instantiate_datamodule, setup_experiment
+from project.experiment import setup_experiment
 from project.main import run
 from project.networks.fcnet import FcNet
 from project.utils.device import default_device
-from project.utils.testutils import ParametrizedFixture
-from project.utils.types import DataModule
+from project.utils.testutils import run_for_all_configs_of_type
 
 logger = get_logger(__name__)
 
@@ -60,35 +59,12 @@ def get_experiment_config(command_line_overrides: list[str]) -> Config:
     return config
 
 
-class TestReinforce(AlgorithmTests[Reinforce]):
-    algorithm_type: type[Reinforce] = Reinforce
-    algorithm_name: ClassVar[str] = "reinforce"
-
+@run_for_all_configs_of_type("datamodule", RlDataModule)
+@run_for_all_configs_of_type("network", FcNet)
+class TestReinforce(LearningAlgorithmTests[Reinforce]):
     metric_name: ClassVar[str] = "train/avg_episode_return"
     lower_is_better: ClassVar[bool] = False
 
-    # --------------------------
-
-    _supported_datamodule_types: ClassVar[list[type[DataModule]]] = [RlDataModule]
-    # TODO: This isn't actually true: we could use pretty much an arbitrary network with this algo.
-    _supported_network_types: ClassVar[list[type[nn.Module]]] = [FcNet]
-
-    network_name = ParametrizedFixture(values=["fcnet"], scope="class")
-
-    @pytest.fixture(scope="class")
-    def datamodule(self, experiment_config: Config) -> RlDataModule:
-        datamodule = instantiate_datamodule(experiment_config)
-        assert isinstance(datamodule, RlDataModule)
-        # assert isinstance(datamodule, DataModule)
-        return datamodule
-
-    @pytest.fixture(scope="function")
-    def algorithm(self, algorithm_kwargs: dict, datamodule: RlDataModule) -> Reinforce:
-        algo = self.algorithm_cls(**algorithm_kwargs)
-        assert algo.datamodule is datamodule
-        return algo
-
-    # TODO:
     @pytest.mark.skip(
         reason=(
             "TODO: Double-check this, but I think thhe 'test overfit one batch' test already "

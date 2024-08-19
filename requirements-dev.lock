@@ -33,6 +33,8 @@ antlr4-python3-runtime==4.9.3
     # via omegaconf
 appdirs==1.4.4
     # via orion
+async-timeout==4.0.3
+    # via aiohttp
 attrs==24.2.0
     # via aiohttp
 babel==2.16.0
@@ -55,6 +57,7 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
     # via requests
 chex==0.1.86
+    # via gymnax
     # via optax
 click==8.1.7
     # via black
@@ -108,6 +111,8 @@ etils==1.9.4
     # via orbax-checkpoint
 evaluate==0.4.2
     # via research-project-template
+exceptiongroup==1.2.2
+    # via pytest
 execnet==2.1.1
     # via pytest-xdist
 falcon==3.1.3
@@ -133,6 +138,7 @@ flask-cors==5.0.0
     # via brax
 flax==0.8.5
     # via brax
+    # via gymnax
     # via torch-jax-interop
 fonttools==4.53.1
     # via matplotlib
@@ -166,9 +172,13 @@ gunicorn==23.0.0
     # via orion
 gym==0.26.2
     # via brax
+    # via gymnax
 gym-notices==0.0.8
     # via gym
 gymnasium==0.29.1
+    # via gymnax
+    # via research-project-template
+gymnax==0.0.8
     # via research-project-template
 huggingface-hub==0.24.6
     # via datasets
@@ -206,6 +216,7 @@ jax==0.4.31
     # via brax
     # via chex
     # via flax
+    # via gymnax
     # via jaxopt
     # via mujoco-mjx
     # via optax
@@ -220,6 +231,7 @@ jax-cuda12-plugin==0.4.31
 jaxlib==0.4.31
     # via brax
     # via chex
+    # via gymnax
     # via jax
     # via jaxopt
     # via mujoco-mjx
@@ -268,7 +280,9 @@ markupsafe==2.1.5
     # via mkdocstrings
     # via werkzeug
 matplotlib==3.9.2
+    # via gymnax
     # via research-project-template
+    # via seaborn
 mdurl==0.1.2
     # via markdown-it-py
 mergedeep==1.3.4
@@ -369,6 +383,7 @@ numpy==1.26.4
     # via scikit-learn
     # via scikit-optimize
     # via scipy
+    # via seaborn
     # via tensor-regression
     # via tensorboardx
     # via tensorstore
@@ -453,6 +468,7 @@ pandas==2.2.2
     # via datasets
     # via evaluate
     # via orion
+    # via seaborn
 pathspec==0.12.1
     # via black
     # via mkdocs
@@ -540,6 +556,7 @@ pytz==2024.1
 pyyaml==6.0.2
     # via datasets
     # via flax
+    # via gymnax
     # via huggingface-hub
     # via lightning
     # via mkdocs
@@ -592,6 +609,8 @@ scipy==1.14.1
     # via orion
     # via scikit-learn
     # via scikit-optimize
+seaborn==0.13.2
+    # via gymnax
 sentry-sdk==2.14.0
     # via wandb
 setproctitle==1.3.3
@@ -630,6 +649,10 @@ threadpoolctl==3.5.0
 tokenizers==0.19.1
     # via transformers
 tomli==2.0.1
+    # via black
+    # via coverage
+    # via pytest
+    # via pytest-env
 toolz==0.12.1
     # via chex
 torch==2.4.1
@@ -665,6 +688,7 @@ trimesh==4.4.9
 triton==3.0.0
     # via torch
 typing-extensions==4.12.2
+    # via black
     # via brax
     # via chex
     # via etils

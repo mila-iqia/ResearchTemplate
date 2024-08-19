@@ -195,10 +195,11 @@ class EnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
             discount_factor=self.discount_factor,
         )
 
+
 ActorOutput = TypeVar("ActorOutput", bound=NestedMapping[str, Tensor])
-class VectorEnvEpisodeIterator(
-    Iterator[Episode[ActorOutput]]
-):
+
+
+class VectorEnvEpisodeIterator(Iterator[Episode[ActorOutput]]):
     """Yields one episode at a time from interacting with a vectorized environment."""
 
     def __init__(

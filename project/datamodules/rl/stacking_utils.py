@@ -315,7 +315,10 @@ def _unstack_dict(v: Mapping, n_slices: int) -> list[Mapping]:
 
 
 @unstack.register(type(None))
-@unstack.register(int | float | str | bool)
+@unstack.register(int)
+@unstack.register(float)
+@unstack.register(str)
+@unstack.register(bool)
 def _unstack_shallow_copy(v: T, n_slices: int) -> list[T]:
     return [v for _ in range(n_slices)]
 
@@ -323,7 +326,9 @@ def _unstack_shallow_copy(v: T, n_slices: int) -> list[T]:
 Ten = TypeVar("Ten", bound=Tensor | np.ndarray | jax.Array)
 
 
-@unstack.register(Tensor | np.ndarray | jax.Array)
+@unstack.register(Tensor)
+@unstack.register(np.ndarray)
+@unstack.register(jax.Array)
 def _unstack_arraylike(v: Ten, n_slices: int) -> list[Ten]:
     assert v.shape[0] == n_slices
     return list(v)

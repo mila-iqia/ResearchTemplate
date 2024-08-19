@@ -33,6 +33,7 @@ dependencies = [
     "hydra-orion-sweeper>=1.6.4",
     "gymnasium>=0.29.1",
     "brax>=0.10.5",
+    "gymnax>=0.0.8",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

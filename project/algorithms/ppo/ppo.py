@@ -29,26 +29,26 @@ from torch import Tensor, nn
 from torch.distributions import Normal
 from torch.optim.optimizer import Optimizer
 
-from project.algorithms.bases.algorithm import Algorithm
-from project.algorithms.common.hooks import modules_of_type
 from project.algorithms.ppo.dataloader_wrapper import PpoDataLoaderWrapper
 from project.algorithms.ppo.utils import (
     PPOActorOutput,
     discount_cumsum,
 )
 from project.datamodules.rl.datamodule import EpisodeBatch, RlDataModule, TensorEnv
-from project.datamodules.rl.wrappers.normalize_actions import check_and_normalize_box_actions
+from project.datamodules.rl.wrappers.normalize_actions import (
+    check_and_normalize_box_actions,
+)
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox
 from project.networks.fcnet import FcNet
-from project.utils.types import PhaseStr, StepOutputDict
 
 logger = get_logger(__name__)
 eps = np.finfo(np.float32).eps.item()
 
 
 def init_linear_layers(module: nn.Module, std=np.sqrt(2), bias_const=0.0):
-    for layer in modules_of_type(module, nn.Linear):
-        init_linear_layer(layer, std, bias_const)
+    for layer in module.children():
+        if isinstance(layer, nn.Linear):
+            init_linear_layer(layer, std, bias_const)
 
 
 def init_linear_layer(layer: nn.Linear, std=np.sqrt(2), bias_const=0.0):
@@ -62,7 +62,7 @@ def init_linear_layer(layer: nn.Linear, std=np.sqrt(2), bias_const=0.0):
 #         super().__init__(loc, scale, validate_args)
 
 
-class PPO(Algorithm):
+class PPO(LightningModule):
     """PPO Algorithm, based on the CleanRL implementation.
 
     See [CleanRL PPO implementation](https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo_continuous_action.py)
@@ -104,7 +104,7 @@ class PPO(Algorithm):
     """
 
     @dataclass
-    class HParams(Algorithm.HParams):
+    class HParams:
         """Hyperparameters for the PPO algorithm.
 
         These are taken directly from the CleanRL PPO implementation.
@@ -169,10 +169,11 @@ class PPO(Algorithm):
         network: FcNet,
         hp: PPO.HParams | None = None,
     ):
-        super().__init__(datamodule, network, hp=hp)
-        self.hp: PPO.HParams
+        super().__init__()
+        self.network = network
+        self.hp = hp or type(self).HParams()
         self.network: FcNet
-        self.datamodule: RlDataModule[PPOActorOutput] = self.datamodule.set_actor(actor=self)
+        self.datamodule: RlDataModule[PPOActorOutput] = datamodule.set_actor(actor=self)
         assert isinstance(self.datamodule, RlDataModule)
 
         # NOTE: assuming continuous actions for now.
