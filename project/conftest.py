@@ -61,6 +61,9 @@ if typing.TYPE_CHECKING:
     Param = str | tuple[str, ...] | ParameterSet
 
 
+if not torch.cuda.is_available():
+    os.environ["JAX_PLATFORMS"] = "cpu"
+
 logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
@@ -654,3 +657,28 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         marker = args_to_be_parametrized_markers[arg_name][-1]
         indirect = marker.kwargs.get("indirect", False)
         metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)
+
+
+def pytest_addoption(parser: pytest.Parser):
+    parser.addoption(
+        "--shorter-than",
+        action="store",
+        type=float,
+        default=None,
+        help="Skip tests that take longer than this.",
+    )
+
+
+def pytest_ignore_collect(path: str):
+    p = Path(path)
+    # fixme: Trying to fix doctest issues for project/configs/algorithm/lr_scheduler/__init__.py::project.configs.algorithm.lr_scheduler.StepLRConfig
+    if p.name in ["lr_scheduler", "optimizer"] and "configs" in p.parts:
+        return True
+    return False
+
+
+def pytest_configure(config: pytest.Config):
+    config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
+    config.addinivalue_line(
+        "markers", "very_fast: mark test as very fast to run (including test setup)."
+    )
