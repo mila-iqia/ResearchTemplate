@@ -15,9 +15,10 @@ markdown_extensions:
 
 plugins:
   - search
+  - awesome-pages
+  - autorefs
   - literate-nav:
       nav_file: SUMMARY.md
-  - awesome-pages
   - gen-files:
       # https://oprypin.github.io/mkdocs-gen-files/#usage
       scripts:

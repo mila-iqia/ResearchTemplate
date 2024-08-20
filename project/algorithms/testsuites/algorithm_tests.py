@@ -1,3 +1,8 @@
+"""Suite of unit tests for an "Algorithm".
+
+See the [project.algorithms.example_test][] module for an example of how to use this.
+"""
+
 import copy
 import inspect
 from abc import ABC
@@ -35,7 +40,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     Simply inherit from this class and decorate the class with the appropriate markers to get a set
     of decent unit tests that should apply to any LightningModule.
 
-    See the `project.algorithms.example_test` module for an example.
+    See the [project.algorithms.example_test][] module for an example.
     """
 
     algorithm_config: ParametrizedFixture[str]
@@ -90,6 +95,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         network: torch.nn.Module,
         seed: int,
     ):
+        """Checks that the weights initialization is consistent given the a random seed."""
         with seeded_rng(seed):
             algorithm_1 = instantiate_algorithm(experiment_config, datamodule, network)
 
@@ -101,6 +107,9 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_forward_pass_is_deterministic(
         self, forward_pass_input: Any, algorithm: LightningModule, seed: int
     ):
+        """Checks that the forward pass output is consistent given the a random seed and a given
+        input."""
+
         with seeded_rng(seed):
             out1 = algorithm(forward_pass_input)
         with seeded_rng(seed):
@@ -125,7 +134,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         with seeded_rng(seed):
             gradients_callback = GetStuffFromFirstTrainingStep()
-            self._do_one_step_of_training(
+            self.do_one_step_of_training(
                 algorithm_1,
                 datamodule,
                 accelerator,
@@ -140,7 +149,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         with seeded_rng(seed):
             gradients_callback = GetStuffFromFirstTrainingStep()
-            self._do_one_step_of_training(
+            self.do_one_step_of_training(
                 algorithm_2,
                 datamodule,
                 accelerator=accelerator,
@@ -203,9 +212,12 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         tensor_regression: TensorRegressionFixture,
         tmp_path: Path,
     ):
+        """Check that the backward pass is reproducible given the same weights, inputs and random
+        seed."""
+
         with seeded_rng(seed):
             gradients_callback = GetStuffFromFirstTrainingStep()
-            self._do_one_step_of_training(
+            self.do_one_step_of_training(
                 algorithm,
                 datamodule,
                 accelerator=accelerator,
@@ -235,7 +247,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             additional_label=next(algorithm.parameters()).device.type,
         )
 
-    def _do_one_step_of_training(
+    def do_one_step_of_training(
         self,
         algorithm: LightningModule,
         datamodule: LightningDataModule,
@@ -244,6 +256,10 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         callbacks: list[lightning.Callback],
         tmp_path: Path,
     ):
+        """Performs one step of training.
+
+        Overwrite this if you train your algorithm differently.
+        """
         trainer = lightning.Trainer(
             accelerator=accelerator,
             callbacks=callbacks,

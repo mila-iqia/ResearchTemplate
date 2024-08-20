@@ -41,7 +41,8 @@ def add_doc_for_module(module_path: Path) -> None:
 
     def is_module(p: Path) -> bool:
         return (
-            p.suffix == ".py" and not p.name.startswith("__") and not p.name.endswith("_test.py")
+            p.suffix == ".py"
+            and not p.name.startswith("__")  # and not p.name.endswith("_test.py")
         )
 
     children = list(p for p in module_path.glob("*.py") if is_module(p))
