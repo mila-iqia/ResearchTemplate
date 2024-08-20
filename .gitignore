@@ -169,3 +169,4 @@ lightning_logs
 **.npz
 # .python-version
 .testmondata*
+.schemas
