@@ -30,7 +30,13 @@ AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 @pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
-    """Suite of unit tests for an "Algorithm" (LightningModule)."""
+    """Suite of unit tests for an "Algorithm" (LightningModule).
+
+    Simply inherit from this class and decorate the class with the appropriate markers to get a set
+    of decent unit tests that should apply to any LightningModule.
+
+    See the `project.algorithms.example_test` module for an example.
+    """
 
     algorithm_config: ParametrizedFixture[str]
 
