@@ -10,7 +10,7 @@ from pytest_regressions.file_regression import FileRegressionFixture
 
 from project.utils.auto_schema import (
     AutoSchemaPlugin,
-    add_schema_header,
+    _add_schema_header,
     create_schema_for_config,
     get_schema_from_target,
 )
@@ -61,7 +61,7 @@ def test_create_schema_for_config(
 
     schema = create_schema_for_config(input_file)
     schema_path = (original_datadir / input_file.name).with_suffix(".json")
-    add_schema_header(config_file, schema_path)
+    _add_schema_header(config_file, schema_path)
 
     schema = get_schema_from_target(config_file)
     file_regression.check(json.dumps(schema, indent=2), fullpath=schema_path, extension=".json")
@@ -95,7 +95,7 @@ def test_get_schema(
     config_file.write_text(input_file.read_text())
 
     schema_path = (original_datadir / input_file.name).with_suffix(".json")
-    add_schema_header(config_file, schema_path)
+    _add_schema_header(config_file, schema_path)
 
     schema = get_schema_from_target(config_file)
 

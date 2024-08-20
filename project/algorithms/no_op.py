@@ -5,7 +5,7 @@ from lightning import Callback, LightningModule
 from torch import nn
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.utils.types.protocols import DataModule
+from project.utils.typing_utils.protocols import DataModule
 
 
 class NoOp(LightningModule):

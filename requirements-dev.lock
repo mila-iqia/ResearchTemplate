@@ -74,6 +74,8 @@ distlib==0.3.8 ; (python_version < '3.13' and sys_platform == 'linux') or (pytho
     # via virtualenv
 docker-pycreds==0.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
     # via wandb
+docstring-parser==0.16 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+    # via simple-parsing
 etils==1.7.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
     # via optax
     # via orbax-checkpoint
@@ -405,6 +407,8 @@ setuptools==72.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (p
     # via chex
     # via lightning-utilities
     # via wandb
+simple-parsing==0.1.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+    # via research-project-template
 six==1.16.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
     # via docker-pycreds
     # via python-dateutil
@@ -462,6 +466,7 @@ typing-extensions==4.12.2 ; (python_version < '3.11' and ((python_version < '3.1
     # via pydantic
     # via pydantic-core
     # via pytorch-lightning
+    # via simple-parsing
     # via submitit
     # via torch
 urllib3==2.2.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')

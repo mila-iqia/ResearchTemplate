@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../.schemas/hydra_default_schema.json
 # https://hydra.cc/docs/configure_hydra/intro/
 
 # Copied from https://github.com/ashleve/lightning-hydra-template/blob/9e7089ce70dac66096576c6596e966d4c38cbdce/configs/hydra/default.yaml

@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=../../../.schemas/datamodule_fashion_mnist_schema.json
 defaults:
-- mnist
+  - mnist
+  - _self_
 _target_: project.datamodules.FashionMNISTDataModule

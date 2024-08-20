@@ -10,7 +10,7 @@ from lightning import LightningModule, Trainer
 from lightning import pytorch as pl
 from typing_extensions import TypeVar, override
 
-from project.utils.types import NestedMapping
+from project.utils.typing_utils import NestedMapping
 from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)

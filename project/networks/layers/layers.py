@@ -13,7 +13,7 @@ import torch
 from torch import Tensor, nn
 from typing_extensions import ParamSpec
 
-from project.utils.types import Module, OutT, T, is_sequence_of
+from project.utils.typing_utils import Module, OutT, T, is_sequence_of
 
 P = ParamSpec("P", default=[Tensor])
 

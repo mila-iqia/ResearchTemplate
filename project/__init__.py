@@ -4,7 +4,7 @@ from .experiment import Experiment
 from .utils.hydra_utils import patched_safe_name  # noqa
 
 # from .networks import FcNet
-from .utils.types import DataModule
+from .utils.typing_utils import DataModule
 
 add_configs_to_hydra_store()
 

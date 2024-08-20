@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../.schemas/network_resnet50_schema.json
 _target_: torchvision.models.resnet50
 num_classes: "${instance_attr:datamodule.num_classes}"
 weights: null

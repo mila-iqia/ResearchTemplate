@@ -1,5 +1,7 @@
+# yaml-language-server: $schema=../../../.schemas/datamodule_imagenet32_schema.json
 defaults:
-- vision
+  - vision
+  - _self_
 _target_: project.datamodules.ImageNet32DataModule
 data_dir: ${constant:SCRATCH}
 val_split: -1

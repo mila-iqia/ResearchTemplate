@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../../.schemas/callbacks_model_checkpoint_schema.json
 # https://pytorch-lightning.readthedocs.io/en/latest/api/lightning.pytorch.callbacks.ModelCheckpoint.html
 
 # Save the model periodically by monitoring a quantity.

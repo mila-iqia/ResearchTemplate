@@ -22,6 +22,7 @@ dependencies = [
     "matplotlib>=3.9.2",
     "torch-jax-interop>=0.0.7",
     "pydantic>=2.8.2",
+    "simple-parsing>=0.1.5",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -90,3 +91,4 @@ serve-docs = "mkdocs serve"
 check_torch_gpu = "python -c 'import torch; print(torch.cuda.is_available())'"
 check_jax_gpu = "python -c 'import jax.numpy as jnp; print(jnp.zeros(1).devices())'"
 tests = "pytest -x -v"
+make_schemas = "python project/utils/auto_schema.py"

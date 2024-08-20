@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../.schemas/algorithm_jax_example_schema.json
 # This config show how you can customize use a config file to configure the example algorithm.
 
 _target_: project.algorithms.jax_example.JaxExample

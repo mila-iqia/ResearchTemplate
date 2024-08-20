@@ -5,8 +5,8 @@ from lightning import LightningDataModule, LightningModule, Trainer
 from torch import Tensor
 from typing_extensions import NotRequired, TypeVar
 
-from project.utils.types import PyTree
-from project.utils.types.protocols import DataModule, Module
+from project.utils.typing_utils import PyTree
+from project.utils.typing_utils.protocols import DataModule, Module
 
 
 class StepOutputDict(TypedDict, total=False):

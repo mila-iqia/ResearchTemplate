@@ -18,7 +18,7 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.datamodules.vision import VisionDataModule
 from project.utils.testutils import run_for_all_datamodules
-from project.utils.types import is_sequence_of
+from project.utils.typing_utils import is_sequence_of
 
 
 # @use_overrides(["datamodule.num_workers=0"])

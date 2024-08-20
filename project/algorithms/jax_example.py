@@ -19,7 +19,7 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.image_classification.mnist import MNISTDataModule
-from project.utils.types.protocols import ClassificationDataModule
+from project.utils.typing_utils.protocols import ClassificationDataModule
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 

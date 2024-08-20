@@ -10,7 +10,7 @@ from torchmetrics.classification import MulticlassAccuracy
 from typing_extensions import NotRequired, Required, override
 
 from project.algorithms.callbacks.callback import BatchType, Callback
-from project.utils.types.protocols import ClassificationDataModule
+from project.utils.typing_utils.protocols import ClassificationDataModule
 
 logger = get_logger(__name__)
 

@@ -6,8 +6,8 @@ from torch import Tensor
 from torchvision.tv_tensors import Image
 
 from project.datamodules.vision import VisionDataModule
-from project.utils.types import C, H, W
-from project.utils.types.protocols import ClassificationDataModule
+from project.utils.typing_utils import C, H, W
+from project.utils.typing_utils.protocols import ClassificationDataModule
 
 # todo: need to decide whether this should be a base class or just a protocol.
 # - IF this is a protocol, then we can't use issubclass with it, so it can't be used in the

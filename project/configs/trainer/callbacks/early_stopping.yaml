@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../../.schemas/callbacks_early_stopping_schema.json
 # https://pytorch-lightning.readthedocs.io/en/latest/api/lightning.pytorch.callbacks.EarlyStopping.html
 
 # Monitor a metric and stop training when it stops improving.

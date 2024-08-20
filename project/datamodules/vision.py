@@ -17,8 +17,8 @@ from torchvision.transforms import v2 as transforms
 from torchvision.tv_tensors import Image, set_return_type
 
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
-from project.utils.types import C, H, W
-from project.utils.types.protocols import DataModule
+from project.utils.typing_utils import C, H, W
+from project.utils.typing_utils.protocols import DataModule
 
 logger = get_logger(__name__)
 

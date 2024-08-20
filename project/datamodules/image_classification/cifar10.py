@@ -10,7 +10,7 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
-from project.utils.types import C, H, W
+from project.utils.typing_utils import C, H, W
 
 
 def cifar10_train_transforms():

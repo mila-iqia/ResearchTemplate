@@ -1,2 +1,3 @@
+# yaml-language-server: $schema=../../../.schemas/network_jax_cnn_schema.json
 _target_: project.algorithms.jax_example.CNN
 num_classes: ${instance_attr:datamodule.num_classes}

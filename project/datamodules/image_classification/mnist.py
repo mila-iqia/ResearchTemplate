@@ -11,7 +11,7 @@ from torchvision.transforms import v2 as transforms
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.types import C, H, W
+from project.utils.typing_utils import C, H, W
 
 
 def mnist_train_transforms():
