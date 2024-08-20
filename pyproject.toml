@@ -83,7 +83,7 @@ dev-dependencies = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/researchtemplate"]
+packages = ["project"]
 
 [tool.rye.scripts]
 serve-docs = "mkdocs serve"
