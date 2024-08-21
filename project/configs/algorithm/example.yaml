@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../.schemas/algorithm_example_schema.json
 # This is an example of how you can use a config file to configure a LightningModule.
 # In this case we configure the example algorithm.
 

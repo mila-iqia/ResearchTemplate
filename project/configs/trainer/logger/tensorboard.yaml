@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../../.schemas/logger_tensorboard_schema.json
 # https://www.tensorflow.org/tensorboard/
 
 tensorboard:

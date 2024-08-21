@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../.schemas/trainer_cpu_schema.json
 defaults:
   - default.yaml
 

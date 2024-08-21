@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../.schemas/datamodule_imagenet32_schema.json
 defaults:
   - vision
   - _self_

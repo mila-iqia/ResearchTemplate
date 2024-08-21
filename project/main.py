@@ -25,11 +25,11 @@ if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 logger = get_logger(__name__)
 
-project_name = Path(__file__).parent.name
+PROJECT_NAME = Path(__file__).parent.name
 
 
 @hydra.main(
-    config_path="pkg://project.configs",
+    config_path=f"pkg://{PROJECT_NAME}.configs",
     config_name="config",
     version_base="1.2",
 )

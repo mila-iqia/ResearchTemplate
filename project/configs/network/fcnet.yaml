@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../.schemas/network_fcnet_schema.json
 _target_: project.networks.fcnet.FcNet
 output_dims: ${instance_attr:datamodule.num_classes}
 input_shape: ${instance_attr:datamodule.dims}

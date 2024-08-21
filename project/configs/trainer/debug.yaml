@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../.schemas/trainer_debug_schema.json
 defaults:
   - default.yaml
 min_epochs: 1

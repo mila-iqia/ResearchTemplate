@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=../../../../.schemas/logger_wandb_schema.json
 # https://wandb.ai
 
 wandb:

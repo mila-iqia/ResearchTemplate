@@ -9,24 +9,24 @@ from hydra.test_utils.config_source_common_tests import ConfigSourceTestSuite
 from pytest_regressions.file_regression import FileRegressionFixture
 
 from project.utils.auto_schema import (
-    AutoSchemaPlugin,
     _add_schema_header,
-    create_schema_for_config,
-    get_schema_from_target,
+    _AutoSchemaPlugin,
+    _create_schema_for_config,
+    _get_schema_from_target,
 )
 from project.utils.env_vars import REPO_ROOTDIR
 
 
 @pytest.mark.xfail(raises=(NotImplementedError, ValueError), reason="Not implemented yet.")
 @pytest.mark.parametrize(
-    ("type_", "path"), [(AutoSchemaPlugin, "project://project.utils.auto_schema")]
+    ("type_", "path"), [(_AutoSchemaPlugin, "project://project.utils.auto_schema")]
 )
 class TestAutoSchemaPlugin(ConfigSourceTestSuite): ...
 
 
 def test_discovery() -> None:
     # Test that this config source is discoverable when looking at config sources
-    assert AutoSchemaPlugin.__name__ in [
+    assert _AutoSchemaPlugin.__name__ in [
         x.__name__ for x in Plugins.instance().discover(ConfigSource)
     ]
 
@@ -59,11 +59,11 @@ def test_create_schema_for_config(
     config_file.parent.mkdir(exist_ok=True, parents=True)
     config_file.write_text(input_file.read_text())
 
-    schema = create_schema_for_config(input_file)
+    schema = _create_schema_for_config(input_file)
     schema_path = (original_datadir / input_file.name).with_suffix(".json")
     _add_schema_header(config_file, schema_path)
 
-    schema = get_schema_from_target(config_file)
+    schema = _get_schema_from_target(config_file)
     file_regression.check(json.dumps(schema, indent=2), fullpath=schema_path, extension=".json")
 
 
@@ -97,6 +97,6 @@ def test_get_schema(
     schema_path = (original_datadir / input_file.name).with_suffix(".json")
     _add_schema_header(config_file, schema_path)
 
-    schema = get_schema_from_target(config_file)
+    schema = _get_schema_from_target(config_file)
 
     file_regression.check(json.dumps(schema, indent=2), fullpath=schema_path, extension=".json")
