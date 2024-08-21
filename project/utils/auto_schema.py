@@ -436,7 +436,7 @@ def _merge_dicts(
 
     >>> x = dict(b=1, c=dict(d=2, e=3))
     >>> y = dict(d=3, c=dict(z=2, f=4))
-    >>> merge_dicts(x, y)
+    >>> _merge_dicts(x, y)
     {'b': 1, 'c': {'d': 2, 'e': 3, 'z': 2, 'f': 4}, 'd': 3}
     >>> x
     {'b': 1, 'c': {'d': 2, 'e': 3}}
