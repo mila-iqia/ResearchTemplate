@@ -4,6 +4,7 @@ This is very helpful when using Hydra! It shows the user what options are availa
 description and default values, and displays errors if you have config files with invalid values.
 
 ## todos
+- [ ] Fix descriptions: parse docstrings from base classes.
 - [ ] Add schemas for the nested dicts entries in a config file if they have a _target_ (currently just the first level).
 - [ ] Modify the schema to support omegaconf directives like ${oc.env:VAR_NAME} and our custom directives like ${instance_attr} and so on.
 - [ ] Refine the schema for the `defaults` list to match what Hydra allows mnore closely.
@@ -27,6 +28,7 @@ import docstring_parser as dp
 import flax
 import flax.linen
 import flax.struct
+import hydra.utils
 import hydra_zen
 import pydantic
 import pydantic.schema
@@ -35,7 +37,6 @@ from hydra.core.object_type import ObjectType
 from hydra.core.plugins import Plugins
 from hydra.plugins.config_source import ConfigResult, ConfigSource
 from hydra.types import RunMode
-from hydra.utils import get_object
 from omegaconf import DictConfig, OmegaConf
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from pydantic_core import core_schema
@@ -177,9 +178,8 @@ def main():
                 f.write(f"{_rel}\n")
 
     config_file_to_schema_and_schema_file: dict[Path, tuple[Path, Schema]] = {}
-    # Write all the schemas to the schema directory.
-    _cwd = Path.cwd()
 
+    # Write all the schemas to the schema directory.
     for config_file, schema in config_files_to_schemas.items():
         schema_file = _get_schema_file_path(config_file, schema, schemas_dir)
 
@@ -213,11 +213,13 @@ def main():
 
     logger.info("Done updating the schemas for the Hydra config files.")
 
-def relative_to_cwd(p: Path):
-    return p.relative_to(Path.cwd(), walk_up=True)
+def relative_to_cwd(p: str | Path):
+    return Path(p).relative_to(Path.cwd())
 
 def _install_yaml_vscode_extension():
-    subprocess.check_call(("code", "--install-extension", "redhat.vscode-yaml"), text=True)
+    logger.debug("Running `code --install-extension redhat.vscode-yaml` to install the yaml extension for vscode.")
+    output = subprocess.check_output(("code", "--install-extension", "redhat.vscode-yaml"), text=True)
+    logger.debug(output)
 
 def _add_schemas_to_vscode_settings(config_files_to_schemas: dict[Path, Schema], repo_root: Path, schemas_dir: Path) -> None:
     # Make the vscode settings file if necessary:
@@ -282,9 +284,10 @@ def _get_shemas_for_hydra_configs(configs_dir: Path) -> dict[Path, Schema]:
             config = _load_config(config_file, configs_dir=configs_dir)
             config_files_to_shemas[config_file] = _create_schema_for_config(config, config_file=config_file, configs_dir=configs_dir)
         except Exception as e:
-            logger.warning(f"Unable to update the schema for yaml config file {config_file.relative_to(configs_dir)}: {e}")
+            logger.debug(f"Unable to update the schema for yaml config file {config_file.relative_to(configs_dir)}: {e}")
+            # raise
         else:
-            logger.info(f"Updated schema for {config_file}.")
+            logger.info(f"Updated schema for ./{relative_to_cwd(config_file)}.")
     return config_files_to_shemas
 
 
@@ -297,12 +300,13 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
         - Should ideally load the defaults and merge this schema on top of them.
     """
     schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
-    schema["title"] = f"Schema for {config_file.name}"
+    schema["title"] = f"Auto-generated schema for {config_file.name}"
 
-    # note: the `defaults` list gets consumed by Hydra in `_load_config`, so we actually re-read the
-    # config file to get the `defaults`, if present.
+
     if config_file.exists():
-       # Config is an actual yaml file, not a structured config entry.
+        # Config is an actual yaml file, not a structured config entry.
+        # note: the `defaults` list gets consumed by Hydra in `_load_config`, so we actually re-read the
+        # config file to get the `defaults`, if present.
         _config = OmegaConf.to_container(OmegaConf.load(config_file), resolve=False)
         assert isinstance(_config, dict)
         defaults = _config.get("defaults")
@@ -310,39 +314,33 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
             schema = _update_schema_from_defaults(config_file, schema=schema, defaults=defaults, configs_dir=configs_dir)
 
     if target_name := config.get("_target_"):
-        target = get_object(target_name)
-
+        # There's a '_target_' key at the top level in the config file.
+        target = hydra.utils.get_object(target_name)
+        schema["description"] = f"Schema based on the signature of {target}."
         schema["properties"]["_target_"] = PropertySchema(
             type="string",
             title="Target",
-            const=config["_target_"],
+            const=target_name,
             # pattern=r"", # todo: Use a pattern to match python module import strings.
-            description="Target to instantiate.\nSee https://hydra.cc/docs/advanced/instantiate_objects/overview/",
+            description=(
+                f"Target to instantiate, in this case: `{target_name}`\n"
+                # f"* Source: <file://{relative_to_cwd(inspect.getfile(target))}>\n"
+                # f"* Config file: <file://{config_file}>\n"
+                f"See the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n"
+            ),
         )
         if config.get("_partial_"):
             # todo: add a special marker that allows extra fields?
             schema["required"] = []
 
-        if inspect.getfullargspec(target).varkw is None:
-            # if the target takes **kwargs, then we don't restrict additional properties.
-            schema["additionalProperties"] = False
-        else:
-            schema["additionalProperties"] = True
+        # if the target takes **kwargs, then we don't restrict additional properties.
+        schema["additionalProperties"] = inspect.getfullargspec(target).varkw is not None
 
-        # _target_ at top level: easier case.
-        schema_from_target = _get_schema_from_target(config, config_file=config_file)
-        logger.debug(f"Schema from target {config['_target_']}: {schema_from_target}")
-
-        assert "properties" in schema_from_target
-        doc = dp.parse(target.__doc__ or target.__init__.__doc__)
-        for property_name, property_dict in schema_from_target["properties"].items():
-            for param in doc.params:
-                if param.arg_name == property_name and param.description:
-                    property_dict.setdefault("description", param.description)
-                    break
+        value_schema = _get_schema_from_target(config, config_file=config_file)
+        logger.debug(f"Schema from target {config['_target_']}: {value_schema}")
 
         schema = _merge_dicts(
-            schema_from_target,
+            value_schema,
             schema,
             conflict_handler=overwrite,
         )
@@ -358,24 +356,14 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
         if isinstance(value, dict | DictConfig) and "_target_" in value.keys():
             # schema_from_target = get_schema_from_target(value, config_file=config_file)
             target = hydra_zen.get_target(value)  # type: ignore
-
-            schema_from_target = _get_schema_from_target(value, config_file=config_file)
+            value_schema = _get_schema_from_target(value, config_file=config_file)
             logger.debug(
                 f"Getting schema from target {value['_target_']} at key {key} in file {config_file}."
             )
 
-            assert "properties" in schema_from_target
-
-
-            doc = dp.parse(target.__doc__ or target.__init__.__doc__)
-            for property_name, property_dict in schema_from_target["properties"].items():
-                for param in doc.params:
-                    if param.arg_name == property_name and param.description:
-                        property_dict.setdefault("description", param.description)
-                        break
-
+            assert "properties" in value_schema
             if key not in schema["properties"]:
-                schema["properties"][key] = schema_from_target
+                schema["properties"][key] = value_schema
             else:
                 raise NotImplementedError("todo: use merge_dicts here")
 
@@ -552,19 +540,9 @@ def _add_schema_header(config_file: Path, schema_path: Path) -> None:
         f.writelines(output_lines)
 
 
-# todo: read https://stackoverflow.com/questions/70639556/is-it-possible-to-use-pydantic-instead-of-dataclasses-in-structured-configs-in-h
 def _get_schema_from_target(config: dict | DictConfig, config_file: Path) -> Schema:
-    # todo: instead of using `load_from_yaml`, we should use something like `get_config_loader()`
-
-    # *config_groups, config_name = input_file.relative_to(CONFIGS_DIR).with_suffix("").parts
-    # config_group = "/".join(config_groups)
-    # config = get_config_loader().load_configuration(None, overrides=[f"{config_group}={config_name}"])
-
     assert isinstance(config, dict | DictConfig)
     logger.debug(f"Config: {config}")
-    # todo: maybe support the case where there's a single entry in the dictionary, which itself has a _target_ key
-
-    # todo: this doesn't take `defaults` into account.
     target = hydra_zen.get_target(config)  # type: ignore
 
     if inspect.isclass(target) and issubclass(target, flax.linen.Module):
@@ -592,12 +570,46 @@ def _get_schema_from_target(config: dict | DictConfig, config_file: Path) -> Sch
             # zen_wrappers=pydantic_parser,  # unsure if this is how it works?
         )
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=UserWarning)
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
 
-        json_schema = pydantic.TypeAdapter(object_type).json_schema(
-            mode="serialization", schema_generator=_MyGenerateJsonSchema
-        )
+            json_schema = pydantic.TypeAdapter(object_type).json_schema(
+                mode="serialization", schema_generator=_MyGenerateJsonSchema, by_alias=False,
+            )
+        assert "properties" in json_schema
+    except pydantic.PydanticSchemaGenerationError as e:
+        raise NotImplementedError(f"Unable to get the schema with pydantic: {e}")
+
+    assert "properties" in json_schema
+
+    docs_to_search: list[dp.Docstring] = []
+
+    if inspect.isclass(target):
+        for target_or_base_class in inspect.getmro(target):
+            if class_docstring := inspect.getdoc(target_or_base_class):
+                docs_to_search.append(dp.parse(class_docstring))
+            if init_docstring := inspect.getdoc(target_or_base_class.__init__):
+                docs_to_search.append(dp.parse(init_docstring))
+    else:
+        assert inspect.isfunction(target)
+        docstring = inspect.getdoc(target)
+        if docstring:
+            docs_to_search = [dp.parse(docstring)]
+
+    param_descriptions: dict[str, str] = {}
+    for doc in docs_to_search:
+        for param in doc.params:
+            if param.description and param.arg_name not in param_descriptions:
+                param_descriptions[param.arg_name] = param.description
+
+    # Update the pydantic schema with descriptions:
+    for property_name, property_dict in json_schema["properties"].items():
+        if description := param_descriptions.get(property_name):
+            property_dict["description"] = description
+        else:
+            property_dict["description"] = f"The {property_name} parameter of the {target.__qualname__}."
+
 
     # Add field docstrings as descriptions in the schema!
     # json_schema = _update_schema_with_descriptions(object_type, json_schema=json_schema)
