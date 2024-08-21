@@ -4,8 +4,8 @@ This is very helpful when using Hydra! It shows the user what options are availa
 description and default values, and displays errors if you have config files with invalid values.
 
 ## todos
-- [ ] Fix descriptions: parse docstrings from base classes.
-- [ ] Add schemas for the nested dicts entries in a config file if they have a _target_ (currently just the first level).
+- [ ] skip re-creating an existing schema unless a command-line flag is passed.
+- [ ] Add schemas for all the nested dict entries in a config file if they have a _target_ (currently just the first level).
 - [ ] Modify the schema to support omegaconf directives like ${oc.env:VAR_NAME} and our custom directives like ${instance_attr} and so on.
 - [ ] Refine the schema for the `defaults` list to match what Hydra allows mnore closely.
 """
@@ -300,7 +300,7 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
         - Should ideally load the defaults and merge this schema on top of them.
     """
     schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
-    schema["title"] = f"Auto-generated schema for {config_file.name}"
+    schema["title"] = f"Auto-generated schema for {config_file.relative_to(configs_dir)}"
 
 
     if config_file.exists():
@@ -316,7 +316,8 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
     if target_name := config.get("_target_"):
         # There's a '_target_' key at the top level in the config file.
         target = hydra.utils.get_object(target_name)
-        schema["description"] = f"Schema based on the signature of {target}."
+        schema["title"] = f"Auto-generated schema for {target}"
+        schema["description"] = f"Based on the signature of {target}."
         schema["properties"]["_target_"] = PropertySchema(
             type="string",
             title="Target",
