@@ -1,102 +1,54 @@
 import json
 from pathlib import Path
 
-import hydra_zen
 import pytest
-from hydra.core.plugins import Plugins
-from hydra.plugins.config_source import ConfigSource
-from hydra.test_utils.config_source_common_tests import ConfigSourceTestSuite
+import yaml
 from pytest_regressions.file_regression import FileRegressionFixture
 
-from project.utils.auto_schema import (
-    _add_schema_header,
-    _AutoSchemaPlugin,
-    _create_schema_for_config,
-    _get_schema_from_target,
-)
-from project.utils.env_vars import REPO_ROOTDIR
+from .auto_schema import add_schema_header, create_schema_for_config
 
 
-@pytest.mark.xfail(raises=(NotImplementedError, ValueError), reason="Not implemented yet.")
-@pytest.mark.parametrize(
-    ("type_", "path"), [(_AutoSchemaPlugin, "project://project.utils.auto_schema")]
-)
-class TestAutoSchemaPlugin(ConfigSourceTestSuite): ...
-
-
-def test_discovery() -> None:
-    # Test that this config source is discoverable when looking at config sources
-    assert _AutoSchemaPlugin.__name__ in [
-        x.__name__ for x in Plugins.instance().discover(ConfigSource)
-    ]
-
-
-# @dataclass
 class Foo:
-    # some_integer: int
-    # optional_str: str = "bob"
-    def __init__(self, some_integer: int, optional_str: str = "bob"):
-        self.some_integer = some_integer
-        self.optional_str = optional_str
+    def __init__(self, bar: str):
+        """Description of the `Foo` class.
+
+        Args:
+            bar: Description of the `bar` argument.
+        """
+        self.bar = bar
 
 
-@pytest.mark.parametrize(
-    "input_file",
-    [file for file in (REPO_ROOTDIR / "project/configs").rglob("*.yaml")],
-    ids=lambda x: str(x.relative_to(REPO_ROOTDIR / "project/configs")),
-)
-def test_create_schema_for_config(
-    input_file: Path,
-    tmp_path: Path,
-    file_regression: FileRegressionFixture,
-    original_datadir: Path,
+class Bar(Foo):
+    """Docstring of the Bar class.
+
+    Args:
+        baz: description of the `baz` argument from the cls docstring instead of the init docstring.
+    """
+
+    def __init__(self, bar: str, baz: int):
+        # no docstring here.
+        super().__init__(bar=bar)
+        self.baz = baz
+
+
+_this_file = Path(__file__)
+test_files = list((_this_file.parent / _this_file.name).with_suffix("").rglob("*.yaml"))
+
+
+@pytest.mark.parametrize("config_file", test_files, ids=[f.name for f in test_files])
+def test_make_schema(
+    config_file: Path, file_regression: FileRegressionFixture, original_datadir: Path
 ):
-    if input_file.name == "config.yaml":
-        pytest.skip(
-            reason="TODO: handle the top-level config later, seems harder to work on for a first POC"
-        )
-    config_file = original_datadir / input_file.name
-    config_file.parent.mkdir(exist_ok=True, parents=True)
-    config_file.write_text(input_file.read_text())
+    """Test that creates a schema for a config file and saves it next to it.
 
-    schema = _create_schema_for_config(input_file)
-    schema_path = (original_datadir / input_file.name).with_suffix(".json")
-    _add_schema_header(config_file, schema_path)
+    (in the test folder).
+    """
+    schema_file = config_file.with_suffix(".json")
 
-    schema = _get_schema_from_target(config_file)
-    file_regression.check(json.dumps(schema, indent=2), fullpath=schema_path, extension=".json")
+    config = yaml.load(config_file.read_text(), yaml.FullLoader)
+    schema = create_schema_for_config(
+        config=config, config_file=config_file, configs_dir=original_datadir
+    )
 
-
-@pytest.mark.skip(reason="Skipping for now in favour of the test above.")
-@pytest.mark.parametrize(
-    "input_file",
-    [file for file in (REPO_ROOTDIR / "project/configs").rglob("*.yaml")],
-    ids=lambda x: str(x.relative_to(REPO_ROOTDIR / "project/configs")),
-)
-def test_get_schema(
-    input_file: Path,
-    tmp_path: Path,
-    file_regression: FileRegressionFixture,
-    original_datadir: Path,
-):
-    # *config_groups, config_name = input_file.relative_to(CONFIGS_DIR).with_suffix("").parts
-    # config_group = "/".join(config_groups)
-
-    # config_name = str(input_file.relative_to(REPO_ROOTDIR / "project/configs"))
-    try:
-        # todo: this is dumb, the _target_ could be in the defaults list!
-        _config = hydra_zen.load_from_yaml(input_file)
-        _target = hydra_zen.get_target(_config)  # type: ignore
-    except TypeError:
-        pytest.skip(reason=f"Config at {input_file} doesn't have a target.")
-
-    config_file = original_datadir / input_file.name
-    config_file.parent.mkdir(exist_ok=True, parents=True)
-    config_file.write_text(input_file.read_text())
-
-    schema_path = (original_datadir / input_file.name).with_suffix(".json")
-    _add_schema_header(config_file, schema_path)
-
-    schema = _get_schema_from_target(config_file)
-
-    file_regression.check(json.dumps(schema, indent=2), fullpath=schema_path, extension=".json")
+    add_schema_header(config_file, schema_path=schema_file)
+    file_regression.check(json.dumps(schema, indent=2), fullpath=schema_file, extension=".json")

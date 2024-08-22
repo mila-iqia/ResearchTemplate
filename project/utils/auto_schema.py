@@ -8,7 +8,10 @@ description and default values, and displays errors if you have config files wit
 - [ ] Add schemas for all the nested dict entries in a config file if they have a _target_ (currently just the first level).
 - [ ] Modify the schema to support omegaconf directives like ${oc.env:VAR_NAME} and our custom directives like ${instance_attr} and so on.
 - [ ] Refine the schema for the `defaults` list to match what Hydra allows mnore closely.
+- [ ] todo: Make a hydra plugin that creates the schemas for configs
 """
+
+import argparse
 import copy
 import dataclasses
 import inspect
@@ -28,24 +31,24 @@ import docstring_parser as dp
 import flax
 import flax.linen
 import flax.struct
+import hydra.errors
 import hydra.utils
 import hydra_zen
+import lightning.pytorch.callbacks
 import pydantic
 import pydantic.schema
 import rich.logging
-from hydra.core.object_type import ObjectType
-from hydra.core.plugins import Plugins
-from hydra.plugins.config_source import ConfigResult, ConfigSource
+import tqdm
 from hydra.types import RunMode
 from omegaconf import DictConfig, OmegaConf
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from pydantic_core import core_schema
+from tqdm.rich import tqdm_rich
 from typing_extensions import NotRequired, Required
 
 from project.main import PROJECT_NAME
 from project.utils.env_vars import REPO_ROOTDIR
-from project.utils.hydra_config_utils import get_config_loader
-from project.utils.typing_utils import NestedMapping, is_sequence_of
+from project.utils.typing_utils import NestedMapping
 
 logger = get_logger(__name__)
 
@@ -91,8 +94,7 @@ class Schema(TypedDict, total=False):
     """ https://json-schema.org/understanding-json-schema/reference/conditionals#dependentRequired """
 
 
-
-HYDRA_CONFIG_SCHEMA =  Schema(
+HYDRA_CONFIG_SCHEMA = Schema(
     title="Default Schema for any Hydra config file.",
     description=f"Schema created by the `{__file__}` script.",
     properties={
@@ -137,8 +139,9 @@ HYDRA_CONFIG_SCHEMA =  Schema(
         "_partial_": ["_target_"],
         "_args_": ["_target_"],
         "_recursive_": ["_target_"],
-    }
+    },
 )
+
 
 def main():
     logging.basicConfig(
@@ -156,44 +159,125 @@ def main():
             )
         ],
     )
-    _root_logger = logging.getLogger("project")
+    # _root_logger = logging.getLogger("project")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project-root", type=Path, default=REPO_ROOTDIR)
+    parser.add_argument("--configs-dir", type=Path, default=CONFIGS_DIR)
+    parser.add_argument("--schemas-dir", type=Path, default=None, required=False)
+    parser.add_argument("--regen-schemas", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--stop-on-error", action=argparse.BooleanOptionalAction)
+    verbosity_group = parser.add_mutually_exclusive_group()
+    verbosity_group.add_argument(
+        "-q", "--quiet", dest="quiet", action=argparse.BooleanOptionalAction
+    )
+    verbosity_group.add_argument("-v", "--verbose", dest="verbose", action="count", default=0)
 
-    repo_root: Path = REPO_ROOTDIR
-    configs_dir: Path = CONFIGS_DIR
-    schemas_dir: Path = REPO_ROOTDIR / ".schemas"
+    args = parser.parse_args()
 
-    config_files_to_schemas = _get_shemas_for_hydra_configs(configs_dir=configs_dir)
+    repo_root = args.project_root
+    configs_dir = args.configs_dir
+    schemas_dir = args.schemas_dir
+    regen_schemas = args.regen_schemas
+    stop_on_error = args.stop_on_error
 
-    if not config_files_to_schemas:
-        logger.warning(f"Unable to deduce a schema to use for any configs in {configs_dir}.")
+    if args.quiet:
+        logger.setLevel(logging.NOTSET)
+    elif args.verbose:
+        if args.verbose >= 3:
+            logger.setLevel(logging.DEBUG)
+        elif args.verbose == 2:
+            logger.setLevel(logging.INFO)
+        else:
+            assert args.verbose == 1
+            logger.setLevel(logging.WARNING)
+
+    run(
+        repo_root=repo_root,
+        configs_dir=configs_dir,
+        schemas_dir=schemas_dir,
+        regen_schemas=regen_schemas,
+        stop_on_error=stop_on_error,
+    )
+    logger.info("Done updating the schemas for the Hydra config files.")
+
+
+def run(
+    repo_root: Path = REPO_ROOTDIR,
+    configs_dir: Path = CONFIGS_DIR,
+    schemas_dir: Path | None = None,
+    regen_schemas: bool = False,
+    stop_on_error: bool = False,
+):
+    if schemas_dir is None:
+        schemas_dir = repo_root / ".schemas"
+
+    if schemas_dir.is_relative_to(repo_root):
+        _add_schemas_dir_to_gitignore(schemas_dir, repo_root=repo_root)
+
+    config_files = list(configs_dir.rglob("*.yaml")) + list(configs_dir.rglob("*.yml"))
+
+    if (_top_level_config := (configs_dir / "config.yaml")) in config_files:
+        # todo: also add support for the top-level configs that are backed (or not) by a structured
+        # config node.
+        pass
+        # config_files.remove(_top_level_config)
+
+    if not config_files:
+        warnings.warn(RuntimeWarning(f"Unable to find any config files {configs_dir}!"))
         return
 
-    schemas_dir.mkdir(exist_ok=True)
-    if schemas_dir.is_relative_to(REPO_ROOTDIR):
-        _rel = schemas_dir.relative_to(REPO_ROOTDIR)
-        _gitignore_file = REPO_ROOTDIR/".gitignore"
-        if not any(line.startswith(str(_rel)) for line in _gitignore_file.read_text().splitlines()):
-            logger.info(f"Adding entry in .gitignore for the schemas directory ({schemas_dir})")
-            with _gitignore_file.open("a") as f:
-                f.write(f"{_rel}\n")
+    config_file_to_schema_file: dict[Path, Path] = {}
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=tqdm.TqdmExperimentalWarning)
+        pbar = tqdm_rich(config_files, desc="Creating schemas", total=len(config_files))
 
-    config_file_to_schema_and_schema_file: dict[Path, tuple[Path, Schema]] = {}
+    for config_file in pbar:
+        pretty_config_file_name = config_file.relative_to(configs_dir)
+        schema_file = _get_schema_file_path(config_file, schemas_dir)
 
-    # Write all the schemas to the schema directory.
-    for config_file, schema in config_files_to_schemas.items():
-        schema_file = _get_schema_file_path(config_file, schema, schemas_dir)
+        if schema_file.exists() and not regen_schemas:
+            if _is_incomplete_schema(schema_file):
+                logger.info(
+                    f"Unable to properly create the schema for {pretty_config_file_name} last time. Trying again."
+                )
+            else:
+                logger.debug(
+                    f"Schema file {_relative_to_cwd(schema_file)} was already successfully created. Skipping."
+                )
+                continue
 
-        _content = json.dumps(schema, indent=2)
-        if not schema_file.exists():
-            logger.info(f"Writing a new schema for {relative_to_cwd(config_file)} at {relative_to_cwd(schema_file)}.")
-            schema_file.write_text(_content + "\n")
-        elif schema_file.read_text().strip() != _content:
-            logger.info(f"Updating the schema for {relative_to_cwd(config_file)} at {relative_to_cwd(schema_file)}.")
-            schema_file.write_text(_content + "\n")
-        else:
-            logger.debug(f"Schema at {relative_to_cwd(schema_file)} is already up-to-date.")
+        pbar.set_postfix_str(f"Creating schema for {pretty_config_file_name}")
 
-        config_file_to_schema_and_schema_file[config_file] = (schema_file, schema)
+        try:
+            logger.debug(f"Creating a schema for {pretty_config_file_name}")
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning)
+                config = _load_config(config_file, configs_dir=configs_dir)
+            schema = create_schema_for_config(
+                config, config_file=config_file, configs_dir=configs_dir
+            )
+            schema_file.parent.mkdir(exist_ok=True, parents=True)
+            schema_file.write_text(json.dumps(schema, indent=2) + "\n")
+        except (
+            pydantic.errors.PydanticSchemaGenerationError,
+            hydra.errors.MissingConfigException,
+        ) as exc:
+            logger.warning(
+                f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
+            )
+            if stop_on_error:
+                raise
+
+            schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
+            schema["additionalProperties"] = True
+            schema["title"] = f"Partial schema for {pretty_config_file_name}"
+            schema["description"] = (
+                f"(errors occurred while trying to create the schema from the signature:\n{exc}"
+            )
+            schema_file.write_text(json.dumps(schema, indent=2) + "\n")
+            _set_is_incomplete_schema(schema_file, True)
+
+        config_file_to_schema_file[config_file] = schema_file
 
     # Option 1: Add a vscode setting that associates the schema file with the yaml files. (less intrusive perhaps).
     # Option 2: Add a header to the yaml files that points to the schema file.
@@ -201,27 +285,65 @@ def main():
     # We will use option 1 if a `code` executable is found.
     set_schemas_in_vscode_settings_file = bool(shutil.which("code"))
     if set_schemas_in_vscode_settings_file:
-        logger.debug("Found the `code` executable, will add schema paths to the vscode settings.")
-        _install_yaml_vscode_extension()
-        _add_schemas_to_vscode_settings(config_files_to_schemas, repo_root=repo_root, schemas_dir=schemas_dir)
-    else:
-        logger.debug(
-            "Did not find the `code` executable on this machine. Will add headers to config files to point to the schemas to use."
-        )
-        for config_file, (schema_file, schema) in config_file_to_schema_and_schema_file.items():
-            _add_schema_header(config_file, schema_path=schema_file)
+        try:
+            logger.debug(
+                "Found the `code` executable, will add schema paths to the vscode settings."
+            )
+            _install_yaml_vscode_extension()
+            _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
+            return
+        except Exception as exc:
+            logger.error(
+                f"Unable to write schemas in the vscode settings file. "
+                f"Falling back to adding a header to config files. (exc={exc})"
+            )
 
-    logger.info("Done updating the schemas for the Hydra config files.")
+    logger.debug("A headers to config files to point to the schemas to use.")
+    for config_file, schema_file in config_file_to_schema_file.items():
+        add_schema_header(config_file, schema_path=schema_file)
 
-def relative_to_cwd(p: str | Path):
+
+def _add_schemas_dir_to_gitignore(schemas_dir: Path, repo_root: Path):
+    _rel = schemas_dir.relative_to(repo_root)
+    _gitignore_file = repo_root / ".gitignore"
+    if not any(line.startswith(str(_rel)) for line in _gitignore_file.read_text().splitlines()):
+        logger.info(f"Adding entry in .gitignore for the schemas directory ({schemas_dir})")
+        with _gitignore_file.open("a") as f:
+            f.write(f"{_rel}\n")
+
+
+_incomplete_schema_xattr = "user.schema_error"
+
+
+def _is_incomplete_schema(schema_file: Path) -> bool:
+    try:
+        return os.getxattr(schema_file, _incomplete_schema_xattr) == bytes(1)
+    except OSError:
+        return False
+
+
+def _set_is_incomplete_schema(schema_file: Path, val: bool):
+    os.setxattr(schema_file, _incomplete_schema_xattr, bytes(val))
+
+
+def _relative_to_cwd(p: str | Path):
     return Path(p).relative_to(Path.cwd())
 
+
 def _install_yaml_vscode_extension():
-    logger.debug("Running `code --install-extension redhat.vscode-yaml` to install the yaml extension for vscode.")
-    output = subprocess.check_output(("code", "--install-extension", "redhat.vscode-yaml"), text=True)
+    logger.debug(
+        "Running `code --install-extension redhat.vscode-yaml` to install the yaml extension for vscode."
+    )
+    output = subprocess.check_output(
+        ("code", "--install-extension", "redhat.vscode-yaml"), text=True
+    )
     logger.debug(output)
 
-def _add_schemas_to_vscode_settings(config_files_to_schemas: dict[Path, Schema], repo_root: Path, schemas_dir: Path) -> None:
+
+def _add_schemas_to_vscode_settings(
+    config_file_to_schema_file: dict[Path, Path],
+    repo_root: Path,
+) -> None:
     # Make the vscode settings file if necessary:
     vscode_dir = repo_root / ".vscode"
     vscode_dir.mkdir(exist_ok=True, parents=False)
@@ -229,10 +351,12 @@ def _add_schemas_to_vscode_settings(config_files_to_schemas: dict[Path, Schema],
     vscode_settings_file.touch(exist_ok=True)
 
     # TODO: What to do with comments? Ideally we'd keep them, right?
-    logger.info(f"Reading the VsCode settings file at {vscode_settings_file}.")
+    logger.debug(f"Reading the VsCode settings file at {vscode_settings_file}.")
     vscode_settings_content = vscode_settings_file.read_text()
     # Remove any trailing commas from the content:
-    vscode_settings_content = vscode_settings_content.strip().removesuffix("}").rstrip().rstrip(",") + "}"
+    vscode_settings_content = (
+        vscode_settings_content.strip().removesuffix("}").rstrip().rstrip(",") + "}"
+    )
     vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
 
     # Avoid the popup and do users a favour by disabling telemetry.
@@ -243,9 +367,8 @@ def _add_schemas_to_vscode_settings(config_files_to_schemas: dict[Path, Schema],
     )
 
     # Write all the schemas
-    for config_file, schema in config_files_to_schemas.items():
-        schema_file = _get_schema_file_path(config_file, schema, schemas_dir)
-        schema_file.write_text(json.dumps(schema, indent=2) + "\n")
+    for config_file, schema_file in config_file_to_schema_file.items():
+        assert schema_file.exists()
 
         schema_key = str(schema_file.relative_to(repo_root))
         # TODO: Make sure that this makes sense. What if people
@@ -256,21 +379,25 @@ def _add_schemas_to_vscode_settings(config_files_to_schemas: dict[Path, Schema],
         if schema_key not in yaml_schemas_setting:
             yaml_schemas_setting[schema_key] = path_to_add
         elif isinstance(files_associated_with_schema := yaml_schemas_setting[schema_key], str):
-            yaml_schemas_setting[schema_key] = sorted(set([files_associated_with_schema, path_to_add]))
+            yaml_schemas_setting[schema_key] = sorted(
+                set([files_associated_with_schema, path_to_add])
+            )
         else:
-            yaml_schemas_setting[schema_key] = sorted(set(files_associated_with_schema + [path_to_add]))
+            yaml_schemas_setting[schema_key] = sorted(
+                set(files_associated_with_schema + [path_to_add])
+            )
 
     vscode_settings_file.write_text(json.dumps(vscode_settings, indent=2))
     logger.info(f"Updated the yaml schemas in the vscode settings file at {vscode_settings_file}.")
 
 
-def _get_schema_file_path(config_file: Path, schema: Schema, schemas_dir: Path):
+def _get_schema_file_path(config_file: Path, schemas_dir: Path):
     config_group = config_file.parent
     schema_file = schemas_dir / f"{config_group.name}_{config_file.stem}_schema.json"
     return schema_file
 
 
-def _get_shemas_for_hydra_configs(configs_dir: Path) -> dict[Path, Schema]:
+def _get_shemas_for_hydra_configs(configs_dir: Path, regen_schemas: bool) -> dict[Path, Schema]:
     config_files_to_shemas: dict[Path, Schema] = {}
 
     for config_file in itertools.chain(configs_dir.rglob("*.yaml"), configs_dir.rglob("*.yml")):
@@ -282,16 +409,22 @@ def _get_shemas_for_hydra_configs(configs_dir: Path) -> dict[Path, Schema]:
         try:
             logger.info(f"Creating a schema for {config_file.relative_to(configs_dir)}")
             config = _load_config(config_file, configs_dir=configs_dir)
-            config_files_to_shemas[config_file] = _create_schema_for_config(config, config_file=config_file, configs_dir=configs_dir)
+            config_files_to_shemas[config_file] = create_schema_for_config(
+                config, config_file=config_file, configs_dir=configs_dir
+            )
         except Exception as e:
-            logger.debug(f"Unable to update the schema for yaml config file {config_file.relative_to(configs_dir)}: {e}")
+            logger.debug(
+                f"Unable to update the schema for yaml config file {config_file.relative_to(configs_dir)}: {e}"
+            )
             # raise
         else:
-            logger.info(f"Updated schema for ./{relative_to_cwd(config_file)}.")
+            logger.info(f"Updated schema for ./{_relative_to_cwd(config_file)}.")
     return config_files_to_shemas
 
 
-def _create_schema_for_config(config: dict | DictConfig, config_file: Path, configs_dir: Path) -> Schema:
+def create_schema_for_config(
+    config: dict | DictConfig, config_file: Path | None, configs_dir: Path | None
+) -> Schema:
     """IDEA: Create a schema for the given config.
 
     - If you encounter a key, add it to the schema.
@@ -300,24 +433,30 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
         - Should ideally load the defaults and merge this schema on top of them.
     """
     schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
-    schema["title"] = f"Auto-generated schema for {config_file.relative_to(configs_dir)}"
+    schema["title"] = "Auto-generated schema."
 
-
-    if config_file.exists():
+    if config_file and config_file.exists() and configs_dir:
         # Config is an actual yaml file, not a structured config entry.
+        p = config_file.relative_to(configs_dir) if configs_dir else config_file
+        schema["title"] = f"Auto-generated schema for {p}"
         # note: the `defaults` list gets consumed by Hydra in `_load_config`, so we actually re-read the
         # config file to get the `defaults`, if present.
         _config = OmegaConf.to_container(OmegaConf.load(config_file), resolve=False)
         assert isinstance(_config, dict)
-        defaults = _config.get("defaults")
-        if defaults:
-            schema = _update_schema_from_defaults(config_file, schema=schema, defaults=defaults, configs_dir=configs_dir)
+        # defaults = _config.get("defaults")
+        assert "defaults" not in config
+        assert config == _load_config(config_file, configs_dir=configs_dir)
+
+        # if defaults:
+        #     schema = _update_schema_from_defaults(
+        #         config_file, schema=schema, defaults=defaults, configs_dir=configs_dir
+        #     )
 
     if target_name := config.get("_target_"):
         # There's a '_target_' key at the top level in the config file.
         target = hydra.utils.get_object(target_name)
         schema["title"] = f"Auto-generated schema for {target}"
-        schema["description"] = f"Based on the signature of {target}."
+        schema["description"] = "Based on the target signature."
         schema["properties"]["_target_"] = PropertySchema(
             type="string",
             title="Target",
@@ -330,69 +469,68 @@ def _create_schema_for_config(config: dict | DictConfig, config_file: Path, conf
                 f"See the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n"
             ),
         )
-        if config.get("_partial_"):
-            # todo: add a special marker that allows extra fields?
-            schema["required"] = []
 
-        # if the target takes **kwargs, then we don't restrict additional properties.
-        schema["additionalProperties"] = inspect.getfullargspec(target).varkw is not None
-
-        value_schema = _get_schema_from_target(config, config_file=config_file)
-        logger.debug(f"Schema from target {config['_target_']}: {value_schema}")
+        schema_from_target_signature = _get_schema_from_target(config)
+        # logger.debug(f"Schema from signature of {target}: {schema_from_target_signature}")
 
         schema = _merge_dicts(
-            value_schema,
+            schema_from_target_signature,
             schema,
             conflict_handler=overwrite,
         )
-        schema = _adapt_schema_for_hydra(config_file, config, schema)
 
         return schema
 
     # Config file that contains entries that may or may not have a _target_.
     schema["additionalProperties"] = True
+
     for key, value in config.items():
         # Go over all the values in the config. If any of them have a `_target_`, then we can
-        # add
+        # add a schema at that entry.
+        # TODO: make this work recursively?
         if isinstance(value, dict | DictConfig) and "_target_" in value.keys():
-            # schema_from_target = get_schema_from_target(value, config_file=config_file)
             target = hydra_zen.get_target(value)  # type: ignore
-            value_schema = _get_schema_from_target(value, config_file=config_file)
+            schema_from_target_signature = _get_schema_from_target(value)
             logger.debug(
                 f"Getting schema from target {value['_target_']} at key {key} in file {config_file}."
             )
 
-            assert "properties" in value_schema
+            assert "properties" in schema_from_target_signature
             if key not in schema["properties"]:
-                schema["properties"][key] = value_schema
+                schema["properties"][key] = schema_from_target_signature
             else:
                 raise NotImplementedError("todo: use merge_dicts here")
 
     return schema
 
 
-def _update_schema_from_defaults(config_file: Path, schema: Schema, defaults: list[str], configs_dir: Path):
+def _update_schema_from_defaults(
+    config_file: Path, schema: Schema, defaults: list[str | dict[str, str]], configs_dir: Path
+):
     defaults_list = defaults
-    if not is_sequence_of(defaults_list, str):
-        # TODO: If there's a default like `- callbacks: foobar.yml` in `trainer/default.yaml`, then
-        # perhaps we could also add a schema for one of the entries in the config file if there is a default
-        logger.error(f"The defaults list in {config_file} doesn't contain only strings! Skipping.")
-        return schema
+
     for default in defaults_list:
         if default == "_self_":  # todo: does this actually make sense?
             continue
-        assert not default.startswith("/")
+        # Note: The defaults can also have the .yaml or .yml extension, _load_config drops the
+        # extension.
+        if isinstance(default, str):
+            assert not default.startswith("/")
+            other_config_path = config_file.parent / default
+        else:
+            assert len(default) == 1
+            key, val = next(iter(default.items()))
+            other_config_path = config_file.parent / key / val
+        logger.debug(f"Loading config of default {default}.")
 
-        if default.endswith((".yaml", ".yml")):
-            default = default.removesuffix(".yaml").removesuffix(".yml")
+        # try:
+        default_config = _load_config(other_config_path, configs_dir=configs_dir)
+        # except omegaconf.errors.MissingMandatoryValue:
+        #     default_config = OmegaConf.load(other_config_path)
 
-        other_config_path = config_file.parent / f"{default}.yaml"
-        config = _load_config(other_config_path, configs_dir=configs_dir)
-        # raise RuntimeError(
-        #     f"Can't find the config file for default {default!r} in config {config_file}: "
-        #     f"{other_config_path} doesn't exist!"
-        # )
-        schema_of_default = _create_schema_for_config(config=config, config_file=other_config_path, configs_dir=configs_dir)
+        schema_of_default = create_schema_for_config(
+            config=default_config, config_file=other_config_path, configs_dir=configs_dir
+        )
 
         logger.debug(f"Schema from default {default}: {schema_of_default}")
         logger.debug(f"Properties of {default=}: {list(schema_of_default['properties'].keys())}")
@@ -471,80 +609,119 @@ def _merge_dicts(
     return out
 
 
+def _has_package_global_line(config_file: Path) -> int | None:
+    """Returns whether the config file contains a `@package _global_` directive of hydra.
+
+    See: https://hydra.cc/docs/advanced/overriding_packages/#overriding-the-package-via-the-package-directive
+    """
+    for line in config_file.read_text().splitlines():
+        line = line.strip()
+        if not line.startswith("#"):
+            continue
+        if line.removeprefix("#").strip().startswith("@package _global_"):
+            return True
+    return False
+
+
 def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
+    from hydra._internal.config_loader_impl import ConfigLoaderImpl
+    from hydra._internal.utils import create_automatic_config_search_path
+
+    from project.main import PROJECT_NAME
+
     *config_groups, config_name = config_path.relative_to(configs_dir).with_suffix("").parts
-    logger.debug(f"{config_path=}, {config_groups=}, {config_name=}")
-    config_group = "/".join(config_groups)
-    top_config = get_config_loader().load_configuration(
-        f"{config_group}/{config_name}", overrides=[], run_mode=RunMode.RUN
+    logger.debug(
+        f"config_path: ./{_relative_to_cwd(config_path)}, {config_groups=}, {config_name=}, configs_dir: {configs_dir}"
     )
+    config_group = "/".join(config_groups)
+
+    if _has_package_global_line(config_path):
+        # Tricky: Here we load the global config but with the given config as an override.
+        search_path = create_automatic_config_search_path(
+            calling_file=None,
+            calling_module=None,
+            # TODO: This doesn't seem to be working in unit tests?
+            config_path=f"pkg://{PROJECT_NAME}.configs",
+        )
+        config_loader = ConfigLoaderImpl(config_search_path=search_path)
+        top_config = config_loader.load_configuration(
+            "config",  # todo: Fix this?
+            overrides=[f"{config_group}={config_name}"],
+            # todo: setting this here because it appears to be what's used in Hydra in a normal
+            # run, even though RunMode.RUN would make more sense intuitively.
+            run_mode=RunMode.MULTIRUN,
+        )
+        return top_config
+
+    # Load the global config and get the node for the desired config.
+    # TODO: Can this cause errors if configs in an unrelated subtree have required values?
+
+    search_path = create_automatic_config_search_path(
+        calling_file=None, calling_module=None, config_path=f"pkg://{PROJECT_NAME}.configs"
+    )
+    config_loader = ConfigLoaderImpl(config_search_path=search_path)
+    top_config = config_loader.load_configuration(
+        f"{config_group}/{config_name}", overrides=[], run_mode=RunMode.MULTIRUN
+    )
+    # Retrieve the sub-entry in the config and return it.
     config = top_config
     for config_group in config_groups:
         config = config[config_group]
     return config
 
 
-class _AutoSchemaPlugin(ConfigSource):
-    # todo: Perhaps we can make a hydra plugin with the auto-schema stuff?
-    def __init__(self, provider: str, path: str) -> None:
-        super().__init__(provider=provider, path=path)
-        logger.info(f"{provider=}, {path=}")
+def add_schema_header(config_file: Path, schema_path: Path) -> None:
+    # TODO: THis line should be added **after** any comments like @package: global
+    lines = config_file.read_text().splitlines(keepends=True)
 
-    @staticmethod
-    def scheme() -> str:
-        return "auto_schema"
-
-    def load_config(self, config_path: str) -> ConfigResult:
-        _name = self._normalize_file_name(config_path)
-        raise NotImplementedError(config_path)
-
-    def is_group(self, config_path: str) -> bool:
-        raise NotImplementedError(config_path)
-
-    def is_config(self, config_path: str) -> bool:
-        raise NotImplementedError(config_path)
-
-    def available(self) -> bool:
-        """
-        :return: True is this config source is pointing to a valid location
-        """
-        return True
-        raise NotImplementedError()
-
-    def list(self, config_path: str, results_filter: ObjectType | None) -> list[str]:
-        """List items under the specified config path.
-
-        :param config_path: config path to list items in, examples: "", "foo", "foo/bar"
-        :param results_filter: None for all, GROUP for groups only and CONFIG for configs only
-        :return: a list of config or group identifiers (sorted and unique)
-        """
-        raise NotImplementedError(config_path, results_filter)
-
-
-def register_auto_schema_plugin() -> None:
-    Plugins.instance().register(_AutoSchemaPlugin)
-
-
-def _add_schema_header(config_file: Path, schema_path: Path) -> None:
-    input_lines = config_file.read_text().splitlines(keepends=True)
-    relative_path_to_schema = os.path.relpath(schema_path, start=config_file.parent)
     if config_file.parent is schema_path.parent:
-        relative_path_to_schema = "./" + schema_path.name
-    new_first_line = f"# yaml-language-server: $schema={relative_path_to_schema}\n"
-    # todo; remove leading empty lines.
-    if input_lines[0].startswith("# yaml-language-server: $schema="):
-        output_lines = [new_first_line, *input_lines[1:]]
+        relative_path_to_schema_2 = "./" + schema_path.name
+        # TODO: Unsure when this branch would be used, and if it would differ.
+        assert False, (
+            os.path.relpath(schema_path, start=config_file.parent),
+            relative_path_to_schema_2,
+        )
     else:
-        output_lines = [new_first_line, *input_lines]
+        relative_path_to_schema = os.path.relpath(schema_path, start=config_file.parent)
 
-    with config_file.open("w") as f:
-        f.writelines(output_lines)
+    # Remove any existing schema lines.
+    lines = [
+        line for line in lines if not line.strip().startswith("# yaml-language-server: $schema=")
+    ]
+
+    # NOTE: This line can be placed anywhere in the file, not necessarily needs to be at the top,
+    # and the yaml vscode extension will pick it up.
+    new_line = f"# yaml-language-server: $schema={relative_path_to_schema}\n"
+
+    package_global_line: int | None = None
+
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+        # BUG: IF the schema line comes before a @package: global comment, then the @package: _global_
+        # comment is ignored by Hydra.
+        # Locate the last package line (a bit unnecessary, since there should only be one).
+        if line.startswith("#") and line.removeprefix("#").strip().startswith("@package:"):
+            package_global_line = i
+
+    if package_global_line is None:
+        # There's no package directive in the file.
+        new_lines = [new_line, *lines]
+    else:
+        new_lines = lines.copy()
+        # Insert the schema line after the package directive line.
+        new_lines.insert(package_global_line + 1, new_line)
+
+    result = "\n".join(new_lines) + "\n"
+    if config_file.read_text() != result:
+        config_file.write_text(result)
 
 
-def _get_schema_from_target(config: dict | DictConfig, config_file: Path) -> Schema:
+def _get_schema_from_target(config: dict | DictConfig) -> Schema:
     assert isinstance(config, dict | DictConfig)
     logger.debug(f"Config: {config}")
-    target = hydra_zen.get_target(config)  # type: ignore
+    target = hydra.utils.get_object(config["_target_"])
 
     if inspect.isclass(target) and issubclass(target, flax.linen.Module):
         object_type = hydra_zen.builds(
@@ -553,6 +730,23 @@ def _get_schema_from_target(config: dict | DictConfig, config_file: Path) -> Sch
             hydra_recursive=False,
             hydra_convert="all",
             zen_exclude=["parent"],
+            zen_dataclass={"cls_name": target.__qualname__},
+        )
+
+    elif inspect.isclass(target) and issubclass(
+        target, lightning.pytorch.callbacks.RichProgressBar
+    ):
+        from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTheme  # noqa
+        from rich.style import Style  # noqa
+
+        # todo: trying to fix this here.
+        # RichProgressBarTheme.__annotations__[]
+        object_type = hydra_zen.builds(
+            target,
+            populate_full_signature=True,
+            hydra_recursive=False,
+            hydra_convert="all",
+            zen_exclude=["theme"],
             zen_dataclass={"cls_name": target.__qualname__},
         )
     elif dataclasses.is_dataclass(target):
@@ -576,7 +770,9 @@ def _get_schema_from_target(config: dict | DictConfig, config_file: Path) -> Sch
             warnings.filterwarnings("ignore", category=UserWarning)
 
             json_schema = pydantic.TypeAdapter(object_type).json_schema(
-                mode="serialization", schema_generator=_MyGenerateJsonSchema, by_alias=False,
+                mode="serialization",
+                schema_generator=_MyGenerateJsonSchema,
+                by_alias=False,
             )
         assert "properties" in json_schema
     except pydantic.PydanticSchemaGenerationError as e:
@@ -609,41 +805,17 @@ def _get_schema_from_target(config: dict | DictConfig, config_file: Path) -> Sch
         if description := param_descriptions.get(property_name):
             property_dict["description"] = description
         else:
-            property_dict["description"] = f"The {property_name} parameter of the {target.__qualname__}."
+            property_dict["description"] = (
+                f"The {property_name} parameter of the {target.__qualname__}."
+            )
 
+    if config.get("_partial_"):
+        json_schema["required"] = []
 
-    # Add field docstrings as descriptions in the schema!
-    # json_schema = _update_schema_with_descriptions(object_type, json_schema=json_schema)
+    # if the target takes **kwargs, then we don't restrict additional properties.
+    json_schema["additionalProperties"] = inspect.getfullargspec(target).varkw is not None
 
     return json_schema
-
-
-# TODO: read this:
-# https://suneeta-mall.github.io/2022/03/15/hydra-pydantic-config-management-for-training-application.html#hydra-directives
-# https://wandb.ai/adrishd/hydra-example/reports/Configuring-W-B-Projects-with-Hydra--VmlldzoxNTA2MzQw
-def _adapt_schema_for_hydra(
-    input_file: Path, config: dict | DictConfig, schema_from_pydantic: Schema
-):
-    """TODO: Adapt the schema to be better adapted for Hydra configs.
-
-    TODOs:
-    - [ ] defaults should always be accepted as a field.
-    - [ ] _partial_ should make it so there are no mandatory fields
-    - [ ] Unexpected extra fields should not be allowed
-    """
-    # TODO: This generated schema does not seem that well-adapted for Hydra, actually.
-    schema = copy.deepcopy(schema_from_pydantic)
-
-    if hydra_zen.is_partial_builds(config):
-        # todo: add a special marker that allows extra fields?
-        schema["required"] = []
-
-    if _target_has_var_kwargs(config):
-        # if the target takes **kwargs, then we don't restrict additional properties.
-        schema["additionalProperties"] = True
-    else:
-        schema["additionalProperties"] = False
-    return schema
 
 
 def _target_has_var_kwargs(config: DictConfig) -> bool:
