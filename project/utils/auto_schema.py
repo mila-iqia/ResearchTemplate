@@ -193,7 +193,8 @@ def main():
     else:
         logger.setLevel(logging.ERROR)
 
-    run(
+    add_schemas_to_all_hydra_configs(
+        config_files=list(configs_dir.rglob("*.yaml")) + list(configs_dir.rglob("*.yml")),
         repo_root=repo_root,
         configs_dir=configs_dir,
         schemas_dir=schemas_dir,
@@ -203,30 +204,29 @@ def main():
     logger.info("Done updating the schemas for the Hydra config files.")
 
 
-def run(
-    repo_root: Path = REPO_ROOTDIR,
+def add_schemas_to_all_hydra_configs(
+    config_files: list[Path],
+    repo_root: Path,
     configs_dir: Path = CONFIGS_DIR,
     schemas_dir: Path | None = None,
     regen_schemas: bool = False,
     stop_on_error: bool = False,
 ):
+    if not config_files:
+        warnings.warn(RuntimeWarning("No config files were passed. Skipping."))
+        return
+
     if schemas_dir is None:
         schemas_dir = repo_root / ".schemas"
 
     if schemas_dir.is_relative_to(repo_root):
         _add_schemas_dir_to_gitignore(schemas_dir, repo_root=repo_root)
 
-    config_files = list(configs_dir.rglob("*.yaml")) + list(configs_dir.rglob("*.yml"))
-
     if (_top_level_config := (configs_dir / "config.yaml")) in config_files:
         # todo: also add support for the top-level configs that are backed (or not) by a structured
         # config node.
         pass
         # config_files.remove(_top_level_config)
-
-    if not config_files:
-        warnings.warn(RuntimeWarning(f"Unable to find any config files {configs_dir}!"))
-        return
 
     config_file_to_schema_file: dict[Path, Path] = {}
     with warnings.catch_warnings():
