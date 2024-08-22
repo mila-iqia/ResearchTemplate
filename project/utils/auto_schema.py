@@ -261,6 +261,8 @@ def run(
         except (
             pydantic.errors.PydanticSchemaGenerationError,
             hydra.errors.MissingConfigException,
+            hydra.errors.ConfigCompositionException,
+            Exception,  # FIXME: Narrow this down!
         ) as exc:
             logger.warning(
                 f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
