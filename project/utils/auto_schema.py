@@ -190,6 +190,8 @@ def main():
         else:
             assert args.verbose == 1
             logger.setLevel(logging.WARNING)
+    else:
+        logger.setLevel(logging.ERROR)
 
     run(
         repo_root=repo_root,
@@ -229,7 +231,9 @@ def run(
     config_file_to_schema_file: dict[Path, Path] = {}
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=tqdm.TqdmExperimentalWarning)
-        pbar = tqdm_rich(config_files, desc="Creating schemas", total=len(config_files))
+        pbar = tqdm_rich(
+            config_files, desc="Creating schemas", total=len(config_files), leave=False
+        )
 
     for config_file in pbar:
         pretty_config_file_name = config_file.relative_to(configs_dir)
@@ -662,9 +666,11 @@ def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
         calling_file=None, calling_module=None, config_path=f"pkg://{PROJECT_NAME}.configs"
     )
     config_loader = ConfigLoaderImpl(config_search_path=search_path)
-    top_config = config_loader.load_configuration(
-        f"{config_group}/{config_name}", overrides=[], run_mode=RunMode.MULTIRUN
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        top_config = config_loader.load_configuration(
+            f"{config_group}/{config_name}", overrides=[], run_mode=RunMode.MULTIRUN
+        )
     # Retrieve the sub-entry in the config and return it.
     config = top_config
     for config_group in config_groups:
