@@ -23,6 +23,7 @@ import os.path
 import shutil
 import subprocess
 import sys
+import typing
 import warnings
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from logging import getLogger as get_logger
@@ -101,7 +102,10 @@ class _PropertyNames(TypedDict):
 
 class ObjectSchema(PropertySchema, total=False):
     type: Literal["object"]
-    properties: MutableMapping[str, PropertySchema]
+    # annoying that we have to include the subclasses here!
+    properties: MutableMapping[
+        str, PropertySchema | ArrayPropertySchema | StringPropertySchema | ObjectSchema
+    ]
     patternProperties: Mapping[str, PropertySchema | StringPropertySchema]
     propertyNames: _PropertyNames
     minProperties: int
@@ -115,7 +119,11 @@ class Schema(TypedDict, total=False):
     type: str
 
     # annoying that we have to include the subclasses here!
-    properties: Required[Mapping[str, PropertySchema | ArrayPropertySchema | StringPropertySchema]]
+    properties: Required[
+        MutableMapping[
+            str, PropertySchema | ArrayPropertySchema | StringPropertySchema | ObjectSchema
+        ]
+    ]
     required: NotRequired[list[str]]
 
     additionalProperties: NotRequired[bool]
@@ -182,7 +190,7 @@ HYDRA_CONFIG_SCHEMA = Schema(
                 "See: https://hydra.cc/docs/advanced/instantiate_objects/overview"
             ),
         ),
-        "_recursive_": StringPropertySchema(
+        "_recursive_": PropertySchema(
             type="boolean",
             title="Recursive",
             description=(
@@ -562,6 +570,9 @@ def create_schema_for_config(
         # There's a '_target_' key at the top level in the config file.
         target = hydra.utils.get_object(target_name)
         schema["description"] = f"Based on the signature of {target}."
+        if "properties" not in schema:
+            schema["properties"] = {}
+        assert "properties" in schema and isinstance(schema["properties"], dict)
         schema["properties"]["_target_"] = PropertySchema(
             type="string",
             title="Target",
@@ -579,8 +590,8 @@ def create_schema_for_config(
         # logger.debug(f"Schema from signature of {target}: {schema_from_target_signature}")
 
         schema = _merge_dicts(
-            nested_value_schema_from_target_signature,
-            schema,
+            nested_value_schema_from_target_signature,  # type: ignore
+            schema,  # type: ignore
             conflict_handler=overwrite,
         )
 
@@ -603,6 +614,7 @@ def create_schema_for_config(
     _config_dict = (
         OmegaConf.to_container(config, resolve=False) if isinstance(config, DictConfig) else config
     )
+    assert isinstance(_config_dict, dict)
     for keys, value in all_subentries_with_target(_config_dict).items():
         # Go over all the values in the config. If any of them have a `_target_`, then we can
         # add a schema at that entry.
@@ -637,14 +649,14 @@ def create_schema_for_config(
             where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
 
         if "properties" not in where_to_set:
-            where_to_set["properties"] = {last_key: nested_value_schema_from_target_signature}
+            where_to_set["properties"] = {last_key: nested_value_schema_from_target_signature}  # type: ignore
         elif last_key not in where_to_set["properties"]:
             assert isinstance(last_key, str)
-            where_to_set["properties"][last_key] = nested_value_schema_from_target_signature
+            where_to_set["properties"][last_key] = nested_value_schema_from_target_signature  # type: ignore
         else:
-            where_to_set["properties"] = _merge_dicts(
+            where_to_set["properties"] = _merge_dicts(  # type: ignore
                 where_to_set["properties"],
-                nested_value_schema_from_target_signature,
+                nested_value_schema_from_target_signature,  # type: ignore
             )
             raise NotImplementedError("todo: use merge_dicts here")
 
@@ -692,11 +704,11 @@ def _update_schema_from_defaults(
         )
 
         logger.debug(f"Schema from default {default}: {schema_of_default}")
-        logger.debug(f"Properties of {default=}: {list(schema_of_default['properties'].keys())}")
+        logger.debug(f"Properties of {default=}: {list(schema_of_default['properties'].keys())}")  # type: ignore
 
-        schema = _merge_dicts(
-            schema_of_default,
-            schema,
+        schema = _merge_dicts(  # type: ignore
+            schema_of_default,  # type: ignore
+            schema,  # type: ignore
             conflict_handlers={
                 "_target_": overwrite,  # use the new target.
                 "default": overwrite,  # use the new default?
@@ -722,10 +734,10 @@ conflict_handlers: dict[str, Callable[[Any, Any], Any]] = {}
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
-_NestedMapping = Mapping[_K, _V | "_NestedMapping[_K, _V]"]
+_NestedDict = MutableMapping[_K, _V | "_NestedDict[_K, _V]"]
 
-_D1 = TypeVar("_D1", bound=_NestedMapping)
-_D2 = TypeVar("_D2", bound=_NestedMapping)
+_D1 = TypeVar("_D1", bound=_NestedDict)
+_D2 = TypeVar("_D2", bound=_NestedDict)
 
 
 def _merge_dicts(
@@ -761,16 +773,16 @@ def _merge_dicts(
                 )
             elif a[key] != b[key]:
                 if specific_conflict_handler := conflict_handlers.get(key):
-                    out[key] = specific_conflict_handler(a[key], b[key])
+                    out[key] = specific_conflict_handler(a[key], b[key])  # type: ignore
                 elif conflict_handler:
-                    out[key] = conflict_handler(a[key], b[key])
+                    out[key] = conflict_handler(a[key], b[key])  # type: ignore
 
                 # if any(key.split(".")[-1] == handler_name for  for prefix in ["_", "description", "title"]):
                 #     out[key] = b[key]
                 else:
                     raise Exception("Conflict at " + ".".join(path + [str(key)]))
         else:
-            out[key] = copy.deepcopy(b[key])
+            out[key] = copy.deepcopy(b[key])  # type: ignore
     return out
 
 
@@ -885,7 +897,7 @@ def add_schema_header(config_file: Path, schema_path: Path) -> None:
         config_file.write_text(result)
 
 
-def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema:
+def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
     assert isinstance(config, dict | DictConfig)
     logger.debug(f"Config: {config}")
     target = hydra.utils.get_object(config["_target_"])
@@ -940,6 +952,8 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema:
                 schema_generator=_MyGenerateJsonSchema,
                 by_alias=False,
             )
+            json_schema = typing.cast(Schema, json_schema)
+
             # if "$defs" in json_schema:
             #     for key, class_schema in list(json_schema["$defs"].items()):
             #         logger.debug(f"Before resolving {key}: {json_schema}")
@@ -1029,7 +1043,7 @@ class _MyGenerateJsonSchema(GenerateJsonSchema):
             slightly_changed_schema = schema | {
                 "members": [Dummy(v.name) for v in schema["members"]]
             }
-            return super().enum_schema(slightly_changed_schema)
+            return super().enum_schema(slightly_changed_schema)  # type: ignore
         return super().enum_schema(schema)
 
 
