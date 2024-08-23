@@ -53,6 +53,8 @@ from pydantic_core import core_schema
 from tqdm.rich import tqdm_rich
 from typing_extensions import NotRequired, Required
 
+from project.utils.env_vars import REPO_ROOTDIR
+
 logger = get_logger(__name__)
 
 _SpecialEntries = TypedDict(
@@ -73,8 +75,11 @@ class PropertySchema(_SpecialEntries, total=False):
     enum: list[Any]
 
 
+# S = TypeVar("S", bound=PropertySchema, covariant=True)
+
+
 class OneOf(TypedDict):
-    oneOf: Sequence[PropertySchema | StringPropertySchema | ObjectSchema]
+    oneOf: Sequence[PropertySchema | ArrayPropertySchema | ObjectSchema | StringPropertySchema]
 
 
 class ArrayPropertySchema(PropertySchema, total=False):
@@ -90,14 +95,15 @@ class StringPropertySchema(PropertySchema, total=False):
     pattern: str
 
 
-class PropertyNames(TypedDict):
+class _PropertyNames(TypedDict):
     pattern: str
 
 
 class ObjectSchema(PropertySchema, total=False):
     type: Literal["object"]
+    properties: MutableMapping[str, PropertySchema]
     patternProperties: Mapping[str, PropertySchema | StringPropertySchema]
-    propertyNames: PropertyNames
+    propertyNames: _PropertyNames
     minProperties: int
     maxProperties: int
 
@@ -107,8 +113,11 @@ class Schema(TypedDict, total=False):
     title: str
     description: str
     type: str
-    properties: Required[MutableMapping[str, PropertySchema | ArrayPropertySchema]]
+
+    # annoying that we have to include the subclasses here!
+    properties: Required[Mapping[str, PropertySchema | ArrayPropertySchema | StringPropertySchema]]
     required: NotRequired[list[str]]
+
     additionalProperties: NotRequired[bool]
 
     dependentRequired: NotRequired[MutableMapping[str, list[str]]]
@@ -142,7 +151,7 @@ HYDRA_CONFIG_SCHEMA = Schema(
                     StringPropertySchema(type="string", pattern=r"^\w+(.yaml|.yml)?$"),
                     ObjectSchema(
                         type="object",
-                        propertyNames={"pattern": r"^(override\s*)?(/?\w*)+$"},
+                        propertyNames=_PropertyNames(pattern=r"^(override\s*)?(/?\w*)+$"),
                         patternProperties={
                             r"^(override\s*)?(/?\w*)*$": PropertySchema(type="null"),
                         },
@@ -153,12 +162,12 @@ HYDRA_CONFIG_SCHEMA = Schema(
             ),
             uniqueItems=True,
         ),
-        "_target_": PropertySchema(
+        "_target_": StringPropertySchema(
             type="string",
             title="Target",
             description="Target to instantiate.\nSee https://hydra.cc/docs/advanced/instantiate_objects/overview/",
         ),
-        "_convert_": PropertySchema(
+        "_convert_": StringPropertySchema(
             type="string",
             enum=["none", "partial", "object", "all"],
             title="Convert",
@@ -173,7 +182,7 @@ HYDRA_CONFIG_SCHEMA = Schema(
                 "See: https://hydra.cc/docs/advanced/instantiate_objects/overview"
             ),
         ),
-        "_recursive_": PropertySchema(
+        "_recursive_": StringPropertySchema(
             type="boolean",
             title="Recursive",
             description=(
@@ -488,11 +497,9 @@ def _add_schemas_to_vscode_settings(
     for config_file, schema_file in config_file_to_schema_file.items():
         assert schema_file.exists()
 
-        schema_key = str(schema_file.relative_to(repo_root))
-        # TODO: Make sure that this makes sense. What if people
-        # open a folder like their $HOME in vscode, but the project is a subfolder?
+        _root = vscode_settings_file.parent.parent
+        schema_key = str(schema_file.relative_to(_root))
         path_to_add = str(config_file.absolute())
-        # path_to_add = str(config_file.relative_to(repo_root))
 
         if schema_key not in yaml_schemas_setting:
             yaml_schemas_setting[schema_key] = path_to_add
@@ -526,7 +533,7 @@ def _get_schema_file_path(config_file: Path, schemas_dir: Path):
 
 
 def create_schema_for_config(
-    config: dict | DictConfig, config_file: Path | None, configs_dir: Path | None
+    config: dict | DictConfig, config_file: Path, configs_dir: Path | None
 ) -> Schema | ObjectSchema:
     """IDEA: Create a schema for the given config.
 
@@ -536,19 +543,14 @@ def create_schema_for_config(
         - Should ideally load the defaults and merge this schema on top of them.
     """
     schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
-    schema["title"] = "Auto-generated schema."
+    pretty_path = config_file.relative_to(configs_dir) if configs_dir else config_file
+    schema["title"] = f"Auto-generated schema for {pretty_path}"
 
-    if config_file and config_file.exists() and configs_dir:
-        # Config is an actual yaml file, not a structured config entry.
-        p = config_file.relative_to(configs_dir) if configs_dir else config_file
-        schema["title"] = f"Auto-generated schema for {p}"
+    if config_file.exists() and configs_dir:
         # note: the `defaults` list gets consumed by Hydra in `_load_config`, so we actually re-read the
         # config file to get the `defaults`, if present.
-        _config = OmegaConf.to_container(OmegaConf.load(config_file), resolve=False)
-        assert isinstance(_config, dict)
-        # defaults = _config.get("defaults")
+        # TODO: There still defaults here, only during unit tests, even though _load_config should have consumed them!
         if "defaults" in config:
-            # Only really used when given a config file that isn't in the configs dir (which is weird!)
             schema = _update_schema_from_defaults(
                 config_file=config_file,
                 schema=schema,
@@ -559,8 +561,7 @@ def create_schema_for_config(
     if target_name := config.get("_target_"):
         # There's a '_target_' key at the top level in the config file.
         target = hydra.utils.get_object(target_name)
-        schema["title"] = f"Auto-generated schema for {target}"
-        schema["description"] = "Based on the target signature."
+        schema["description"] = f"Based on the signature of {target}."
         schema["properties"]["_target_"] = PropertySchema(
             type="string",
             title="Target",
@@ -574,11 +575,11 @@ def create_schema_for_config(
             ),
         )
 
-        schema_from_target_signature = _get_schema_from_target(config)
+        nested_value_schema_from_target_signature = _get_schema_from_target(config)
         # logger.debug(f"Schema from signature of {target}: {schema_from_target_signature}")
 
         schema = _merge_dicts(
-            schema_from_target_signature,
+            nested_value_schema_from_target_signature,
             schema,
             conflict_handler=overwrite,
         )
@@ -588,26 +589,64 @@ def create_schema_for_config(
     # Config file that contains entries that may or may not have a _target_.
     schema["additionalProperties"] = True
 
-    for key, value in config.items():
+    def all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
+        """Iterator that yields all the nested config entries that have a _target_."""
+        entries = {}
+        for key, value in config.items():
+            if isinstance(value, dict) and "_target_" in value.keys():
+                entries[(key,)] = value
+            elif isinstance(value, dict):
+                for subkey, subvalue in all_subentries_with_target(value).items():
+                    entries[(key, *subkey)] = subvalue
+        return entries
+
+    _config_dict = (
+        OmegaConf.to_container(config, resolve=False) if isinstance(config, DictConfig) else config
+    )
+    for keys, value in all_subentries_with_target(_config_dict).items():
         # Go over all the values in the config. If any of them have a `_target_`, then we can
         # add a schema at that entry.
-        # TODO: make this work recursively?
-        if isinstance(value, dict | DictConfig) and "_target_" in value.keys():
-            target = hydra_zen.get_target(value)  # type: ignore
-            schema_from_target_signature = _get_schema_from_target(value)
-            if "$defs" in schema_from_target_signature:
-                # note: can't have a $defs key in the schema.
-                schema.setdefault("$defs", {}).update(schema_from_target_signature.pop("$defs"))  # type: ignore
-            logger.debug(
-                f"Getting schema from target {value['_target_']} at key {key} in file {config_file}."
+        assert "_target_" in value
+        target = hydra.utils.get_object(value["_target_"])
+
+        # try:
+        nested_value_schema_from_target_signature = _get_schema_from_target(value)
+        # except omegaconf.errors.InterpolationToMissingValueError:
+        #     logger.warning(
+        #         f"Unable to get the schema for {value['_target_']} at key {'.'.join(keys)} "
+        #         f"in file {config_file}."
+        #     )
+        #     continue
+
+        if "$defs" in nested_value_schema_from_target_signature:
+            # note: can't have a $defs key in the schema.
+            schema.setdefault("$defs", {}).update(  # type: ignore
+                nested_value_schema_from_target_signature.pop("$defs")
             )
 
-            assert "properties" in schema_from_target_signature
-            if key not in schema["properties"]:
-                assert isinstance(key, str)
-                schema["properties"][key] = schema_from_target_signature
-            else:
-                raise NotImplementedError("todo: use merge_dicts here")
+        logger.debug(
+            f"Getting schema from target {value['_target_']} at key {'.'.join(keys)} in "
+            f"{config_file}."
+        )
+
+        assert "properties" in nested_value_schema_from_target_signature
+
+        parent_keys, last_key = keys[:-1], keys[-1]
+        where_to_set: Schema | ObjectSchema = schema
+        for key in parent_keys:
+            where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
+
+        if "properties" not in where_to_set:
+            where_to_set["properties"] = {last_key: nested_value_schema_from_target_signature}
+        elif last_key not in where_to_set["properties"]:
+            assert isinstance(last_key, str)
+            where_to_set["properties"][last_key] = nested_value_schema_from_target_signature
+        else:
+            where_to_set["properties"] = _merge_dicts(
+                where_to_set["properties"],
+                nested_value_schema_from_target_signature,
+            )
+            raise NotImplementedError("todo: use merge_dicts here")
 
     return schema
 
@@ -756,16 +795,20 @@ def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
     )
     config_group = "/".join(config_groups)
 
-    search_path = create_config_search_path(str(configs_dir))
+    from hydra.core.utils import setup_globals
+
+    # todo: When would this normally be called?
+    setup_globals()
+
+    # FIXME!
+    if configs_dir.is_relative_to(REPO_ROOTDIR) and (configs_dir / "__init__.py").exists():
+        config_module = str(configs_dir.relative_to(REPO_ROOTDIR)).replace("/", ".")
+        search_path = create_config_search_path(f"pkg://{config_module}")
+    else:
+        search_path = create_config_search_path(str(configs_dir))
 
     if _has_package_global_line(config_path):
         # Tricky: Here we load the global config but with the given config as an override.
-        # search_path = create_automatic_config_search_path(
-        #     calling_file=None,
-        #     calling_module=None,
-        #     # TODO: This doesn't seem to be working in unit tests?
-        #     config_path=f"pkg://{PROJECT_NAME}.configs",
-        # )
         config_loader = ConfigLoaderImpl(config_search_path=search_path)
         top_config = config_loader.load_configuration(
             "config",  # todo: Fix this?
@@ -778,12 +821,7 @@ def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
 
     # Load the global config and get the node for the desired config.
     # TODO: Can this cause errors if configs in an unrelated subtree have required values?
-
-    # search_path = create_automatic_config_search_path(
-    #     calling_file=None,
-    #     calling_module=None,
-    #     config_path=f"pkg://{PROJECT_NAME}.configs",
-    # )
+    logger.debug(f"loading config {config_path}")
     config_loader = ConfigLoaderImpl(config_search_path=search_path)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)

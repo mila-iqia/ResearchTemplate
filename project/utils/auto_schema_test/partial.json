@@ -77,10 +77,8 @@
       "description": "Whether this config calls the target function when instantiated, or creates a `functools.partial` that will call the target.\nSee: https://hydra.cc/docs/advanced/instantiate_objects/overview"
     }
   },
-  "required": [
-    "bar"
-  ],
-  "title": "Auto-generated schema for with_target.yaml",
+  "required": [],
+  "title": "Auto-generated schema for partial.yaml",
   "type": "object",
   "additionalProperties": false,
   "description": "Based on the signature of <class 'project.utils.auto_schema_test.Foo'>.",

@@ -80,10 +80,10 @@
   "required": [
     "bar"
   ],
-  "title": "Auto-generated schema for <class 'project.utils.auto_schema_test.Foo'>",
+  "title": "Auto-generated schema for with_package_global.yaml",
   "type": "object",
   "additionalProperties": false,
-  "description": "Based on the target signature.",
+  "description": "Based on the signature of <class 'project.utils.auto_schema_test.Foo'>.",
   "dependentRequired": {
     "_convert_": [
       "_target_"
