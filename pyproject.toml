@@ -61,7 +61,7 @@ indent-width = 4
 lint.select = ["E4", "E7", "E9", "F", "I", "UP"]
 
 
-[tool.uv]
+[tool.rye]
 managed = true
 dev-dependencies = [
     "pytest>=8.3.2",
@@ -85,8 +85,8 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["project"]
 
-# [tool.uv.scripts]
-# serve-docs = "mkdocs serve"
-# check_torch_gpu = "python -c 'import torch; print(torch.cuda.is_available())'"
-# check_jax_gpu = "python -c 'import jax.numpy as jnp; print(jnp.zeros(1).devices())'"
-# tests = "pytest -x -v"
+[tool.rye.scripts]
+serve-docs = "mkdocs serve"
+check_torch_gpu = "python -c 'import torch; print(torch.cuda.is_available())'"
+check_jax_gpu = "python -c 'import jax.numpy as jnp; print(jnp.zeros(1).devices())'"
+tests = "pytest -x -v"
