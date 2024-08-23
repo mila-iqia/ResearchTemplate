@@ -869,7 +869,7 @@ def add_schema_header(config_file: Path, schema_path: Path) -> None:
         # BUG: IF the schema line comes before a @package: global comment, then the @package: _global_
         # comment is ignored by Hydra.
         # Locate the last package line (a bit unnecessary, since there should only be one).
-        if line.startswith("#") and line.removeprefix("#").strip().startswith("@package:"):
+        if line.startswith("#") and line.removeprefix("#").strip().startswith("@package"):
             package_global_line = i
 
     if package_global_line is None:
