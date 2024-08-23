@@ -189,7 +189,9 @@ def run_for_all_vision_datamodules():
     return run_for_all_configs_of_type("datamodule", VisionDataModule)
 
 
-def run_for_all_configs_of_type(config_group: str, config_target_type: type):
+def run_for_all_configs_of_type(
+    config_group: str, config_target_type: type, excluding: type | tuple[type, ...] = ()
+):
     """Parametrizes a test to run with all the configs in the given group that have targets which
     are subclasses of the given type.
 
@@ -201,7 +203,9 @@ def run_for_all_configs_of_type(config_group: str, config_target_type: type):
         ''' This test will run with all the configs in the 'network' group that produce nn.Modules! '''
     ```
     """
-    config_names = get_all_configs_in_group_of_type(config_group, config_target_type)
+    config_names = get_all_configs_in_group_of_type(
+        config_group, config_target_type, include_subclasses=True, excluding=excluding
+    )
     config_name_to_marks = {
         name: default_marks_for_config_name.get(name, []) for name in config_names
     }

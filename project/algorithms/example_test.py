@@ -1,4 +1,4 @@
-import torch
+import torch.nn
 
 from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.datamodules.image_classification.image_classification import (
