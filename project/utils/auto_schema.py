@@ -11,6 +11,8 @@ description and default values, and displays errors if you have config files wit
 - [ ] todo: Make a hydra plugin that creates the schemas for configs
 """
 
+from __future__ import annotations
+
 import argparse
 import copy
 import dataclasses
@@ -22,7 +24,7 @@ import os.path
 import shutil
 import subprocess
 import warnings
-from collections.abc import Callable, MutableMapping
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, Literal, TypedDict, TypeVar
@@ -58,7 +60,7 @@ CONFIGS_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
 
 class PropertySchema(TypedDict, total=False):
     title: str
-    type: Literal["string", "boolean", "object", "array", "integer"]
+    type: str
     description: str
     default: Any
     examples: list[str]
@@ -69,9 +71,13 @@ class PropertySchema(TypedDict, total=False):
     enum: list[Any]
 
 
+class OneOf(TypedDict):
+    oneOf: Sequence[PropertySchema | StringPropertySchema | ObjectSchema]
+
+
 class ArrayPropertySchema(PropertySchema, total=False):
     type: Literal["array"]
-    items: Required[PropertySchema]
+    items: Required[PropertySchema | OneOf]
     minItems: int
     maxItems: int
     uniqueItems: bool
@@ -80,6 +86,18 @@ class ArrayPropertySchema(PropertySchema, total=False):
 class StringPropertySchema(PropertySchema, total=False):
     type: Literal["string"]
     pattern: str
+
+
+class PropertyNames(TypedDict):
+    pattern: str
+
+
+class ObjectSchema(PropertySchema, total=False):
+    type: Literal["object"]
+    patternProperties: Mapping[str, PropertySchema | StringPropertySchema]
+    propertyNames: PropertyNames
+    minProperties: int
+    maxProperties: int
 
 
 class Schema(TypedDict, total=False):
@@ -103,7 +121,25 @@ HYDRA_CONFIG_SCHEMA = Schema(
             title="Hydra defaults",
             description="Hydra defaults for this config. See https://hydra.cc/docs/advanced/defaults_list/",
             type="array",
-            items=PropertySchema(type="string"),
+            items=OneOf(
+                oneOf=[
+                    ObjectSchema(
+                        type="object",
+                        propertyNames={"pattern": r"^(override\s*)?(/?\w*)+$"},
+                        patternProperties={
+                            # todo: support package directives with @?
+                            # todo: Create a enum schema using the available options in the config group!
+                            # override network: something  -> `something` value should be in the available options for network.
+                            r"^(override\s*)?(/?\w*)*$": StringPropertySchema(
+                                type="string", pattern=r"\w*(.yaml|.yml)?$"
+                            ),
+                        },
+                        minProperties=1,
+                        maxProperties=1,
+                    ),
+                    StringPropertySchema(type="string", pattern=r"\w+(.yaml|.yml)?$"),
+                ],
+            ),
             uniqueItems=True,
         ),
         "_target_": PropertySchema(
@@ -181,20 +217,22 @@ def main():
     args = parser.parse_args()
 
     path: Path = args.path
-    configs_dir = args.configs_dir
-    schemas_dir = args.schemas_dir
-    regen_schemas = args.regen_schemas
-    stop_on_error = args.stop_on_error
+    configs_dir: Path = args.configs_dir
+    schemas_dir: Path = args.schemas_dir
+    regen_schemas: bool = args.regen_schemas
+    stop_on_error: bool = args.stop_on_error
+    quiet: bool = args.quiet
+    verbose: int = args.verbose
 
-    if args.quiet:
+    if quiet:
         logger.setLevel(logging.NOTSET)
-    elif args.verbose:
-        if args.verbose >= 3:
+    elif verbose:
+        if verbose >= 3:
             logger.setLevel(logging.DEBUG)
-        elif args.verbose == 2:
+        elif verbose == 2:
             logger.setLevel(logging.INFO)
         else:
-            assert args.verbose == 1
+            assert verbose == 1
             logger.setLevel(logging.WARNING)
     else:
         logger.setLevel(logging.ERROR)
@@ -214,6 +252,7 @@ def main():
         schemas_dir=schemas_dir,
         regen_schemas=regen_schemas,
         stop_on_error=stop_on_error,
+        quiet=quiet,
     )
     logger.info("Done updating the schemas for the Hydra config files.")
 
@@ -225,6 +264,7 @@ def add_schemas_to_all_hydra_configs(
     schemas_dir: Path | None = None,
     regen_schemas: bool = False,
     stop_on_error: bool = False,
+    quiet: bool = False,
 ):
     if not config_files:
         warnings.warn(RuntimeWarning("No config files were passed. Skipping."))
@@ -246,7 +286,10 @@ def add_schemas_to_all_hydra_configs(
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=tqdm.TqdmExperimentalWarning)
         pbar = tqdm_rich(
-            config_files, desc="Creating schemas", total=len(config_files), leave=False
+            config_files,
+            desc="Creating schemas for Hydra config files...",
+            total=len(config_files),
+            leave=not quiet,
         )
 
     for config_file in pbar:
@@ -290,6 +333,7 @@ def add_schemas_to_all_hydra_configs(
             )
             schema_file.parent.mkdir(exist_ok=True, parents=True)
             schema_file.write_text(json.dumps(schema, indent=2) + "\n")
+            _set_is_incomplete_schema(schema_file, False)
         except (
             pydantic.errors.PydanticSchemaGenerationError,
             hydra.errors.MissingConfigException,
@@ -860,7 +904,7 @@ class _MyGenerateJsonSchema(GenerateJsonSchema):
     # ) -> JsonSchemaValue:
     #     raise PydanticOmit
 
-    def enum_schema(self, schema: "core_schema.EnumSchema") -> JsonSchemaValue:
+    def enum_schema(self, schema: core_schema.EnumSchema) -> JsonSchemaValue:
         """Generates a JSON schema that matches an Enum value.
 
         Args:
