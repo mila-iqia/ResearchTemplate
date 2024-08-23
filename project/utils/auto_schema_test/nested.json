@@ -1,6 +1,6 @@
 {
   "title": "Auto-generated schema for nested.yaml",
-  "description": "Schema created by the `/workspaces/ResearchTemplate/project/utils/auto_schema.py` script.",
+  "description": "Schema created by the `auto_schema.py` script.",
   "properties": {
     "defaults": {
       "title": "Hydra defaults",

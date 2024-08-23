@@ -126,7 +126,7 @@ class Schema(TypedDict, total=False):
 
 HYDRA_CONFIG_SCHEMA = Schema(
     title="Default Schema for any Hydra config file.",
-    description=f"Schema created by the `{__file__}` script.",
+    description="Schema created by the `auto_schema.py` script.",
     properties={
         "defaults": ArrayPropertySchema(
             title="Hydra defaults",

@@ -82,7 +82,7 @@
   ],
   "title": "Auto-generated schema for with_defaults.yaml",
   "type": "object",
-  "description": "Schema created by the `/workspaces/ResearchTemplate/project/utils/auto_schema.py` script.",
+  "description": "Schema created by the `auto_schema.py` script.",
   "dependentRequired": {
     "_convert_": [
       "_target_"
