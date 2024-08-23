@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=with_defaults.json
+defaults:
+  - with_target
+bar: "bob"

@@ -3,6 +3,8 @@
     * overview/*.md
   * Getting Started
     * getting_started/*.md
+  * Features
+    * features/*.md
   * Reference
     * reference/*
   * Examples

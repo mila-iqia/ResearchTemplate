@@ -4,11 +4,9 @@ This is very helpful when using Hydra! It shows the user what options are availa
 description and default values, and displays errors if you have config files with invalid values.
 
 ## todos
-- [ ] skip re-creating an existing schema unless a command-line flag is passed.
 - [ ] Add schemas for all the nested dict entries in a config file if they have a _target_ (currently just the first level).
 - [ ] Modify the schema to support omegaconf directives like ${oc.env:VAR_NAME} and our custom directives like ${instance_attr} and so on.
-- [ ] Refine the schema for the `defaults` list to match what Hydra allows mnore closely.
-- [ ] todo: Make a hydra plugin that creates the schemas for configs
+- [ ] todo: Make a hydra plugin that creates the schemas for configs when hydra is loading stuff.
 """
 
 from __future__ import annotations
@@ -41,6 +39,8 @@ import pydantic
 import pydantic.schema
 import rich.logging
 import tqdm
+from hydra._internal.config_loader_impl import ConfigLoaderImpl
+from hydra._internal.utils import create_config_search_path
 from hydra.types import RunMode
 from omegaconf import DictConfig, OmegaConf
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
@@ -207,6 +207,15 @@ def main():
     parser.add_argument("--schemas-dir", type=Path, default=None, required=False)
     parser.add_argument("--regen-schemas", action=argparse.BooleanOptionalAction)
     parser.add_argument("--stop-on-error", action=argparse.BooleanOptionalAction)
+    parser.add_argument(
+        "--add-headers",
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Always add headers to the yaml config files, instead of the default "
+            "behaviour which is to first try to add an entry in the vscode "
+            "settings.json file."
+        ),
+    )
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument(
         "-q", "--quiet", dest="quiet", action=argparse.BooleanOptionalAction
@@ -331,13 +340,12 @@ def add_schemas_to_all_hydra_configs(
                 config, config_file=config_file, configs_dir=configs_dir
             )
             schema_file.parent.mkdir(exist_ok=True, parents=True)
-            schema_file.write_text(json.dumps(schema, indent=2) + "\n")
+            schema_file.write_text(json.dumps(schema, indent=2).rstrip() + "\n\n")
             _set_is_incomplete_schema(schema_file, False)
         except (
             pydantic.errors.PydanticSchemaGenerationError,
             hydra.errors.MissingConfigException,
             hydra.errors.ConfigCompositionException,
-            # Exception,  # FIXME: Narrow this down!
         ) as exc:
             logger.warning(
                 f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
@@ -427,7 +435,7 @@ def _add_schemas_to_vscode_settings(
     vscode_settings_file = vscode_dir / "settings.json"
     vscode_settings_file.touch(exist_ok=True)
 
-    # TODO: What to do with comments? Ideally we'd keep them, right?
+    # TODO: Use Jsonc to load the file and preserve comments?
     logger.debug(f"Reading the VsCode settings file at {vscode_settings_file}.")
     vscode_settings_content = vscode_settings_file.read_text()
     # Remove any trailing commas from the content:
@@ -496,7 +504,14 @@ def create_schema_for_config(
         _config = OmegaConf.to_container(OmegaConf.load(config_file), resolve=False)
         assert isinstance(_config, dict)
         # defaults = _config.get("defaults")
-        assert "defaults" not in config
+        if "defaults" in config:
+            # Only really used when given a config file that isn't in the configs dir (which is weird!)
+            schema = _update_schema_from_defaults(
+                config_file=config_file,
+                schema=schema,
+                defaults=config["defaults"],
+                configs_dir=configs_dir,
+            )
 
     if target_name := config.get("_target_"):
         # There's a '_target_' key at the top level in the config file.
@@ -573,6 +588,13 @@ def _update_schema_from_defaults(
             key, val = next(iter(default.items()))
             other_config_path = config_file.parent / key / val
         logger.debug(f"Loading config of default {default}.")
+
+        if not other_config_path.suffix:
+            # If the other config file has the name without the extension, try both .yml and .yaml.
+            for suffix in (".yml", ".yaml"):
+                if other_config_path.with_suffix(suffix).exists():
+                    other_config_path = other_config_path.with_suffix(suffix)
+                    break
 
         # try:
         default_config = _load_config(other_config_path, configs_dir=configs_dir)
@@ -683,25 +705,22 @@ def _has_package_global_line(config_file: Path) -> int | None:
 
 
 def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
-    from hydra._internal.config_loader_impl import ConfigLoaderImpl
-    from hydra._internal.utils import create_automatic_config_search_path
-
-    from project.main import PROJECT_NAME
-
     *config_groups, config_name = config_path.relative_to(configs_dir).with_suffix("").parts
     logger.debug(
         f"config_path: ./{_relative_to_cwd(config_path)}, {config_groups=}, {config_name=}, configs_dir: {configs_dir}"
     )
     config_group = "/".join(config_groups)
 
+    search_path = create_config_search_path(str(configs_dir))
+
     if _has_package_global_line(config_path):
         # Tricky: Here we load the global config but with the given config as an override.
-        search_path = create_automatic_config_search_path(
-            calling_file=None,
-            calling_module=None,
-            # TODO: This doesn't seem to be working in unit tests?
-            config_path=f"pkg://{PROJECT_NAME}.configs",
-        )
+        # search_path = create_automatic_config_search_path(
+        #     calling_file=None,
+        #     calling_module=None,
+        #     # TODO: This doesn't seem to be working in unit tests?
+        #     config_path=f"pkg://{PROJECT_NAME}.configs",
+        # )
         config_loader = ConfigLoaderImpl(config_search_path=search_path)
         top_config = config_loader.load_configuration(
             "config",  # todo: Fix this?
@@ -715,11 +734,11 @@ def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
     # Load the global config and get the node for the desired config.
     # TODO: Can this cause errors if configs in an unrelated subtree have required values?
 
-    search_path = create_automatic_config_search_path(
-        calling_file=None,
-        calling_module=None,
-        config_path=f"pkg://{PROJECT_NAME}.configs",
-    )
+    # search_path = create_automatic_config_search_path(
+    #     calling_file=None,
+    #     calling_module=None,
+    #     config_path=f"pkg://{PROJECT_NAME}.configs",
+    # )
     config_loader = ConfigLoaderImpl(config_search_path=search_path)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
@@ -734,16 +753,18 @@ def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
 
 
 def add_schema_header(config_file: Path, schema_path: Path) -> None:
-    # TODO: THis line should be added **after** any comments like @package: global
-    lines = config_file.read_text().splitlines(keepends=True)
+    """Add a comment in the yaml config file to tell yaml language server where to look for the
+    schema.
+
+    Importantly in the context of Hydra, this comment line should be added **after** any `#
+    @package: <xyz>` directives of Hydra, otherwise Hydra doesn't use those directives properly
+    anymore.
+    """
+    lines = config_file.read_text().splitlines(keepends=False)
 
     if config_file.parent is schema_path.parent:
-        relative_path_to_schema_2 = "./" + schema_path.name
         # TODO: Unsure when this branch would be used, and if it would differ.
-        assert False, (
-            os.path.relpath(schema_path, start=config_file.parent),
-            relative_path_to_schema_2,
-        )
+        relative_path_to_schema = "./" + schema_path.name
     else:
         relative_path_to_schema = os.path.relpath(schema_path, start=config_file.parent)
 
@@ -754,7 +775,7 @@ def add_schema_header(config_file: Path, schema_path: Path) -> None:
 
     # NOTE: This line can be placed anywhere in the file, not necessarily needs to be at the top,
     # and the yaml vscode extension will pick it up.
-    new_line = f"# yaml-language-server: $schema={relative_path_to_schema}\n"
+    new_line = f"# yaml-language-server: $schema={relative_path_to_schema}"
 
     package_global_line: int | None = None
 
@@ -776,7 +797,7 @@ def add_schema_header(config_file: Path, schema_path: Path) -> None:
         # Insert the schema line after the package directive line.
         new_lines.insert(package_global_line + 1, new_line)
 
-    result = "\n".join(new_lines) + "\n"
+    result = "\n".join(new_lines).strip() + "\n"
     if config_file.read_text() != result:
         config_file.write_text(result)
 

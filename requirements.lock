@@ -10,108 +10,108 @@
 #   universal: true
 
 -e file:.
-absl-py==2.1.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+absl-py==2.1.0
     # via chex
     # via optax
     # via orbax-checkpoint
-aiohappyeyeballs==2.3.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+aiohappyeyeballs==2.3.5
     # via aiohttp
-aiohttp==3.10.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+aiohttp==3.10.3
     # via fsspec
-aiosignal==1.3.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+aiosignal==1.3.1
     # via aiohttp
-annotated-types==0.7.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+annotated-types==0.7.0
     # via pydantic
-antlr4-python3-runtime==4.9.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+antlr4-python3-runtime==4.9.3
     # via hydra-core
     # via omegaconf
-async-timeout==4.0.3 ; python_version < '3.11' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))
+async-timeout==4.0.3 ; python_full_version < '3.11'
     # via aiohttp
-attrs==24.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+attrs==24.2.0
     # via aiohttp
-babel==2.16.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+babel==2.16.0
     # via mkdocs-material
-beautifulsoup4==4.12.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+beautifulsoup4==4.12.3
     # via gdown
-black==24.8.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+black==24.8.0
     # via research-project-template
-bracex==2.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+bracex==2.5
     # via wcmatch
-certifi==2024.7.4 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+certifi==2024.7.4
     # via requests
     # via sentry-sdk
-charset-normalizer==3.3.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+charset-normalizer==3.3.2
     # via requests
-chex==0.1.86 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+chex==0.1.86
     # via optax
-click==8.1.7 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+click==8.1.7
     # via black
     # via mkdocs
     # via mkdocstrings
     # via wandb
-cloudpickle==3.0.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+cloudpickle==3.0.0
     # via submitit
-colorama==0.4.6 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_system == 'Windows' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or (sys_platform == 'win32' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+colorama==0.4.6
     # via click
     # via colorlog
     # via griffe
     # via mkdocs
     # via mkdocs-material
     # via tqdm
-colorlog==6.8.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+colorlog==6.8.2
     # via hydra-colorlog
-contourpy==1.2.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+contourpy==1.2.1
     # via matplotlib
-cycler==0.12.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+cycler==0.12.1
     # via matplotlib
-docker-pycreds==0.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+docker-pycreds==0.4.0
     # via wandb
-docstring-parser==0.16 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+docstring-parser==0.16
     # via simple-parsing
-etils==1.7.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+etils==1.7.0
     # via optax
     # via orbax-checkpoint
-filelock==3.15.4 ; (python_version < '3.13' and platform_machine == 'x86_64' and platform_system == 'Linux') or (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+filelock==3.15.4
     # via gdown
     # via torch
     # via triton
-flax==0.8.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+flax==0.8.5
     # via torch-jax-interop
-fonttools==4.53.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+fonttools==4.53.1
     # via matplotlib
-frozenlist==1.4.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+frozenlist==1.4.1
     # via aiohttp
     # via aiosignal
-fsspec==2024.6.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+fsspec==2024.6.1
     # via etils
     # via lightning
     # via pytorch-lightning
     # via torch
-gdown==5.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+gdown==5.2.0
     # via research-project-template
-ghp-import==2.1.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+ghp-import==2.1.0
     # via mkdocs
-gitdb==4.0.11 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+gitdb==4.0.11
     # via gitpython
-gitpython==3.1.43 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+gitpython==3.1.43
     # via wandb
-griffe==0.49.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+griffe==0.49.0
     # via mkdocstrings-python
-hydra-colorlog==1.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+hydra-colorlog==1.2.0
     # via research-project-template
-hydra-core==1.3.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+hydra-core==1.3.2
     # via hydra-colorlog
     # via hydra-submitit-launcher
     # via hydra-zen
     # via research-project-template
-hydra-submitit-launcher==1.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+hydra-submitit-launcher==1.2.0
     # via research-project-template
-hydra-zen==0.13.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+hydra-zen==0.13.0
     # via research-project-template
-idna==3.7 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+idna==3.7
     # via requests
     # via yarl
-importlib-resources==6.4.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+importlib-resources==6.4.2
     # via etils
 jax==0.4.31
     # via chex
@@ -121,97 +121,102 @@ jax==0.4.31
     # via pytorch2jax
     # via research-project-template
     # via torch-jax-interop
-jax-cuda12-pjrt==0.4.31 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+jax-cuda12-pjrt==0.4.31
     # via jax-cuda12-plugin
 jax-cuda12-plugin==0.4.31
     # via jax
-jaxlib==0.4.31 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+jaxlib==0.4.31
     # via chex
     # via jax
     # via optax
     # via orbax-checkpoint
     # via pytorch2jax
-jinja2==3.1.4 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+jinja2==3.1.4
     # via mkdocs
     # via mkdocs-material
     # via mkdocstrings
     # via torch
-kiwisolver==1.4.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+kiwisolver==1.4.5
     # via matplotlib
-lightning==2.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+lightning==2.4.0
     # via research-project-template
-lightning-utilities==0.11.6 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+lightning-utilities==0.11.6
     # via lightning
     # via pytorch-lightning
     # via torchmetrics
-markdown==3.6 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+lxml==5.3.0
+    # via mkdocs-video
+markdown==3.6
     # via mkdocs
     # via mkdocs-autorefs
     # via mkdocs-material
     # via mkdocstrings
     # via pymdown-extensions
-markdown-it-py==3.0.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+markdown-it-py==3.0.0
     # via rich
-markupsafe==2.1.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+markupsafe==2.1.5
     # via jinja2
     # via mkdocs
     # via mkdocs-autorefs
     # via mkdocstrings
-matplotlib==3.9.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+matplotlib==3.9.2
     # via research-project-template
-mdurl==0.1.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mdurl==0.1.2
     # via markdown-it-py
-mergedeep==1.3.4 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mergedeep==1.3.4
     # via mkdocs
     # via mkdocs-get-deps
-mkdocs==1.6.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs==1.6.0
     # via mkdocs-autorefs
     # via mkdocs-awesome-pages-plugin
     # via mkdocs-gen-files
     # via mkdocs-literate-nav
     # via mkdocs-material
+    # via mkdocs-video
     # via mkdocstrings
     # via research-project-template
-mkdocs-autorefs==1.0.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-autorefs==1.0.1
     # via mkdocstrings
-mkdocs-awesome-pages-plugin==2.9.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-awesome-pages-plugin==2.9.3
     # via research-project-template
-mkdocs-gen-files==0.5.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-gen-files==0.5.0
     # via research-project-template
-mkdocs-get-deps==0.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-get-deps==0.2.0
     # via mkdocs
-mkdocs-literate-nav==0.6.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-literate-nav==0.6.1
     # via research-project-template
-mkdocs-material==9.5.31 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-material==9.5.31
     # via research-project-template
-mkdocs-material-extensions==1.3.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-material-extensions==1.3.1
     # via mkdocs-material
-mkdocstrings==0.25.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocs-video==1.5.0
+    # via research-project-template
+mkdocstrings==0.25.2
     # via mkdocstrings-python
     # via research-project-template
-mkdocstrings-python==1.10.8 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mkdocstrings-python==1.10.8
     # via mkdocstrings
-ml-dtypes==0.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+ml-dtypes==0.4.0
     # via jax
     # via jaxlib
     # via tensorstore
-mpmath==1.3.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mpmath==1.3.0
     # via sympy
-msgpack==1.0.8 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+msgpack==1.0.8
     # via flax
     # via orbax-checkpoint
-multidict==6.0.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+multidict==6.0.5
     # via aiohttp
     # via yarl
-mypy-extensions==1.0.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+mypy-extensions==1.0.0
     # via black
-natsort==8.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+natsort==8.4.0
     # via mkdocs-awesome-pages-plugin
-nest-asyncio==1.6.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+nest-asyncio==1.6.0
     # via orbax-checkpoint
-networkx==3.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+networkx==3.3
     # via torch
-numpy==1.26.4 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or ((python_version >= '3.11' or (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or ((python_version >= '3.12' or (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+numpy==1.26.4
     # via chex
     # via contourpy
     # via flax
@@ -226,55 +231,55 @@ numpy==1.26.4 ; (python_version < '3.13' and sys_platform == 'linux') or (python
     # via tensorstore
     # via torchmetrics
     # via torchvision
-nvidia-cublas-cu12==12.1.3.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or (((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))))
+nvidia-cublas-cu12==12.1.3.1
     # via jax-cuda12-plugin
     # via nvidia-cudnn-cu12
     # via nvidia-cusolver-cu12
     # via torch
-nvidia-cuda-cupti-cu12==12.1.105 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+nvidia-cuda-cupti-cu12==12.1.105
     # via jax-cuda12-plugin
     # via torch
-nvidia-cuda-nvcc-cu12==12.6.20 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+nvidia-cuda-nvcc-cu12==12.6.20
     # via jax-cuda12-plugin
-nvidia-cuda-nvrtc-cu12==12.1.105 ; platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))
+nvidia-cuda-nvrtc-cu12==12.1.105 ; platform_machine == 'x86_64' and platform_system == 'Linux'
     # via torch
-nvidia-cuda-runtime-cu12==12.1.105 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
-    # via jax-cuda12-plugin
-    # via torch
-nvidia-cudnn-cu12==9.1.0.70 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+nvidia-cuda-runtime-cu12==12.1.105
     # via jax-cuda12-plugin
     # via torch
-nvidia-cufft-cu12==11.0.2.54 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+nvidia-cudnn-cu12==9.1.0.70
     # via jax-cuda12-plugin
     # via torch
-nvidia-curand-cu12==10.3.2.106 ; platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))
-    # via torch
-nvidia-cusolver-cu12==11.4.5.107 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+nvidia-cufft-cu12==11.0.2.54
     # via jax-cuda12-plugin
     # via torch
-nvidia-cusparse-cu12==12.1.0.106 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or (((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))))
+nvidia-curand-cu12==10.3.2.106 ; platform_machine == 'x86_64' and platform_system == 'Linux'
+    # via torch
+nvidia-cusolver-cu12==11.4.5.107
+    # via jax-cuda12-plugin
+    # via torch
+nvidia-cusparse-cu12==12.1.0.106
     # via jax-cuda12-plugin
     # via nvidia-cusolver-cu12
     # via torch
-nvidia-nccl-cu12==2.20.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))
+nvidia-nccl-cu12==2.20.5
     # via jax-cuda12-plugin
     # via torch
-nvidia-nvjitlink-cu12==12.6.20 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))))) or (((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or (((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux') or (platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')))))))
+nvidia-nvjitlink-cu12==12.6.20
     # via jax-cuda12-plugin
     # via nvidia-cusolver-cu12
     # via nvidia-cusparse-cu12
-nvidia-nvtx-cu12==12.1.105 ; platform_machine == 'x86_64' and platform_system == 'Linux' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))
+nvidia-nvtx-cu12==12.1.105 ; platform_machine == 'x86_64' and platform_system == 'Linux'
     # via torch
-omegaconf==2.3.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+omegaconf==2.3.0
     # via hydra-core
     # via hydra-zen
-opt-einsum==3.3.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+opt-einsum==3.3.0
     # via jax
-optax==0.2.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+optax==0.2.3
     # via flax
-orbax-checkpoint==0.5.23 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+orbax-checkpoint==0.5.23
     # via flax
-packaging==24.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+packaging==24.1
     # via black
     # via hydra-core
     # via lightning
@@ -283,46 +288,46 @@ packaging==24.1 ; (python_version < '3.13' and sys_platform == 'linux') or (pyth
     # via mkdocs
     # via pytorch-lightning
     # via torchmetrics
-paginate==0.5.6 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+paginate==0.5.6
     # via mkdocs-material
-pathspec==0.12.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pathspec==0.12.1
     # via black
     # via mkdocs
-pillow==10.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pillow==10.4.0
     # via matplotlib
     # via torchvision
-platformdirs==4.2.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+platformdirs==4.2.2
     # via black
     # via mkdocs-get-deps
     # via mkdocstrings
     # via wandb
-protobuf==5.27.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+protobuf==5.27.3
     # via orbax-checkpoint
     # via wandb
-psutil==6.0.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+psutil==6.0.0
     # via wandb
-pydantic==2.8.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pydantic==2.8.2
     # via research-project-template
-pydantic-core==2.20.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pydantic-core==2.20.1
     # via pydantic
-pygments==2.18.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pygments==2.18.0
     # via mkdocs-material
     # via rich
-pymdown-extensions==10.9 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pymdown-extensions==10.9
     # via mkdocs-material
     # via mkdocstrings
-pyparsing==3.1.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pyparsing==3.1.2
     # via matplotlib
-pysocks==1.7.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pysocks==1.7.1
     # via requests
-python-dateutil==2.9.0.post0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+python-dateutil==2.9.0.post0
     # via ghp-import
     # via matplotlib
-pytorch-lightning==2.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pytorch-lightning==2.4.0
     # via lightning
-pytorch2jax==0.1.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pytorch2jax==0.1.0
     # via torch-jax-interop
-pyyaml==6.0.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pyyaml==6.0.2
     # via flax
     # via lightning
     # via mkdocs
@@ -333,49 +338,49 @@ pyyaml==6.0.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python
     # via pytorch-lightning
     # via pyyaml-env-tag
     # via wandb
-pyyaml-env-tag==0.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+pyyaml-env-tag==0.1
     # via mkdocs
-regex==2024.7.24 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+regex==2024.7.24
     # via mkdocs-material
-requests==2.32.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+requests==2.32.3
     # via gdown
     # via mkdocs-material
     # via wandb
-rich==13.7.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+rich==13.7.1
     # via flax
     # via research-project-template
-scipy==1.14.0 ; (python_version >= '3.12' or (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')) and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))
+scipy==1.14.0
     # via jax
     # via jaxlib
-sentry-sdk==2.13.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+sentry-sdk==2.13.0
     # via wandb
-setproctitle==1.3.3 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+setproctitle==1.3.3
     # via wandb
-setuptools==72.2.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.12' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+setuptools==72.2.0
     # via chex
     # via lightning-utilities
     # via wandb
-simple-parsing==0.1.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+simple-parsing==0.1.5
     # via research-project-template
-six==1.16.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+six==1.16.0
     # via docker-pycreds
     # via python-dateutil
-smmap==5.0.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+smmap==5.0.1
     # via gitdb
-soupsieve==2.6 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+soupsieve==2.6
     # via beautifulsoup4
-submitit==1.5.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+submitit==1.5.1
     # via hydra-submitit-launcher
-sympy==1.13.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+sympy==1.13.2
     # via torch
-tensorstore==0.1.64 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+tensorstore==0.1.64
     # via flax
     # via orbax-checkpoint
-tomli==2.0.1 ; python_version < '3.11' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))
+tomli==2.0.1 ; python_full_version < '3.11'
     # via black
-toolz==0.12.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+toolz==0.12.1
     # via chex
-torch==2.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+torch==2.4.0
     # via lightning
     # via pytorch-lightning
     # via pytorch2jax
@@ -383,21 +388,21 @@ torch==2.4.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_
     # via torch-jax-interop
     # via torchmetrics
     # via torchvision
-torch-jax-interop==0.0.7 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+torch-jax-interop==0.0.7
     # via research-project-template
-torchmetrics==1.4.1 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+torchmetrics==1.4.1
     # via lightning
     # via pytorch-lightning
-torchvision==0.19.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+torchvision==0.19.0
     # via research-project-template
-tqdm==4.66.5 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+tqdm==4.66.5
     # via gdown
     # via lightning
     # via pytorch-lightning
     # via research-project-template
-triton==3.0.0 ; python_version < '3.13' and platform_machine == 'x86_64' and platform_system == 'Linux'
+triton==3.0.0 ; python_full_version < '3.13' and platform_machine == 'x86_64' and platform_system == 'Linux'
     # via torch
-typing-extensions==4.12.2 ; (python_version < '3.11' and ((python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux'))) or (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+typing-extensions==4.12.2
     # via black
     # via chex
     # via etils
@@ -412,16 +417,16 @@ typing-extensions==4.12.2 ; (python_version < '3.11' and ((python_version < '3.1
     # via simple-parsing
     # via submitit
     # via torch
-urllib3==2.2.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+urllib3==2.2.2
     # via requests
     # via sentry-sdk
-wandb==0.17.6 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+wandb==0.17.6
     # via research-project-template
-watchdog==4.0.2 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+watchdog==4.0.2
     # via mkdocs
-wcmatch==9.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+wcmatch==9.0
     # via mkdocs-awesome-pages-plugin
-yarl==1.9.4 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+yarl==1.9.4
     # via aiohttp
-zipp==3.20.0 ; (python_version < '3.13' and sys_platform == 'linux') or (python_version < '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version < '3.13' and sys_platform != 'linux') or (python_version >= '3.13' and sys_platform == 'linux') or (python_version >= '3.13' and sys_platform == 'linux' and (python_version <= '3.9' or sys_platform != 'linux')) or (python_version >= '3.13' and sys_platform != 'linux')
+zipp==3.20.0
     # via etils

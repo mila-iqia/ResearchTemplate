@@ -14,32 +14,38 @@ markdown_extensions:
   - pymdownx.superfences
 
 plugins:
-- search
-- literate-nav:
-    nav_file: SUMMARY.md
-- awesome-pages
-- gen-files:
-    # https://oprypin.github.io/mkdocs-gen-files/#usage
-    scripts:
-      - docs/generate_reference_docs.py
-- mkdocstrings:
-    handlers:
-      python:
-        import:
-        - https://docs.python-requests.org/en/master/objects.inv
-        options:
-          docstring_style: google
-          members_order: source
-          annotations_path: brief
-          show_docstring_attributes: true
-          modernize_annotations: true
-          show_source: false
-          show_submodules: false
-          separate_signature: true
-          signature_crossrefs: true
-          show_signature_annotations: true
-          allow_inspection: true
-
+  - search
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - awesome-pages
+  - gen-files:
+      # https://oprypin.github.io/mkdocs-gen-files/#usage
+      scripts:
+        - docs/generate_reference_docs.py
+  - mkdocstrings:
+      handlers:
+        python:
+          import:
+            - https://docs.python-requests.org/en/master/objects.inv
+            - https://lightning.ai/docs/pytorch/stable/objects.inv
+          options:
+            docstring_style: google
+            members_order: source
+            annotations_path: brief
+            show_docstring_attributes: true
+            modernize_annotations: true
+            show_source: false
+            show_submodules: false
+            separate_signature: true
+            signature_crossrefs: true
+            show_signature_annotations: true
+            allow_inspection: true
+  - mkdocs-video:
+      is_video: True
+      video_muted: True
+      video_controls: True
+      css_style:
+        width: "100%"
 # todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
 #   - admonition
 #   - pymdownx.details

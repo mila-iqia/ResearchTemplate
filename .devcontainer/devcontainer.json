@@ -30,6 +30,9 @@
 					"editor.defaultFormatter": "charliermarsh.ruff",
 					"editor.formatOnType": true
 				},
+				"editor.rulers": [
+					99
+				],
 				"editor.formatOnSave": true,
 				"files.exclude": {
 					"**/.git": true,
@@ -62,7 +65,8 @@
 				"GitHub.copilot",
 				"knowsuchagency.pdm-task-provider",
 				"GitHub.copilot-chat",
-				"mutantdino.resourcemonitor"
+				"mutantdino.resourcemonitor",
+				"Gruntfuggly.todo-tree"
 			]
 		}
 	},

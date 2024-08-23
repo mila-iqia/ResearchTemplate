@@ -36,6 +36,7 @@ docs = [
     "mkdocs-material>=9.5.31",
     "black>=24.8.0",
     "mkdocs>=1.6.0",
+    "mkdocs-video>=1.5.0",
 ]
 gpu = ["jax[cuda12]>=0.4.31"]
 
@@ -78,6 +79,7 @@ dev-dependencies = [
     "pytest-testmon>=2.1.1",
     "pre-commit>=3.8.0",
     "mktestdocs>=0.2.2",
+    "tomli>=2.0.1",              # TODO: weird. Don't understand why this is required!
 ]
 
 [tool.hatch.metadata]
