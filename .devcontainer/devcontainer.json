@@ -10,7 +10,11 @@
 		"ghcr.io/devcontainers-contrib/features/apt-get-packages": {
 			"packages": "vim"
 		},
-		"ghcr.io/e-gineering/devcontainer-features/rye:1": {}
+		// "ghcr.io/e-gineering/devcontainer-features/rye:1": {},
+		"ghcr.io/va-h/devcontainers-features/uv:1": {}
+	},
+	"hostRequirements": {
+		"gpu": "optional"
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -48,6 +52,8 @@
 				"python.testing.unittestEnabled": false,
 				"python.testing.pytestEnabled": true,
 				"python.experiments.optOutFrom": [
+					// Used so that `. .venv/bin/activate` is done properly when opening a terminal
+					// (We can often edit this activation script to load modules, etc).
 					"pythonTerminalEnvVarActivation"
 				],
 				"python.terminal.activateEnvInCurrentTerminal": false,
@@ -70,12 +76,11 @@
 		"SLURM_TMPDIR": "/tmp",
 		"NETWORK_DIR": "/network",
 		// used by rye (fixed issues with symlinked .cache dir to $SCRATCH)
-		"UV_LINK_MODE": "symlink"
+		"UV_LINK_MODE": "symlink",
+		"UV_CACHE_DIR": "/home/vscode/scratch/.cache/uv"
 	},
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
-		// Mount a directory which will contain the pdm installation cache (shared with the host machine).
-		// This will use $SCRATCH/.cache/pdm, otherwise
 		// Mount a "$SCRATCH" directory in the host to ~/scratch in the container.
 		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
 		// Mount a /network to match the /network directory on the host.
@@ -91,18 +96,22 @@
 		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
 	],
 	"runArgs": [
-		"--gpus",
-		"all",
-		"--ipc=host"
+		// TODO: This should be commented when we don't have a GPU.
+		// Perhaps we need a different devcontainer file for with/without GPU? :(
+		// "--gpus",
+		// "all",
+		// "--ipc=host"
 	],
 	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
 	// doesn't fail.
 	"initializeCommand": {
-		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}", // this is fine on compute nodes
+		// this is fine on compute nodes
+		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}",
 		"create ssh cache dir": "mkdir -p ~/.cache/ssh"
 	},
 	"onCreateCommand": {
-		"pre-commit": "pre-commit install --install-hooks"
+		"pre-commit": "pre-commit install --install-hooks",
+		"uv sync": "uv sync --all-extras"
 	},
 	"updateContentCommand": {
 		// BUG: doesn't work atm. Perhaps some permission issues?
