@@ -3,3 +3,4 @@ a:
   b:
     foo:
       _target_: project.utils.auto_schema_test.Foo
+      bar: "bob"
