@@ -17,6 +17,7 @@ from omegaconf import DictConfig
 
 from project.configs.config import Config
 from project.experiment import Experiment, setup_experiment
+from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
 
@@ -36,6 +37,20 @@ PROJECT_NAME = Path(__file__).parent.name
 def main(dict_config: DictConfig) -> dict:
     """Main entry point for training a model."""
     print_config(dict_config, resolve=False)
+
+    from project.utils.auto_schema import add_schemas_to_all_hydra_configs
+
+    # Note: running this should take ~5 seconds the first time and <1s after that.
+    add_schemas_to_all_hydra_configs(
+        config_files=None,
+        repo_root=REPO_ROOTDIR,
+        configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
+        regen_schemas=False,
+        stop_on_error=False,
+        quiet=True,
+        add_headers=False,
+    )
+
     config: Config = resolve_dictconfig(dict_config)
 
     experiment: Experiment = setup_experiment(config)

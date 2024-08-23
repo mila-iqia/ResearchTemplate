@@ -51,6 +51,4 @@ def test_make_schema(
     )
 
     add_schema_header(config_file, schema_path=schema_file)
-    file_regression.check(
-        json.dumps(schema, indent=2), fullpath=schema_file, extension=".json"
-    )
+    file_regression.check(json.dumps(schema, indent=2), fullpath=schema_file, extension=".json")

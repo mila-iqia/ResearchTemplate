@@ -52,7 +52,20 @@
           },
           {
             "type": "string",
-            "pattern": "\\w+(.yaml|.yml)?$"
+            "pattern": "^\\w+(.yaml|.yml)?$"
+          },
+          {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^(override\\s*)?(/?\\w*)+$"
+            },
+            "patternProperties": {
+              "^(override\\s*)?(/?\\w*)*$": {
+                "type": "null"
+              }
+            },
+            "minProperties": 1,
+            "maxProperties": 1
           }
         ]
       },

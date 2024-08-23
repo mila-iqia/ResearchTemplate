@@ -15,12 +15,14 @@ import argparse
 import copy
 import dataclasses
 import datetime
+import importlib
 import inspect
 import json
 import logging
 import os.path
 import shutil
 import subprocess
+import sys
 import warnings
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from logging import getLogger as get_logger
@@ -35,12 +37,15 @@ import hydra.errors
 import hydra.utils
 import hydra_zen
 import lightning.pytorch.callbacks
+import omegaconf
 import pydantic
 import pydantic.schema
 import rich.logging
 import tqdm
 from hydra._internal.config_loader_impl import ConfigLoaderImpl
 from hydra._internal.utils import create_config_search_path
+from hydra.core.config_search_path import ConfigSearchPath
+from hydra.plugins.search_path_plugin import SearchPathPlugin
 from hydra.types import RunMode
 from omegaconf import DictConfig, OmegaConf
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
@@ -48,16 +53,14 @@ from pydantic_core import core_schema
 from tqdm.rich import tqdm_rich
 from typing_extensions import NotRequired, Required
 
-from project.main import PROJECT_NAME
-from project.utils.env_vars import REPO_ROOTDIR
-
 logger = get_logger(__name__)
 
+_SpecialEntries = TypedDict(
+    "_SpecialEntries", {"$defs": dict[str, dict], "$schema": str}, total=False
+)
 
-CONFIGS_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
 
-
-class PropertySchema(TypedDict, total=False):
+class PropertySchema(_SpecialEntries, total=False):
     title: str
     type: str
     description: str
@@ -136,7 +139,16 @@ HYDRA_CONFIG_SCHEMA = Schema(
                         minProperties=1,
                         maxProperties=1,
                     ),
-                    StringPropertySchema(type="string", pattern=r"\w+(.yaml|.yml)?$"),
+                    StringPropertySchema(type="string", pattern=r"^\w+(.yaml|.yml)?$"),
+                    ObjectSchema(
+                        type="object",
+                        propertyNames={"pattern": r"^(override\s*)?(/?\w*)+$"},
+                        patternProperties={
+                            r"^(override\s*)?(/?\w*)*$": PropertySchema(type="null"),
+                        },
+                        minProperties=1,
+                        maxProperties=1,
+                    ),
                 ],
             ),
             uniqueItems=True,
@@ -179,9 +191,9 @@ HYDRA_CONFIG_SCHEMA = Schema(
 )
 
 
-def main():
+def main(argv: list[str] | None = None):
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.ERROR,
         # format="%(asctime)s - %(levelname)s - %(message)s",
         format="%(message)s",
         datefmt="[%X]",
@@ -195,8 +207,19 @@ def main():
             )
         ],
     )
-    # _root_logger = logging.getLogger("project")
+
+    from project.main import PROJECT_NAME
+    from project.utils.env_vars import REPO_ROOTDIR
+
+    CONFIGS_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
+
+    # FIXME: remove this, perhaps it could be an argument?
+    from project.utils.env_vars import REPO_ROOTDIR
+
+    repo_root = REPO_ROOTDIR
+
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         "path",
         type=Path,
@@ -222,7 +245,7 @@ def main():
     )
     verbosity_group.add_argument("-v", "--verbose", dest="verbose", action="count", default=0)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     path: Path = args.path
     configs_dir: Path = args.configs_dir
@@ -231,6 +254,7 @@ def main():
     stop_on_error: bool = args.stop_on_error
     quiet: bool = args.quiet
     verbose: int = args.verbose
+    add_headers: bool = args.add_headers
 
     if quiet:
         logger.setLevel(logging.NOTSET)
@@ -245,11 +269,10 @@ def main():
     else:
         logger.setLevel(logging.ERROR)
 
-    repo_root = REPO_ROOTDIR
     if not path.is_absolute():
         path = Path.cwd() / path
     if path.is_dir():
-        config_files = list(configs_dir.rglob("*.yaml")) + list(configs_dir.rglob("*.yml"))
+        config_files = _yaml_files_in(configs_dir)
     else:
         config_files = [path]
 
@@ -261,19 +284,27 @@ def main():
         regen_schemas=regen_schemas,
         stop_on_error=stop_on_error,
         quiet=quiet,
+        add_headers=add_headers,
     )
     logger.info("Done updating the schemas for the Hydra config files.")
 
 
+def _yaml_files_in(configs_dir):
+    return list(configs_dir.rglob("*.yaml")) + list(configs_dir.rglob("*.yml"))
+
+
 def add_schemas_to_all_hydra_configs(
-    config_files: list[Path],
+    config_files: list[Path] | None,
     repo_root: Path,
-    configs_dir: Path = CONFIGS_DIR,
+    configs_dir: Path,
     schemas_dir: Path | None = None,
     regen_schemas: bool = False,
     stop_on_error: bool = False,
     quiet: bool = False,
+    add_headers: bool | None = None,
 ):
+    if config_files is None:
+        config_files = _yaml_files_in(configs_dir)
     if not config_files:
         warnings.warn(RuntimeWarning("No config files were passed. Skipping."))
         return
@@ -283,12 +314,6 @@ def add_schemas_to_all_hydra_configs(
 
     if schemas_dir.is_relative_to(repo_root):
         _add_schemas_dir_to_gitignore(schemas_dir, repo_root=repo_root)
-
-    if (_top_level_config := (configs_dir / "config.yaml")) in config_files:
-        # todo: also add support for the top-level configs that are backed (or not) by a structured
-        # config node.
-        pass
-        # config_files.remove(_top_level_config)
 
     config_file_to_schema_file: dict[Path, Path] = {}
     with warnings.catch_warnings():
@@ -313,7 +338,10 @@ def add_schemas_to_all_hydra_configs(
             config_file_modified_time = datetime.datetime.fromtimestamp(
                 config_file.stat().st_mtime
             )
-            if config_file_modified_time > schema_file_modified_time:
+            # Add a delay to account for the time it takes to modify the the config file at the end to remove a header.
+            if (config_file_modified_time - schema_file_modified_time) > datetime.timedelta(
+                seconds=10
+            ):
                 logger.info(
                     f"Config file {pretty_config_file_name} was modified, regenerating the schema."
                 )
@@ -346,6 +374,7 @@ def add_schemas_to_all_hydra_configs(
             pydantic.errors.PydanticSchemaGenerationError,
             hydra.errors.MissingConfigException,
             hydra.errors.ConfigCompositionException,
+            omegaconf.errors.InterpolationResolutionError,
         ) as exc:
             logger.warning(
                 f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
@@ -369,6 +398,10 @@ def add_schemas_to_all_hydra_configs(
 
     # We will use option 1 if a `code` executable is found.
     set_schemas_in_vscode_settings_file = bool(shutil.which("code"))
+
+    if add_headers:
+        set_schemas_in_vscode_settings_file = False
+
     if set_schemas_in_vscode_settings_file:
         try:
             logger.debug(
@@ -464,16 +497,26 @@ def _add_schemas_to_vscode_settings(
         if schema_key not in yaml_schemas_setting:
             yaml_schemas_setting[schema_key] = path_to_add
         elif isinstance(files_associated_with_schema := yaml_schemas_setting[schema_key], str):
-            yaml_schemas_setting[schema_key] = sorted(
-                set([files_associated_with_schema, path_to_add])
-            )
+            files = sorted(set([files_associated_with_schema, path_to_add]))
+            yaml_schemas_setting[schema_key] = files[0] if len(files) == 1 else files
         else:
-            yaml_schemas_setting[schema_key] = sorted(
-                set(files_associated_with_schema + [path_to_add])
-            )
+            files = sorted(set(files_associated_with_schema + [path_to_add]))
+            yaml_schemas_setting[schema_key] = files[0] if len(files) == 1 else files
 
     vscode_settings_file.write_text(json.dumps(vscode_settings, indent=2))
     logger.info(f"Updated the yaml schemas in the vscode settings file at {vscode_settings_file}.")
+
+    # If this worked, then remove any schema directives from the config files.
+    for config_file, schema_file in config_file_to_schema_file.items():
+        assert schema_file.exists()
+        config_lines = config_file.read_text().splitlines()
+        lines_to_remove: list[int] = []
+        for i, line in enumerate(config_lines):
+            if line.strip().startswith("# yaml-language-server: $schema="):
+                lines_to_remove.append(i)
+        for line_to_remove in reversed(lines_to_remove):
+            config_lines.pop(line_to_remove)
+        config_file.write_text("\n".join(config_lines).rstrip() + ("\n" if config_lines else ""))
 
 
 def _get_schema_file_path(config_file: Path, schemas_dir: Path):
@@ -484,7 +527,7 @@ def _get_schema_file_path(config_file: Path, schemas_dir: Path):
 
 def create_schema_for_config(
     config: dict | DictConfig, config_file: Path | None, configs_dir: Path | None
-) -> Schema:
+) -> Schema | ObjectSchema:
     """IDEA: Create a schema for the given config.
 
     - If you encounter a key, add it to the schema.
@@ -553,13 +596,15 @@ def create_schema_for_config(
             target = hydra_zen.get_target(value)  # type: ignore
             schema_from_target_signature = _get_schema_from_target(value)
             if "$defs" in schema_from_target_signature:
-                schema.setdefault("$defs", {}).update(schema_from_target_signature.pop("$defs"))
+                # note: can't have a $defs key in the schema.
+                schema.setdefault("$defs", {}).update(schema_from_target_signature.pop("$defs"))  # type: ignore
             logger.debug(
                 f"Getting schema from target {value['_target_']} at key {key} in file {config_file}."
             )
 
             assert "properties" in schema_from_target_signature
             if key not in schema["properties"]:
+                assert isinstance(key, str)
                 schema["properties"][key] = schema_from_target_signature
             else:
                 raise NotImplementedError("todo: use merge_dicts here")
@@ -802,7 +847,7 @@ def add_schema_header(config_file: Path, schema_path: Path) -> None:
         config_file.write_text(result)
 
 
-def _get_schema_from_target(config: dict | DictConfig) -> Schema:
+def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema:
     assert isinstance(config, dict | DictConfig)
     logger.debug(f"Config: {config}")
     target = hydra.utils.get_object(config["_target_"])
@@ -948,6 +993,48 @@ class _MyGenerateJsonSchema(GenerateJsonSchema):
             }
             return super().enum_schema(slightly_changed_schema)
         return super().enum_schema(schema)
+
+
+class AutoSchemaPlugin(SearchPathPlugin):
+    provider: str
+    path: str
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
+        search_path_entries = search_path.get_path()
+        # WIP: Trying to infer the project root, configs dir from the Hydra context.
+        # Currently hard-coded.
+
+        for seach_path_entry in search_path_entries:
+            if seach_path_entry.provider != "main":
+                continue
+
+            if seach_path_entry.path.startswith("pkg://"):
+                configs_pkg = seach_path_entry.path.removeprefix("pkg://")
+                project_package = configs_pkg.split(".")[0]
+                _project_module = importlib.import_module(project_package)
+                assert (
+                    _project_module.__file__
+                    and Path(_project_module.__file__).name == "__init__.py"
+                )
+                repo_root = Path(_project_module.__file__).parent.parent
+                configs_dir = repo_root / configs_pkg.replace(".", "/")
+                if not (repo_root.is_dir() and configs_dir.is_dir()):
+                    logger.warning(
+                        f"Unable to add schemas to Hydra configs: "
+                        f"Expected to find the project root directory at {repo_root} "
+                        f"and the configs directory at {configs_dir}!"
+                    )
+                    continue
+                    logger.debug("Assuming that the ")
+                add_schemas_to_all_hydra_configs(
+                    config_files=None,
+                    repo_root=repo_root,
+                    configs_dir=configs_dir,
+                    quiet=True,
+                )
 
 
 if __name__ == "__main__":
