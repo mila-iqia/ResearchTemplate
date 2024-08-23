@@ -1,11 +1,13 @@
 import json
+import subprocess
 from pathlib import Path
 
+import hydra.errors
 import pytest
 import yaml
 from pytest_regressions.file_regression import FileRegressionFixture
 
-from .auto_schema import add_schema_header, create_schema_for_config
+from .auto_schema import add_schema_header, create_schema_for_config, main
 
 
 class Foo:
@@ -54,3 +56,39 @@ def test_make_schema(
     file_regression.check(
         json.dumps(schema, indent=2) + "\n", fullpath=schema_file, extension=".json"
     )
+
+
+def test_can_run_via_cli():
+    """Actually run the command on the repo from the CLI."""
+    # Run programmatically instead of with a subproc4ess so we can get nice coverage stats.
+    main(["."])  # assuming we're at the project root directory.
+
+
+@pytest.mark.xfail(
+    raises=hydra.errors.MissingConfigException,
+    reason="TODO: Missing hydra/sweeper/orion config since it isn't installed atm.",
+    strict=True,
+)
+def test_run_via_cli_without_errors():
+    """Checks that the command completes without errors."""
+    # Run programmatically instead of with a subproc4ess so we can get nice coverage stats.
+    main([".", "--stop-on-error"])  # assuming we're at the project root directory.
+
+
+def test_run_via_rye_script():
+    """Actually run the command on the repo, via the `[tool.rye.scripts]` entry in
+    pyproject.toml."""
+    # Run once so we can get nice coverage stats.
+    subprocess.check_call(["rye", "run", "auto_schema"], text=True)
+
+
+@pytest.mark.xfail(
+    raises=subprocess.CalledProcessError,
+    reason="TODO: Missing hydra/sweeper/orion config since it isn't installed atm.",
+    strict=True,
+)
+def test_run_via_rye_script_without_errors():
+    """Actually run the command on the repo, via the `[tool.rye.scripts]` entry in
+    pyproject.toml."""
+    # Run once so we can get nice coverage stats.
+    subprocess.check_call(["rye", "run", "auto_schema", "--stop-on-error"], text=True)
