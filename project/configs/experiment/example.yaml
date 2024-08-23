@@ -18,13 +18,11 @@ name: example
 seed: ${oc.env:SLURM_PROCID,12345}
 
 algorithm:
-  hp:
-    optimizer:
-      lr: 0.002
+  optimizer_config:
+    lr: 0.002
 
 datamodule:
   batch_size: 64
-
 
 trainer:
   min_epochs: 1
