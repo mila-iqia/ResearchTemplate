@@ -30,6 +30,7 @@
 					"editor.defaultFormatter": "charliermarsh.ruff",
 					"editor.formatOnType": true
 				},
+				"editor.formatOnSave": true,
 				"files.exclude": {
 					"**/.git": true,
 					"**/.svn": true,
