@@ -50,7 +50,6 @@ from typing_extensions import NotRequired, Required
 
 from project.main import PROJECT_NAME
 from project.utils.env_vars import REPO_ROOTDIR
-from project.utils.typing_utils import NestedMapping
 
 logger = get_logger(__name__)
 
@@ -498,12 +497,6 @@ def create_schema_for_config(
         assert isinstance(_config, dict)
         # defaults = _config.get("defaults")
         assert "defaults" not in config
-        assert config == _load_config(config_file, configs_dir=configs_dir)
-
-        # if defaults:
-        #     schema = _update_schema_from_defaults(
-        #         config_file, schema=schema, defaults=defaults, configs_dir=configs_dir
-        #     )
 
     if target_name := config.get("_target_"):
         # There's a '_target_' key at the top level in the config file.
@@ -598,7 +591,12 @@ def _update_schema_from_defaults(
         schema = _merge_dicts(
             schema_of_default,
             schema,
-            conflict_handlers={"title": overwrite, "description": overwrite},
+            conflict_handlers={
+                "_target_": overwrite,  # use the new target.
+                "default": overwrite,  # use the new default?
+                "title": overwrite,
+                "description": overwrite,
+            },
         )
         # todo: deal with this one here.
         if schema.get("additionalProperties") is False:
@@ -614,22 +612,23 @@ def keep_previous(val_a: Any, val_b: Any) -> Any:
     return val_a
 
 
-conflict_handlers: dict[str, Callable[[Any, Any], Any]] = {
-    "_target_": overwrite,  # use the new target.
-    "default": overwrite,  # use the new default?
-}
+conflict_handlers: dict[str, Callable[[Any, Any], Any]] = {}
 
-D1 = TypeVar("D1", bound=NestedMapping)
-D2 = TypeVar("D2", bound=NestedMapping)
+_K = TypeVar("_K")
+_V = TypeVar("_V")
+_NestedMapping = Mapping[_K, _V | "_NestedMapping[_K, _V]"]
+
+_D1 = TypeVar("_D1", bound=_NestedMapping)
+_D2 = TypeVar("_D2", bound=_NestedMapping)
 
 
 def _merge_dicts(
-    a: D1,
-    b: D2,
+    a: _D1,
+    b: _D2,
     path: list[str] = [],
     conflict_handlers: dict[str, Callable[[Any, Any], Any]] = conflict_handlers,
     conflict_handler: Callable[[Any, Any], Any] | None = None,
-) -> D1 | D2:
+) -> _D1 | _D2:
     """Merge two nested dictionaries.
 
     >>> x = dict(b=1, c=dict(d=2, e=3))
