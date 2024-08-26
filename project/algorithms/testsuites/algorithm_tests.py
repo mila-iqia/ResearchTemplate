@@ -19,11 +19,7 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.hydra_config_utils import get_all_configs_in_group_with_target
-from project.utils.testutils import (
-    ParametrizedFixture,
-    seeded_rng,
-)
+from project.utils.testutils import ParametrizedFixture, seeded_rng
 from project.utils.typing_utils import PyTree, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
@@ -47,18 +43,18 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        algorithm_under_test = _get_algorithm_class_from_generic_arg(cls)
-        # find all algorithm configs that create algorithms of this type.
-        configs_for_this_algorithm = get_all_configs_in_group_with_target(
-            "algorithm", algorithm_under_test
-        )
-        assert not hasattr(cls, "algorithm_config"), cls
-        cls.algorithm_config = ParametrizedFixture(
-            name="algorithm_config",
-            values=configs_for_this_algorithm,
-            ids=str,
-            scope="session",
-        )
+        # algorithm_under_test = _get_algorithm_class_from_generic_arg(cls)
+        # # find all algorithm configs that create algorithms of this type.
+        # configs_for_this_algorithm = get_all_configs_in_group_with_target(
+        #     "algorithm", algorithm_under_test
+        # )
+        # # assert not hasattr(cls, "algorithm_config"), cls
+        # cls.algorithm_config = ParametrizedFixture(
+        #     name="algorithm_config",
+        #     values=configs_for_this_algorithm,
+        #     ids=configs_for_this_algorithm,
+        #     scope="session",
+        # )
 
         # TODO: Could also add a parametrize_when_used mark to parametrize the datamodule, network,
         # etc, based on the type annotations of the algorithm constructor? For example, if an algo
@@ -105,7 +101,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
 
     def test_forward_pass_is_deterministic(
-        self, forward_pass_input: Any, algorithm: LightningModule, seed: int
+        self, forward_pass_input: Any, algorithm: AlgorithmType, seed: int
     ):
         """Checks that the forward pass output is consistent given the a random seed and a given
         input."""
@@ -120,7 +116,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_backward_pass_is_deterministic(
         self,
         datamodule: LightningDataModule,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
         devices: int | list[int],
@@ -188,7 +184,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_forward_pass_is_reproducible(
         self,
         forward_pass_input: Any,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         seed: int,
         tensor_regression: TensorRegressionFixture,
     ):
@@ -205,7 +201,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_backward_pass_is_reproducible(
         self,
         datamodule: LightningDataModule,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
         devices: int | list[int],
@@ -249,7 +245,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
     def do_one_step_of_training(
         self,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         datamodule: LightningDataModule,
         accelerator: str,
         devices: int | list[int],

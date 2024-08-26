@@ -179,7 +179,7 @@ def get_experiment_device(experiment_config: Config | DictConfig) -> torch.devic
 
 
 def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
-    """Create the network given the configs."""
+    """Creates the network given the configs."""
     # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
     device = get_experiment_device(experiment_config)
 
@@ -200,8 +200,17 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
 def instantiate_algorithm(
     experiment_config: Config, datamodule: DataModule, network: nn.Module
 ) -> LightningModule:
+    """Function used to instantiate the algorithm.
+
+    It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
+    as arguments, to make it easier to swap out different networks and datamodules during
+    experiments.
+
+    The instantiated datamodule and network will be passed to the algorithm's constructor.
+    """
     # Create the algorithm
     algo_config = experiment_config.algorithm
+
     if isinstance(algo_config, LightningModule):
         logger.info(
             f"Algorithm was already instantiated (probably to interpolate a field value)."

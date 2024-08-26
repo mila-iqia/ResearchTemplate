@@ -22,9 +22,6 @@ import torchvision.models
 from torch import nn
 
 from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import NETWORK_DIR
@@ -202,6 +199,10 @@ def run_for_all_configs_of_type(
     def test_something_about_the_network(network: torch.nn.Module):
         ''' This test will run with all the configs in the 'network' group that produce nn.Modules! '''
     ```
+
+    Concretely, this works by indirectly parametrizing the `f"{config_group}_config"` fixture.
+    To learn more about indirect parametrization in PyTest, take a look at
+    https://docs.pytest.org/en/stable/example/parametrize.html#indirect-parametrization
     """
     config_names = get_all_configs_in_group_of_type(
         config_group, config_target_type, include_subclasses=True, excluding=excluding
@@ -210,10 +211,6 @@ def run_for_all_configs_of_type(
         name: default_marks_for_config_name.get(name, []) for name in config_names
     }
     return run_for_all_configs_in_group(config_group, config_name_to_marks=config_name_to_marks)
-
-
-def run_for_all_image_classification_datamodules():
-    return run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 
 
 def parametrize_when_used(

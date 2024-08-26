@@ -4,7 +4,7 @@ This is very helpful when using Hydra! It shows the user what options are availa
 description and default values, and displays errors if you have config files with invalid values.
 
 ## todos
-- [ ] Add schemas for all the nested dict entries in a config file if they have a _target_ (currently just the first level).
+- [ ] Support '???' as a value for any property.
 - [ ] Modify the schema to support omegaconf directives like ${oc.env:VAR_NAME} and our custom directives like ${instance_attr} and so on.
 - [ ] todo: Make a hydra plugin that creates the schemas for configs when hydra is loading stuff.
 """

@@ -15,6 +15,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
+from typing import Any
 
 import flax.linen
 import lightning.pytorch as pl
@@ -77,17 +78,11 @@ def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Mod
 
 
 @pytest.fixture(scope="session")
-def input(training_batch: tuple[Tensor, Tensor]) -> Tensor:
-    return training_batch[0]
-
-
-@pytest.fixture(scope="session")
 def network(
     experiment_config: Config,
     datamodule: DataModule,
     device: torch.device,
-    input: Tensor,
-    request: pytest.FixtureRequest,
+    training_batch: Any,
 ):
     with device:
         network = instantiate_network(experiment_config, datamodule=datamodule)
@@ -99,7 +94,9 @@ def network(
         # a bit ugly, but we need to initialize any lazy weights before we pass the network
         # to the tests.
         # TODO: Investigate the false positives with example_from_config, resnets, cifar10
-        _ = network(input)
+        if isinstance(training_batch, tuple):
+            input = training_batch[0]
+            _ = network(input)
     return network
 
 
@@ -150,7 +147,7 @@ def algorithm_config(request: pytest.FixtureRequest) -> str | None:
     algorithm_config_name = getattr(request, "param", None)
     if algorithm_config_name:
         _add_default_marks_for_config_name(algorithm_config_name, request)
-    return
+    return algorithm_config_name
 
 
 @pytest.fixture(scope="session")
