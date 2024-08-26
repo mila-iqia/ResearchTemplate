@@ -127,7 +127,10 @@ def import_object(target_path: str):
 
 
 def get_all_configs_in_group_of_type(
-    group_name: str, config_target_type: type | tuple[type, ...], include_subclasses: bool = True
+    group_name: str,
+    config_target_type: type | tuple[type, ...],
+    include_subclasses: bool = True,
+    excluding: type | tuple[type, ...] = (),
 ) -> list[str]:
     """Returns the names of all the configs in the given config group that have this target or a
     subclass of it."""
@@ -156,9 +159,24 @@ def get_all_configs_in_group_of_type(
 
         logger.warning(
             RuntimeWarning(
-                f"Unable to tell what kind of object will be created by the target {target} of config {name} in group {group_name}. This config will be skipepd in tests."
+                f"Unable to tell what kind of object will be created by the target {target} of "
+                f"config {name} in group {group_name}. This config will be skipped in tests."
             )
         )
+    config_target_type = (
+        config_target_type if isinstance(config_target_type, tuple) else (config_target_type,)
+    )
+    if excluding is not None:
+        exclude = (excluding,) if isinstance(excluding, type) else excluding
+        names_to_types = {
+            name: object_type
+            for name, object_type in names_to_types.items()
+            if (
+                not issubclass(object_type, exclude)
+                if include_subclasses
+                else object_type not in exclude
+            )
+        }
 
     return [
         name
@@ -167,8 +185,6 @@ def get_all_configs_in_group_of_type(
             issubclass(object_type, config_target_type)
             if include_subclasses
             else object_type in config_target_type
-            if isinstance(config_target_type, tuple)
-            else object_type is config_target_type
         )
     ]
 
