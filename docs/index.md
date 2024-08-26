@@ -40,7 +40,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
     [:octicons-arrow-right-24: Check out the Jax example](examples/jax.md)
 
-- :material-format-font:{ .lg .middle } __Ready-to-use examples__
+- :fontawesome-solid-plane-departure:{ .lg .middle } __Ready-to-use examples__
 
     ---
 
