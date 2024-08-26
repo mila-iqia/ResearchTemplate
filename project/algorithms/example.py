@@ -1,6 +1,10 @@
-"""Example of an algorithm, which is a Pytorch Lightning image classifier.
+"""Example of a simple algorithm for image classification.
 
-Uses regular backpropagation.
+This can be run from the command-line like so:
+
+```console
+python project/main.py algorithm=example
+```
 """
 
 import dataclasses

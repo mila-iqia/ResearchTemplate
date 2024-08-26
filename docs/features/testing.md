@@ -25,7 +25,7 @@ This template comes with some [easy-to-use test suites](#test-suites) as well as
 - [ ] Describe the Github Actions workflows that come with the template, and how to setup a self-hosted runner for template forks.
 - [ ] Add links to relevant documentation -->
 
-## 🔥 Automated testing on SLURM clusters with GitHub CI
+## :fire: Automated testing on SLURM clusters with GitHub CI
 
 > 🔥 NOTE: This is a feature that is entirely unique to this template! 🔥
 

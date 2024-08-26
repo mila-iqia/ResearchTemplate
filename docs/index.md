@@ -5,11 +5,63 @@
 [![hydra](https://img.shields.io/badge/Config-Hydra_1.3-89b8cd)](https://hydra.cc/)
 [![license](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/mila-iqia/ResearchTemplate#license)
 
-Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
+!!! note "Work-in-Progress"
+    Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
 
 This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
 
 For more context, see [this  introduction to the project.](intro.md).
+
+<div class="grid cards" markdown>
+
+- :material-clock-fast:{ .lg .middle } __Set up in 5 minutes__
+
+    ---
+
+    [Get started quickly](install.md) with [a single installation script](#) and get up
+    and running in minutes
+
+    [:octicons-arrow-right-24: Getting started](install.md)
+
+- :test_tube:{ .lg .middle } __Well-tested, robust codebase__
+
+    ---
+
+    Focus on your research! Let tests take care of detecting bugs and broken configs!
+
+    [:octicons-arrow-right-24: Check out the included tests](features/testing.md)
+
+- :material-lightning-bolt:{ .lg .middle } __Support for both PyTorch and Jax__
+
+    ---
+
+    You can use both PyTorch and Jax for your algorithms!
+    ([Lightning](https://lightning.ai/docs/pytorch/stable/) handles the rest.)
+
+    [:octicons-arrow-right-24: Check out the Jax example](examples/jax.md)
+
+- :material-format-font:{ .lg .middle } __Ready-to-use examples__
+
+    ---
+
+    Includes examples for Supervised learning(1) and NLP 🤗(2), with unsupervised learning and RL coming soon.
+    { .annotate }
+
+    1. The source code for the example is available [here](https://github.com/mila-iqia/ResearchTemplate/blob/master/project/algorithms/example.py)
+    2. 👷 Coming soon-ish
+
+    [:octicons-arrow-right-24: Check out the examples here](examples/examples.md)
+
+<!--
+-   :material-scale-balance:{ .lg .middle } __Open Source, MIT__
+
+    ---
+
+    Material for MkDocs is licensed under MIT and available on [GitHub]
+
+    [:octicons-arrow-right-24: License](#) -->
+
+</div>
 
 ## Overview
 
