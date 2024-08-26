@@ -13,7 +13,7 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS, SLURM_TMPDIR
-from project.utils.types import C, H, W
+from project.utils.typing_utils import C, H, W
 
 logger = get_logger(__name__)
 

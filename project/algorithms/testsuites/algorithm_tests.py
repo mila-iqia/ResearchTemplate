@@ -19,8 +19,8 @@ from project.utils.testutils import (
     ParametrizedFixture,
     seeded_rng,
 )
-from project.utils.types import PyTree, is_sequence_of
-from project.utils.types.protocols import DataModule
+from project.utils.typing_utils import PyTree, is_sequence_of
+from project.utils.typing_utils.protocols import DataModule
 
 logger = get_logger(__name__)
 

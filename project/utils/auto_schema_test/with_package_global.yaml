@@ -1,0 +1,4 @@
+# @package: _global_
+# yaml-language-server: $schema=with_package_global.json
+_target_: project.utils.auto_schema_test.Foo
+bar: "bob"

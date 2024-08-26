@@ -19,7 +19,7 @@ from torchvision.transforms import v2 as transforms
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, SCRATCH
-from project.utils.types import C, H, W
+from project.utils.typing_utils import C, H, W
 
 logger = getLogger(__name__)
 

@@ -23,8 +23,8 @@ from torchvision.transforms import v2 as transform_lib
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
-from project.utils.types import C, H, W
-from project.utils.types.protocols import Module
+from project.utils.typing_utils import C, H, W
+from project.utils.typing_utils.protocols import Module
 
 logger = get_logger(__name__)
 

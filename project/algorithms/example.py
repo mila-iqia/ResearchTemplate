@@ -9,12 +9,11 @@ from logging import getLogger
 from typing import Any, Literal
 
 import torch
-from hydra_zen.typing import HydraPartialBuilds, Partial, PartialBuilds, ZenPartialBuilds  # noqa
 from lightning import LightningModule
 from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import functional as F
-from torch.optim import Optimizer
+from torch.optim.optimizer import Optimizer
 
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule

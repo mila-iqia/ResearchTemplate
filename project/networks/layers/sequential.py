@@ -11,7 +11,7 @@ from torch import (
 from torch._jit_internal import _copy_to_script_wrapper
 from typing_extensions import TypeVar
 
-from project.utils.types import Module
+from project.utils.typing_utils import Module
 
 ModuleType = TypeVar("ModuleType", bound=Module[..., Any], default=Module[[Tensor], Tensor])
 

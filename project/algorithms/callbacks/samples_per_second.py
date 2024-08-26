@@ -7,7 +7,7 @@ from torch.optim import Optimizer
 from typing_extensions import override
 
 from project.algorithms.callbacks.callback import BatchType, Callback, StepOutputType
-from project.utils.types import is_sequence_of
+from project.utils.typing_utils import is_sequence_of
 
 
 class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):

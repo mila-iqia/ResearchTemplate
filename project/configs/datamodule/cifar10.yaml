@@ -1,5 +1,6 @@
 defaults:
-- vision
+  - vision
+  - _self_
 _target_: project.datamodules.CIFAR10DataModule
 data_dir: ${constant:torchvision_dir,DATA_DIR}
 batch_size: 128

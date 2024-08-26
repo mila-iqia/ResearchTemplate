@@ -38,13 +38,13 @@ hydra:
     subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
 
   launcher:
-    array_parallelism: 4  # max num of jobs to run in parallel
+    array_parallelism: 4 # max num of jobs to run in parallel
     # note: Can't currently use this argument with the submitit launcher plugin. We would need to
     # create a subclass to add support for it.
     # ntasks_per_gpu: 2
     # Other things to pass to `sbatch`:
     additional_parameters:
-      time: 0-00:10:00  # maximum wall time allocated for the job (D-HH:MM:SS)
+      time: 0-00:10:00 # maximum wall time allocated for the job (D-HH:MM:SS)
       # requeue: null  # requeue job if it fails
     ## A list of commands to add to the generated sbatch script before running srun:
     # setup:
@@ -61,12 +61,11 @@ hydra:
       name: "${name}"
       version: 1
 
-
     algorithm:
-    #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
+      #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
       type: random
       config:
-          seed: 1
+        seed: 1
 
     worker:
       n_workers: ${hydra.launcher.array_parallelism}
@@ -77,5 +76,5 @@ hydra:
       type: legacy
       use_hydra_path: false
       database:
-          type: pickleddb
-          host: "logs/${name}/multiruns/database.pkl"
+        type: pickleddb
+        host: "logs/${name}/multiruns/database.pkl"

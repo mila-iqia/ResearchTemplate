@@ -1,3 +1,4 @@
 defaults:
-- mnist
+  - mnist
+  - _self_
 _target_: project.datamodules.FashionMNISTDataModule

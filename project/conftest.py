@@ -49,8 +49,8 @@ from project.utils.testutils import (
     default_marks_for_config_name,
     seeded_rng,
 )
-from project.utils.types import is_sequence_of
-from project.utils.types.protocols import (
+from project.utils.typing_utils import is_sequence_of
+from project.utils.typing_utils.protocols import (
     DataModule,
 )
 

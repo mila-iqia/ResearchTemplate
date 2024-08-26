@@ -1,0 +1,3 @@
+# yaml-language-server: $schema=with_target.json
+_target_: project.utils.auto_schema_test.Foo
+bar: "bob"

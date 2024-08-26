@@ -1,0 +1,3 @@
+# yaml-language-server: $schema=partial.json
+_target_: project.utils.auto_schema_test.Foo
+_partial_: true

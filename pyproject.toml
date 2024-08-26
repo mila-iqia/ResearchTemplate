@@ -22,6 +22,7 @@ dependencies = [
     "matplotlib>=3.9.2",
     "torch-jax-interop>=0.0.7",
     "pydantic>=2.8.2",
+    "simple-parsing>=0.1.5",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -35,6 +36,7 @@ docs = [
     "mkdocs-material>=9.5.31",
     "black>=24.8.0",
     "mkdocs>=1.6.0",
+    "mkdocs-video>=1.5.0",
 ]
 gpu = ["jax[cuda12]>=0.4.31"]
 
@@ -47,13 +49,14 @@ build-backend = "hatchling.build"
 testpaths = ["project", "docs"]
 norecursedirs = [".venv"]
 # todo: look into using https://github.com/scientific-python/pytest-doctestplus
+env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
+
+
 addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
 markers = [
     "incremental: incremental testing support",
     "parametrize_when_used: Parametrize a test only when the argument is used.",
 ]
-
-
 [tool.ruff]
 line-length = 99
 indent-width = 4
@@ -77,6 +80,8 @@ dev-dependencies = [
     "pytest-testmon>=2.1.1",
     "pre-commit>=3.8.0",
     "mktestdocs>=0.2.2",
+    # TODO: weird. Don't understand why this one is required!
+    "tomli>=2.0.1",
 ]
 
 [tool.hatch.metadata]
@@ -90,3 +95,4 @@ serve-docs = "mkdocs serve"
 check_torch_gpu = "python -c 'import torch; print(torch.cuda.is_available())'"
 check_jax_gpu = "python -c 'import jax.numpy as jnp; print(jnp.zeros(1).devices())'"
 tests = "pytest -x -v"
+auto_schema = "python project/utils/auto_schema.py ."

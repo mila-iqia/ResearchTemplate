@@ -14,7 +14,7 @@ from lightning import LightningDataModule, Trainer
 from omegaconf import DictConfig, OmegaConf
 from torchvision import transforms
 
-from project.utils.types.protocols import (
+from project.utils.typing_utils.protocols import (
     DataModule,
 )
 
