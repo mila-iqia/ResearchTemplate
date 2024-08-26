@@ -5,11 +5,16 @@ by tests.
 
 ## How this works
 
-All the components of an experiment are created using fixtures. The first fixtures to be invoked
-are the ones that would correspond to command-line arguments.
+Our goal here is to make sure that the way we create networks/datasets/algorithms during tests match
+as closely as possible how they are created normally in a real run.
+For example, when running `python project/main.py algorithm=example`.
+
+We achieve this like so: All the components of an experiment are created using fixtures.
+The first fixtures to be invoked are the ones that would correspond to command-line arguments.
+The fixtures for command-line arguments
+
 
 For example, one of the fixtures which is created first is [datamodule_config][project.conftest.datamodule_config].
-This fixture takes the value
 
 The first fixtures to be created are the [datamodule_config][project.conftest.datamodule_config], `network_config` and `algorithm_config`, along with `overrides`.
 From these, the `experiment_dictconfig` is created
@@ -56,9 +61,6 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
 from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
@@ -68,6 +70,7 @@ from project.experiment import (
     seed_rng,
     setup_logging,
 )
+from project.main import PROJECT_NAME
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
@@ -76,9 +79,7 @@ from project.utils.testutils import (
     seeded_rng,
 )
 from project.utils.typing_utils import is_sequence_of
-from project.utils.typing_utils.protocols import (
-    DataModule,
-)
+from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
@@ -215,8 +216,7 @@ def experiment_config(
     yield config
 
 
-@pytest.fixture(scope="session")
-def experiment_dictconfig(
+def command_line_arguments(
     tmp_path_factory: pytest.TempPathFactory,
     devices: str,
     accelerator: str,
@@ -225,8 +225,13 @@ def experiment_dictconfig(
     network_config: str | None,
     overrides: tuple[str, ...],
     request: pytest.FixtureRequest,
-) -> Generator[DictConfig, None, None]:
-    tmp_path = tmp_path_factory.mktemp("experiment_testing")
+):
+    """Fixture that returns the command-line arguments that will be passed to Hydra to run the
+    experiment.
+
+    The `algorithm_config`, `network_config` and `datamodule_config` values here are parametrized
+    indirectly during tests, for example in [project.algorithms.example_test][].
+    """
 
     combination = set([datamodule_config, network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
@@ -246,8 +251,6 @@ def experiment_dictconfig(
         # TODO: Setting this here, which actually impacts the tests!
         "seed=42",
     ]
-    if not any("trainer.default_root_dir" in override for override in overrides):
-        default_overrides.append(f"++trainer.default_root_dir={tmp_path}")
     if algorithm_config:
         default_overrides.append(f"algorithm={algorithm_config}")
     if network_config:
@@ -256,17 +259,29 @@ def experiment_dictconfig(
         default_overrides.append(f"datamodule={datamodule_config}")
 
     all_overrides = default_overrides + list(overrides)
+    return all_overrides
 
+
+@pytest.fixture(scope="session")
+def experiment_dictconfig(
+    command_line_arguments: list[str], tmp_path_factory: pytest.TempPathFactory
+) -> Generator[DictConfig, None, None]:
     logger.info(
         "This test will run as if this was passed on the command-line:\n"
         + "\n"
         + "```\n"
-        + ("python main.py " + " ".join(all_overrides) + "\n")
+        + ("python main.py " + " ".join(command_line_arguments) + "\n")
         + "```\n"
     )
 
-    with setup_hydra_for_tests_and_compose(
-        all_overrides=all_overrides,
+    tmp_path = tmp_path_factory.mktemp("test")
+    if not any("trainer.default_root_dir" in override for override in command_line_arguments):
+        command_line_arguments = command_line_arguments + [
+            f"++trainer.default_root_dir={tmp_path}"
+        ]
+
+    with _setup_hydra_for_tests_and_compose(
+        all_overrides=command_line_arguments,
         tmp_path=tmp_path,
     ) as dict_config:
         yield dict_config
@@ -499,13 +514,14 @@ def use_overrides(command_line_overrides: Param | list[Param], ids=None):
 
 
 @contextmanager
-def setup_hydra_for_tests_and_compose(
+def _setup_hydra_for_tests_and_compose(
     all_overrides: list[str] | None,
     tmp_path_factory: pytest.TempPathFactory | None = None,
     tmp_path: Path | None = None,
 ):
+    """Context manager that sets up the Hydra configuration for unit tests."""
     with initialize_config_module(
-        config_module="project.configs",
+        config_module=f"{PROJECT_NAME}.configs",
         job_name="test",
         version_base="1.2",
     ):
@@ -552,19 +568,6 @@ def common_setup_experiment_part(experiment_config: Config):
     """
     setup_logging(experiment_config)
     seed_rng(experiment_config)
-
-
-@pytest.fixture(scope="session")
-def num_classes(datamodule: DataModule) -> int:
-    """Returns a batch of data from the training set of an image classification datamodule."""
-    if not isinstance(datamodule, ImageClassificationDataModule):
-        pytest.skip(
-            reason=(
-                f"Test requires an ImageClassificationDataModule, but datamodule is of type "
-                f"{type(datamodule).__name__}"
-            )
-        )
-    return datamodule.num_classes
 
 
 @pytest.fixture
