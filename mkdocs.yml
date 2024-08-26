@@ -9,6 +9,7 @@ theme:
   features:
     - navigation.instant
     - navigation.instant.prefetch
+    - navigation.instant.preview
 markdown_extensions:
   - toc:
       permalink: "#"
@@ -32,6 +33,7 @@ plugins:
         python:
           import:
             - https://docs.python-requests.org/en/master/objects.inv
+            - https://omegaconf.readthedocs.io/en/latest/objects.inv
             - https://lightning.ai/docs/pytorch/stable/objects.inv
             - https://docs.pytest.org/en/stable/objects.inv
             - https://flax.readthedocs.io/en/latest/objects.inv
