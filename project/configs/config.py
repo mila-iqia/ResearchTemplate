@@ -21,10 +21,21 @@ class Config:
     """
 
     datamodule: Any
-    """Configuration for the datamodule (dataset + transforms + dataloader creation)."""
+    """Configuration for the datamodule (dataset + transforms + dataloader creation).
+
+    This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
+    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
+    """
 
     algorithm: Any
-    """The hyper-parameters of the algorithm to use."""
+    """Configuration for the algorithm (a
+    [LightningModule][lightning.pytorch.core.module.LightningModule]).
+
+    It is suggested for this class to accept a `datamodule` and `network` as arguments. The
+    instantiated datamodule and network will be passed to the algorithm's constructor.
+
+    For more info, see the [instantiate_algorithm][project.experiment.instantiate_algorithm] function.
+    """
 
     network: Any
     """The network to use."""

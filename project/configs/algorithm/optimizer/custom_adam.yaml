@@ -1,5 +1,5 @@
 defaults:
-- Adam
+  - Adam
 # Learning rate of the optimizer.
 lr: 4e-3
 # Weight decay coefficient.

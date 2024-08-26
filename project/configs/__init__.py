@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
 
-from project.configs.algorithm import register_algorithm_configs
 from project.configs.config import Config
 from project.configs.datamodule import datamodule_store
 from project.configs.network import network_store
@@ -24,7 +23,6 @@ def add_configs_to_hydra_store(with_dynamic_configs: bool = True):
     """Adds all configs to the Hydra Config store."""
     datamodule_store.add_to_hydra_store()
     network_store.add_to_hydra_store()
-    register_algorithm_configs(with_dynamic_configs=with_dynamic_configs)
 
 
 # todo: move the algorithm_store.add_to_hydra_store() here?

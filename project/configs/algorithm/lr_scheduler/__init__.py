@@ -9,41 +9,32 @@ from logging import getLogger as get_logger
 import hydra_zen
 import torch
 import torch.optim.lr_scheduler
-from hydra_zen.typing import PartialBuilds
-
-from project.utils.hydra_utils import make_config_and_store
 
 _logger = get_logger(__name__)
 
-_LR_SCHEDULER_GROUP = "algorithm/lr_scheduler"
-lr_scheduler_store = hydra_zen.ZenStore(name="schedulers")
-
-lr_scheduler_group_store = lr_scheduler_store(group=_LR_SCHEDULER_GROUP)
 
 # Some LR Schedulers have constructors with arguments without a default value (in addition to optimizer).
 # In this case, we specify the missing arguments here so we get a nice error message if it isn't passed.
 
-CosineAnnealingLRConfig = make_config_and_store(
-    torch.optim.lr_scheduler.CosineAnnealingLR,
-    T_max="???",
-    store=lr_scheduler_group_store,
-)
-
-StepLRConfig = make_config_and_store(
-    torch.optim.lr_scheduler.StepLR,
-    step_size="???",
-    store=lr_scheduler_group_store,
-)
+# StepLRConfig = hydra_zen.builds(
+#     torch.optim.lr_scheduler.StepLR,
+#     populate_full_signature=True,
+#     step_size="???",
+#     zen_partial=True,
+#     zen_dataclass={"cls_name": "StepLRConfig", "frozen": True},
+# ),
+# network_store(ResNet18Config, name="resnet18")
 
 
 def add_configs_for_all_torch_schedulers():
-    """Generates configuration dataclasses for all torch.optim.lr_scheduler classes that are not
-    already configured.
+    """Generates configuration classes for all the LR schedulers in `torch.optim.lr_scheduler`."""
 
-    Registers the configs using the `make_config_and_store` function.
-    """
+    _LR_SCHEDULER_GROUP = "algorithm/lr_scheduler"
+
+    lr_scheduler_store = hydra_zen.ZenStore(name="schedulers")
+
     configured_schedulers = [
-        hydra_zen.get_target(config) for config in get_all_scheduler_configs()
+        hydra_zen.get_target(config) for config in lr_scheduler_store[_LR_SCHEDULER_GROUP].values()
     ]
     missing_torch_schedulers = {
         _name: _scheduler_type
@@ -56,14 +47,15 @@ def add_configs_for_all_torch_schedulers():
     }
     for scheduler_name, scheduler_type in missing_torch_schedulers.items():
         _logger.debug(f"Making a config for {scheduler_type=}")
-        _config = make_config_and_store(scheduler_type, store=lr_scheduler_group_store)
+        # Create a config programmatically.
+        config_class = hydra_zen.builds(
+            scheduler_type,
+            zen_partial=True,
+            populate_full_signature=True,
+            zen_dataclass={"cls_name": f"{scheduler_name}Config", "frozen": True},
+        )
+        # Add the config to the config store.
+        lr_scheduler_store(config_class, name=scheduler_name, group=_LR_SCHEDULER_GROUP)
 
-
-def get_all_config_names() -> list[str]:
-    return sorted(
-        [config_name for (_group, config_name) in lr_scheduler_store[_LR_SCHEDULER_GROUP].keys()]
-    )
-
-
-def get_all_scheduler_configs() -> list[type[PartialBuilds[torch.optim.lr_scheduler.LRScheduler]]]:
-    return list(lr_scheduler_store[_LR_SCHEDULER_GROUP].values())
+    # Add the configs to the Hydra config store.
+    lr_scheduler_store.add_to_hydra_store(overwrite_ok=False)

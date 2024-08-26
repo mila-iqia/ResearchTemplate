@@ -1,61 +1,41 @@
-"""Configs for optimizers.
+"""Configurations for optimizers.
 
-By default, this adds configuration classes for all the optimizers in `torch.optim`.
-This is done using [hydra-zen.builds](https://mit-ll-responsible-ai.github.io/hydra-zen/generated/hydra_zen.builds.html#).
+You can add configurations either with a config file or in code using
+[hydra-zen.builds](https://mit-ll-responsible-ai.github.io/hydra-zen/generated/hydra_zen.builds.html#).
 """
-
-import inspect
-from logging import getLogger as get_logger
 
 import hydra_zen
 import torch
 import torch.optim
-from hydra_zen.typing import PartialBuilds
 
-from project.utils.hydra_utils import make_config_and_store
-
-_OPTIMIZER_GROUP = "algorithm/optimizer"
-
-_logger = get_logger(__name__)
-
-optimizers_store = hydra_zen.ZenStore(name="optimizers")
-optimizers_group_store = optimizers_store(group=_OPTIMIZER_GROUP)
-
+# NOTE: Can also create configs programmatically with hydra-zen.
+# This works the same way as creating config files for each algorithm under
+# `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
+# well as structured config (dataclasses).
 
 # Create some configs manually so they can get nice type hints when imported.
-AdamConfig = make_config_and_store(torch.optim.Adam, store=optimizers_group_store)
+AdamConfig = hydra_zen.builds(
+    # note: getting this 'Adam is not exported from `torch.optim`' typing error, but importing it
+    # from torch.optim.adam doesn't work (because they del the `adam` module in torch.optim!)
+    torch.optim.Adam,  # type: ignore
+    zen_partial=True,
+    populate_full_signature=True,
+    zen_dataclass={"cls_name": "AdamConfig", "frozen": True},
+)
 
+SGDConfig = hydra_zen.builds(
+    torch.optim.SGD,  # type: ignore
+    zen_partial=True,
+    populate_full_signature=True,
+    zen_dataclass={"cls_name": "SGDConfig", "frozen": True},
+)
 
-SGDConfig = make_config_and_store(torch.optim.SGD, store=optimizers_group_store)
+# If you add a configuration file under `project/configs/algorithm`, it will also be available as an option
+# from the command-line, and can use these configs in their default list.
+optimizers_store = hydra_zen.store(group="optimizer")
+# NOTE: You can also add your configs to the config store programmatically like this instead of
+# adding a config file:
 
-
-def add_configs_for_all_torch_optimizers():
-    """Generates configuration dataclasses for all `torch.optim.Optimizer` classes that are not
-    already configured.
-
-    Registers the configs using the `make_config_and_store` function.
-    """
-    configured_schedulers = [
-        hydra_zen.get_target(config) for config in get_all_optimizer_configs()
-    ]
-    missing_torch_schedulers = {
-        _name: _optimizer_type
-        for _name, _optimizer_type in vars(torch.optim).items()
-        if inspect.isclass(_optimizer_type)
-        and issubclass(_optimizer_type, torch.optim.Optimizer)
-        and _optimizer_type is not torch.optim.Optimizer
-        and _optimizer_type not in configured_schedulers
-    }
-    for scheduler_name, scheduler_type in missing_torch_schedulers.items():
-        _logger.debug(f"Making a config for {scheduler_type=}")
-        _config = make_config_and_store(scheduler_type, store=optimizers_group_store)
-
-
-def get_all_config_names() -> list[str]:
-    return sorted(
-        [config_name for (_group, config_name) in optimizers_store[_OPTIMIZER_GROUP].keys()]
-    )
-
-
-def get_all_optimizer_configs() -> list[type[PartialBuilds[torch.optim.Optimizer]]]:
-    return list(optimizers_store[_OPTIMIZER_GROUP].values())
+# store the config in the config group.
+# optimizers_store(AdamConfig, name="Adam")
+# optimizers_store(SGDConfig, name="SGD")
