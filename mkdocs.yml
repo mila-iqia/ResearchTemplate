@@ -4,7 +4,11 @@ site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
 
-theme: material
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
 markdown_extensions:
   - toc:
       permalink: "#"
@@ -29,6 +33,8 @@ plugins:
           import:
             - https://docs.python-requests.org/en/master/objects.inv
             - https://lightning.ai/docs/pytorch/stable/objects.inv
+            - https://docs.pytest.org/en/stable/objects.inv
+            - https://flax.readthedocs.io/en/latest/objects.inv
           options:
             docstring_style: google
             members_order: source

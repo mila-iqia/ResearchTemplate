@@ -18,6 +18,7 @@ Other good reads:
 You are welcome (and encouraged) to use other similar templates which, at the time of writing this, have significantly better documentation. However, there are several advantages to using this particular template:
 
 - ❗Support for both Jax and Torch with PyTorch-Lightning ❗
+- Neat Configs thanks to [Auto-Generated YAML schemas](features/auto_schema.md)
 - Easy development inside a devcontainer with VsCode
 - Tailor-made for ML researchers that run their jobs on SLURM clusters (with default configurations for the [Mila](https://docs.mila.quebec) and [DRAC](https://docs.alliancecan.ca) clusters.)
 - Rich typing of all parts of the source code using Python 3.12's new type annotation syntax

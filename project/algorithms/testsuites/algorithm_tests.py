@@ -1,4 +1,4 @@
-"""Suite of unit tests for an "Algorithm".
+"""Suite of tests for an "algorithm".
 
 See the [project.algorithms.example_test][] module for an example of how to use this.
 """
