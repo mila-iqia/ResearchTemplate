@@ -41,49 +41,6 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
     algorithm_config: ParametrizedFixture[str]
 
-    def __init_subclass__(cls) -> None:
-        super().__init_subclass__()
-        # algorithm_under_test = _get_algorithm_class_from_generic_arg(cls)
-        # # find all algorithm configs that create algorithms of this type.
-        # configs_for_this_algorithm = get_all_configs_in_group_with_target(
-        #     "algorithm", algorithm_under_test
-        # )
-        # # assert not hasattr(cls, "algorithm_config"), cls
-        # cls.algorithm_config = ParametrizedFixture(
-        #     name="algorithm_config",
-        #     values=configs_for_this_algorithm,
-        #     ids=configs_for_this_algorithm,
-        #     scope="session",
-        # )
-
-        # TODO: Could also add a parametrize_when_used mark to parametrize the datamodule, network,
-        # etc, based on the type annotations of the algorithm constructor? For example, if an algo
-        # shows that it accepts any LightningDataModule, then parametrize it with all the datamodules,
-        # but if the algo says it only works with ImageNet, then parametrize with all the configs
-        # that have the ImageNet datamodule as their target (or a subclass of ImageNetDataModule).
-
-    @pytest.fixture(scope="session")
-    def forward_pass_input(self, training_batch: PyTree[torch.Tensor]):
-        """Extracts the model input from a batch of data coming from the dataloader.
-
-        Overwrite this if your batches are not tuples of tensors (i.e. if your algorithm isn't a
-        simple supervised learning algorithm like the example).
-        """
-        # By default, assume that the batch is a tuple of tensors.
-        batch = training_batch
-        if isinstance(batch, torch.Tensor):
-            return batch
-        if not is_sequence_of(batch, torch.Tensor):
-            raise NotImplementedError(
-                "The basic test suite assumes that a batch is a tuple of tensors, as in the"
-                f"supervised learning example, but the batch from the datamodule "
-                f"is of type {type(batch)}. You need to override this method in your test class "
-                "for the rest of the built-in tests to work correctly."
-            )
-        assert len(batch) >= 1
-        input = batch[0]
-        return input
-
     def test_initialization_is_deterministic(
         self,
         experiment_config: Config,
@@ -242,6 +199,49 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
         )
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        # algorithm_under_test = _get_algorithm_class_from_generic_arg(cls)
+        # # find all algorithm configs that create algorithms of this type.
+        # configs_for_this_algorithm = get_all_configs_in_group_with_target(
+        #     "algorithm", algorithm_under_test
+        # )
+        # # assert not hasattr(cls, "algorithm_config"), cls
+        # cls.algorithm_config = ParametrizedFixture(
+        #     name="algorithm_config",
+        #     values=configs_for_this_algorithm,
+        #     ids=configs_for_this_algorithm,
+        #     scope="session",
+        # )
+
+        # TODO: Could also add a parametrize_when_used mark to parametrize the datamodule, network,
+        # etc, based on the type annotations of the algorithm constructor? For example, if an algo
+        # shows that it accepts any LightningDataModule, then parametrize it with all the datamodules,
+        # but if the algo says it only works with ImageNet, then parametrize with all the configs
+        # that have the ImageNet datamodule as their target (or a subclass of ImageNetDataModule).
+
+    @pytest.fixture(scope="session")
+    def forward_pass_input(self, training_batch: PyTree[torch.Tensor]):
+        """Extracts the model input from a batch of data coming from the dataloader.
+
+        Overwrite this if your batches are not tuples of tensors (i.e. if your algorithm isn't a
+        simple supervised learning algorithm like the example).
+        """
+        # By default, assume that the batch is a tuple of tensors.
+        batch = training_batch
+        if isinstance(batch, torch.Tensor):
+            return batch
+        if not is_sequence_of(batch, torch.Tensor):
+            raise NotImplementedError(
+                "The basic test suite assumes that a batch is a tuple of tensors, as in the"
+                f"supervised learning example, but the batch from the datamodule "
+                f"is of type {type(batch)}. You need to override this method in your test class "
+                "for the rest of the built-in tests to work correctly."
+            )
+        assert len(batch) >= 1
+        input = batch[0]
+        return input
 
     def do_one_step_of_training(
         self,

@@ -2,6 +2,32 @@
 
 This module contains [PyTest fixtures](https://docs.pytest.org/en/6.2.x/fixture.html) that are used
 by tests.
+
+## How this works
+
+All the components of an experiment are created using fixtures. The first fixtures to be invoked
+are the ones that would correspond to command-line arguments.
+
+For example, one of the fixtures which is created first is [datamodule_config][project.conftest.datamodule_config].
+This fixture takes the value
+
+The first fixtures to be created are the [datamodule_config][project.conftest.datamodule_config], `network_config` and `algorithm_config`, along with `overrides`.
+From these, the `experiment_dictconfig` is created
+
+```mermaid
+flowchart TD
+datamodule_config[<a href="#project.conftest.datamodule_config">datamodule_config</a>] --> experiment_dictconfig
+network_config[<a href="#project.conftest.network_config">network_config</a>] --> experiment_dictconfig
+algorithm_config[<a href="#project.conftest.algorithm_config">algorithm_config</a>] --> experiment_dictconfig
+overrides[<a href="#project.conftest.overrides">overrides</a>] --> experiment_dictconfig
+experiment_dictconfig[<a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>] --> experiment_config
+experiment_config[<a href="#project.conftest.experiment_config">experiment_config</a>] --> datamodule
+experiment_config --> network
+datamodule[<a href="#project.conftest.datamodule">datamodule</a>] --> algorithm
+network[<a href="#project.conftest.network">network</a>] --> algorithm
+
+algorithm[<a href="#project.conftest.algorithm">algorithm</a>] -- is used by --> some_test
+```
 """
 
 from __future__ import annotations
@@ -40,7 +66,6 @@ from project.experiment import (
     instantiate_network,
     instantiate_trainer,
     seed_rng,
-    setup_experiment,
     setup_logging,
 )
 from project.utils.hydra_utils import resolve_dictconfig
@@ -73,7 +98,8 @@ DEFAULT_SEED = 42
 
 @pytest.fixture(scope="function")
 def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
-    """Fixture that creates the "algorithm" (a [lightning.LightningModule][lightning])."""
+    """Fixture that creates the "algorithm" (a
+    [LightningModule][lightning.pytorch.core.module.LightningModule])."""
     return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
 
 
@@ -143,7 +169,11 @@ def training_batch(
 
 @pytest.fixture(scope="session")
 def algorithm_config(request: pytest.FixtureRequest) -> str | None:
-    """The name of the config to use within the "algorithm" group."""
+    """The algorithm config to use in the experiment, as if `algorithm=<value>` was passed.
+
+    This is parametrized with all the configurations for a given algorithm type when using the
+    included tests, for example as is done in [project.algorithms.example_test][].
+    """
     algorithm_config_name = getattr(request, "param", None)
     if algorithm_config_name:
         _add_default_marks_for_config_name(algorithm_config_name, request)
@@ -152,7 +182,8 @@ def algorithm_config(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def datamodule_config(request: pytest.FixtureRequest) -> str | None:
-    """The name of the config to use within the "datamodule" group."""
+    """The datamodule config to use in the experiment, as if `datamodule=<value>` was passed."""
+
     datamodule_config_name = getattr(request, "param", None)
     if datamodule_config_name:
         _add_default_marks_for_config_name(datamodule_config_name, request)
@@ -161,22 +192,25 @@ def datamodule_config(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def network_config(request: pytest.FixtureRequest) -> str | None:
+    """The network config to use in the experiment, as if `network=<value>` was passed."""
     network_config_name = getattr(request, "param", None)
     if network_config_name:
         _add_default_marks_for_config_name(network_config_name, request)
     return network_config_name
 
 
-@pytest.fixture(scope="module")
-def experiment(experiment_config: Config):
-    experiment = setup_experiment(experiment_config)
-    yield experiment
+# @pytest.fixture(scope="module")
+# def experiment(experiment_config: Config) -> Experiment:
+#     """Instantiates all the components of an experiment and returns them."""
+#     experiment = setup_experiment(experiment_config)
+#     return experiment
 
 
 @pytest.fixture(scope="session")
 def experiment_config(
     experiment_dictconfig: DictConfig,
 ) -> Generator[Config, None, None]:
+    """The experiment configuration, with all interpolations resolved."""
     config = resolve_dictconfig(experiment_dictconfig)
     yield config
 

@@ -10,24 +10,33 @@ theme:
     - navigation.instant
     - navigation.instant.prefetch
     - navigation.instant.preview
+    - content.code.copy
 markdown_extensions:
   - toc:
       permalink: "#"
       toc_depth: 3
-  - pymdownx.highlight
+  - pymdownx.highlight: # https://squidfunk.github.io/mkdocs-material/reference/code-blocks/#configuration
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.magiclink
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 plugins:
   - search
   - awesome-pages
   - autorefs
-  - literate-nav:
-      nav_file: SUMMARY.md
   - gen-files:
       # https://oprypin.github.io/mkdocs-gen-files/#usage
       scripts:
         - docs/generate_reference_docs.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
   - mkdocstrings:
       handlers:
         python:

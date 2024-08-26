@@ -1,10 +1,4 @@
-"""All the configuration classes for the project.
-
-## Algorithm configs
-
-All algorithm classes that are defined in `project/algorithms` and are added to `__all__` in
-[project.algorithms.__init__.py][] will have a configuration class created dynamically.
-"""
+"""All the configuration classes for the project."""
 
 from __future__ import annotations
 

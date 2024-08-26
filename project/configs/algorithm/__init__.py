@@ -1,8 +1,6 @@
-from logging import getLogger as get_logger
+"""Configs for optimizers."""
 
 import hydra_zen
-
-logger = get_logger(__name__)
 
 # note; Can also create configs programmatically with hydra-zen.
 # This works the same way as creating config files for each algorithm under
