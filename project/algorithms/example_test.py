@@ -18,9 +18,13 @@ class TestExampleAlgo(LearningAlgorithmTests[ExampleAlgorithm]):
     """Tests for the `ExampleAlgorithm`.
 
     This runs all the tests included in the base class, with the given parametrizations:
-    - `algorithm_config` will take the value
 
+    - `algorithm_config` will take the value `"example"`
+        - This is because there is an `example.yaml` config file whose `_target_` is the ``ExampleAlgorithm``.
+    - `datamodule_config` will take these values: `['cifar10', 'fashion_mnist', 'imagenet', 'imagenet32', 'inaturalist', 'mnist']`
+        - These are all the configs whose target is an `ImageClassificationDataModule`.
+    - Similarly, `network_config` will be parametrized by the names of all configs which produce an nn.Module.
 
-    See [LearningAlgorithmTests][project.algorithms.testsuites.algorithm_tests.LearningAlgorithmTests]
-    for more information on the built-in tests.
+    Take a look at the [LearningAlgorithmTests class][project.algorithms.testsuites.algorithm_tests.LearningAlgorithmTests]
+    if you want to see the actual test code.
     """
