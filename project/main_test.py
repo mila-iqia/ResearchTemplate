@@ -17,6 +17,9 @@ from .main import main
 
 def test_jax_can_use_the_GPU():
     """Test that Jax can use the GPU if it we have one."""
+    # NOTE: Super interesting: Seems like running just an
+    # `import jax.numpy; print(jax.numpy.zeros(1).devices())` in a new terminal FAILS, but if you
+    # do `import torch` before that, then it works!
     import jax.numpy
 
     device = jax.numpy.zeros(1).devices().pop()

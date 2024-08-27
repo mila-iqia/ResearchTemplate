@@ -111,9 +111,6 @@ if typing.TYPE_CHECKING:
     Param = str | tuple[str, ...] | ParameterSet
 
 
-if not torch.cuda.is_available():
-    os.environ["JAX_PLATFORMS"] = "cpu"
-
 logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
@@ -225,7 +222,6 @@ def experiment_dictconfig(
         all_overrides=command_line_arguments,
         tmp_path_factory=tmp_path_factory,
     ) as dict_config:
-        assert False, dict_config["network"]
         return dict_config
 
 

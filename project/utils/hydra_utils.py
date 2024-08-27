@@ -205,7 +205,7 @@ def register_instance_attr_resolver(instantiated_objects_cache: dict[str, Any]) 
     OmegaConf.register_new_resolver(
         "instance_attr",
         functools.partial(
-            get_instantiated_attr,
+            instance_attr,
             _instantiated_objects_cache=instantiated_objects_cache,
         ),
         replace=True,
@@ -249,7 +249,7 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
     return config
 
 
-def get_instantiated_attr(
+def instance_attr(
     *attributes: str,
     _instantiated_objects_cache: MutableMapping[str, Any] | None = None,
 ):
@@ -263,6 +263,16 @@ def get_instantiated_attr(
 
     This works during a call to `hydra.utils.instantiate`, by looking at the stack trace to find
     the instantiated objects, which are in a variable in that function.
+
+    If there is a `${instance_attr:datamodule.num_classes}` interpolation in a config, this will:
+
+    1. instantiate the `datamodule` config
+    2. store it at the key `'datamodule'` in the instantiated objects cache dict (if passed).
+
+        > (This is useful since it makes it possible for us to later reuse this instantiated
+        datamodule instead of re-instantiating it.)
+
+    3. Retrieve the value of the attribute (`getattr(datamodule, 'num_classes')`) and return it.
     """
     if not attributes:
         raise RuntimeError("Need to pass one or more attributes to this resolver.")
@@ -333,18 +343,18 @@ def get_instantiated_attr(
                 (isinstance(obj, dict | DictConfig) and "_target_" in obj)
                 or (is_dataclass(obj) and any(f.name == "_target_" for f in fields(obj)))
             ):
-                # attribute not found, and the `obj` isn't a config with a _target_ field.
+                # attribute not found, and the `obj` isn't a config with a _target_ field, so we
+                # won't be able to instantiate it.
                 break
 
-            # FIXME: SUPER HACKY: Instantiating the object just to get the value. Super bad.
-            # FIXME: It's either this, or we pull a surprise and replace the config object in
-            # the cache with the instantiated object.
+            # NOTE: Instantiating the object just to get the value, but we store the instantiated
+            # object in the cache dict so it can be reused later to avoid re-instantiating the obj.
 
             path_so_far = key
             if nested_attribute[:level]:
                 path_so_far += "." + ".".join(nested_attribute[:level])
             logger.debug(
-                f"Will pro-actively attempt to instantiate {path_so_far} just to retrieve "
+                f"Will pro-actively attempt to instantiate {path_so_far} to retrieve "
                 f"the {attr_part} attribute."
             )
             try:
@@ -369,19 +379,27 @@ def get_instantiated_attr(
                     f"This compute is being wasted because {_instantiated_objects_cache=}. "
                     f"If this is an expensive config to instantiate (e.g. Dataset, model, etc), "
                     f"consider passing a dictionary that will be populated with the instantiated "
-                    f"objects so they can be reused instead of being discarded."
+                    f"objects so they can be reused instead of being discarded and instantiated "
+                    f"again."
                 )
             else:
                 _instantiated_objects_cache[path_so_far] = instantiated_obj
 
             if not hasattr(instantiated_obj, attr_part):
+                logger.debug(
+                    f"We instantiated the object at path {path_so_far}, but it doesn't have the "
+                    f"{attr_part} attribute. Moving on to the next attribute in attributes."
+                )
                 # _instantiated_objects_cache[path_so_far] = instantiated_obj
                 break
 
+            # Retrieve the attribute from the instantiated object.
             obj = getattr(instantiated_obj, attr_part)
         else:
-            # Found the attribute!
+            # Found the attribute on the object! (didn't break)
             return obj
+
+        logger.debug(f"Trying the next attribute in {attributes}.")
 
     raise RuntimeError(
         f"Could not find any of these attributes {attributes} from the instantiated objects: "
@@ -391,6 +409,14 @@ def get_instantiated_attr(
 
 
 def being_called_in_hydra_context() -> bool:
+    """Returns `True` if this function is being called indirectly by Hydra/OmegaConf.
+
+    Can be used in a field default factory to change the default value based on whether the config
+    is being instantiated by Hydra vs in code. For example, you could have a default value for a
+    field `a` of a dataclass `Foo` that is 'a=123` when called in code, for example when doing
+    `Foo()` in a python file, but then when called by Hydra, the default value could be
+    `a=${some_interpolation}`, so that Hydra/OmegaConf resolve that interpolation.
+    """
     import hydra.core.utils
     import omegaconf._utils
     import omegaconf.base

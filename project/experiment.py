@@ -7,8 +7,6 @@ datamodule, network, trainer, and algorithm configs in a certain order.
 
 This also adds the instance_attr custom resolver, which allows you to retrieve an attribute of
 an instantiated object instead of a config.
-
-# See [this example](../../features/instance_attr_resolver.md) for more info.
 """
 
 from __future__ import annotations
@@ -71,7 +69,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     """Instantiate the experiment components from the Hydra configuration.
 
     All the interpolations in the configs have already been resolved by
-    [project.experiment.resolve_dictconfig][]. Now we only need to instantiate the components
+    [project.utils.hydra_utils.resolve_dictconfig][]. Now we only need to instantiate the components
     from their configs.
 
     Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
@@ -85,7 +83,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     seed_rng(experiment_config)
     trainer = instantiate_trainer(experiment_config)
 
-    datamodule = instantiate_datamodule(experiment_config)
+    datamodule = instantiate_datamodule(experiment_config.datamodule)
 
     network = instantiate_network(experiment_config, datamodule=datamodule)
 
@@ -162,19 +160,21 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     return trainer
 
 
-def instantiate_datamodule(experiment_config: Config) -> DataModule:
-    datamodule_config: Dataclass | DataModule = experiment_config.datamodule
+def instantiate_datamodule(datamodule_config: DictConfig | Dataclass | DataModule) -> DataModule:
+    """Instantiate the datamodule from the configuration dict.
 
-    datamodule_overrides = {}
-    if hasattr(experiment_config.algorithm, "batch_size"):
-        # The algorithm has the batch size as a hyper-parameter.
-        algo_batch_size = getattr(experiment_config.algorithm, "batch_size")
-        assert isinstance(algo_batch_size, int)
-        logger.info(
-            f"Overwriting `batch_size` from datamodule config with the value on the Algorithm "
-            f"hyper-parameters: {algo_batch_size}"
-        )
-        datamodule_overrides["batch_size"] = algo_batch_size
+    Any interpolations in the config will have already been resolved by the time we get here.
+    """
+
+    # if hasattr(experiment_config.algorithm, "batch_size"):
+    #     # The algorithm has the batch size as a hyper-parameter.
+    #     algo_batch_size = getattr(experiment_config.algorithm, "batch_size")
+    #     assert isinstance(algo_batch_size, int)
+    #     logger.info(
+    #         f"Overwriting `batch_size` from datamodule config with the value on the Algorithm "
+    #         f"hyper-parameters: {algo_batch_size}"
+    #     )
+    #     datamodule_overrides["batch_size"] = algo_batch_size
 
     datamodule: DataModule
     if isinstance(datamodule_config, DataModule):
@@ -184,7 +184,8 @@ def instantiate_datamodule(experiment_config: Config) -> DataModule:
         )
         datamodule = datamodule_config
     else:
-        datamodule = hydra_zen.instantiate(datamodule_config, **datamodule_overrides)
+        logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
+        datamodule = instantiate(datamodule_config)
         assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)

@@ -1,4 +1,4 @@
-"""Configs for optimizers."""
+"""Configs for algorithms."""
 
 import hydra_zen
 
