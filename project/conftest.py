@@ -2,6 +2,60 @@
 
 This module contains [PyTest fixtures](https://docs.pytest.org/en/6.2.x/fixture.html) that are used
 by tests.
+
+## How this works
+
+Our goal here is to make sure that the way we create networks/datasets/algorithms during tests match
+as closely as possible how they are created normally in a real run.
+For example, when running `python project/main.py algorithm=example`.
+
+We achieve this like so: All the components of an experiment are created using fixtures.
+The first fixtures to be invoked are the ones that would correspond to command-line arguments.
+The fixtures for command-line arguments
+
+
+For example, one of the fixtures which is created first is [datamodule_config][project.conftest.datamodule_config].
+
+The first fixtures to be created are the [datamodule_config][project.conftest.datamodule_config], `network_config` and `algorithm_config`, along with `overrides`.
+From these, the `experiment_dictconfig` is created
+
+```mermaid
+---
+title: Fixture dependency graph
+---
+flowchart TD
+datamodule_config[
+    <a href="#project.conftest.datamodule_config">datamodule_config</a>
+] -- 'datamodule=A' --> command_line_arguments
+network_config[
+    <a href="#project.conftest.network_config">network_config</a>:
+] -- 'network=B' --> command_line_arguments
+algorithm_config[
+    <a href="#project.conftest.algorithm_config">algorithm_config</a>
+] -- 'algorithm=C' --> command_line_arguments
+overrides[
+    <a href="#project.conftest.overrides">overrides</a>
+] -- 'seed=123' --> command_line_arguments
+command_line_arguments[
+    <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
+] -- load configs for 'datamodule=A network=B algorithm=C seed=123' --> experiment_dictconfig
+experiment_dictconfig[
+    <a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>
+] -- instantiate objects from configs --> experiment_config
+experiment_config[
+    <a href="#project.conftest.experiment_config">experiment_config</a>
+] --> datamodule & network & algorithm
+datamodule[
+    <a href="#project.conftest.datamodule">datamodule</a>
+] --> algorithm
+network[
+    <a href="#project.conftest.network">network</a>
+] --> algorithm
+algorithm[
+    <a href="#project.conftest.algorithm">algorithm</a>
+] -- is used by --> some_test
+algorithm & network & datamodule -- is used by --> some_other_test
+```
 """
 
 from __future__ import annotations
@@ -11,10 +65,10 @@ import sys
 import typing
 import warnings
 from collections import defaultdict
-from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
+from typing import Any
 
 import flax.linen
 import lightning.pytorch as pl
@@ -29,9 +83,6 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
 from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
@@ -39,9 +90,10 @@ from project.experiment import (
     instantiate_network,
     instantiate_trainer,
     seed_rng,
-    setup_experiment,
     setup_logging,
 )
+from project.main import PROJECT_NAME
+from project.utils.hydra_config_utils import get_config_loader
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
@@ -50,9 +102,7 @@ from project.utils.testutils import (
     seeded_rng,
 )
 from project.utils.typing_utils import is_sequence_of
-from project.utils.typing_utils.protocols import (
-    DataModule,
-)
+from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
@@ -64,11 +114,221 @@ if typing.TYPE_CHECKING:
 logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
-
-# fast = pytest.mark.fast
-# fast = pytest.mark.fast
-# fast_after_fixtures = pytest.mark.timeout(DEFAULT_TIMEOUT, func_only=True)
 DEFAULT_SEED = 42
+
+
+@pytest.fixture(scope="session")
+def algorithm_config(request: pytest.FixtureRequest) -> str | None:
+    """The algorithm config to use in the experiment, as if `algorithm=<value>` was passed.
+
+    This is parametrized with all the configurations for a given algorithm type when using the
+    included tests, for example as is done in [project.algorithms.example_test][].
+    """
+    algorithm_config_name = getattr(request, "param", None)
+    if algorithm_config_name:
+        _add_default_marks_for_config_name(algorithm_config_name, request)
+    return algorithm_config_name
+
+
+@pytest.fixture(scope="session")
+def datamodule_config(request: pytest.FixtureRequest) -> str | None:
+    """The datamodule config to use in the experiment, as if `datamodule=<value>` was passed."""
+
+    datamodule_config_name = getattr(request, "param", None)
+    if datamodule_config_name:
+        _add_default_marks_for_config_name(datamodule_config_name, request)
+    return datamodule_config_name
+
+
+@pytest.fixture(scope="session")
+def network_config(request: pytest.FixtureRequest) -> str | None:
+    """The network config to use in the experiment, as if `network=<value>` was passed."""
+    network_config_name = getattr(request, "param", None)
+    if network_config_name:
+        _add_default_marks_for_config_name(network_config_name, request)
+    return network_config_name
+
+
+@pytest.fixture(scope="session")
+def command_line_arguments(
+    devices: str,
+    accelerator: str,
+    algorithm_config: str | None,
+    datamodule_config: str | None,
+    network_config: str | None,
+    overrides: tuple[str, ...],
+):
+    """Fixture that returns the command-line arguments that will be passed to Hydra to run the
+    experiment.
+
+    The `algorithm_config`, `network_config` and `datamodule_config` values here are parametrized
+    indirectly by most tests using the [`project.utils.testutils.run_for_all_configs_of_type`][]
+    function so that the respective components are created in the same way as they
+    would be by Hydra in a regular run.
+    """
+
+    combination = set([datamodule_config, network_config, algorithm_config])
+    for configs, marks in default_marks_for_config_combinations.items():
+        marks = [marks] if not isinstance(marks, list | tuple) else marks
+        configs = set(configs)
+        if combination >= configs:
+            # warnings.warn(f"Applying markers because {combination} contains {configs}")
+            # There is a combination of potentially unsupported configs here, e.g. MNIST and ResNets.
+            pytest.skip(reason=f"Combination {combination} contains {configs}.")
+            # for mark in marks:
+            #     request.applymarker(mark)
+
+    default_overrides = [
+        # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.
+        f"trainer.devices={devices}",
+        f"trainer.accelerator={accelerator}",
+        # TODO: Setting this here, which actually impacts the tests!
+        "seed=42",
+    ]
+    if algorithm_config:
+        default_overrides.append(f"algorithm={algorithm_config}")
+    if network_config:
+        default_overrides.append(f"network={network_config}")
+    if datamodule_config:
+        default_overrides.append(f"datamodule={datamodule_config}")
+
+    all_overrides = default_overrides + list(overrides)
+    return all_overrides
+
+
+@pytest.fixture(scope="session")
+def experiment_dictconfig(
+    command_line_arguments: list[str], tmp_path_factory: pytest.TempPathFactory
+) -> DictConfig:
+    """The `omegaconf.DictConfig` that is created by Hydra from the command-line arguments.
+
+    Any interpolations in the configs will *not* have been resolved at this point.
+    """
+    logger.info(
+        "This test will run as if this was passed on the command-line:\n"
+        + "\n"
+        + "```\n"
+        + ("python main.py " + " ".join(command_line_arguments) + "\n")
+        + "```\n"
+    )
+
+    tmp_path = tmp_path_factory.mktemp("test")
+    if not any("trainer.default_root_dir" in override for override in command_line_arguments):
+        command_line_arguments = command_line_arguments + [
+            f"++trainer.default_root_dir={tmp_path}"
+        ]
+
+    with _setup_hydra_for_tests_and_compose(
+        all_overrides=command_line_arguments,
+        tmp_path_factory=tmp_path_factory,
+    ) as dict_config:
+        return dict_config
+
+
+@pytest.fixture(scope="session")
+def experiment_config(
+    experiment_dictconfig: DictConfig,
+) -> Config:
+    """The experiment configuration, with all interpolations resolved."""
+    config = resolve_dictconfig(experiment_dictconfig)
+    return config
+
+
+@pytest.fixture(scope="session")
+def network(
+    experiment_config: Config,
+    datamodule: DataModule,
+    device: torch.device,
+    training_batch: Any,
+):
+    with device:
+        network = instantiate_network(experiment_config, datamodule=datamodule)
+
+    if isinstance(network, flax.linen.Module):
+        return network
+
+    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
+        # a bit ugly, but we need to initialize any lazy weights before we pass the network
+        # to the tests.
+        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
+        if isinstance(training_batch, tuple):
+            input = training_batch[0]
+            _ = network(input)
+    return network
+
+
+@pytest.fixture(scope="session")
+def datamodule(
+    experiment_config: Config,
+    _common_setup_experiment_part: None,
+    datamodule_config: str | None,
+    overrides: list[str] | None,
+) -> DataModule:
+    """Fixture that creates the datamodule for the given config."""
+    if datamodule_config:
+        # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
+        from hydra.types import RunMode
+
+        config = get_config_loader().load_configuration(
+            f"datamodule/{datamodule_config}.yaml",
+            overrides=overrides or [],
+            run_mode=RunMode.RUN,
+        )
+        datamodule_config = config["datamodule"]
+        assert isinstance(datamodule_config, DictConfig)
+        datamodule = instantiate_datamodule(datamodule_config)
+        return datamodule
+    # NOTE: creating the datamodule by itself instead of with everything else.
+    return instantiate_datamodule(experiment_config.datamodule)
+
+
+@pytest.fixture(scope="function")
+def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
+    """Fixture that creates the "algorithm" (a
+    [LightningModule][lightning.pytorch.core.module.LightningModule])."""
+    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
+
+
+@pytest.fixture(scope="function")
+def trainer(
+    experiment_config: Config,
+    _common_setup_experiment_part: None,  # noqa
+) -> pl.Trainer:
+    return instantiate_trainer(experiment_config)
+
+
+@pytest.fixture(scope="session")
+def train_dataloader(datamodule: DataModule) -> DataLoader:
+    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
+        datamodule.num_workers = 0  # type: ignore
+    datamodule.prepare_data()
+    datamodule.setup("fit")
+    train_dataloader = datamodule.train_dataloader()
+    assert isinstance(train_dataloader, DataLoader)
+    return train_dataloader
+
+
+@pytest.fixture(scope="session")
+def training_batch(
+    train_dataloader: DataLoader, device: torch.device
+) -> tuple[Tensor, ...] | dict[str, Tensor]:
+    # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
+    dataloader_iterator = iter(train_dataloader)
+    batch = next(dataloader_iterator)
+    if is_sequence_of(batch, Tensor):
+        batch = tuple(t.to(device=device) for t in batch)
+        return batch
+    else:
+        assert isinstance(batch, dict) and is_sequence_of(batch.values(), Tensor)
+        batch = {k: v.to(device=device) for k, v in batch.items()}
+        return batch
+
+
+# @pytest.fixture(scope="module")
+# def experiment(experiment_config: Config) -> Experiment:
+#     """Instantiates all the components of an experiment and returns them."""
+#     experiment = setup_experiment(experiment_config)
+#     return experiment
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
@@ -298,13 +558,13 @@ def use_overrides(command_line_overrides: Param | list[Param], ids=None):
 
 
 @contextmanager
-def setup_hydra_for_tests_and_compose(
+def _setup_hydra_for_tests_and_compose(
     all_overrides: list[str] | None,
-    tmp_path_factory: pytest.TempPathFactory | None = None,
-    tmp_path: Path | None = None,
+    tmp_path_factory: pytest.TempPathFactory,
 ):
+    """Context manager that sets up the Hydra configuration for unit tests."""
     with initialize_config_module(
-        config_module="project.configs",
+        config_module=f"{PROJECT_NAME}.configs",
         job_name="test",
         version_base="1.2",
     ):
@@ -326,8 +586,6 @@ def setup_hydra_for_tests_and_compose(
             config.hydra.job.id = 0
             config.hydra.runtime.output_dir = str(
                 tmp_path_factory.mktemp(basename="output", numbered=True)
-                if tmp_path_factory
-                else tmp_path
             )
         HydraConfig.instance().set_config(config)
         yield config
@@ -342,196 +600,15 @@ def _add_default_marks_for_config_name(config_name: str, request: pytest.Fixture
 
 
 @pytest.fixture(scope="session")
-def algorithm_config(request: pytest.FixtureRequest) -> str | None:
-    """The name of the config to use within the "algorithm" group."""
-    algorithm_config_name = getattr(request, "param", None)
-    if algorithm_config_name:
-        _add_default_marks_for_config_name(algorithm_config_name, request)
-    return
-
-
-@pytest.fixture(scope="session")
-def datamodule_config(request: pytest.FixtureRequest) -> str | None:
-    """The name of the config to use within the "datamodule" group."""
-    datamodule_config_name = getattr(request, "param", None)
-    if datamodule_config_name:
-        _add_default_marks_for_config_name(datamodule_config_name, request)
-    return datamodule_config_name
-
-
-@pytest.fixture(scope="session")
-def network_config(request: pytest.FixtureRequest) -> str | None:
-    network_config_name = getattr(request, "param", None)
-    if network_config_name:
-        _add_default_marks_for_config_name(network_config_name, request)
-    return network_config_name
-
-
-@pytest.fixture(scope="session")
-def experiment_dictconfig(
-    tmp_path_factory: pytest.TempPathFactory,
-    devices: str,
-    accelerator: str,
-    algorithm_config: str | None,
-    datamodule_config: str | None,
-    network_config: str | None,
-    overrides: tuple[str, ...],
-    request: pytest.FixtureRequest,
-) -> Generator[DictConfig, None, None]:
-    tmp_path = tmp_path_factory.mktemp("experiment_testing")
-
-    combination = set([datamodule_config, network_config, algorithm_config])
-    for configs, marks in default_marks_for_config_combinations.items():
-        marks = [marks] if not isinstance(marks, list | tuple) else marks
-        configs = set(configs)
-        if combination >= configs:
-            # warnings.warn(f"Applying markers because {combination} contains {configs}")
-            # There is a combination of potentially unsupported configs here, e.g. MNIST and ResNets.
-            pytest.skip(reason=f"Combination {combination} contains {configs}.")
-            # for mark in marks:
-            #     request.applymarker(mark)
-
-    default_overrides = [
-        # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.
-        f"trainer.devices={devices}",
-        f"trainer.accelerator={accelerator}",
-        # TODO: Setting this here, which actually impacts the tests!
-        "seed=42",
-    ]
-    if not any("trainer.default_root_dir" in override for override in overrides):
-        default_overrides.append(f"++trainer.default_root_dir={tmp_path}")
-    if algorithm_config:
-        default_overrides.append(f"algorithm={algorithm_config}")
-    if network_config:
-        default_overrides.append(f"network={network_config}")
-    if datamodule_config:
-        default_overrides.append(f"datamodule={datamodule_config}")
-
-    all_overrides = default_overrides + list(overrides)
-
-    logger.info(
-        "This test will run as if this was passed on the command-line:\n"
-        + "\n"
-        + "```\n"
-        + ("python main.py " + " ".join(all_overrides) + "\n")
-        + "```\n"
-    )
-
-    with setup_hydra_for_tests_and_compose(
-        all_overrides=all_overrides,
-        tmp_path=tmp_path,
-    ) as dict_config:
-        yield dict_config
-
-
-@pytest.fixture(scope="session")
-def experiment_config(
-    experiment_dictconfig: DictConfig,
-) -> Generator[Config, None, None]:
-    config = resolve_dictconfig(experiment_dictconfig)
-    yield config
-
-
-@pytest.fixture(scope="module")
-def experiment(experiment_config: Config):
-    experiment = setup_experiment(experiment_config)
-    yield experiment
-
-
-@pytest.fixture(scope="session")
-def common_setup_experiment_part(experiment_config: Config):
+def _common_setup_experiment_part(experiment_config: Config):
     """Fixture that is used to run the common part of `setup_experiment`.
 
     This is there so that we can instantiate only one or a few of the experiment components (e.g.
     only the Network), while also only doing the common part once if we were to use more than one
-    of these components and their associated fixtures below.
+    of these components in a test.
     """
     setup_logging(experiment_config)
     seed_rng(experiment_config)
-
-
-@pytest.fixture(scope="function")
-def trainer(experiment_config: Config, common_setup_experiment_part: None) -> pl.Trainer:
-    return instantiate_trainer(experiment_config)
-
-
-@pytest.fixture(scope="session")
-def datamodule(experiment_config: Config, common_setup_experiment_part: None) -> DataModule:
-    # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_config)
-
-
-@pytest.fixture(scope="session")
-def train_dataloader(datamodule: DataModule) -> DataLoader:
-    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
-        datamodule.num_workers = 0  # type: ignore
-    datamodule.prepare_data()
-    datamodule.setup("fit")
-    train_dataloader = datamodule.train_dataloader()
-    assert isinstance(train_dataloader, DataLoader)
-    return train_dataloader
-
-
-@pytest.fixture(scope="session")
-def training_batch(
-    train_dataloader: DataLoader, device: torch.device
-) -> tuple[Tensor, ...] | dict[str, Tensor]:
-    # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
-    dataloader_iterator = iter(train_dataloader)
-    batch = next(dataloader_iterator)
-    if is_sequence_of(batch, Tensor):
-        batch = tuple(t.to(device=device) for t in batch)
-        return batch
-    else:
-        assert isinstance(batch, dict) and is_sequence_of(batch.values(), Tensor)
-        batch = {k: v.to(device=device) for k, v in batch.items()}
-        return batch
-
-
-@pytest.fixture(scope="session")
-def num_classes(datamodule: DataModule) -> int:
-    """Returns a batch of data from the training set of an image classification datamodule."""
-    if not isinstance(datamodule, ImageClassificationDataModule):
-        pytest.skip(
-            reason=(
-                f"Test requires an ImageClassificationDataModule, but datamodule is of type "
-                f"{type(datamodule).__name__}"
-            )
-        )
-    return datamodule.num_classes
-
-
-@pytest.fixture(scope="session")
-def input(training_batch: tuple[Tensor, Tensor]) -> Tensor:
-    return training_batch[0]
-
-
-@pytest.fixture(scope="session")
-def network(
-    experiment_config: Config,
-    datamodule: DataModule,
-    device: torch.device,
-    input: Tensor,
-    request: pytest.FixtureRequest,
-):
-    with device:
-        network = instantiate_network(experiment_config, datamodule=datamodule)
-
-    if isinstance(network, flax.linen.Module):
-        return network
-
-    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
-        # a bit ugly, but we need to initialize any lazy weights before we pass the network
-        # to the tests.
-        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
-        _ = network(input)
-    return network
-
-
-@pytest.fixture(scope="function")
-def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
-    """Fixture that creates an "algorithm" (LightningModule)."""
-    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
 
 
 @pytest.fixture
@@ -655,3 +732,28 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         marker = args_to_be_parametrized_markers[arg_name][-1]
         indirect = marker.kwargs.get("indirect", False)
         metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)
+
+
+def pytest_addoption(parser: pytest.Parser):
+    parser.addoption(
+        "--shorter-than",
+        action="store",
+        type=float,
+        default=None,
+        help="Skip tests that take longer than this.",
+    )
+
+
+def pytest_ignore_collect(path: str):
+    p = Path(path)
+    # fixme: Trying to fix doctest issues for project/configs/algorithm/lr_scheduler/__init__.py::project.configs.algorithm.lr_scheduler.StepLRConfig
+    if p.name in ["lr_scheduler", "optimizer"] and "configs" in p.parts:
+        return True
+    return False
+
+
+def pytest_configure(config: pytest.Config):
+    config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
+    config.addinivalue_line(
+        "markers", "very_fast: mark test as very fast to run (including test setup)."
+    )

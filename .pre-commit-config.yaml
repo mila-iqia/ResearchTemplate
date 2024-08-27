@@ -17,6 +17,7 @@ repos:
         require_serial: true
       - id: check-yaml
         require_serial: true
+        exclude: "mkdocs.yml"
       - id: debug-statements
         require_serial: true
       - id: detect-private-key
@@ -35,9 +36,8 @@ repos:
     rev: "v0.5.7"
     hooks:
       - id: ruff
-        args: ['--line-length', '99', '--fix']
+        args: ["--line-length", "99", "--fix"]
         require_serial: true
-
 
   # python docstring formatting
   - repo: https://github.com/myint/docformatter
@@ -67,7 +67,7 @@ repos:
     rev: 0.7.17
     hooks:
       - id: mdformat
-        exclude: 'SUMMARY.md'
+        exclude: "SUMMARY.md|testing.md"
         args: ["--number"]
         additional_dependencies:
           - mdformat-gfm
@@ -79,7 +79,6 @@ repos:
           # see https://github.com/KyleKing/mdformat-mkdocs
           - mdformat-mkdocs[recommended]>=2.1.0
         require_serial: true
-
 
   # word spelling linter
   - repo: https://github.com/codespell-project/codespell

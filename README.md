@@ -28,7 +28,8 @@ Why should you use this template (instead of another)?
 
 Here are some of the advantages to using this template compared to [some of the other templates out there](https://mila-iqia.github.io/ResearchTemplate/related):
 
-- ❗Support for both Jax and Torch with PyTorch-Lightning ❗
+- ❗Can use both PyTorch and Jax with PyTorch-Lightning ❗
+- Neat Configs thanks to [Auto-Generated YAML schemas](https://mila-iqia.github.io/ResearchTemplate/features/auto_schema)
 - Easy development inside a [Development Container](https://code.visualstudio.com/docs/remote/containers) with [VsCode](https://code.visualstudio.com/)
 - Tailor-made for ML researchers that run their jobs on SLURM clusters (with default configurations for the [Mila](https://docs.mila.quebec) and [DRAC](https://docs.alliancecan.ca) clusters.)
 - Rich typing and documentation of all parts of the source code using Python 3.12's new type annotation syntax

@@ -4,30 +4,76 @@ site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
 
-theme: material
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.preview
+    - content.code.copy
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
 markdown_extensions:
   - toc:
       permalink: "#"
       toc_depth: 3
-  - pymdownx.highlight
+  - pymdownx.highlight: # https://squidfunk.github.io/mkdocs-material/reference/code-blocks/#configuration
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.magiclink
-  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 plugins:
   - search
-  - literate-nav:
-      nav_file: SUMMARY.md
   - awesome-pages
+  - autorefs
   - gen-files:
       # https://oprypin.github.io/mkdocs-gen-files/#usage
       scripts:
         - docs/generate_reference_docs.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
   - mkdocstrings:
       handlers:
         python:
           import:
             - https://docs.python-requests.org/en/master/objects.inv
+            - https://omegaconf.readthedocs.io/en/latest/objects.inv
             - https://lightning.ai/docs/pytorch/stable/objects.inv
+            - https://docs.pytest.org/en/stable/objects.inv
+            - https://flax.readthedocs.io/en/latest/objects.inv
           options:
             docstring_style: google
             members_order: source

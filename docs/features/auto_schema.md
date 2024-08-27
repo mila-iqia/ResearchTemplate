@@ -1,5 +1,7 @@
 # Auto Schema for Hydra Configs
 
+> 🔥 NOTE: This is a feature that is entirely unique to this template! 🔥
+
 This project template comes with a really neat feature: Your [Hydra](https://hydra.cc) config files automatically get a [Schema](https://json-schema.org/) associated with them.
 
 This greatly improves the experience of developing a project with Hydra:

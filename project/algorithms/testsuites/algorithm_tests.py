@@ -1,3 +1,8 @@
+"""Suite of tests for an "algorithm".
+
+See the [project.algorithms.example_test][] module for an example of how to use this.
+"""
+
 import copy
 import inspect
 from abc import ABC
@@ -14,11 +19,7 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.hydra_config_utils import get_all_configs_in_group_with_target
-from project.utils.testutils import (
-    ParametrizedFixture,
-    seeded_rng,
-)
+from project.utils.testutils import ParametrizedFixture, seeded_rng
 from project.utils.typing_utils import PyTree, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
@@ -30,52 +31,15 @@ AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 @pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
-    """Suite of unit tests for an "Algorithm" (LightningModule)."""
+    """Suite of unit tests for an "Algorithm" (LightningModule).
+
+    Simply inherit from this class and decorate the class with the appropriate markers to get a set
+    of decent unit tests that should apply to any LightningModule.
+
+    See the [project.algorithms.example_test][] module for an example.
+    """
 
     algorithm_config: ParametrizedFixture[str]
-
-    def __init_subclass__(cls) -> None:
-        super().__init_subclass__()
-        algorithm_under_test = _get_algorithm_class_from_generic_arg(cls)
-        # find all algorithm configs that create algorithms of this type.
-        configs_for_this_algorithm = get_all_configs_in_group_with_target(
-            "algorithm", algorithm_under_test
-        )
-        assert not hasattr(cls, "algorithm_config"), cls
-        cls.algorithm_config = ParametrizedFixture(
-            name="algorithm_config",
-            values=configs_for_this_algorithm,
-            ids=str,
-            scope="session",
-        )
-
-        # TODO: Could also add a parametrize_when_used mark to parametrize the datamodule, network,
-        # etc, based on the type annotations of the algorithm constructor? For example, if an algo
-        # shows that it accepts any LightningDataModule, then parametrize it with all the datamodules,
-        # but if the algo says it only works with ImageNet, then parametrize with all the configs
-        # that have the ImageNet datamodule as their target (or a subclass of ImageNetDataModule).
-
-    @pytest.fixture(scope="session")
-    def forward_pass_input(self, training_batch: PyTree[torch.Tensor]):
-        """Extracts the model input from a batch of data coming from the dataloader.
-
-        Overwrite this if your batches are not tuples of tensors (i.e. if your algorithm isn't a
-        simple supervised learning algorithm like the example).
-        """
-        # By default, assume that the batch is a tuple of tensors.
-        batch = training_batch
-        if isinstance(batch, torch.Tensor):
-            return batch
-        if not is_sequence_of(batch, torch.Tensor):
-            raise NotImplementedError(
-                "The basic test suite assumes that a batch is a tuple of tensors, as in the"
-                f"supervised learning example, but the batch from the datamodule "
-                f"is of type {type(batch)}. You need to override this method in your test class "
-                "for the rest of the built-in tests to work correctly."
-            )
-        assert len(batch) >= 1
-        input = batch[0]
-        return input
 
     def test_initialization_is_deterministic(
         self,
@@ -84,6 +48,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         network: torch.nn.Module,
         seed: int,
     ):
+        """Checks that the weights initialization is consistent given the a random seed."""
         with seeded_rng(seed):
             algorithm_1 = instantiate_algorithm(experiment_config, datamodule, network)
 
@@ -93,8 +58,11 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
 
     def test_forward_pass_is_deterministic(
-        self, forward_pass_input: Any, algorithm: LightningModule, seed: int
+        self, forward_pass_input: Any, algorithm: AlgorithmType, seed: int
     ):
+        """Checks that the forward pass output is consistent given the a random seed and a given
+        input."""
+
         with seeded_rng(seed):
             out1 = algorithm(forward_pass_input)
         with seeded_rng(seed):
@@ -105,7 +73,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_backward_pass_is_deterministic(
         self,
         datamodule: LightningDataModule,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
         devices: int | list[int],
@@ -119,7 +87,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         with seeded_rng(seed):
             gradients_callback = GetStuffFromFirstTrainingStep()
-            self._do_one_step_of_training(
+            self.do_one_step_of_training(
                 algorithm_1,
                 datamodule,
                 accelerator,
@@ -134,7 +102,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         with seeded_rng(seed):
             gradients_callback = GetStuffFromFirstTrainingStep()
-            self._do_one_step_of_training(
+            self.do_one_step_of_training(
                 algorithm_2,
                 datamodule,
                 accelerator=accelerator,
@@ -173,7 +141,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_forward_pass_is_reproducible(
         self,
         forward_pass_input: Any,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         seed: int,
         tensor_regression: TensorRegressionFixture,
     ):
@@ -190,16 +158,19 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_backward_pass_is_reproducible(
         self,
         datamodule: LightningDataModule,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
         devices: int | list[int],
         tensor_regression: TensorRegressionFixture,
         tmp_path: Path,
     ):
+        """Check that the backward pass is reproducible given the same weights, inputs and random
+        seed."""
+
         with seeded_rng(seed):
             gradients_callback = GetStuffFromFirstTrainingStep()
-            self._do_one_step_of_training(
+            self.do_one_step_of_training(
                 algorithm,
                 datamodule,
                 accelerator=accelerator,
@@ -229,15 +200,62 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             additional_label=next(algorithm.parameters()).device.type,
         )
 
-    def _do_one_step_of_training(
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        # algorithm_under_test = _get_algorithm_class_from_generic_arg(cls)
+        # # find all algorithm configs that create algorithms of this type.
+        # configs_for_this_algorithm = get_all_configs_in_group_with_target(
+        #     "algorithm", algorithm_under_test
+        # )
+        # # assert not hasattr(cls, "algorithm_config"), cls
+        # cls.algorithm_config = ParametrizedFixture(
+        #     name="algorithm_config",
+        #     values=configs_for_this_algorithm,
+        #     ids=configs_for_this_algorithm,
+        #     scope="session",
+        # )
+
+        # TODO: Could also add a parametrize_when_used mark to parametrize the datamodule, network,
+        # etc, based on the type annotations of the algorithm constructor? For example, if an algo
+        # shows that it accepts any LightningDataModule, then parametrize it with all the datamodules,
+        # but if the algo says it only works with ImageNet, then parametrize with all the configs
+        # that have the ImageNet datamodule as their target (or a subclass of ImageNetDataModule).
+
+    @pytest.fixture(scope="session")
+    def forward_pass_input(self, training_batch: PyTree[torch.Tensor]):
+        """Extracts the model input from a batch of data coming from the dataloader.
+
+        Overwrite this if your batches are not tuples of tensors (i.e. if your algorithm isn't a
+        simple supervised learning algorithm like the example).
+        """
+        # By default, assume that the batch is a tuple of tensors.
+        batch = training_batch
+        if isinstance(batch, torch.Tensor):
+            return batch
+        if not is_sequence_of(batch, torch.Tensor):
+            raise NotImplementedError(
+                "The basic test suite assumes that a batch is a tuple of tensors, as in the"
+                f"supervised learning example, but the batch from the datamodule "
+                f"is of type {type(batch)}. You need to override this method in your test class "
+                "for the rest of the built-in tests to work correctly."
+            )
+        assert len(batch) >= 1
+        input = batch[0]
+        return input
+
+    def do_one_step_of_training(
         self,
-        algorithm: LightningModule,
+        algorithm: AlgorithmType,
         datamodule: LightningDataModule,
         accelerator: str,
         devices: int | list[int],
         callbacks: list[lightning.Callback],
         tmp_path: Path,
     ):
+        """Performs one step of training.
+
+        Overwrite this if you train your algorithm differently.
+        """
         trainer = lightning.Trainer(
             accelerator=accelerator,
             callbacks=callbacks,

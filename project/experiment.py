@@ -1,3 +1,14 @@
+"""Module containing the functions which create experiment components from Hydra configs.
+
+This is essentially just calling [hydra.utils.instantiate](
+https://hydra.cc/docs/1.3/advanced/instantiate_objects/overview/#internaldocs-banner)
+on the
+datamodule, network, trainer, and algorithm configs in a certain order.
+
+This also adds the instance_attr custom resolver, which allows you to retrieve an attribute of
+an instantiated object instead of a config.
+"""
+
 from __future__ import annotations
 
 import dataclasses
@@ -55,7 +66,13 @@ class Experiment:
 
 
 def setup_experiment(experiment_config: Config) -> Experiment:
-    """Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
+    """Instantiate the experiment components from the Hydra configuration.
+
+    All the interpolations in the configs have already been resolved by
+    [project.utils.hydra_utils.resolve_dictconfig][]. Now we only need to instantiate the components
+    from their configs.
+
+    Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
     Trainer, Algorithm, etc) to go from the options that come from Hydra, into all required
     components for the experiment, which is stored as a dataclass called `Experiment`.
 
@@ -66,7 +83,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     seed_rng(experiment_config)
     trainer = instantiate_trainer(experiment_config)
 
-    datamodule = instantiate_datamodule(experiment_config)
+    datamodule = instantiate_datamodule(experiment_config.datamodule)
 
     network = instantiate_network(experiment_config, datamodule=datamodule)
 
@@ -75,7 +92,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     return Experiment(
         trainer=trainer,
         algorithm=algorithm,
-        network=network,  # todo: fix typing issues (maybe removing/reworking the `Network` class?)
+        network=network,
         datamodule=datamodule,
     )
 
@@ -143,19 +160,21 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     return trainer
 
 
-def instantiate_datamodule(experiment_config: Config) -> DataModule:
-    datamodule_config: Dataclass | DataModule = experiment_config.datamodule
+def instantiate_datamodule(datamodule_config: DictConfig | Dataclass | DataModule) -> DataModule:
+    """Instantiate the datamodule from the configuration dict.
 
-    datamodule_overrides = {}
-    if hasattr(experiment_config.algorithm, "batch_size"):
-        # The algorithm has the batch size as a hyper-parameter.
-        algo_batch_size = getattr(experiment_config.algorithm, "batch_size")
-        assert isinstance(algo_batch_size, int)
-        logger.info(
-            f"Overwriting `batch_size` from datamodule config with the value on the Algorithm "
-            f"hyper-parameters: {algo_batch_size}"
-        )
-        datamodule_overrides["batch_size"] = algo_batch_size
+    Any interpolations in the config will have already been resolved by the time we get here.
+    """
+
+    # if hasattr(experiment_config.algorithm, "batch_size"):
+    #     # The algorithm has the batch size as a hyper-parameter.
+    #     algo_batch_size = getattr(experiment_config.algorithm, "batch_size")
+    #     assert isinstance(algo_batch_size, int)
+    #     logger.info(
+    #         f"Overwriting `batch_size` from datamodule config with the value on the Algorithm "
+    #         f"hyper-parameters: {algo_batch_size}"
+    #     )
+    #     datamodule_overrides["batch_size"] = algo_batch_size
 
     datamodule: DataModule
     if isinstance(datamodule_config, DataModule):
@@ -165,7 +184,8 @@ def instantiate_datamodule(experiment_config: Config) -> DataModule:
         )
         datamodule = datamodule_config
     else:
-        datamodule = hydra_zen.instantiate(datamodule_config, **datamodule_overrides)
+        logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
+        datamodule = instantiate(datamodule_config)
         assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)
@@ -179,7 +199,7 @@ def get_experiment_device(experiment_config: Config | DictConfig) -> torch.devic
 
 
 def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
-    """Create the network given the configs."""
+    """Creates the network given the configs."""
     # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
     device = get_experiment_device(experiment_config)
 
@@ -200,8 +220,17 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
 def instantiate_algorithm(
     experiment_config: Config, datamodule: DataModule, network: nn.Module
 ) -> LightningModule:
+    """Function used to instantiate the algorithm.
+
+    It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
+    as arguments, to make it easier to swap out different networks and datamodules during
+    experiments.
+
+    The instantiated datamodule and network will be passed to the algorithm's constructor.
+    """
     # Create the algorithm
     algo_config = experiment_config.algorithm
+
     if isinstance(algo_config, LightningModule):
         logger.info(
             f"Algorithm was already instantiated (probably to interpolate a field value)."

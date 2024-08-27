@@ -12,7 +12,11 @@ from project.networks.layers.layers import Flatten
 class FcNet(nn.Sequential):
     @pydantic.dataclasses.dataclass
     class HParams:
-        """Dataclass containing the network hyper-parameters."""
+        """Dataclass containing the network hyper-parameters.
+
+        This is an example of how Pydantic can be used to validate configs and command-line
+        arguments.
+        """
 
         hidden_dims: list[pydantic.PositiveInt] = field(default_factory=[128, 128].copy)
 
