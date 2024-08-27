@@ -20,18 +20,41 @@ The first fixtures to be created are the [datamodule_config][project.conftest.da
 From these, the `experiment_dictconfig` is created
 
 ```mermaid
+---
+title: Fixture dependency graph
+---
 flowchart TD
-datamodule_config[<a href="#project.conftest.datamodule_config">datamodule_config</a>] --> experiment_dictconfig
-network_config[<a href="#project.conftest.network_config">network_config</a>] --> experiment_dictconfig
-algorithm_config[<a href="#project.conftest.algorithm_config">algorithm_config</a>] --> experiment_dictconfig
-overrides[<a href="#project.conftest.overrides">overrides</a>] --> experiment_dictconfig
-experiment_dictconfig[<a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>] --> experiment_config
-experiment_config[<a href="#project.conftest.experiment_config">experiment_config</a>] --> datamodule
-experiment_config --> network
-datamodule[<a href="#project.conftest.datamodule">datamodule</a>] --> algorithm
-network[<a href="#project.conftest.network">network</a>] --> algorithm
-
-algorithm[<a href="#project.conftest.algorithm">algorithm</a>] -- is used by --> some_test
+datamodule_config[
+    <a href="#project.conftest.datamodule_config">datamodule_config</a>
+] -- 'datamodule=A' --> command_line_arguments
+network_config[
+    <a href="#project.conftest.network_config">network_config</a>:
+] -- 'network=B' --> command_line_arguments
+algorithm_config[
+    <a href="#project.conftest.algorithm_config">algorithm_config</a>
+] -- 'algorithm=C' --> command_line_arguments
+overrides[
+    <a href="#project.conftest.overrides">overrides</a>
+] -- 'seed=123' --> command_line_arguments
+command_line_arguments[
+    <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
+] -- load configs for 'datamodule=A network=B algorithm=C seed=123' --> experiment_dictconfig
+experiment_dictconfig[
+    <a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>
+] -- instantiate objects from configs --> experiment_config
+experiment_config[
+    <a href="#project.conftest.experiment_config">experiment_config</a>
+] --> datamodule & network & algorithm
+datamodule[
+    <a href="#project.conftest.datamodule">datamodule</a>
+] --> algorithm
+network[
+    <a href="#project.conftest.network">network</a>
+] --> algorithm
+algorithm[
+    <a href="#project.conftest.algorithm">algorithm</a>
+] -- is used by --> some_test
+algorithm & network & datamodule -- is used by --> some_other_test
 ```
 """
 
@@ -42,7 +65,6 @@ import sys
 import typing
 import warnings
 from collections import defaultdict
-from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -71,6 +93,7 @@ from project.experiment import (
     setup_logging,
 )
 from project.main import PROJECT_NAME
+from project.utils.hydra_config_utils import get_config_loader
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
@@ -95,77 +118,6 @@ logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
-
-
-@pytest.fixture(scope="function")
-def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
-    """Fixture that creates the "algorithm" (a
-    [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
-
-
-@pytest.fixture(scope="session")
-def network(
-    experiment_config: Config,
-    datamodule: DataModule,
-    device: torch.device,
-    training_batch: Any,
-):
-    with device:
-        network = instantiate_network(experiment_config, datamodule=datamodule)
-
-    if isinstance(network, flax.linen.Module):
-        return network
-
-    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
-        # a bit ugly, but we need to initialize any lazy weights before we pass the network
-        # to the tests.
-        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
-        if isinstance(training_batch, tuple):
-            input = training_batch[0]
-            _ = network(input)
-    return network
-
-
-@pytest.fixture(scope="function")
-def trainer(
-    experiment_config: Config,
-    common_setup_experiment_part: None,  # noqa
-) -> pl.Trainer:
-    return instantiate_trainer(experiment_config)
-
-
-@pytest.fixture(scope="session")
-def datamodule(experiment_config: Config, common_setup_experiment_part: None) -> DataModule:
-    # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_config)
-
-
-@pytest.fixture(scope="session")
-def train_dataloader(datamodule: DataModule) -> DataLoader:
-    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
-        datamodule.num_workers = 0  # type: ignore
-    datamodule.prepare_data()
-    datamodule.setup("fit")
-    train_dataloader = datamodule.train_dataloader()
-    assert isinstance(train_dataloader, DataLoader)
-    return train_dataloader
-
-
-@pytest.fixture(scope="session")
-def training_batch(
-    train_dataloader: DataLoader, device: torch.device
-) -> tuple[Tensor, ...] | dict[str, Tensor]:
-    # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
-    dataloader_iterator = iter(train_dataloader)
-    batch = next(dataloader_iterator)
-    if is_sequence_of(batch, Tensor):
-        batch = tuple(t.to(device=device) for t in batch)
-        return batch
-    else:
-        assert isinstance(batch, dict) and is_sequence_of(batch.values(), Tensor)
-        batch = {k: v.to(device=device) for k, v in batch.items()}
-        return batch
 
 
 @pytest.fixture(scope="session")
@@ -200,37 +152,22 @@ def network_config(request: pytest.FixtureRequest) -> str | None:
     return network_config_name
 
 
-# @pytest.fixture(scope="module")
-# def experiment(experiment_config: Config) -> Experiment:
-#     """Instantiates all the components of an experiment and returns them."""
-#     experiment = setup_experiment(experiment_config)
-#     return experiment
-
-
 @pytest.fixture(scope="session")
-def experiment_config(
-    experiment_dictconfig: DictConfig,
-) -> Generator[Config, None, None]:
-    """The experiment configuration, with all interpolations resolved."""
-    config = resolve_dictconfig(experiment_dictconfig)
-    yield config
-
-
 def command_line_arguments(
-    tmp_path_factory: pytest.TempPathFactory,
     devices: str,
     accelerator: str,
     algorithm_config: str | None,
     datamodule_config: str | None,
     network_config: str | None,
     overrides: tuple[str, ...],
-    request: pytest.FixtureRequest,
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
     experiment.
 
     The `algorithm_config`, `network_config` and `datamodule_config` values here are parametrized
-    indirectly during tests, for example in [project.algorithms.example_test][].
+    indirectly by most tests using the [`project.utils.testutils.run_for_all_configs_of_type`][]
+    function so that the respective components are created in the same way as they
+    would be by Hydra in a regular run.
     """
 
     combination = set([datamodule_config, network_config, algorithm_config])
@@ -265,7 +202,11 @@ def command_line_arguments(
 @pytest.fixture(scope="session")
 def experiment_dictconfig(
     command_line_arguments: list[str], tmp_path_factory: pytest.TempPathFactory
-) -> Generator[DictConfig, None, None]:
+) -> DictConfig:
+    """The `omegaconf.DictConfig` that is created by Hydra from the command-line arguments.
+
+    Any interpolations in the configs will *not* have been resolved at this point.
+    """
     logger.info(
         "This test will run as if this was passed on the command-line:\n"
         + "\n"
@@ -282,9 +223,116 @@ def experiment_dictconfig(
 
     with _setup_hydra_for_tests_and_compose(
         all_overrides=command_line_arguments,
-        tmp_path=tmp_path,
+        tmp_path_factory=tmp_path_factory,
     ) as dict_config:
-        yield dict_config
+        assert False, dict_config["network"]
+        return dict_config
+
+
+@pytest.fixture(scope="session")
+def experiment_config(
+    experiment_dictconfig: DictConfig,
+) -> Config:
+    """The experiment configuration, with all interpolations resolved."""
+    config = resolve_dictconfig(experiment_dictconfig)
+    return config
+
+
+@pytest.fixture(scope="session")
+def network(
+    experiment_config: Config,
+    datamodule: DataModule,
+    device: torch.device,
+    training_batch: Any,
+):
+    with device:
+        network = instantiate_network(experiment_config, datamodule=datamodule)
+
+    if isinstance(network, flax.linen.Module):
+        return network
+
+    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
+        # a bit ugly, but we need to initialize any lazy weights before we pass the network
+        # to the tests.
+        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
+        if isinstance(training_batch, tuple):
+            input = training_batch[0]
+            _ = network(input)
+    return network
+
+
+@pytest.fixture(scope="session")
+def datamodule(
+    experiment_config: Config,
+    _common_setup_experiment_part: None,
+    datamodule_config: str | None,
+    overrides: list[str] | None,
+) -> DataModule:
+    """Fixture that creates the datamodule for the given config."""
+    if datamodule_config:
+        # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
+        from hydra.types import RunMode
+
+        config = get_config_loader().load_configuration(
+            f"datamodule/{datamodule_config}.yaml",
+            overrides=overrides or [],
+            run_mode=RunMode.RUN,
+        )
+        datamodule_config = config["datamodule"]
+        assert isinstance(datamodule_config, DictConfig)
+        datamodule = instantiate_datamodule(datamodule_config)
+        return datamodule
+    # NOTE: creating the datamodule by itself instead of with everything else.
+    return instantiate_datamodule(experiment_config.datamodule)
+
+
+@pytest.fixture(scope="function")
+def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
+    """Fixture that creates the "algorithm" (a
+    [LightningModule][lightning.pytorch.core.module.LightningModule])."""
+    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
+
+
+@pytest.fixture(scope="function")
+def trainer(
+    experiment_config: Config,
+    _common_setup_experiment_part: None,  # noqa
+) -> pl.Trainer:
+    return instantiate_trainer(experiment_config)
+
+
+@pytest.fixture(scope="session")
+def train_dataloader(datamodule: DataModule) -> DataLoader:
+    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
+        datamodule.num_workers = 0  # type: ignore
+    datamodule.prepare_data()
+    datamodule.setup("fit")
+    train_dataloader = datamodule.train_dataloader()
+    assert isinstance(train_dataloader, DataLoader)
+    return train_dataloader
+
+
+@pytest.fixture(scope="session")
+def training_batch(
+    train_dataloader: DataLoader, device: torch.device
+) -> tuple[Tensor, ...] | dict[str, Tensor]:
+    # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
+    dataloader_iterator = iter(train_dataloader)
+    batch = next(dataloader_iterator)
+    if is_sequence_of(batch, Tensor):
+        batch = tuple(t.to(device=device) for t in batch)
+        return batch
+    else:
+        assert isinstance(batch, dict) and is_sequence_of(batch.values(), Tensor)
+        batch = {k: v.to(device=device) for k, v in batch.items()}
+        return batch
+
+
+# @pytest.fixture(scope="module")
+# def experiment(experiment_config: Config) -> Experiment:
+#     """Instantiates all the components of an experiment and returns them."""
+#     experiment = setup_experiment(experiment_config)
+#     return experiment
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
@@ -516,8 +564,7 @@ def use_overrides(command_line_overrides: Param | list[Param], ids=None):
 @contextmanager
 def _setup_hydra_for_tests_and_compose(
     all_overrides: list[str] | None,
-    tmp_path_factory: pytest.TempPathFactory | None = None,
-    tmp_path: Path | None = None,
+    tmp_path_factory: pytest.TempPathFactory,
 ):
     """Context manager that sets up the Hydra configuration for unit tests."""
     with initialize_config_module(
@@ -543,8 +590,6 @@ def _setup_hydra_for_tests_and_compose(
             config.hydra.job.id = 0
             config.hydra.runtime.output_dir = str(
                 tmp_path_factory.mktemp(basename="output", numbered=True)
-                if tmp_path_factory
-                else tmp_path
             )
         HydraConfig.instance().set_config(config)
         yield config
@@ -559,12 +604,12 @@ def _add_default_marks_for_config_name(config_name: str, request: pytest.Fixture
 
 
 @pytest.fixture(scope="session")
-def common_setup_experiment_part(experiment_config: Config):
+def _common_setup_experiment_part(experiment_config: Config):
     """Fixture that is used to run the common part of `setup_experiment`.
 
     This is there so that we can instantiate only one or a few of the experiment components (e.g.
     only the Network), while also only doing the common part once if we were to use more than one
-    of these components and their associated fixtures below.
+    of these components in a test.
     """
     setup_logging(experiment_config)
     seed_rng(experiment_config)

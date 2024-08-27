@@ -1,3 +1,16 @@
+"""Module containing the functions which create experiment components from Hydra configs.
+
+This is essentially just calling [hydra.utils.instantiate](
+https://hydra.cc/docs/1.3/advanced/instantiate_objects/overview/#internaldocs-banner)
+on the
+datamodule, network, trainer, and algorithm configs in a certain order.
+
+This also adds the instance_attr custom resolver, which allows you to retrieve an attribute of
+an instantiated object instead of a config.
+
+# See [this example](../../features/instance_attr_resolver.md) for more info.
+"""
+
 from __future__ import annotations
 
 import dataclasses
@@ -55,7 +68,13 @@ class Experiment:
 
 
 def setup_experiment(experiment_config: Config) -> Experiment:
-    """Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
+    """Instantiate the experiment components from the Hydra configuration.
+
+    All the interpolations in the configs have already been resolved by
+    [project.experiment.resolve_dictconfig][]. Now we only need to instantiate the components
+    from their configs.
+
+    Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
     Trainer, Algorithm, etc) to go from the options that come from Hydra, into all required
     components for the experiment, which is stored as a dataclass called `Experiment`.
 
@@ -75,7 +94,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     return Experiment(
         trainer=trainer,
         algorithm=algorithm,
-        network=network,  # todo: fix typing issues (maybe removing/reworking the `Network` class?)
+        network=network,
         datamodule=datamodule,
     )
 

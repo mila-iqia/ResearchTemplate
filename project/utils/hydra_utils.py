@@ -163,20 +163,28 @@ def get_outer_class(inner_class: type) -> type:
 
 
 def get_attr(obj: Any, *attributes: str):
+    """Recursive version of `getattr` when the attribute is like 'a.b.c'."""
+
     if not attributes:
         return obj
     for attribute in attributes:
-        subobj = obj
         try:
-            for attr in attribute.split("."):
-                subobj = getattr(subobj, attr)
-            return subobj
+            return _get_attr(obj, attribute)
         except AttributeError:
             pass
     raise AttributeError(f"Could not find any attributes matching {attributes} on {obj}.")
 
 
-def has_attr(obj: Any, potentially_nested_attribute: str):
+def _get_attr(obj: Any, potentially_nested_attribute: str):
+    """Recursive version of `getattr` when the attribute is like 'a.b.c'."""
+    subobj = obj
+    for attr in potentially_nested_attribute.split("."):
+        subobj = getattr(subobj, attr)
+        return subobj
+
+
+def _has_attr(obj: Any, potentially_nested_attribute: str):
+    """Recursive version of `hasattr` when the attribute is like 'a.b.c'."""
     for attribute in potentially_nested_attribute.split("."):
         if not hasattr(obj, attribute):
             return False
@@ -184,7 +192,8 @@ def has_attr(obj: Any, potentially_nested_attribute: str):
     return True
 
 
-def set_attr(obj: Any, potentially_nested_attribute: str, value: Any) -> None:
+def _set_attr(obj: Any, potentially_nested_attribute: str, value: Any) -> None:
+    """Recursive version of `setattr` when the attribute is like 'a.b.c'."""
     attributes = potentially_nested_attribute.split(".")
     for attr in attributes[:-1]:
         obj = getattr(obj, attr)
@@ -192,6 +201,7 @@ def set_attr(obj: Any, potentially_nested_attribute: str, value: Any) -> None:
 
 
 def register_instance_attr_resolver(instantiated_objects_cache: dict[str, Any]) -> None:
+    """Registers the `instance_attr` custom resolver with OmegaConf."""
     OmegaConf.register_new_resolver(
         "instance_attr",
         functools.partial(
@@ -203,6 +213,11 @@ def register_instance_attr_resolver(instantiated_objects_cache: dict[str, Any]) 
 
 
 def resolve_dictconfig(dict_config: DictConfig) -> Config:
+    """Resolve all interpolations in the `DictConfig`.
+
+    Returns a [`Config`][project.configs.Config] object, which is a simple dataclass used to give
+    nicer type hints for the contents of an experiment config.
+    """
     # Important: Register this fancy little resolver here so we can get attributes of the
     # instantiated objects, not just the configs!
     instantiated_objects_cache: dict[str, Any] = {}
@@ -216,25 +231,20 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
     # If we had to instantiate some of the configs into objects in order to find the interpolated
     # values (e.g. ${instance_attr:datamodule.dims} or similar in order to construct the network),
     # then we don't waste that, put the object instance into the config.
-    # TODO: This isn't quite correct typing-wise, since for example the field for `datamodule` is a
-    # `DataModuleConfig` while we're setting it to a value of `LightningDataModule` if we
-    # instantiated it.
-    # TODO: We don't actually have LightningDataModule objects here! We only have these
-    # `<DatamoduleName>Config` objects, so we can't get the attributes like `dims` properly!
     for attribute, pre_instantiated_object in instantiated_objects_cache.items():
-        if not has_attr(config, attribute):
+        if not _has_attr(config, attribute):
             logger.debug(
                 f"Leftover temporarily-instantiated attribute {attribute} in the instantiated "
                 f"objects cache."
             )
             continue
-        value_in_config = get_attr(config, attribute)
+        value_in_config = _get_attr(config, attribute)
         if pre_instantiated_object != value_in_config:
             logger.debug(
                 f"Overwriting the config at {attribute} with the pre-instantiated "
                 f"object {pre_instantiated_object}"
             )
-            set_attr(config, attribute, pre_instantiated_object)
+            _set_attr(config, attribute, pre_instantiated_object)
 
     return config
 
@@ -243,7 +253,17 @@ def get_instantiated_attr(
     *attributes: str,
     _instantiated_objects_cache: MutableMapping[str, Any] | None = None,
 ):
-    """Quite hacky: Allows interpolations to get the value of the objects, rather than configs."""
+    """Allows interpolations of the instantiated objects attributes (rather than configs).
+
+    !!! note "This is very hacky"
+
+        This is quite hacky and very dependent on the code of Hydra / OmegaConf not changing too
+        much in the future. For this reason, consider pinning the versions of these libraries in
+        your project if you intend do use this feature.
+
+    This works during a call to `hydra.utils.instantiate`, by looking at the stack trace to find
+    the instantiated objects, which are in a variable in that function.
+    """
     if not attributes:
         raise RuntimeError("Need to pass one or more attributes to this resolver.")
     assert being_called_in_hydra_context()
@@ -260,22 +280,23 @@ def get_instantiated_attr(
     non_init_field_items: list[dict[str, Any]] = []
 
     for frame_info in frame_infos:
-        if frame_info.function == DictConfig._to_object.__name__:
-            _self_obj: DictConfig = frame_info.frame.f_locals["self"]
+        if frame_info.function != DictConfig._to_object.__name__:
+            continue
+        _self_obj: DictConfig = frame_info.frame.f_locals["self"]
 
-            assert "init_field_items" in frame_info.frame.f_locals
-            frame_init_field_items = frame_info.frame.f_locals["init_field_items"]
-            logger.debug(
-                f"Adding the following items into the init field items: {frame_init_field_items}"
-            )
-            init_field_items.append(frame_init_field_items.copy())
+        assert "init_field_items" in frame_info.frame.f_locals
+        frame_init_field_items = frame_info.frame.f_locals["init_field_items"]
+        # logger.debug(
+        #     f"Gathered {frame_init_field_items} from the init_field_items variable."
+        # )
+        init_field_items.append(frame_init_field_items.copy())
 
-            assert "non_init_field_items" in frame_info.frame.f_locals
-            frame_non_init_field_items = frame_info.frame.f_locals["non_init_field_items"]
-            non_init_field_items.append(frame_non_init_field_items.copy())
-            logger.debug(
-                f"Adding the following items into the init field items: {frame_non_init_field_items}"
-            )
+        assert "non_init_field_items" in frame_info.frame.f_locals
+        frame_non_init_field_items = frame_info.frame.f_locals["non_init_field_items"]
+        non_init_field_items.append(frame_non_init_field_items.copy())
+        # logger.debug(
+        #     f"Gathered {frame_non_init_field_items} from the non_init_field_items variable."
+        # )
     assert init_field_items or non_init_field_items
     # Okay so we now have all the *instantiated* attributes! We can do the interpolation by
     # getting its value!
