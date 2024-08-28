@@ -75,6 +75,10 @@ def main(dict_config: DictConfig) -> dict:
 
 
 def run(experiment: Experiment) -> tuple[str, float | None, dict]:
+    """Run the experiment: training followed by evaluation.
+
+    Returns the metrics of the evaluation.
+    """
     # Train the model using the dataloaders of the datamodule:
     # The Algorithm gets to "wrap" the datamodule if it wants. This might be useful in the
     # case of RL, where we need to set the actor to use in the environment, as well as
