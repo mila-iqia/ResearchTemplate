@@ -62,6 +62,9 @@ the "test explorer" tab to your editor. Then, you'll be able to see and debug th
 
 ## Unit tests
 
+```console
+pytest -x -v
+```
 
 ## Regression Tests
 
@@ -80,6 +83,12 @@ pytest --regen-all
 
 
 ## integration-tests
+
+To run slower integration tests, use the following:
+
+```console
+pytest -x -v --slow
+```
 
 ## Continuous Integration
 

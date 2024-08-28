@@ -5,6 +5,7 @@ import shutil
 
 import hydra_zen
 import pytest
+import torch
 from omegaconf import DictConfig
 
 from project.algorithms.example import ExampleAlgorithm
@@ -31,7 +32,6 @@ def test_jax_can_use_the_GPU():
 
 def test_torch_can_use_the_GPU():
     """Test that torch can use the GPU if it we have one."""
-    import torch
 
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
 
