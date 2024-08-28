@@ -34,7 +34,12 @@ hydra:
   mode: MULTIRUN
   # TODO: Automatically setup the log dir as a symlink to somewhere on scratch if we detect that
   # it's in $HOME.
+  run:
+    # output directory, generated dynamically on each run
+    dir: logs/${name}/runs
   sweep:
+    dir: logs/${name}/multiruns/
+    # subdir: ${hydra.job.num}
     subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
 
   launcher:

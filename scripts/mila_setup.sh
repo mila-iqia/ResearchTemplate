@@ -61,6 +61,13 @@ else
     echo "✅ $HOME/.vscode-server/data/Machine/settings.json already exists"
 fi
 
+if [ ! -f logs ]; then
+    echo "Creating a logs symlink to $SCRATCH/logs"
+    mkdir -p $SCRATCH/logs
+    ln -s $SCRATCH/logs logs
+else
+    echo "'logs' directory already exists."
+fi
 
 # install all dependencies
 echo "Installing all dependencies"
