@@ -51,7 +51,7 @@ def main(dict_config: DictConfig) -> dict:
         regen_schemas=False,
         stop_on_error=False,
         quiet=True,
-        add_headers=False,
+        add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
     )
 
     config: Config = resolve_dictconfig(dict_config)
