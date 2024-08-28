@@ -30,6 +30,15 @@ else
     echo "✅ ~/.bash_aliases already contains 'source \"\$HOME/.rye/env\"'"
 fi
 
+if ! grep -q 'module load libffi OpenSSL' ~/.bash_aliases; then
+    echo "Adding a line with 'module load libffi OpenSSL' to ~/.bash_aliases"
+    echo "# Load the libffi and OpenSSL modules (not Python)" >> ~/.bash_aliases
+    echo 'module load libffi OpenSSL' >> ~/.bash_aliases
+else
+    echo "✅ ~/.bash_aliases already contains 'module load libffi OpenSSL'"
+fi
+
+
 if ! grep -q 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' ~/.bash_aliases; then
     echo "Adding a line with 'export UV_LINK_MODE=\${UV_LINK_MODE:-"symlink"}' to ~/.bash_aliases"
     echo '# Setting UV_LINK_MODE to symlink (so that rye can use a cache dir on $SCRATCH)' >> ~/.bash_aliases
