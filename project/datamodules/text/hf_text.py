@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shutil
 from logging import getLogger
 from pathlib import Path
@@ -14,7 +13,7 @@ from transformers import (
     AutoTokenizer,
 )
 
-from project.utils.env_vars import DATA_DIR
+from project.utils.env_vars import REPO_ROOTDIR, SCRATCH, SLURM_TMPDIR
 from project.utils.utils import get_task_info
 
 torch.set_num_threads(
@@ -31,7 +30,7 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self,
         hf_dataset_path: str,
         tokenizer: str,
-        data_dir: str | Path = DATA_DIR,
+        data_dir: str | Path = SCRATCH or REPO_ROOTDIR / "data",
         task_name: str | None = None,
         task_field_map: dict | None = None,
         num_labels: int | None = None,
@@ -69,9 +68,15 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
-        self.data_dir: Path = Path(data_dir or DATA_DIR)
-        self.dataset_path = self.data_dir / f"{self.task_name}_dataset"
-        self.tmp_path = self.data_dir / f"{self.task_name}_tmp"
+        self.data_dir: Path = Path(data_dir)
+        self.processed_dataset_path = (
+            self.data_dir / f"{self.hf_dataset_path}_{self.task_name}_dataset"
+        )
+        if SLURM_TMPDIR:
+            self.working_path = SLURM_TMPDIR / self.processed_dataset_path.name
+        else:
+            self.working_path = self.processed_dataset_path
+        # self.dataset_path = self.working_path = self.data_dir / f"{self.task_name}_dataset"
 
         if task_name:
             self.text_fields, self.num_labels = get_task_info(task_name)
@@ -92,38 +97,37 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
 
     def prepare_data(self):
+        """
+        1.
+        """
         # Make sure to use $SCRATCH instead of $HOME for the huggingface cache directory"
-        if not self.dataset_path.exists():  # checking dataset hasn't been previously downloaded
-            logger.debug("Loading dataset for the first time.")
-            dataset = load_dataset(
-                self.hf_dataset_path,
-                self.task_name,
-                cache_dir=str(self.data_dir / ".cache/huggingface/datasets"),
-            )
-            # Tokenize and save to $SCRATCH
-            tokenized_dataset = dataset.map(
-                self.convert_to_features, batched=True, remove_columns=["label"]
-            )
-            tokenized_dataset.save_to_disk(self.dataset_path)
-        else:
-            logger.debug(f"Tokenized dataset already exists at {self.dataset_path}")
-
-        slurm_tmpdir_exists = (
-            os.getenv("SLURM_TMPDIR") is not None and not Path(os.getenv("SLURM_TMPDIR")).exists()
+        logger.debug("Loading dataset...")
+        dataset = load_dataset(
+            self.hf_dataset_path,
+            self.task_name,
+            cache_dir=str(self.data_dir / ".cache/huggingface/datasets"),
         )
+        # Tokenize and save to $SCRATCH
+        tokenized_dataset = dataset.map(
+            self.convert_to_features,
+            batched=True,
+            remove_columns=["label"],
+            load_from_cache_file=True,
+        )
+        logger.debug(f"Saving (overwriting) tokenized dataset at {self.processed_dataset_path}")
+        tokenized_dataset.save_to_disk(str(self.processed_dataset_path))
+
         ## the SLURM path exists and it wasn't chosen as the DATA_DIR variable by default
-        if slurm_tmpdir_exists:
-            self.tmp_path = Path(os.getenv("SLURM_TMPDIR")) / f"{self.task_name}_tmp"
-            # Copy dataset to the temporary path if not already present
-            logger.debug(f"Copying dataset from {self.dataset_path} to {self.tmp_path}")
-            shutil.copytree(self.dataset_path, self.tmp_path, dirs_exist_ok=True)
-            logger.info(f"Done preparing the dataset to {self.tmp_path}")
-        else:
-            logger.info(f"Done preparing the dataset at {self.dataset_path}")
+        # Copy dataset to the (faster) temporary path if not already present
+        if self.working_path != self.processed_dataset_path and not self.working_path.exists():
+            logger.debug(f"Copying dataset from {self.working_path} to {self.working_path}")
+            shutil.copytree(self.processed_dataset_path, self.working_path, dirs_exist_ok=False)
+
+        logger.info(f"Done preparing the dataset at {self.processed_dataset_path}")
 
     def setup(self, stage: str, seed: int = 42):
-        self.dataset = DatasetDict.load_from_disk(self.tmp_path)
-        logger.info(f"Loaded dataset from {self.tmp_path}")
+        self.dataset = DatasetDict.load_from_disk(self.working_path)
+        logger.info(f"Loaded dataset from {self.working_path}")
 
         if self.dataset_fraction is not None:
             logger.info(f"Reducing dataset to {self.dataset_fraction * 100}% of original size")

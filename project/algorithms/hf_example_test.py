@@ -25,6 +25,7 @@ class RecordTrainingLossCb(lightning.Callback):
         self.losses.append(outputs["loss"].detach())
 
 
+@run_for_all_configs_of_type("algorithm", HFExample)
 @run_for_all_configs_of_type("datamodule", HFDataModule)
 @run_for_all_configs_of_type("network", PreTrainedModel)
 class TestHFExample(LearningAlgorithmTests[HFExample]):

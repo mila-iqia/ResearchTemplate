@@ -101,7 +101,7 @@ from project.utils.testutils import (
     default_marks_for_config_name,
     seeded_rng,
 )
-from project.utils.typing_utils import is_sequence_of
+from project.utils.typing_utils import is_mapping_of, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
@@ -259,26 +259,27 @@ def network(
 
 @pytest.fixture(scope="session")
 def datamodule(
-    experiment_config: Config,
-    _common_setup_experiment_part: None,
+    # experiment_config: Config,
+    # _common_setup_experiment_part: None,
     datamodule_config: str | None,
     overrides: list[str] | None,
 ) -> DataModule:
     """Fixture that creates the datamodule for the given config."""
-    if datamodule_config:
-        # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
-        from hydra.types import RunMode
-
-        config = get_config_loader().load_configuration(
-            f"datamodule/{datamodule_config}.yaml",
-            overrides=overrides or [],
-            run_mode=RunMode.RUN,
-        )
-        datamodule_config = config["datamodule"]
-        assert isinstance(datamodule_config, DictConfig)
-        datamodule = instantiate_datamodule(datamodule_config)
-        return datamodule
+    if datamodule_config is None:
+        datamodule_config = "cifar10"
     # NOTE: creating the datamodule by itself instead of with everything else.
+    # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
+    from hydra.types import RunMode
+
+    config = get_config_loader().load_configuration(
+        f"datamodule/{datamodule_config}.yaml",
+        overrides=overrides or [],
+        run_mode=RunMode.RUN,
+    )
+    datamodule_config = config["datamodule"]
+    assert isinstance(datamodule_config, DictConfig)
+    datamodule = instantiate_datamodule(datamodule_config)
+    return datamodule
     return instantiate_datamodule(experiment_config.datamodule)
 
 
@@ -319,7 +320,7 @@ def training_batch(
         batch = tuple(t.to(device=device) for t in batch)
         return batch
     else:
-        assert isinstance(batch, dict) and is_sequence_of(batch.values(), Tensor)
+        assert is_mapping_of(batch, str, torch.Tensor)
         batch = {k: v.to(device=device) for k, v in batch.items()}
         return batch
 

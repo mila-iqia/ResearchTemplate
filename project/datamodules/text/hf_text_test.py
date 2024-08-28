@@ -16,17 +16,20 @@ def prepared_datamodule(
     _slurm_tmpdir = tmp_path / "_slurm_tmpdir"
     _slurm_tmpdir.mkdir()
 
-    _scratch_before = datamodule.dataset_path
-    _slurm_tmpdir_before = datamodule.tmp_path
+    _scratch_before = datamodule.data_dir
+    _slurm_tmpdir_before = datamodule.working_path
 
-    datamodule.dataset_path = _scratch_dir / f"{datamodule.task_name}_dataset"
-    datamodule.tmp_path = _slurm_tmpdir / f"{datamodule.task_name}_tmp"
+    datamodule.data_dir = _scratch_dir / f"{datamodule.task_name}_dataset"
+    datamodule.working_path = _slurm_tmpdir / f"{datamodule.task_name}_tmp"
+    datamodule.processed_dataset_path = (
+        datamodule.data_dir / f"{datamodule.hf_dataset_path}_{datamodule.task_name}_dataset"
+    )
 
     datamodule.prepare_data()
     yield datamodule
     # Restore the original value:
-    datamodule.dataset_path = _scratch_before
-    datamodule.tmp_path = _slurm_tmpdir_before
+    datamodule.data_dir = _scratch_before
+    datamodule.working_path = _slurm_tmpdir_before
 
 
 @run_for_all_configs_of_type("datamodule", HFDataModule)
@@ -36,13 +39,13 @@ def test_dataset_location(
     """Test that the dataset is downloaded to the correct location."""
     datamodule = prepared_datamodule
     assert (
-        datamodule.dataset_path.exists()
-    ), f"Dataset path {datamodule.dataset_path} does not exist."
+        datamodule.working_path.exists()
+    ), f"Dataset path {datamodule.working_path} does not exist."
 
     expected_files = ["dataset_dict.json"]
 
     for file_name in expected_files:
-        file_path = datamodule.dataset_path / file_name
+        file_path = datamodule.working_path / file_name
         assert file_path.exists(), f"Expected file: {file_name} not found at {file_path}."
 
 
