@@ -543,6 +543,18 @@ def _get_schema_file_path(config_file: Path, schemas_dir: Path):
     return schema_file
 
 
+def _all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
+    """Iterator that yields all the nested config entries that have a _target_."""
+    entries = {}
+    for key, value in config.items():
+        if isinstance(value, dict) and "_target_" in value.keys():
+            entries[(key,)] = value
+        elif isinstance(value, dict):
+            for subkey, subvalue in _all_subentries_with_target(value).items():
+                entries[(key, *subkey)] = subvalue
+    return entries
+
+
 def create_schema_for_config(
     config: dict | DictConfig, config_file: Path, configs_dir: Path | None
 ) -> Schema | ObjectSchema:
@@ -553,6 +565,12 @@ def create_schema_for_config(
     - Only the top-level config (`config`) can have a `defaults: list[str]` key.
         - Should ideally load the defaults and merge this schema on top of them.
     """
+
+    _config_dict = (
+        OmegaConf.to_container(config, resolve=False) if isinstance(config, DictConfig) else config
+    )
+    assert isinstance(_config_dict, dict)
+
     schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
     pretty_path = config_file.relative_to(configs_dir) if configs_dir else config_file
     schema["title"] = f"Auto-generated schema for {pretty_path}"
@@ -589,13 +607,56 @@ def create_schema_for_config(
             ),
         )
 
-        nested_value_schema_from_target_signature = _get_schema_from_target(config)
-        # logger.debug(f"Schema from signature of {target}: {schema_from_target_signature}")
+        for keys, value in _all_subentries_with_target(_config_dict).items():
+            assert False, (keys, value)
+            # Go over all the values in the config. If any of them have a `_target_`, then we can
+            # add a schema at that entry.
+            assert "_target_" in value
+            target = hydra.utils.get_object(value["_target_"])
+
+            # try:
+            nested_value_schema = _get_schema_from_target(value)
+            # except omegaconf.errors.InterpolationToMissingValueError:
+            #     logger.warning(
+            #         f"Unable to get the schema for {value['_target_']} at key {'.'.join(keys)} "
+            #         f"in file {config_file}."
+            #     )
+            #     continue
+
+            if "$defs" in nested_value_schema:
+                # note: can't have a $defs key in the schema.
+                schema.setdefault("$defs", {}).update(  # type: ignore
+                    nested_value_schema.pop("$defs")
+                )
+                assert "properties" in nested_value_schema
+
+            parent_keys, last_key = keys[:-1], keys[-1]
+            where_to_set: Schema | ObjectSchema = schema
+            for key in parent_keys:
+                where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
+
+            logger.debug(f"Using schema from nested value at keys {keys}: {nested_value_schema}")
+
+            if "properties" not in where_to_set:
+                where_to_set["properties"] = {last_key: nested_value_schema}  # type: ignore
+            elif last_key not in where_to_set["properties"]:
+                assert isinstance(last_key, str)
+                where_to_set["properties"][last_key] = nested_value_schema  # type: ignore
+            else:
+                where_to_set["properties"] = _merge_dicts(  # type: ignore
+                    where_to_set["properties"],
+                    nested_value_schema,  # type: ignore
+                )
+                raise NotImplementedError("todo: use merge_dicts here")
+
+        schema_from_target = _get_schema_from_target(config)
+        logger.debug(f"Schema from signature of {target}: {nested_value_schema}")
+        logger.debug(f"Existing schema: {schema}")
 
         schema = _merge_dicts(
-            nested_value_schema_from_target_signature,  # type: ignore
+            schema_from_target,  # type: ignore
             schema,  # type: ignore
-            conflict_handler=overwrite,
+            # conflict_handlers=overwrite,
         )
 
         return schema
@@ -603,29 +664,15 @@ def create_schema_for_config(
     # Config file that contains entries that may or may not have a _target_.
     schema["additionalProperties"] = True
 
-    def all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
-        """Iterator that yields all the nested config entries that have a _target_."""
-        entries = {}
-        for key, value in config.items():
-            if isinstance(value, dict) and "_target_" in value.keys():
-                entries[(key,)] = value
-            elif isinstance(value, dict):
-                for subkey, subvalue in all_subentries_with_target(value).items():
-                    entries[(key, *subkey)] = subvalue
-        return entries
-
-    _config_dict = (
-        OmegaConf.to_container(config, resolve=False) if isinstance(config, DictConfig) else config
-    )
     assert isinstance(_config_dict, dict)
-    for keys, value in all_subentries_with_target(_config_dict).items():
+    for keys, value in _all_subentries_with_target(_config_dict).items():
         # Go over all the values in the config. If any of them have a `_target_`, then we can
         # add a schema at that entry.
         assert "_target_" in value
         target = hydra.utils.get_object(value["_target_"])
 
         # try:
-        nested_value_schema_from_target_signature = _get_schema_from_target(value)
+        nested_value_schema = _get_schema_from_target(value)
         # except omegaconf.errors.InterpolationToMissingValueError:
         #     logger.warning(
         #         f"Unable to get the schema for {value['_target_']} at key {'.'.join(keys)} "
@@ -633,10 +680,10 @@ def create_schema_for_config(
         #     )
         #     continue
 
-        if "$defs" in nested_value_schema_from_target_signature:
+        if "$defs" in nested_value_schema:
             # note: can't have a $defs key in the schema.
             schema.setdefault("$defs", {}).update(  # type: ignore
-                nested_value_schema_from_target_signature.pop("$defs")
+                nested_value_schema.pop("$defs")
             )
 
         logger.debug(
@@ -644,7 +691,7 @@ def create_schema_for_config(
             f"{config_file}."
         )
 
-        assert "properties" in nested_value_schema_from_target_signature
+        assert "properties" in nested_value_schema
 
         parent_keys, last_key = keys[:-1], keys[-1]
         where_to_set: Schema | ObjectSchema = schema
@@ -652,14 +699,14 @@ def create_schema_for_config(
             where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
 
         if "properties" not in where_to_set:
-            where_to_set["properties"] = {last_key: nested_value_schema_from_target_signature}  # type: ignore
+            where_to_set["properties"] = {last_key: nested_value_schema}  # type: ignore
         elif last_key not in where_to_set["properties"]:
             assert isinstance(last_key, str)
-            where_to_set["properties"][last_key] = nested_value_schema_from_target_signature  # type: ignore
+            where_to_set["properties"][last_key] = nested_value_schema  # type: ignore
         else:
             where_to_set["properties"] = _merge_dicts(  # type: ignore
                 where_to_set["properties"],
-                nested_value_schema_from_target_signature,  # type: ignore
+                nested_value_schema,  # type: ignore
             )
             raise NotImplementedError("todo: use merge_dicts here")
 
