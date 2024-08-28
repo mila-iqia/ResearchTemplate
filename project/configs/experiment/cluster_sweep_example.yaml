@@ -32,8 +32,7 @@ trainer:
 
 hydra:
   mode: MULTIRUN
-  # TODO: Automatically setup the log dir as a symlink to somewhere on scratch if we detect that
-  # it's in $HOME.
+  # TODO: Make it so running the same command twice in the same job id resumes from the last checkpoint.
   run:
     # output directory, generated dynamically on each run
     dir: logs/${name}/runs
