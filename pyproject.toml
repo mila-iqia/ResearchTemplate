@@ -27,6 +27,10 @@ dependencies = [
     "transformers>=4.44.0",
     "scikit-learn>=1.5.1",
     "evaluate>=0.4.2",
+    # Pin the version to work around https://github.com/plotly/Kaleido/issues/156.
+    # Only pinning this so that we can install the hydra-orion-sweeper.
+    "kaleido==0.2.1",
+    "hydra-orion-sweeper>=1.6.4",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

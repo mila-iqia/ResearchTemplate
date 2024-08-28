@@ -19,10 +19,10 @@ trainer:
     wandb:
       project: "ResearchTemplate"
       # TODO: Use the Orion trial name?
-      name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
+      name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID}
       save_dir: "${hydra:runtime.output_dir}"
       offline: False # set True to store all logs only locally
-      id: null # pass correct id to resume experiment!
+      id: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID} # pass correct id to resume experiment!
       # entity: ""  # set to name of your wandb team
       log_model: False
       prefix: ""
@@ -53,7 +53,7 @@ hydra:
   sweeper:
     params:
       algorithm:
-        optimizer:
+        optimizer_config:
           lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
           # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
 
