@@ -1,7 +1,39 @@
+from __future__ import annotations
+
 import pytest
+from omegaconf import DictConfig
 
 from project.datamodules.text.hf_text import HFDataModule
-from project.utils.testutils import run_for_all_configs_of_type
+from project.experiment import (
+    instantiate_datamodule,
+)
+from project.utils.hydra_config_utils import get_config_loader
+from project.utils.testutils import (
+    run_for_all_configs_of_type,
+)
+from project.utils.typing_utils.protocols import DataModule
+
+
+@pytest.fixture(scope="session")
+def datamodule(
+    datamodule_config: str | None,
+    overrides: list[str] | None,
+) -> DataModule:
+    """Fixture that creates the datamodule for the given config."""
+    # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
+    from hydra.types import RunMode
+
+    config = get_config_loader().load_configuration(
+        f"datamodule/{datamodule_config}.yaml",
+        overrides=overrides or [],
+        run_mode=RunMode.RUN,
+    )
+    datamodule_config = config["datamodule"]
+    assert isinstance(datamodule_config, DictConfig)
+    datamodule = instantiate_datamodule(datamodule_config)
+    return datamodule
+
+    # NOTE: creating the datamodule by itself instead of with everything else.
 
 
 @pytest.fixture(scope="session")

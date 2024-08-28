@@ -93,7 +93,6 @@ from project.experiment import (
     setup_logging,
 )
 from project.main import PROJECT_NAME
-from project.utils.hydra_config_utils import get_config_loader
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
@@ -257,29 +256,18 @@ def network(
     return network
 
 
-@pytest.fixture(scope="session")
-def datamodule(
-    # experiment_config: Config,
-    # _common_setup_experiment_part: None,
-    datamodule_config: str | None,
-    overrides: list[str] | None,
-) -> DataModule:
-    """Fixture that creates the datamodule for the given config."""
-    if datamodule_config is None:
-        datamodule_config = "cifar10"
-    # NOTE: creating the datamodule by itself instead of with everything else.
-    # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
-    from hydra.types import RunMode
+# BUG: The network has a default config of `resnet18`, which tries to get the
+# num_classes from the datamodule. However, the hf_text datamodule doesn't have that attribute,
+# and we load the datamodule using the entire experiment config, so loading the network raises an
+# error!
+# - instantiate(experiment_config).datamodule
+# - instantiate(experiment_dictconfig['datamodule'])
 
-    config = get_config_loader().load_configuration(
-        f"datamodule/{datamodule_config}.yaml",
-        overrides=overrides or [],
-        run_mode=RunMode.RUN,
-    )
-    datamodule_config = config["datamodule"]
-    assert isinstance(datamodule_config, DictConfig)
-    datamodule = instantiate_datamodule(datamodule_config)
-    return datamodule
+
+@pytest.fixture(scope="session")
+def datamodule(experiment_config: Config) -> DataModule:
+    """Fixture that creates the datamodule for the given config."""
+    # NOTE: creating the datamodule by itself instead of with everything else.
     return instantiate_datamodule(experiment_config.datamodule)
 
 
