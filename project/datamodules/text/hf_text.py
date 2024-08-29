@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from logging import getLogger
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import torch
@@ -12,13 +13,53 @@ from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
 from project.utils.env_vars import REPO_ROOTDIR, SCRATCH, SLURM_TMPDIR
-from project.utils.utils import get_task_info
 
 # BUG: Investigating a slowdown that is happening on SLURM clusters with Lightning and this datamodule:
 # https://github.com/Lightning-AI/pytorch-lightning/issues/10389#issuecomment-2310630247
 # torch.set_num_threads(1)
 
 logger = getLogger(__name__)
+
+SupportedTask = Literal["cola", "sst2", "mrpc", "qqp", "stsb", "mnli", "qnli", "rte", "wnli", "ax"]
+
+
+def get_task_info(task_name: SupportedTask):
+    task_field_map = {
+        "cola": ["sentence"],
+        "sst2": ["sentence"],
+        "mrpc": ["sentence1", "sentence2"],
+        "qqp": ["question1", "question2"],
+        "stsb": ["sentence1", "sentence2"],
+        "mnli": ["premise", "hypothesis"],
+        "qnli": ["question", "sentence"],
+        "rte": ["sentence1", "sentence2"],
+        "wnli": ["sentence1", "sentence2"],
+        "ax": ["premise", "hypothesis"],
+    }
+
+    num_labels = {
+        "cola": 2,
+        "sst2": 2,
+        "mrpc": 2,
+        "qqp": 2,
+        "stsb": 1,
+        "mnli": 3,
+        "qnli": 2,
+        "rte": 2,
+        "wnli": 2,
+        "ax": 3,
+    }
+
+    task_map = task_field_map.get(task_name, None)
+    num_labels = num_labels.get(task_name, None)
+
+    if task_map is None:
+        raise ValueError(f"Task {task_name} task fields currently not supported.")
+
+    if num_labels is None:
+        raise ValueError(f"Task {task_name} labels currently not supported.")
+
+    return task_map, num_labels
 
 
 class HFDataModule(LightningDataModule):  ## to be homogenized with the base text class
