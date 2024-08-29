@@ -546,10 +546,10 @@ def _get_schema_file_path(config_file: Path, schemas_dir: Path):
 def _all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
     """Iterator that yields all the nested config entries that have a _target_."""
     entries = {}
+    if "_target_" in config:
+        entries[()] = config
     for key, value in config.items():
-        if isinstance(value, dict) and "_target_" in value.keys():
-            entries[(key,)] = value
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             for subkey, subvalue in _all_subentries_with_target(value).items():
                 entries[(key, *subkey)] = subvalue
     return entries
@@ -587,116 +587,36 @@ def create_schema_for_config(
                 configs_dir=configs_dir,
             )
 
-    if target_name := config.get("_target_"):
-        # There's a '_target_' key at the top level in the config file.
-        target = hydra.utils.get_object(target_name)
-        schema["description"] = f"Based on the signature of {target}."
-        if "properties" not in schema:
-            schema["properties"] = {}
-        assert "properties" in schema and isinstance(schema["properties"], dict)
-        schema["properties"]["_target_"] = PropertySchema(
-            type="string",
-            title="Target",
-            const=target_name,
-            # pattern=r"", # todo: Use a pattern to match python module import strings.
-            description=(
-                f"Target to instantiate, in this case: `{target_name}`\n"
-                # f"* Source: <file://{relative_to_cwd(inspect.getfile(target))}>\n"
-                # f"* Config file: <file://{config_file}>\n"
-                f"See the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n"
-            ),
-        )
-
-        for keys, value in _all_subentries_with_target(_config_dict).items():
-            assert False, (keys, value)
-            # Go over all the values in the config. If any of them have a `_target_`, then we can
-            # add a schema at that entry.
-            assert "_target_" in value
-            target = hydra.utils.get_object(value["_target_"])
-
-            # try:
-            nested_value_schema = _get_schema_from_target(value)
-            # except omegaconf.errors.InterpolationToMissingValueError:
-            #     logger.warning(
-            #         f"Unable to get the schema for {value['_target_']} at key {'.'.join(keys)} "
-            #         f"in file {config_file}."
-            #     )
-            #     continue
-
-            if "$defs" in nested_value_schema:
-                # note: can't have a $defs key in the schema.
-                schema.setdefault("$defs", {}).update(  # type: ignore
-                    nested_value_schema.pop("$defs")
-                )
-                assert "properties" in nested_value_schema
-
-            parent_keys, last_key = keys[:-1], keys[-1]
-            where_to_set: Schema | ObjectSchema = schema
-            for key in parent_keys:
-                where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
-
-            logger.debug(f"Using schema from nested value at keys {keys}: {nested_value_schema}")
-
-            if "properties" not in where_to_set:
-                where_to_set["properties"] = {last_key: nested_value_schema}  # type: ignore
-            elif last_key not in where_to_set["properties"]:
-                assert isinstance(last_key, str)
-                where_to_set["properties"][last_key] = nested_value_schema  # type: ignore
-            else:
-                where_to_set["properties"] = _merge_dicts(  # type: ignore
-                    where_to_set["properties"],
-                    nested_value_schema,  # type: ignore
-                )
-                raise NotImplementedError("todo: use merge_dicts here")
-
-        schema_from_target = _get_schema_from_target(config)
-        logger.debug(f"Schema from signature of {target}: {nested_value_schema}")
-        logger.debug(f"Existing schema: {schema}")
-
-        schema = _merge_dicts(
-            schema_from_target,  # type: ignore
-            schema,  # type: ignore
-            # conflict_handlers=overwrite,
-        )
-
-        return schema
-
     # Config file that contains entries that may or may not have a _target_.
-    schema["additionalProperties"] = True
+    schema["additionalProperties"] = "_target_" not in config
 
-    assert isinstance(_config_dict, dict)
     for keys, value in _all_subentries_with_target(_config_dict).items():
-        # Go over all the values in the config. If any of them have a `_target_`, then we can
-        # add a schema at that entry.
-        assert "_target_" in value
-        target = hydra.utils.get_object(value["_target_"])
+        is_top_level: bool = not keys
 
-        # try:
+        # target_name = value["_target_"]
+        # target = hydra.utils.get_object(target_name)
+
+        logger.debug(f"Handling key {'.'.join(keys)} in config at path {config_file}")
+
         nested_value_schema = _get_schema_from_target(value)
-        # except omegaconf.errors.InterpolationToMissingValueError:
-        #     logger.warning(
-        #         f"Unable to get the schema for {value['_target_']} at key {'.'.join(keys)} "
-        #         f"in file {config_file}."
-        #     )
-        #     continue
 
         if "$defs" in nested_value_schema:
             # note: can't have a $defs key in the schema.
             schema.setdefault("$defs", {}).update(  # type: ignore
                 nested_value_schema.pop("$defs")
             )
+            assert "properties" in nested_value_schema
 
-        logger.debug(
-            f"Getting schema from target {value['_target_']} at key {'.'.join(keys)} in "
-            f"{config_file}."
-        )
-
-        assert "properties" in nested_value_schema
+        if is_top_level:
+            schema = _merge_dicts(schema, nested_value_schema)
+            continue
 
         parent_keys, last_key = keys[:-1], keys[-1]
         where_to_set: Schema | ObjectSchema = schema
         for key in parent_keys:
             where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
+
+        logger.debug(f"Using schema from nested value at keys {keys}: {nested_value_schema}")
 
         if "properties" not in where_to_set:
             where_to_set["properties"] = {last_key: nested_value_schema}  # type: ignore
@@ -708,7 +628,6 @@ def create_schema_for_config(
                 where_to_set["properties"],
                 nested_value_schema,  # type: ignore
             )
-            raise NotImplementedError("todo: use merge_dicts here")
 
     return schema
 
@@ -1022,6 +941,10 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
 
     assert "properties" in json_schema
 
+    # Add a description
+    assert "description" not in json_schema
+    json_schema["description"] = f"Based on the signature of {target}."
+
     docs_to_search: list[dp.Docstring] = []
 
     if inspect.isclass(target):
@@ -1053,6 +976,22 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
 
     if config.get("_partial_"):
         json_schema["required"] = []
+    # Add some info on the target.
+    assert isinstance(json_schema["properties"]["_target_"], dict)
+    json_schema["properties"]["_target_"].update(
+        PropertySchema(
+            type="string",
+            title="Target",
+            const=config["_target_"],
+            # pattern=r"", # todo: Use a pattern to match python module import strings.
+            description=(
+                f"Target to instantiate, in this case: `{target}`\n"
+                # f"* Source: <file://{relative_to_cwd(inspect.getfile(target))}>\n"
+                # f"* Config file: <file://{config_file}>\n"
+                f"See the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n"
+            ),
+        )
+    )
 
     # if the target takes **kwargs, then we don't restrict additional properties.
     json_schema["additionalProperties"] = inspect.getfullargspec(target).varkw is not None
