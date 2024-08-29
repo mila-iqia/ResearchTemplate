@@ -80,13 +80,12 @@ class HFExample(LightningModule):
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return {"loss": loss, "preds": preds, "labels": labels}
 
-    def validation_step(self, batch, batch_idx, dataloader_idx=0):
+    def validation_step(
+        self, batch: dict[str, torch.Tensor], batch_idx: int, dataloader_idx: int = 0
+    ):
         val_loss, preds, labels = self.model_step(batch)
         self.log("val/loss", val_loss, on_step=False, on_epoch=True, prog_bar=True)
         return {"val/loss": val_loss, "preds": preds, "labels": labels}
-
-    def on_validation_epoch_end(self) -> None:
-        pass
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)"""
