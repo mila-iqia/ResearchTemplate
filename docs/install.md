@@ -14,32 +14,28 @@ There are two ways to install this project
     cd ResearchTemplate
     ```
 
-2. Create a conda environment
+2. Installing dependencies
 
-    ```bash
-    conda create -n research_template python=3.12
-    conda activate research_template
-    ```
+    You can install the package using `pip install -e .`, although we recommend using the [Rye](https://rye.astral.sh/)
+    package manager. This makes it easier to switch python versions and to add or change the dependencies later on.
 
-    Notes:
+    1. On your machine:
 
-    - If you don't have Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
-    - If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
+        ```console
+        curl -sSf https://rye.astral.sh/get | bash
+        rye sync       # Creates a virtual environment and installs dependencies in it.
+        ```
 
-    <!-- TODO: - If you're on the `mila` cluster, you can run this setup script: (...) -->
+    2. On the Mila cluster:
 
-3. Install the package using pip:
+        If you're on the `mila` cluster, you can run this setup script (on a *compute* node):
 
-    ```bash
-    pip install -e .
-    ```
-
-    Optionally, you can also install the package using [PDM](https://pdm-project.org/en/latest/). This makes it easier to add or change the dependencies later on:
-
-    ```bash
-    pip install pdm
-    pdm install
-    ```
+        ```console
+        # Get a compute node to run an interactive job:
+        salloc --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=1:00:00
+        # Run the installation script.
+        scripts/mila_setup.sh
+        ```
 
 ## Using a development container
 
