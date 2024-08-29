@@ -69,8 +69,8 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self,
         hf_dataset_path: str,
         tokenizer: str,
+        task_name: SupportedTask,
         data_dir: str | Path = SCRATCH or REPO_ROOTDIR / "data",
-        task_name: str | None = None,
         task_field_map: dict | None = None,
         num_labels: int | None = None,
         loader_columns: list = [
@@ -94,8 +94,8 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         **kwargs,
     ):
         super().__init__()
-        self.task_name = task_name
         self.tokenizer = tokenizer
+        self.task_name = task_name
         self.loader_columns = loader_columns
         self.seed = seed
         self.shuffle = shuffle
