@@ -58,7 +58,7 @@ class HFExample(LightningModule):
             input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask, labels=labels
         )
 
-    def model_step(self, batch: dict):
+    def model_step(self, batch: dict[str, torch.Tensor]):
         input_ids = batch["input_ids"]
         token_type_ids = batch["token_type_ids"]
         attention_mask = batch["attention_mask"]
@@ -75,7 +75,7 @@ class HFExample(LightningModule):
 
         return loss, preds, labels
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int):
         loss, preds, labels = self.model_step(batch)
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return {"loss": loss, "preds": preds, "labels": labels}
