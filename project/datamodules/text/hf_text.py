@@ -9,16 +9,14 @@ import torch
 from datasets import DatasetDict, load_dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import (
-    AutoTokenizer,
-)
+from transformers import AutoTokenizer
 
 from project.utils.env_vars import REPO_ROOTDIR, SCRATCH, SLURM_TMPDIR
 from project.utils.utils import get_task_info
 
-torch.set_num_threads(
-    1
-)  # https://github.com/Lightning-AI/pytorch-lightning/issues/10389#issuecomment-2310630247
+# BUG: Investigating a slowdown that is happening on SLURM clusters with Lightning and this datamodule:
+# https://github.com/Lightning-AI/pytorch-lightning/issues/10389#issuecomment-2310630247
+# torch.set_num_threads(1)
 
 logger = getLogger(__name__)
 
