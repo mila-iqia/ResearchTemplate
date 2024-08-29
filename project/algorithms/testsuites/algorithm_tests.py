@@ -190,7 +190,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         assert isinstance(gradients_callback.grads, dict)
         assert isinstance(gradients_callback.outputs, dict)
         batch = gradients_callback.batch
-        if isinstance(batch, list | tuple) and len(batch) == 2:
+        if isinstance(batch, list | tuple):
             cpu_batch = {str(i): t.cpu() for i, t in enumerate(batch)}
         else:
             assert isinstance(batch, dict) and all(

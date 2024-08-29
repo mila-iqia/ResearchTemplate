@@ -36,7 +36,7 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
         assert isinstance(training_batch, dict)
         return training_batch
 
-    @pytest.mark.skip(reason="Throughput problems")
+    @pytest.mark.slow
     def test_overfit_batch(
         self,
         algorithm: HFExample,
