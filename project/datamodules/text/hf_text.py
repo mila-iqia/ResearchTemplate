@@ -71,8 +71,6 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         tokenizer: str,
         task_name: SupportedTask,
         data_dir: str | Path = SCRATCH or REPO_ROOTDIR / "data",
-        task_field_map: dict | None = None,
-        num_labels: int | None = None,
         loader_columns: list = [
             "datasets_idx",
             "input_ids",
@@ -117,11 +115,7 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
             self.working_path = self.processed_dataset_path
         # self.dataset_path = self.working_path = self.data_dir / f"{self.task_name}_dataset"
 
-        if task_name:
-            self.text_fields, self.num_labels = get_task_info(task_name)
-        else:
-            self.text_fields = task_field_map
-            self.num_labels = num_labels
+        self.text_fields, self.num_labels = get_task_info(task_name)
 
         ## potential inconsistency in text_fields and task_map
 
@@ -136,9 +130,6 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self.test_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
 
     def prepare_data(self):
-        """
-        1.
-        """
         # Make sure to use $SCRATCH instead of $HOME for the huggingface cache directory"
         logger.debug("Loading dataset...")
         dataset = load_dataset(
@@ -156,7 +147,6 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         logger.debug(f"Saving (overwriting) tokenized dataset at {self.processed_dataset_path}")
         tokenized_dataset.save_to_disk(str(self.processed_dataset_path))
 
-        ## the SLURM path exists and it wasn't chosen as the DATA_DIR variable by default
         # Copy dataset to the (faster) temporary path if not already present
         if self.working_path != self.processed_dataset_path and not self.working_path.exists():
             logger.debug(f"Copying dataset from {self.working_path} to {self.working_path}")

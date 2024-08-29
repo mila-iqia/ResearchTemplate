@@ -21,7 +21,7 @@ def pretrained_network(model_name_or_path: str | Path, **kwargs) -> PreTrainedMo
 
 
 class HFExample(LightningModule):
-    """General purpose lightning module for interfacing with huggingface transformers."""
+    """Example of a lightning module used to train a huggingface model."""
 
     def __init__(
         self,
