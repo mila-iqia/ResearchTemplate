@@ -1,0 +1,2 @@
+_target_: project.algorithms.hf_example.pretrained_network
+model_name_or_path: albert-base-v2
