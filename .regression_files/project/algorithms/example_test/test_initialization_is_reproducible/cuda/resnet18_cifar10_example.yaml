@@ -9,30 +9,30 @@ network.bn1.bias:
   sum: 0.0
 network.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.bn1.running_mean:
   device: cuda:0
-  hash: -5878519106808354682
+  hash: -5258163774450544391
   max: 0.0
-  mean: -0.0
-  min: -0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 64
-  sum: -0.0
+  sum: 0.0
 network.bn1.running_var:
   device: cuda:0
-  hash: 2749178484346089385
-  max: 0.6
-  mean: 0.5
-  min: 0.5
+  hash: 3365237965395210859
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 64
-  sum: 31.6
+  sum: 64.0
 network.bn1.weight:
   device: cuda:0
   hash: 3365237965395210859
@@ -84,30 +84,30 @@ network.layer1.0.bn1.bias:
   sum: 0.0
 network.layer1.0.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer1.0.bn1.running_mean:
   device: cuda:0
-  hash: 4144199726702005761
-  max: 0.3
-  mean: -0.0
-  min: -0.4
+  hash: -5258163774450544391
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 64
-  sum: -1.9
+  sum: 0.0
 network.layer1.0.bn1.running_var:
   device: cuda:0
-  hash: -1587049352141093944
-  max: 0.8
-  mean: 0.7
-  min: 0.6
+  hash: 3365237965395210859
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 64
-  sum: 41.6
+  sum: 64.0
 network.layer1.0.bn1.weight:
   device: cuda:0
   hash: 3365237965395210859
@@ -128,30 +128,30 @@ network.layer1.0.bn2.bias:
   sum: 0.0
 network.layer1.0.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer1.0.bn2.running_mean:
   device: cuda:0
-  hash: -4581449716979947703
-  max: 0.2
-  mean: -0.0
-  min: -0.1
+  hash: -5258163774450544391
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 64
-  sum: -0.6
+  sum: 0.0
 network.layer1.0.bn2.running_var:
   device: cuda:0
-  hash: -4335243484317460289
-  max: 0.7
-  mean: 0.6
-  min: 0.5
+  hash: 3365237965395210859
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 64
-  sum: 36.8
+  sum: 64.0
 network.layer1.0.bn2.weight:
   device: cuda:0
   hash: 3365237965395210859
@@ -196,30 +196,30 @@ network.layer1.1.bn1.bias:
   sum: 0.0
 network.layer1.1.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer1.1.bn1.running_mean:
   device: cuda:0
-  hash: 7422989927479728082
-  max: 0.4
-  mean: -0.0
-  min: -0.4
+  hash: -5258163774450544391
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 64
-  sum: -0.6
+  sum: 0.0
 network.layer1.1.bn1.running_var:
   device: cuda:0
-  hash: 4849578343350795317
-  max: 1.2
-  mean: 0.8
-  min: 0.7
+  hash: 3365237965395210859
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 64
-  sum: 52.5
+  sum: 64.0
 network.layer1.1.bn1.weight:
   device: cuda:0
   hash: 3365237965395210859
@@ -240,30 +240,30 @@ network.layer1.1.bn2.bias:
   sum: 0.0
 network.layer1.1.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer1.1.bn2.running_mean:
   device: cuda:0
-  hash: 6305557095253654844
-  max: 0.2
+  hash: -5258163774450544391
+  max: 0.0
   mean: 0.0
-  min: -0.1
+  min: 0.0
   shape:
   - 64
-  sum: 1.4
+  sum: 0.0
 network.layer1.1.bn2.running_var:
   device: cuda:0
-  hash: -7951983649081003889
-  max: 0.7
-  mean: 0.6
-  min: 0.5
+  hash: 3365237965395210859
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 64
-  sum: 36.9
+  sum: 64.0
 network.layer1.1.bn2.weight:
   device: cuda:0
   hash: 3365237965395210859
@@ -308,30 +308,30 @@ network.layer2.0.bn1.bias:
   sum: 0.0
 network.layer2.0.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer2.0.bn1.running_mean:
   device: cuda:0
-  hash: 9053400171841071450
-  max: 0.4
-  mean: -0.0
-  min: -0.4
+  hash: -1635896773963443042
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 128
-  sum: -0.1
+  sum: 0.0
 network.layer2.0.bn1.running_var:
   device: cuda:0
-  hash: 3613505695311702471
+  hash: 6287136276657058105
   max: 1.0
-  mean: 0.7
-  min: 0.6
+  mean: 1.0
+  min: 1.0
   shape:
   - 128
-  sum: 91.7
+  sum: 128.0
 network.layer2.0.bn1.weight:
   device: cuda:0
   hash: 6287136276657058105
@@ -352,30 +352,30 @@ network.layer2.0.bn2.bias:
   sum: 0.0
 network.layer2.0.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer2.0.bn2.running_mean:
   device: cuda:0
-  hash: 6299567556528549653
-  max: 0.2
+  hash: -1635896773963443042
+  max: 0.0
   mean: 0.0
-  min: -0.2
+  min: 0.0
   shape:
   - 128
-  sum: 0.3
+  sum: 0.0
 network.layer2.0.bn2.running_var:
   device: cuda:0
-  hash: 427603685868218305
-  max: 0.6
-  mean: 0.6
-  min: 0.5
+  hash: 6287136276657058105
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 128
-  sum: 72.5
+  sum: 128.0
 network.layer2.0.bn2.weight:
   device: cuda:0
   hash: 6287136276657058105
@@ -432,30 +432,30 @@ network.layer2.0.downsample.1.bias:
   sum: 0.0
 network.layer2.0.downsample.1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer2.0.downsample.1.running_mean:
   device: cuda:0
-  hash: 2797492643735013494
-  max: 0.5
+  hash: -1635896773963443042
+  max: 0.0
   mean: 0.0
-  min: -0.3
+  min: 0.0
   shape:
   - 128
-  sum: 3.5
+  sum: 0.0
 network.layer2.0.downsample.1.running_var:
   device: cuda:0
-  hash: 4089170461252799565
-  max: 0.9
-  mean: 0.7
-  min: 0.6
+  hash: 6287136276657058105
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 128
-  sum: 89.6
+  sum: 128.0
 network.layer2.0.downsample.1.weight:
   device: cuda:0
   hash: 6287136276657058105
@@ -476,30 +476,30 @@ network.layer2.1.bn1.bias:
   sum: 0.0
 network.layer2.1.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer2.1.bn1.running_mean:
   device: cuda:0
-  hash: -7021330443455657069
-  max: 0.2
+  hash: -1635896773963443042
+  max: 0.0
   mean: 0.0
-  min: -0.2
+  min: 0.0
   shape:
   - 128
-  sum: 0.2
+  sum: 0.0
 network.layer2.1.bn1.running_var:
   device: cuda:0
-  hash: -1399201429764712841
-  max: 0.8
-  mean: 0.7
-  min: 0.6
+  hash: 6287136276657058105
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 128
-  sum: 84.3
+  sum: 128.0
 network.layer2.1.bn1.weight:
   device: cuda:0
   hash: 6287136276657058105
@@ -520,30 +520,30 @@ network.layer2.1.bn2.bias:
   sum: 0.0
 network.layer2.1.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer2.1.bn2.running_mean:
   device: cuda:0
-  hash: -8423530407949902389
-  max: 0.1
+  hash: -1635896773963443042
+  max: 0.0
   mean: 0.0
-  min: -0.1
+  min: 0.0
   shape:
   - 128
-  sum: 0.3
+  sum: 0.0
 network.layer2.1.bn2.running_var:
   device: cuda:0
-  hash: 5350669971641561246
-  max: 0.6
-  mean: 0.6
-  min: 0.5
+  hash: 6287136276657058105
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 128
-  sum: 72.6
+  sum: 128.0
 network.layer2.1.bn2.weight:
   device: cuda:0
   hash: 6287136276657058105
@@ -588,30 +588,30 @@ network.layer3.0.bn1.bias:
   sum: 0.0
 network.layer3.0.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer3.0.bn1.running_mean:
   device: cuda:0
-  hash: -1225558663459102148
-  max: 0.3
-  mean: -0.0
-  min: -0.3
+  hash: 3505480816438514598
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 256
-  sum: -2.8
+  sum: 0.0
 network.layer3.0.bn1.running_var:
   device: cuda:0
-  hash: -5616705334050910536
-  max: 0.8
-  mean: 0.6
-  min: 0.6
+  hash: -6876904910641568386
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 256
-  sum: 155.7
+  sum: 256.0
 network.layer3.0.bn1.weight:
   device: cuda:0
   hash: -6876904910641568386
@@ -632,30 +632,30 @@ network.layer3.0.bn2.bias:
   sum: 0.0
 network.layer3.0.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer3.0.bn2.running_mean:
   device: cuda:0
-  hash: 4300546157277965056
-  max: 0.1
+  hash: 3505480816438514598
+  max: 0.0
   mean: 0.0
-  min: -0.1
+  min: 0.0
   shape:
   - 256
-  sum: 1.3
+  sum: 0.0
 network.layer3.0.bn2.running_var:
   device: cuda:0
-  hash: -5377294272970103452
-  max: 0.6
-  mean: 0.5
-  min: 0.5
+  hash: -6876904910641568386
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 256
-  sum: 136.9
+  sum: 256.0
 network.layer3.0.bn2.weight:
   device: cuda:0
   hash: -6876904910641568386
@@ -712,30 +712,30 @@ network.layer3.0.downsample.1.bias:
   sum: 0.0
 network.layer3.0.downsample.1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer3.0.downsample.1.running_mean:
   device: cuda:0
-  hash: 241154451424473890
-  max: 0.3
-  mean: -0.0
-  min: -0.4
+  hash: 3505480816438514598
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 256
-  sum: -0.9
+  sum: 0.0
 network.layer3.0.downsample.1.running_var:
   device: cuda:0
-  hash: -6567829819101024848
-  max: 0.8
-  mean: 0.6
-  min: 0.6
+  hash: -6876904910641568386
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 256
-  sum: 161.0
+  sum: 256.0
 network.layer3.0.downsample.1.weight:
   device: cuda:0
   hash: -6876904910641568386
@@ -756,30 +756,30 @@ network.layer3.1.bn1.bias:
   sum: 0.0
 network.layer3.1.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer3.1.bn1.running_mean:
   device: cuda:0
-  hash: 7365428311270331190
-  max: 0.2
-  mean: -0.0
-  min: -0.2
+  hash: 3505480816438514598
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 256
-  sum: -0.5
+  sum: 0.0
 network.layer3.1.bn1.running_var:
   device: cuda:0
-  hash: -8819758308383435155
-  max: 0.7
-  mean: 0.6
-  min: 0.5
+  hash: -6876904910641568386
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 256
-  sum: 151.8
+  sum: 256.0
 network.layer3.1.bn1.weight:
   device: cuda:0
   hash: -6876904910641568386
@@ -800,30 +800,30 @@ network.layer3.1.bn2.bias:
   sum: 0.0
 network.layer3.1.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer3.1.bn2.running_mean:
   device: cuda:0
-  hash: -4541921197534020251
-  max: 0.1
+  hash: 3505480816438514598
+  max: 0.0
   mean: 0.0
-  min: -0.1
+  min: 0.0
   shape:
   - 256
-  sum: 0.7
+  sum: 0.0
 network.layer3.1.bn2.running_var:
   device: cuda:0
-  hash: 5769621175556147302
-  max: 0.6
-  mean: 0.5
-  min: 0.5
+  hash: -6876904910641568386
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 256
-  sum: 136.7
+  sum: 256.0
 network.layer3.1.bn2.weight:
   device: cuda:0
   hash: -6876904910641568386
@@ -868,30 +868,30 @@ network.layer4.0.bn1.bias:
   sum: 0.0
 network.layer4.0.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer4.0.bn1.running_mean:
   device: cuda:0
-  hash: -7242584581580898782
-  max: 0.3
-  mean: -0.0
-  min: -0.3
+  hash: -8803861103172710891
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 512
-  sum: -4.0
+  sum: 0.0
 network.layer4.0.bn1.running_var:
   device: cuda:0
-  hash: 3760802362968864033
-  max: 0.6
-  mean: 0.5
-  min: 0.5
+  hash: 6106638844112739035
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 512
-  sum: 274.7
+  sum: 512.0
 network.layer4.0.bn1.weight:
   device: cuda:0
   hash: 6106638844112739035
@@ -912,30 +912,30 @@ network.layer4.0.bn2.bias:
   sum: 0.0
 network.layer4.0.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer4.0.bn2.running_mean:
   device: cuda:0
-  hash: 4549763374720747579
-  max: 0.1
+  hash: -8803861103172710891
+  max: 0.0
   mean: 0.0
-  min: -0.1
+  min: 0.0
   shape:
   - 512
-  sum: 1.2
+  sum: 0.0
 network.layer4.0.bn2.running_var:
   device: cuda:0
-  hash: -9185365468231883276
-  max: 0.5
-  mean: 0.5
-  min: 0.5
+  hash: 6106638844112739035
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 512
-  sum: 251.0
+  sum: 512.0
 network.layer4.0.bn2.weight:
   device: cuda:0
   hash: 6106638844112739035
@@ -992,30 +992,30 @@ network.layer4.0.downsample.1.bias:
   sum: 0.0
 network.layer4.0.downsample.1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer4.0.downsample.1.running_mean:
   device: cuda:0
-  hash: 3122373262345279781
-  max: 0.4
+  hash: -8803861103172710891
+  max: 0.0
   mean: 0.0
-  min: -0.6
+  min: 0.0
   shape:
   - 512
-  sum: 3.5
+  sum: 0.0
 network.layer4.0.downsample.1.running_var:
   device: cuda:0
-  hash: 187066491503785432
-  max: 0.8
-  mean: 0.6
-  min: 0.5
+  hash: 6106638844112739035
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 512
-  sum: 301.7
+  sum: 512.0
 network.layer4.0.downsample.1.weight:
   device: cuda:0
   hash: 6106638844112739035
@@ -1036,30 +1036,30 @@ network.layer4.1.bn1.bias:
   sum: 0.0
 network.layer4.1.bn1.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer4.1.bn1.running_mean:
   device: cuda:0
-  hash: 6615102869868303568
-  max: 0.1
+  hash: -8803861103172710891
+  max: 0.0
   mean: 0.0
-  min: -0.1
+  min: 0.0
   shape:
   - 512
-  sum: 0.9
+  sum: 0.0
 network.layer4.1.bn1.running_var:
   device: cuda:0
-  hash: -2745295034915122323
-  max: 0.5
-  mean: 0.5
-  min: 0.5
+  hash: 6106638844112739035
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 512
-  sum: 257.3
+  sum: 512.0
 network.layer4.1.bn1.weight:
   device: cuda:0
   hash: 6106638844112739035
@@ -1080,30 +1080,30 @@ network.layer4.1.bn2.bias:
   sum: 0.0
 network.layer4.1.bn2.num_batches_tracked:
   device: cuda:0
-  hash: -6198871656470064846
-  max: 7
-  mean: 7.0
-  min: 7
+  hash: -8753497827991233192
+  max: 0
+  mean: 0.0
+  min: 0
   shape: []
-  sum: 7
+  sum: 0
 network.layer4.1.bn2.running_mean:
   device: cuda:0
-  hash: -3213465157316500801
-  max: 0.1
-  mean: -0.0
-  min: -0.1
+  hash: -8803861103172710891
+  max: 0.0
+  mean: 0.0
+  min: 0.0
   shape:
   - 512
-  sum: -0.5
+  sum: 0.0
 network.layer4.1.bn2.running_var:
   device: cuda:0
-  hash: -1441627198489021738
-  max: 0.5
-  mean: 0.5
-  min: 0.5
+  hash: 6106638844112739035
+  max: 1.0
+  mean: 1.0
+  min: 1.0
   shape:
   - 512
-  sum: 251.0
+  sum: 512.0
 network.layer4.1.bn2.weight:
   device: cuda:0
   hash: 6106638844112739035
