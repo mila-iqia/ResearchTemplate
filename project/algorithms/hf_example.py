@@ -32,20 +32,24 @@ class HFExample(LightningModule):
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
-        **kwargs,
     ):
         super().__init__()
-
-        self.save_hyperparameters()
-        self.num_labels = datamodule.num_labels
-        self.task_name = datamodule.task_name
         self.network = network
         self.hf_metric_name = hf_metric_name
+        self.learning_rate = learning_rate
+        self.adam_epsilon = adam_epsilon
+        self.warmup_steps = warmup_steps
+        self.weight_decay = weight_decay
+
+        self.num_labels = datamodule.num_labels
+        self.task_name = datamodule.task_name
         self.metric = load_metric(
             self.hf_metric_name,
             self.task_name,
             experiment_id=datetime.now().strftime("%d-%m-%Y_%H-%M-%S"),
         )
+
+        self.save_hyperparameters(ignore=["datamodule", "network"])
 
     def forward(
         self,
@@ -69,7 +73,7 @@ class HFExample(LightningModule):
         logits = outputs.logits
 
         if self.num_labels > 1:
-            preds = torch.argmax(logits, axis=1)
+            preds = torch.argmax(logits, dim=1)
         else:
             preds = logits.squeeze()
 
@@ -98,7 +102,7 @@ class HFExample(LightningModule):
                     for n, p in model.named_parameters()
                     if not any(nd_param in n for nd_param in no_decay)
                 ],
-                "weight_decay": self.hparams.weight_decay,
+                "weight_decay": self.weight_decay,
             },
             {
                 "params": [
@@ -111,13 +115,13 @@ class HFExample(LightningModule):
         ]
         optimizer = AdamW(
             optimizer_grouped_parameters,
-            lr=self.hparams.learning_rate,
-            eps=self.hparams.adam_epsilon,
+            lr=self.learning_rate,
+            eps=self.adam_epsilon,
         )
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=self.hparams.warmup_steps,
+            num_warmup_steps=self.warmup_steps,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
