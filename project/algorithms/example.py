@@ -7,14 +7,12 @@ python project/main.py algorithm=example
 ```
 """
 
-import dataclasses
 import functools
 from logging import getLogger
 from typing import Any, Literal
 
 import torch
 from lightning import LightningModule
-from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
@@ -22,6 +20,7 @@ from torch.optim.optimizer import Optimizer
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import instantiate
+from project.utils.seeding import seeded_rng
 
 logger = getLogger(__name__)
 
@@ -48,17 +47,16 @@ class ExampleAlgorithm(LightningModule):
         self.datamodule = datamodule
         self.network = network
         self.optimizer_config = optimizer_config
-        assert dataclasses.is_dataclass(optimizer_config) or isinstance(
-            optimizer_config, dict | DictConfig
-        ), optimizer_config
 
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
-        # Do a forward pass to initialize any lazy weights. This is necessary for distributed
-        # training and to infer shapes.
-        _ = self.network(self.example_input_array)
+        if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
+            # Do a forward pass to initialize any lazy weights. This is necessary for distributed
+            # training and to infer shapes.
+            with seeded_rng(seed=42):
+                _ = self.network(self.example_input_array)
 
         # Save hyper-parameters.
         self.save_hyperparameters(ignore=["datamodule", "network"])

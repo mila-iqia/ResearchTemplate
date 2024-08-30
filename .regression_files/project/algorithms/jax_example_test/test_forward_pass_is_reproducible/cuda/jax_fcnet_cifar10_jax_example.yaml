@@ -1,0 +1,22 @@
+input:
+  device: cuda:0
+  hash: -1373365636602041987
+  max: 2.1
+  mean: -0.0
+  min: -2.0
+  shape:
+  - 128
+  - 3
+  - 32
+  - 32
+  sum: -2429.8
+out:
+  device: cuda:0
+  hash: -4821171490455332153
+  max: 2.4
+  mean: 0.1
+  min: -3.1
+  shape:
+  - 128
+  - 10
+  sum: 74.4

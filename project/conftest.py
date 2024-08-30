@@ -60,6 +60,7 @@ algorithm & network & datamodule -- is used by --> some_other_test
 
 from __future__ import annotations
 
+import copy
 import os
 import sys
 import typing
@@ -73,6 +74,7 @@ from typing import Any
 import flax.linen
 import lightning.pytorch as pl
 import numpy as np
+import omegaconf
 import pytest
 import torch
 from hydra import compose, initialize_config_module
@@ -92,13 +94,13 @@ from project.experiment import (
     seed_rng,
     setup_logging,
 )
-from project.main import PROJECT_NAME
+from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
-    seeded_rng,
 )
 from project.utils.typing_utils import is_mapping_of, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
@@ -221,13 +223,13 @@ def experiment_dictconfig(
         all_overrides=command_line_arguments,
         tmp_path_factory=tmp_path_factory,
     ) as dict_config:
+        setup_logging(dict_config["log_level"])
+        seed_rng(dict_config["seed"])
         return dict_config
 
 
 @pytest.fixture(scope="session")
-def experiment_config(
-    experiment_dictconfig: DictConfig,
-) -> Config:
+def experiment_config(experiment_dictconfig: DictConfig) -> Config:
     """The experiment configuration, with all interpolations resolved."""
     config = resolve_dictconfig(experiment_dictconfig)
     return config
@@ -242,16 +244,17 @@ def network(
 ):
     with device:
         network = instantiate_network(experiment_config, datamodule=datamodule)
-
     if isinstance(network, flax.linen.Module):
         return network
 
-    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
+    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()) and isinstance(
+        training_batch, tuple | list
+    ):
         # a bit ugly, but we need to initialize any lazy weights before we pass the network
         # to the tests.
+        input = training_batch[0]
         # TODO: Investigate the false positives with example_from_config, resnets, cifar10
-        if isinstance(training_batch, tuple):
-            input = training_batch[0]
+        with seeded_rng(experiment_config.seed or 123):
             _ = network(input)
     return network
 
@@ -265,10 +268,19 @@ def network(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_config: Config) -> DataModule:
+def datamodule(experiment_dictconfig: DictConfig) -> DataModule:
     """Fixture that creates the datamodule for the given config."""
+    datamodule_config = copy.deepcopy(experiment_dictconfig["datamodule"])
+    omegaconf.OmegaConf.resolve(datamodule_config)
     # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_config.datamodule)
+    return instantiate_datamodule(datamodule_config)
+
+
+# @pytest.fixture(scope="session")
+# def datamodule(experiment_config: Config) -> DataModule:
+#     """Fixture that creates the datamodule for the given config."""
+#     # NOTE: creating the datamodule by itself instead of with everything else.
+#     return instantiate_datamodule(experiment_config.datamodule)
 
 
 @pytest.fixture(scope="function")
@@ -553,7 +565,7 @@ def _setup_hydra_for_tests_and_compose(
 ):
     """Context manager that sets up the Hydra configuration for unit tests."""
     with initialize_config_module(
-        config_module=f"{PROJECT_NAME}.configs",
+        config_module="project.configs",
         job_name="test",
         version_base="1.2",
     ):
@@ -588,18 +600,6 @@ def _add_default_marks_for_config_name(config_name: str, request: pytest.Fixture
     # TODO: ALSO add all the marks for config combinations that contain this config?
 
 
-@pytest.fixture(scope="session")
-def _common_setup_experiment_part(experiment_config: Config):
-    """Fixture that is used to run the common part of `setup_experiment`.
-
-    This is there so that we can instantiate only one or a few of the experiment components (e.g.
-    only the Network), while also only doing the common part once if we were to use more than one
-    of these components in a test.
-    """
-    setup_logging(experiment_config)
-    seed_rng(experiment_config)
-
-
 @pytest.fixture
 def make_torch_deterministic():
     """Set torch to deterministic mode for unit tests that use the tensor_regression fixture."""
@@ -607,6 +607,19 @@ def make_torch_deterministic():
     torch.set_deterministic_debug_mode("error")
     yield
     torch.set_deterministic_debug_mode(mode_before)
+
+
+@pytest.fixture
+def original_datadir(original_datadir: Path):
+    """Tweak the `original_datadir` fixture to create files in a different directory.
+
+    This is just so that we don't see all the regression files next to the code.
+    """
+    path_to_test = original_datadir.relative_to(REPO_ROOTDIR)
+    regression_dir = REPO_ROOTDIR / ".regression_files"
+    regression_dir.mkdir(exist_ok=True)
+    new_datadir = regression_dir / path_to_test
+    return new_datadir
 
 
 # Incremental testing: https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps

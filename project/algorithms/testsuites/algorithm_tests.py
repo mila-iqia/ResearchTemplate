@@ -19,8 +19,9 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.testutils import ParametrizedFixture, seeded_rng
-from project.utils.typing_utils import PyTree, is_sequence_of
+from project.utils.seeding import seeded_rng
+from project.utils.testutils import ParametrizedFixture
+from project.utils.typing_utils import PyTree, is_mapping_of, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
 logger = get_logger(__name__)
@@ -144,6 +145,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             algorithm.state_dict(),
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_forward_pass_is_reproducible(
@@ -161,6 +163,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_backward_pass_is_reproducible(
@@ -190,26 +193,23 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         assert isinstance(gradients_callback.grads, dict)
         assert isinstance(gradients_callback.outputs, dict)
         batch = gradients_callback.batch
-        if isinstance(batch, list | tuple):
+        if is_sequence_of(batch, torch.Tensor):
             cpu_batch = {str(i): t.cpu() for i, t in enumerate(batch)}
         else:
-            assert isinstance(batch, dict) and all(
-                isinstance(v, torch.Tensor) for v in batch.values()
-            )
+            assert is_mapping_of(batch, str, torch.Tensor)
             cpu_batch = {k: v.cpu() for k, v in batch.items()}
         tensor_regression.check(
             {
-                # FIXME: This is ugly, and specific to the image classification example.
                 "batch": cpu_batch,
                 "grads": {
-                    k: v.cpu() if v is not None else None
-                    for k, v in gradients_callback.grads.items()
+                    k: v if v is not None else None for k, v in gradients_callback.grads.items()
                 },
-                "outputs": {k: v.cpu() for k, v in gradients_callback.outputs.items()},
+                "outputs": {k: v for k, v in gradients_callback.outputs.items()},
             },
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def __init_subclass__(cls) -> None:

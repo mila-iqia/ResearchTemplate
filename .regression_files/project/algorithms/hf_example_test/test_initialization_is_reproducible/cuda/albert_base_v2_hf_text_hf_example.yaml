@@ -1,0 +1,255 @@
+network.albert.embeddings.LayerNorm.bias:
+  device: cuda:0
+  hash: 3536794853149431135
+  max: 2.5
+  mean: -0.0
+  min: -1.4
+  shape:
+  - 128
+  sum: -4.5
+network.albert.embeddings.LayerNorm.weight:
+  device: cuda:0
+  hash: 8473515197054842058
+  max: 3.7
+  mean: 3.3
+  min: 1.3
+  shape:
+  - 128
+  sum: 417.8
+network.albert.embeddings.position_embeddings.weight:
+  device: cuda:0
+  hash: -2472269142761384405
+  max: 0.3
+  mean: 0.0
+  min: -0.2
+  shape:
+  - 512
+  - 128
+  sum: 6.9
+network.albert.embeddings.token_type_embeddings.weight:
+  device: cuda:0
+  hash: 9080347636824362700
+  max: 0.0
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 2
+  - 128
+  sum: 0.0
+network.albert.embeddings.word_embeddings.weight:
+  device: cuda:0
+  hash: -9223202123192828322
+  max: 0.2
+  mean: -0.0
+  min: -0.2
+  shape:
+  - 30000
+  - 128
+  sum: -21036.4
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.bias:
+  device: cuda:0
+  hash: 3808960376118880662
+  max: 2.4
+  mean: -0.0
+  min: -3.4
+  shape:
+  - 768
+  sum: -5.1
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.weight:
+  device: cuda:0
+  hash: 3986934823769216342
+  max: 2.5
+  mean: 0.6
+  min: 0.4
+  shape:
+  - 768
+  sum: 438.0
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.bias:
+  device: cuda:0
+  hash: 8995791136489374428
+  max: 5.1
+  mean: -0.0
+  min: -8.7
+  shape:
+  - 768
+  sum: -2.7
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.weight:
+  device: cuda:0
+  hash: -6985426134772694251
+  max: 0.7
+  mean: 0.0
+  min: -0.5
+  shape:
+  - 768
+  - 768
+  sum: 1.1
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.bias:
+  device: cuda:0
+  hash: -9004109640635541966
+  max: 1.6
+  mean: 0.0
+  min: -1.7
+  shape:
+  - 768
+  sum: 9.9
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weight:
+  device: cuda:0
+  hash: 4727836905425143535
+  max: 0.3
+  mean: 0.0
+  min: -0.3
+  shape:
+  - 768
+  - 768
+  sum: 62.5
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.bias:
+  device: cuda:0
+  hash: -6897791756924658064
+  max: 4.8
+  mean: 0.1
+  min: -4.1
+  shape:
+  - 768
+  sum: 46.9
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.weight:
+  device: cuda:0
+  hash: 7526472410662672685
+  max: 0.4
+  mean: -0.0
+  min: -0.3
+  shape:
+  - 768
+  - 768
+  sum: -12.7
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.bias:
+  device: cuda:0
+  hash: -7193266555981251295
+  max: 0.5
+  mean: 0.0
+  min: -0.6
+  shape:
+  - 768
+  sum: 0.7
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.weight:
+  device: cuda:0
+  hash: -9215590876435676281
+  max: 0.3
+  mean: -0.0
+  min: -0.3
+  shape:
+  - 768
+  - 768
+  sum: -56.7
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.bias:
+  device: cuda:0
+  hash: -5745168859479369233
+  max: 0.5
+  mean: -0.6
+  min: -9.0
+  shape:
+  - 3072
+  sum: -1708.0
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
+  device: cuda:0
+  hash: 6657455832685449068
+  max: 1.9
+  mean: -0.0
+  min: -1.8
+  shape:
+  - 3072
+  - 768
+  sum: -38.0
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
+  device: cuda:0
+  hash: -6104529365654482460
+  max: 1.9
+  mean: -0.0
+  min: -14.7
+  shape:
+  - 768
+  sum: -11.1
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
+  device: cuda:0
+  hash: -6766221411195213637
+  max: 1.2
+  mean: -0.0
+  min: -2.5
+  shape:
+  - 768
+  - 3072
+  sum: -37.2
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.bias:
+  device: cuda:0
+  hash: 950033276851098739
+  max: 4.3
+  mean: -0.0
+  min: -0.8
+  shape:
+  - 768
+  sum: -31.2
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.weight:
+  device: cuda:0
+  hash: -3709489083189298708
+  max: 3.1
+  mean: 1.3
+  min: 0.2
+  shape:
+  - 768
+  sum: 1036.6
+network.albert.encoder.embedding_hidden_mapping_in.bias:
+  device: cuda:0
+  hash: 5337606369005850821
+  max: 2.3
+  mean: -0.0
+  min: -2.5
+  shape:
+  - 768
+  sum: -17.9
+network.albert.encoder.embedding_hidden_mapping_in.weight:
+  device: cuda:0
+  hash: 8763035641362126606
+  max: 0.3
+  mean: 0.0
+  min: -0.3
+  shape:
+  - 768
+  - 128
+  sum: 38.0
+network.albert.pooler.bias:
+  device: cuda:0
+  hash: 3729273174019914985
+  max: 1.4
+  mean: 0.0
+  min: -1.3
+  shape:
+  - 768
+  sum: 4.5
+network.albert.pooler.weight:
+  device: cuda:0
+  hash: 4741636359478821589
+  max: 0.3
+  mean: -0.0
+  min: -0.3
+  shape:
+  - 768
+  - 768
+  sum: -13.5
+network.classifier.bias:
+  device: cuda:0
+  hash: -8458139203682520985
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 2
+  sum: 0.0
+network.classifier.weight:
+  device: cuda:0
+  hash: -8059711735577810430
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 2
+  - 768
+  sum: 0.2

@@ -6,7 +6,6 @@ import dataclasses
 import os
 import warnings
 from logging import getLogger as get_logger
-from pathlib import Path
 
 import hydra
 import omegaconf
@@ -27,13 +26,12 @@ if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 logger = get_logger(__name__)
 
-PROJECT_NAME = Path(__file__).parent.name
 
 add_configs_to_hydra_store()
 
 
 @hydra.main(
-    config_path=f"pkg://{PROJECT_NAME}.configs",
+    config_path="pkg://project.configs",
     config_name="config",
     version_base="1.2",
 )
@@ -47,7 +45,7 @@ def main(dict_config: DictConfig) -> dict:
     add_schemas_to_all_hydra_configs(
         config_files=None,
         repo_root=REPO_ROOTDIR,
-        configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
+        configs_dir=REPO_ROOTDIR / "project" / "configs",
         regen_schemas=False,
         stop_on_error=False,
         quiet=True,

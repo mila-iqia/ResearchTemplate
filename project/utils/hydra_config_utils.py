@@ -5,6 +5,8 @@ from collections.abc import Callable
 from logging import getLogger as get_logger
 
 import hydra_zen
+from hydra._internal.config_loader_impl import ConfigLoaderImpl
+from hydra._internal.utils import create_automatic_config_search_path
 from hydra.core.config_store import ConfigStore
 
 from project.utils.hydra_utils import get_outer_class
@@ -13,13 +15,8 @@ logger = get_logger(__name__)
 
 
 def get_config_loader():
-    from hydra._internal.config_loader_impl import ConfigLoaderImpl
-    from hydra._internal.utils import create_automatic_config_search_path
-
-    from project.main import PROJECT_NAME
-
     search_path = create_automatic_config_search_path(
-        calling_file=None, calling_module=None, config_path=f"pkg://{PROJECT_NAME}.configs"
+        calling_file=None, calling_module=None, config_path="pkg://project.configs"
     )
     config_loader = ConfigLoaderImpl(config_search_path=search_path)
     return config_loader

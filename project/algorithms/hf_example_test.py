@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import lightning
 import pytest
 from torch import Tensor
@@ -43,7 +45,7 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
         datamodule: HFDataModule,
         accelerator: str,
         devices: int | list[int],
-        training_batch: dict[str, Tensor],
+        tmp_path: Path,
         num_steps: int = 3,
     ):
         """Test that the loss decreases on a single batch."""
@@ -56,6 +58,7 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
             deterministic=True,
             overfit_batches=1,
             limit_train_batches=1,
+            default_root_dir=tmp_path,
             max_epochs=num_steps,
         )
         trainer.fit(algorithm, datamodule)

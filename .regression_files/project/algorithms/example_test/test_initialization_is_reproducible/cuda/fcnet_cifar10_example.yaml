@@ -1,0 +1,57 @@
+network.0.1.bias:
+  device: cuda:0
+  hash: -7285573615916509595
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 128
+  sum: 0.0
+network.0.1.weight:
+  device: cuda:0
+  hash: -8140577809966809278
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 128
+  - 3072
+  sum: 3.0
+network.1.0.bias:
+  device: cuda:0
+  hash: 3630042998446228783
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 128
+  sum: 0.6
+network.1.0.weight:
+  device: cuda:0
+  hash: -2199529033257130979
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 128
+  - 128
+  sum: 0.0
+network.2.0.bias:
+  device: cuda:0
+  hash: 6145967502991581356
+  max: 0.0
+  mean: -0.0
+  min: -0.1
+  shape:
+  - 10
+  sum: -0.0
+network.2.0.weight:
+  device: cuda:0
+  hash: 3107402893055143127
+  max: 0.1
+  mean: -0.0
+  min: -0.1
+  shape:
+  - 10
+  - 128
+  sum: -0.1

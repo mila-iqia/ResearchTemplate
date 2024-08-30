@@ -224,10 +224,9 @@ def main(argv: list[str] | None = None):
         ],
     )
 
-    from project.main import PROJECT_NAME
     from project.utils.env_vars import REPO_ROOTDIR
 
-    CONFIGS_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
+    CONFIGS_DIR = REPO_ROOTDIR / "project" / "configs"
 
     # FIXME: remove this, perhaps it could be an argument?
     from project.utils.env_vars import REPO_ROOTDIR

@@ -161,7 +161,7 @@ jobs:
       - name: Install dependencies
         run: rye sync --no-lock
       - name: Test with pytest
-        run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
+        run: rye run pytest -v --cov=project --cov-report=xml --cov-append --slow
 
       # TODO: Re-enable this later
       # - name: Test with pytest (only slow tests)

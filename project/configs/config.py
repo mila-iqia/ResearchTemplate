@@ -47,10 +47,10 @@ class Config:
     """Logging level."""
 
     # Random seed.
-    seed: int | None = field(default_factory=lambda: random.randint(0, int(1e5)))
+    seed: int = field(default_factory=lambda: random.randint(0, int(1e5)))
     """Random seed for reproducibility.
 
-    If None, a random seed is generated.
+    When not passed, a random seed is generated.
     """
 
     # Name for the experiment.

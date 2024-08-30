@@ -34,6 +34,7 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.hydra_utils import get_outer_class
+from project.utils.seeding import seeded_rng
 from project.utils.typing_utils import Dataclass
 from project.utils.typing_utils.protocols import DataModule, Module
 from project.utils.utils import validate_datamodule
@@ -79,8 +80,8 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     NOTE: This also has the effect of seeding the random number generators, so the weights that are
     constructed are deterministic and reproducible.
     """
-    setup_logging(experiment_config)
-    seed_rng(experiment_config)
+    setup_logging(experiment_config.log_level)
+    seed_rng(experiment_config.seed)
     trainer = instantiate_trainer(experiment_config)
 
     datamodule = instantiate_datamodule(experiment_config.datamodule)
@@ -97,7 +98,7 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     )
 
 
-def setup_logging(experiment_config: Config) -> None:
+def setup_logging(log_level: str) -> None:
     LOGLEVEL = os.environ.get("LOGLEVEL", "info").upper()
     logging.basicConfig(
         level=LOGLEVEL,
@@ -116,17 +117,13 @@ def setup_logging(experiment_config: Config) -> None:
     )
 
     root_logger = logging.getLogger("project")
-
-    if experiment_config.debug:
-        root_logger.setLevel(logging.INFO)
-    elif experiment_config.verbose:
-        root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(log_level.upper())
 
 
-def seed_rng(experiment_config: Config):
-    if experiment_config.seed is not None:
-        seed = experiment_config.seed
-        print(f"seed manually set to {experiment_config.seed}")
+def seed_rng(seed: int | None):
+    if seed is not None:
+        seed = seed
+        print(f"seed manually set to {seed}")
     else:
         seed = random.randint(0, int(1e5))
         print(f"Randomly selected seed: {seed}")
@@ -213,7 +210,7 @@ def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn
         )
         return network_config.to(device=device)
 
-    with device:
+    with device, seeded_rng(seed=experiment_config.seed):
         return hydra_zen.instantiate(network_config)
 
 
