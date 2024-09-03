@@ -1,0 +1,69 @@
+# @package _global_
+defaults:
+  - example.yaml
+  - override /trainer/logger: wandb
+  - override /hydra/sweeper: orion
+
+log_level: DEBUG
+name: "local-sweep-example"
+# TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
+seed: ${oc.env:SLURM_PROCID,123}
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  max_epochs: 1
+  logger:
+    wandb:
+      project: "ResearchTemplate"
+      # TODO: Use the Orion trial name?
+      # name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID}
+      save_dir: "${hydra:runtime.output_dir}"
+      offline: False # set True to store all logs only locally
+      # id: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID} # pass correct id to resume experiment!
+      # entity: ""  # set to name of your wandb team
+      log_model: False
+      prefix: ""
+      job_type: "train"
+      group: ["${name}"]
+      tags: ["${name}"]
+
+hydra:
+  mode: MULTIRUN
+  run:
+    # output directory, generated dynamically on each run
+    dir: logs/${name}/runs
+  sweep:
+    dir: logs/${name}/multiruns/
+    # subdir: ${hydra.job.num}
+    subdir: ${hydra.job.id}/task${hydra.job.num}
+
+  sweeper:
+    parametrization: null
+    params:
+      algorithm:
+        optimizer_config:
+          lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
+          # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
+
+    experiment:
+      name: "${name}"
+      version: 1
+
+    algorithm:
+      #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
+      type: random
+      config:
+        seed: 1
+
+    worker:
+      n_workers: 1
+      max_broken: 10000
+      max_trials: 10
+
+    storage:
+      type: legacy
+      use_hydra_path: false
+      database:
+        type: pickleddb
+        host: "logs/${name}/multiruns/database.pkl"

@@ -57,6 +57,8 @@ markdown_extensions:
 plugins:
   - search
   - awesome-pages
+  - macros:  #https://mkdocs-macros-plugin.readthedocs.io/en/latest/#declaration-of-the-macros-plugin
+      module_name: docs/macros
   - autorefs
   - gen-files:
       # https://oprypin.github.io/mkdocs-gen-files/#usage

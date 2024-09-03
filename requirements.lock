@@ -173,6 +173,7 @@ jaxlib==0.4.31
     # via pytorch2jax
 jinja2==3.1.4
     # via mkdocs
+    # via mkdocs-macros-plugin
     # via mkdocs-material
     # via mkdocstrings
     # via torch
@@ -218,6 +219,7 @@ mkdocs==1.6.1
     # via mkdocs-awesome-pages-plugin
     # via mkdocs-gen-files
     # via mkdocs-literate-nav
+    # via mkdocs-macros-plugin
     # via mkdocs-material
     # via mkdocs-section-index
     # via mkdocs-video
@@ -233,6 +235,8 @@ mkdocs-gen-files==0.5.0
 mkdocs-get-deps==0.2.0
     # via mkdocs
 mkdocs-literate-nav==0.6.1
+    # via research-project-template
+mkdocs-macros-plugin==1.0.5
     # via research-project-template
 mkdocs-material==9.5.34
     # via research-project-template
@@ -413,6 +417,7 @@ pytest==8.3.2
 python-dateutil==2.9.0.post0
     # via ghp-import
     # via matplotlib
+    # via mkdocs-macros-plugin
     # via pandas
 pytorch-lightning==2.4.0
     # via lightning
@@ -427,6 +432,7 @@ pyyaml==6.0.2
     # via lightning
     # via mkdocs
     # via mkdocs-get-deps
+    # via mkdocs-macros-plugin
     # via omegaconf
     # via orbax-checkpoint
     # via orion
@@ -494,6 +500,8 @@ tenacity==9.0.0
 tensorstore==0.1.64
     # via flax
     # via orbax-checkpoint
+termcolor==2.4.0
+    # via mkdocs-macros-plugin
 threadpoolctl==3.5.0
     # via scikit-learn
 tokenizers==0.19.1
