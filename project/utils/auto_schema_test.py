@@ -2,7 +2,6 @@ import json
 import subprocess
 from pathlib import Path
 
-import hydra.errors
 import pytest
 import yaml
 from pytest_regressions.file_regression import FileRegressionFixture
@@ -64,11 +63,6 @@ def test_can_run_via_cli():
     main(["."])  # assuming we're at the project root directory.
 
 
-@pytest.mark.xfail(
-    raises=hydra.errors.MissingConfigException,
-    reason="TODO: Missing hydra/sweeper/orion config since it isn't installed atm.",
-    strict=True,
-)
 def test_run_via_cli_without_errors():
     """Checks that the command completes without errors."""
     # Run programmatically instead of with a subproc4ess so we can get nice coverage stats.
@@ -82,11 +76,6 @@ def test_run_via_rye_script():
     subprocess.check_call(["rye", "run", "auto_schema"], text=True)
 
 
-@pytest.mark.xfail(
-    raises=subprocess.CalledProcessError,
-    reason="TODO: Missing hydra/sweeper/orion config since it isn't installed atm.",
-    strict=True,
-)
 def test_run_via_rye_script_without_errors():
     """Actually run the command on the repo, via the `[tool.rye.scripts]` entry in
     pyproject.toml."""
