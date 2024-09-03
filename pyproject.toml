@@ -23,10 +23,11 @@ dependencies = [
     "torch-jax-interop>=0.0.7",
     "pydantic>=2.8.2",
     "simple-parsing>=0.1.5",
-    "pydantic==2.7.4",
+    "pydantic==2.8.2",
     "milatools>=0.0.18",
     "rootutils>=0.0.1",
-    "ipykernel>=6.28.0"
+    "ipykernel>=6.28.0",
+    "dill>=0.3.8",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -42,6 +43,7 @@ docs = [
     "mkdocs>=1.6.0",
     "mkdocs-video>=1.5.0",
     "mkdocs-section-index>=0.3.9",
+    "mkdocs-jupyter>=0.24.8",
 ]
 gpu = ["jax[cuda12]>=0.4.31"]
 
