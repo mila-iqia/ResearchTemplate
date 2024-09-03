@@ -238,8 +238,8 @@ def instantiate_algorithm(
                 "The algorithm config, if a dict, should have a _target_ set to an Algorithm class."
             )
         if algo_config.get("_partial_", False):
-            algo_config = instantiate(algo_config)
-            algorithm = algo_config(datamodule=datamodule, network=network)
+            algo_partial_fn: functools.partial[LightningModule] = instantiate(algo_config)
+            algorithm = algo_partial_fn(datamodule=datamodule, network=network)
         else:
             algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
 

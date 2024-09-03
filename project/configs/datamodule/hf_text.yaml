@@ -1,0 +1,7 @@
+_target_: project.datamodules.HFDataModule
+tokenizer: albert-base-v2
+hf_dataset_path: glue
+task_name: cola
+max_seq_length: 128
+train_batch_size: 32
+eval_batch_size: 32

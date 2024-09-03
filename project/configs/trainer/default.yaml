@@ -4,6 +4,8 @@ accelerator: auto
 strategy: auto
 devices: 1
 
+deterministic: true
+
 min_epochs: 1
 max_epochs: 10
 

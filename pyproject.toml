@@ -23,11 +23,13 @@ dependencies = [
     "torch-jax-interop>=0.0.7",
     "pydantic>=2.8.2",
     "simple-parsing>=0.1.5",
-    "pydantic==2.8.2",
     "milatools>=0.0.18",
-    "rootutils>=0.0.1",
     "ipykernel>=6.28.0",
     "dill>=0.3.8",
+    "datasets>=2.21.0",
+    "transformers>=4.44.0",
+    "scikit-learn>=1.5.1",
+    "evaluate>=0.4.2",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -57,13 +59,12 @@ testpaths = ["project", "docs"]
 norecursedirs = [".venv"]
 # todo: look into using https://github.com/scientific-python/pytest-doctestplus
 env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
-
-
-addopts = ["--doctest-modules", "--stats-rounding-precision=3"]
+addopts = ["--doctest-modules", "--stats-rounding-precision=1"]
 markers = [
     "incremental: incremental testing support",
     "parametrize_when_used: Parametrize a test only when the argument is used.",
 ]
+
 [tool.ruff]
 line-length = 99
 indent-width = 4

@@ -76,16 +76,16 @@ def main(dict_config: DictConfig) -> dict:
 
 def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     # Train the model using the dataloaders of the datamodule:
-    # TODO: Should we use `algorithm.datamodule` instead? That way the Algorithm gets to "wrap"
-    # the datamodule however it wants? This might be useful in the case of RL, the need to pass an
-    # actor, as well as potentially adding Wrappers on top of the environment, etc. introduces some
-    # coupling between the Algorithm and the DataModule.
-    # experiment.trainer.fit(experiment.algorithm, datamodule=experiment.datamodule)
-    assert experiment.algorithm.datamodule is experiment.datamodule
-    assert isinstance(experiment.algorithm.datamodule, LightningDataModule)
-
+    # The Algorithm gets to "wrap" the datamodule if it wants. This might be useful in the
+    # case of RL, where we need to set the actor to use in the environment, as well as
+    # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
     # TODO: Add ckpt_path argument to resume a training run.
-    experiment.trainer.fit(experiment.algorithm, datamodule=experiment.algorithm.datamodule)
+    datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
+    assert isinstance(datamodule, LightningDataModule)
+    experiment.trainer.fit(
+        experiment.algorithm,
+        datamodule=datamodule,
+    )
 
     metric_name, error, metrics = evaluation(experiment)
     if wandb.run:
