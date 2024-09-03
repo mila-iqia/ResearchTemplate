@@ -3,7 +3,9 @@ site_description: A project template and directory structure for Python data sci
 site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
-
+nav:
+  - Home: index.md
+  - Profiling your code: docs/examples/profiling.ipynb
 theme:
   name: material
   features:
@@ -92,6 +94,7 @@ plugins:
       video_controls: True
       css_style:
         width: "100%"
+  - mkdocs-jupyter
 # todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
 #   - admonition
 #   - pymdownx.details
