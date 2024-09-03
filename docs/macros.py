@@ -1,26 +1,45 @@
+from __future__ import annotations
+
 import importlib
 import inspect
+import logging
 import textwrap
-from logging import getLogger as get_logger
+import typing
 from pathlib import Path
+from typing import Any
 
-from mkdocs_macros.plugin import MacrosPlugin
+if typing.TYPE_CHECKING:
+    from mkdocs_macros.plugin import MacrosPlugin
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def define_env(env: MacrosPlugin):
     @env.macro
     def inline(module_or_file: str, indent: int = 0):
+        block_type: str | None = None
+        # print(f"Inlining reference: {module_or_file}")
         logger.info(f"Inlining reference: {module_or_file}")
         # TODO: need to support adding the indent otherwise we can't use this inside a collapsible block.
         file = Path(env.project_dir) / module_or_file
         if file.exists():
-            return textwrap.indent(file.read_text(), " " * indent)
+            if not block_type:
+                if file.suffix in [".yaml", ".yml"]:
+                    block_type = "yaml"
+                elif file.suffix == ".py":
+                    block_type = "python3"
+                elif file.suffix == ".sh":
+                    block_type = "bash"
+                else:
+                    block_type = ""
+            content = file.read_text()
+        else:
+            block_type = block_type or "python3"
+            obj: Any = get_object_from_reference(module_or_file)
+            content = "".join(inspect.getsourcelines(obj)[0])
 
-        obj = get_object_from_reference(module_or_file)
-        source = "".join(inspect.getsourcelines(obj)[0])
-        return textwrap.indent(source, " " * indent)
+        content = f"```{block_type}\n" + textwrap.indent(content + "\n```", " " * indent)
+        return content
 
 
 def get_object_from_reference(reference: str):

@@ -1,7 +1,6 @@
 # @package _global_
 defaults:
-  - example.yaml
-  - override /resources: one_gpu.yaml
+  - example.yaml # A configuration for a single run (that works!)
   - override /trainer/logger: wandb
   - override /hydra/launcher: submitit_slurm
   - override /hydra/sweeper: orion
@@ -10,6 +9,11 @@ log_level: DEBUG
 name: "sweep-example"
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
 seed: ${oc.env:SLURM_PROCID,123}
+
+algorithm:
+  optimizer_config:
+    # This here will get overwritten by the sweeper.
+    lr: 0.002
 
 trainer:
   accelerator: gpu
@@ -42,17 +46,25 @@ hydra:
     subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
 
   launcher:
-    array_parallelism: 4 # max num of jobs to run in parallel
+    cpus_per_task: 2
+    nodes: 1
+    # TODO: Pack more than one job on a single GPU.
+    tasks_per_node: 1
+    mem_gb: 16
+    gres: gpu:1
     # note: Can't currently use this argument with the submitit launcher plugin. We would need to
     # create a subclass to add support for it.
     # ntasks_per_gpu: 2
+
+    array_parallelism: 4 # max num of jobs to run in parallel
+
+    ## A list of commands to add to the generated sbatch script before running srun:
+    setup:
+    # - export LD_PRELOAD=/some/folder/with/libraries/
+
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00 # maximum wall time allocated for the job (D-HH:MM:SS)
-      # requeue: null  # requeue job if it fails
-    ## A list of commands to add to the generated sbatch script before running srun:
-    # setup:
-    # - unset CUDA_VISIBLE_DEVICES
 
   sweeper:
     params:

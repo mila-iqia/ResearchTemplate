@@ -1,13 +1,16 @@
 # @package _global_
 defaults:
-  - example.yaml
-  - override /trainer/logger: wandb
-  - override /hydra/sweeper: orion
+  - example.yaml  # A configuration for a single run (that works!)
+  - override /hydra/sweeper: orion  # Select the orion sweeper plugin
 
 log_level: DEBUG
 name: "local-sweep-example"
-# TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
-seed: ${oc.env:SLURM_PROCID,123}
+seed: 123
+
+algorithm:
+  optimizer_config:
+    # This here will get overwritten by the sweeper.
+    lr: 0.002
 
 trainer:
   accelerator: gpu
@@ -15,6 +18,7 @@ trainer:
   max_epochs: 1
   logger:
     wandb:
+      _target_: lightning.pytorch.loggers.wandb.WandbLogger
       project: "ResearchTemplate"
       # TODO: Use the Orion trial name?
       # name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID}
@@ -39,7 +43,6 @@ hydra:
     subdir: ${hydra.job.id}/task${hydra.job.num}
 
   sweeper:
-    parametrization: null
     params:
       algorithm:
         optimizer_config:
@@ -51,8 +54,7 @@ hydra:
       version: 1
 
     algorithm:
-      #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
-      type: random
+      type: tpe
       config:
         seed: 1
 
@@ -67,3 +69,4 @@ hydra:
       database:
         type: pickleddb
         host: "logs/${name}/multiruns/database.pkl"
+    parametrization: null

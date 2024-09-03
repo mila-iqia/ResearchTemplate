@@ -13,10 +13,7 @@ hyper-parameter optimization (HPO)
 Here is a configuration file that you can use to launch a hyper-parameter optimization (HPO) sweep
 
 ??? note "Click to show the yaml config file"
-
-    ```yaml
-    {inline('project/configs/experiment/local_sweep_example.yaml', 4)}
-    ```
+    {{inline('project/configs/experiment/local_sweep_example.yaml', 4)}}
 
 You can use it like so:
 
@@ -27,10 +24,7 @@ python project/main.py experiment=local_sweep_example
 ## Hyper-Parameter Optimization on a SLURM cluster
 
 ??? note "Click to show the yaml config file"
-
-    ```yaml
-    {inline('project/configs/experiment/cluster_sweep_example.yaml', 4)}
-    ```
+    {{inline('project/configs/experiment/cluster_sweep_example.yaml', 4)}}
 
 You can use it like so:
 
