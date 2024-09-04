@@ -103,6 +103,19 @@ def total_ram_GB():
     return mem_in_mb / 1024
 
 
+@use_overrides(
+    "algorithm=no_op trainer/callbacks=no_checkpoints trainer.max_epochs=1 "
+    "+trainer.limit_train_batches=10 +trainer.limit_val_batches=10 "
+    "+trainer.enable_checkpointing=False"
+)
+def test_noop_algo(experiment_dictconfig: DictConfig):
+    result = main(experiment_dictconfig)
+    assert isinstance(result, dict)
+    assert result["type"] == "objective"
+    assert isinstance(result["name"], str)
+    assert isinstance(result["value"], float | torch.Tensor)
+
+
 @pytest.mark.slow
 @use_overrides(
     [
