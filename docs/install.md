@@ -24,7 +24,7 @@ There are two ways to install this project
     - If you don't have Conda installed, you can download it from [here](https://docs.conda.io/en/latest/miniconda.html).
     - If you'd rather use a virtual environment instead of Conda, you can totally do so, as long as you have a version of Python >= 3.12.
 
-    2. On the Mila cluster:
+    4. On the Mila cluster:
 
         If you're on the `mila` cluster, you can run this setup script (on a *compute* node):
 
