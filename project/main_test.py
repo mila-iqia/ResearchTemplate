@@ -1,11 +1,14 @@
 # ADAPTED FROM https://github.com/facebookresearch/hydra/blob/main/examples/advanced/hydra_app_example/tests/test_example.py
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
 
 import hydra.errors
 import hydra_zen
 import omegaconf.errors
+import psutil
 import pytest
 import torch
 from omegaconf import DictConfig
@@ -79,6 +82,49 @@ def test_fast_dev_run(experiment_dictconfig: DictConfig):
     assert result["type"] == "objective"
     assert isinstance(result["name"], str)
     assert isinstance(result["value"], float)
+
+
+def total_ram_GB():
+    """Returns the total amount of VRAM available."""
+    # mem is in bytes.
+    if "SLURM_MEM_PER_NODE" in os.environ:
+        # Inside a SLURM job step via `srun` or `ssh mila-cpu`.
+        mem_in_mb = int(os.environ["SLURM_MEM_PER_NODE"])
+    elif "SLURM_JOB_ID" in os.environ:
+        # Connected to a compute node via SSH (only SLURM_JOB_ID env var is inherited).
+        mem_in_mb = int(
+            subprocess.check_output(
+                ("srun", "--overlap", "--pty", "printenv", "SLURM_MEM_PER_NODE"), text=True
+            )
+        )
+    else:
+        # total from psutil is in bytes.
+        mem_in_mb = psutil.virtual_memory().total / 1024**2
+    return mem_in_mb / 1024
+
+
+@pytest.mark.slow
+@use_overrides(
+    [
+        "experiment=overfit_one_batch trainer.max_epochs=5",
+        "experiment=example +trainer.fast_dev_run=True",
+        pytest.param(
+            "experiment=albert-cola-glue +trainer.fast_dev_run=True",
+            marks=[
+                pytest.mark.skipif(
+                    total_ram_GB() < 16,
+                    reason="Not enough memory for this test.",
+                )
+            ],
+        ),
+    ]
+)
+def test_experiment_configs(experiment_dictconfig: DictConfig):
+    result = main(experiment_dictconfig)
+    assert isinstance(result, dict)
+    assert result["type"] == "objective"
+    assert isinstance(result["name"], str)
+    assert isinstance(result["value"], float | torch.Tensor)
 
 
 # TODO: Add some more integration tests:
