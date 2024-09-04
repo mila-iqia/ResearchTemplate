@@ -1,0 +1,2 @@
+_target_: project.algorithms.no_op.NoOp
+_partial_: true
