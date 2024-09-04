@@ -56,11 +56,15 @@ hydra:
     # create a subclass to add support for it.
     # ntasks_per_gpu: 2
 
-    array_parallelism: 4 # max num of jobs to run in parallel
+    # todo: bump this up.
+    array_parallelism: 1 # max num of jobs to run in parallel
+
+    stderr_to_stdout: true
 
     ## A list of commands to add to the generated sbatch script before running srun:
     setup:
     # - export LD_PRELOAD=/some/folder/with/libraries/
+
 
     # Other things to pass to `sbatch`:
     additional_parameters:
@@ -79,7 +83,7 @@ hydra:
 
     algorithm:
       #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
-      type: random
+      type: tpe
       config:
         seed: 1
 
