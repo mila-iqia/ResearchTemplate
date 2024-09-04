@@ -115,6 +115,7 @@ class ImageNetDataModule(VisionDataModule):
         self.train_kwargs = self.train_kwargs | {"split": "train"}
         self.valid_kwargs = self.valid_kwargs | {"split": "train"}
         self.test_kwargs = self.test_kwargs | {"split": "val"}
+        self.num_classes = type(self).num_classes
         # self.test_dataset_cls = UnlabeledImagenet
 
     def prepare_data(self) -> None:

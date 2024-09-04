@@ -1,2 +1,7 @@
 _target_: project.algorithms.example.ExampleAlgorithm
 _partial_: true
+
+optimizer_config:
+  _target_: torch.optim.adam.Adam
+  _partial_: true
+  lr: 0.0003
