@@ -23,6 +23,9 @@ dependencies = [
     "torch-jax-interop>=0.0.7",
     "pydantic>=2.8.2",
     "simple-parsing>=0.1.5",
+    "milatools>=0.0.18",
+    "ipykernel>=6.28.0",
+    "dill>=0.3.8",
     "datasets>=2.21.0",
     "transformers>=4.44.0",
     "scikit-learn>=1.5.1",
@@ -42,6 +45,7 @@ docs = [
     "mkdocs>=1.6.0",
     "mkdocs-video>=1.5.0",
     "mkdocs-section-index>=0.3.9",
+    "mkdocs-jupyter>=0.24.8",
 ]
 gpu = ["jax[cuda12]>=0.4.31"]
 

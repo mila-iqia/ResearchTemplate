@@ -27,7 +27,6 @@ model_summary:
 
 lr_monitor:
   _target_: lightning.pytorch.callbacks.LearningRateMonitor
-
 device_utilisation:
   _target_: lightning.pytorch.callbacks.DeviceStatsMonitor
 throughput:

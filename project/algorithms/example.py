@@ -7,14 +7,12 @@ python project/main.py algorithm=example
 ```
 """
 
-import dataclasses
 import functools
 from logging import getLogger
 from typing import Any, Literal
 
 import torch
 from lightning import LightningModule
-from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
@@ -48,9 +46,6 @@ class ExampleAlgorithm(LightningModule):
         self.datamodule = datamodule
         self.network = network
         self.optimizer_config = optimizer_config
-        assert dataclasses.is_dataclass(optimizer_config) or isinstance(
-            optimizer_config, dict | DictConfig
-        ), optimizer_config
 
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(

@@ -9,7 +9,6 @@ defaults:
   - override /network: resnet18
   - override /trainer: default
   - override /trainer/callbacks: default
-  - override /trainer/logger: wandb
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
@@ -30,6 +29,7 @@ trainer:
   gradient_clip_val: 0.5
   logger:
     wandb:
+      _target_: lightning.pytorch.loggers.wandb.WandbLogger
       project: "ResearchTemplate"
       name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
       save_dir: "${hydra:runtime.output_dir}"
