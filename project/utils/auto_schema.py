@@ -593,9 +593,6 @@ def create_schema_for_config(
     for keys, value in _all_subentries_with_target(_config_dict).items():
         is_top_level: bool = not keys
 
-        # target_name = value["_target_"]
-        # target = hydra.utils.get_object(target_name)
-
         logger.debug(f"Handling key {'.'.join(keys)} in config at path {config_file}")
 
         nested_value_schema = _get_schema_from_target(value)
@@ -608,13 +605,17 @@ def create_schema_for_config(
             assert "properties" in nested_value_schema
 
         if is_top_level:
-            schema = _merge_dicts(schema, nested_value_schema)
+            schema = _merge_dicts(schema, nested_value_schema, conflict_handler=overwrite)
             continue
 
         parent_keys, last_key = keys[:-1], keys[-1]
         where_to_set: Schema | ObjectSchema = schema
         for key in parent_keys:
-            where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
+            where_to_set = where_to_set.setdefault("properties", {}).setdefault(
+                key, {"type": "object"}
+            )  # type: ignore
+            if "_target_" not in where_to_set:
+                where_to_set["additionalProperties"] = True
 
         logger.debug(f"Using schema from nested value at keys {keys}: {nested_value_schema}")
 
@@ -626,7 +627,8 @@ def create_schema_for_config(
         else:
             where_to_set["properties"] = _merge_dicts(  # type: ignore
                 where_to_set["properties"],
-                nested_value_schema,  # type: ignore
+                {last_key: nested_value_schema},  # type: ignore
+                conflict_handler=overwrite,
             )
 
     return schema
@@ -922,19 +924,6 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
                 by_alias=False,
             )
             json_schema = typing.cast(Schema, json_schema)
-
-            # if "$defs" in json_schema:
-            #     for key, class_schema in list(json_schema["$defs"].items()):
-            #         logger.debug(f"Before resolving {key}: {json_schema}")
-            #         json_schema["$defs"].pop(key)
-            #         class_schema["title"] = key
-            #         expanded = json.dumps(json_schema).replace(
-            #             json.dumps({"$ref": f"#/$defs/{key}"}), json.dumps(class_schema)
-            #         )
-            #         logger.debug(f"Expanded: {expanded}")
-            #         json_schema = json.loads(expanded)
-            #         logger.debug(f"After resolving {key}: {json_schema}")
-            #     assert False, json_schema
         assert "properties" in json_schema
     except pydantic.PydanticSchemaGenerationError as e:
         raise NotImplementedError(f"Unable to get the schema with pydantic: {e}")
@@ -942,8 +931,9 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
     assert "properties" in json_schema
 
     # Add a description
-    assert "description" not in json_schema
-    json_schema["description"] = f"Based on the signature of {target}."
+    json_schema["description"] = f"Based on the signature of {target}.\n" + json_schema.get(
+        "description", ""
+    )
 
     docs_to_search: list[dp.Docstring] = []
 
@@ -977,7 +967,10 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
     if config.get("_partial_"):
         json_schema["required"] = []
     # Add some info on the target.
-    assert isinstance(json_schema["properties"]["_target_"], dict)
+    if "_target_" not in json_schema["properties"]:
+        json_schema["properties"]["_target_"] = {}
+    else:
+        assert isinstance(json_schema["properties"]["_target_"], dict)
     json_schema["properties"]["_target_"].update(
         PropertySchema(
             type="string",

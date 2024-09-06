@@ -70,40 +70,52 @@
       "description": "Whether instantiating this config should recursively instantiate children configs.\nSee: https://hydra.cc/docs/advanced/instantiate_objects/overview/#recursive-instantiation"
     },
     "a": {
+      "type": "object",
+      "additionalProperties": true,
       "properties": {
         "b": {
+          "type": "object",
+          "additionalProperties": true,
           "properties": {
             "foo": {
               "properties": {
                 "_target_": {
-                  "default": "project.utils.auto_schema_test.Foo",
-                  "title": " Target ",
+                  "default": "project.utils.auto_schema_test.Bar",
+                  "title": "Target",
                   "type": "string",
-                  "description": "The _target_ parameter of the Foo."
+                  "description": "Target to instantiate, in this case: `<class 'project.utils.auto_schema_test.Bar'>`\nSee the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n",
+                  "const": "project.utils.auto_schema_test.Bar"
                 },
                 "_recursive_": {
                   "default": false,
                   "title": " Recursive ",
                   "type": "boolean",
-                  "description": "The _recursive_ parameter of the Foo."
+                  "description": "The _recursive_ parameter of the Bar."
                 },
                 "_convert_": {
                   "default": "all",
                   "title": " Convert ",
                   "type": "string",
-                  "description": "The _convert_ parameter of the Foo."
+                  "description": "The _convert_ parameter of the Bar."
                 },
                 "bar": {
                   "title": "Bar",
                   "type": "string",
                   "description": "Description of the `bar` argument."
+                },
+                "baz": {
+                  "title": "Baz",
+                  "type": "integer",
+                  "description": "description of the `baz` argument from the cls docstring instead of the init docstring."
                 }
               },
               "required": [
-                "bar"
+                "bar",
+                "baz"
               ],
-              "title": "Foo",
+              "title": "Bar",
               "type": "object",
+              "description": "Based on the signature of <class 'project.utils.auto_schema_test.Bar'>.\n",
               "additionalProperties": false
             }
           }
