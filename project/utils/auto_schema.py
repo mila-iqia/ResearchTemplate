@@ -20,7 +20,6 @@ import inspect
 import json
 import logging
 import os.path
-import shutil
 import subprocess
 import sys
 import typing
@@ -250,6 +249,7 @@ def main(argv: list[str] | None = None):
     parser.add_argument(
         "--add-headers",
         action=argparse.BooleanOptionalAction,
+        default=None,
         help=(
             "Always add headers to the yaml config files, instead of the default "
             "behaviour which is to first try to add an entry in the vscode "
@@ -272,7 +272,6 @@ def main(argv: list[str] | None = None):
     quiet: bool = args.quiet
     verbose: int = args.verbose
     add_headers: bool = args.add_headers
-
     if quiet:
         logger.setLevel(logging.NOTSET)
     elif verbose:
@@ -413,27 +412,31 @@ def add_schemas_to_all_hydra_configs(
     # Option 1: Add a vscode setting that associates the schema file with the yaml files. (less intrusive perhaps).
     # Option 2: Add a header to the yaml files that points to the schema file.
 
-    # We will use option 1 if a `code` executable is found.
-    set_schemas_in_vscode_settings_file = bool(shutil.which("code"))
+    # If add_headers is None, try option 1, then fallback to option 2.
+    # If add_headers is False, only use option 1
+    # If add_headers is True, only use option 2
 
-    if add_headers:
-        set_schemas_in_vscode_settings_file = False
-
-    if set_schemas_in_vscode_settings_file:
+    if not add_headers:
         try:
             logger.debug(
                 "Found the `code` executable, will add schema paths to the vscode settings."
             )
             _install_yaml_vscode_extension()
             _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
-            return
         except Exception as exc:
             logger.error(
                 f"Unable to write schemas in the vscode settings file. "
                 f"Falling back to adding a header to config files. (exc={exc})"
             )
 
-    logger.debug("A headers to config files to point to the schemas to use.")
+            if add_headers is not None:
+                # Unable to do it. Don't try to add headers, just return.
+                return
+        else:
+            # Success. Return.
+            return
+
+    logger.debug("Adding headers to config files to point to the schemas to use.")
     for config_file, schema_file in config_file_to_schema_file.items():
         add_schema_header(config_file, schema_path=schema_file)
 

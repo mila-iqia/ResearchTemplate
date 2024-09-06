@@ -51,7 +51,7 @@ def main(dict_config: DictConfig) -> dict:
         regen_schemas=False,
         stop_on_error=False,
         quiet=True,
-        add_headers=False,
+        add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
     )
 
     config: Config = resolve_dictconfig(dict_config)
@@ -75,6 +75,10 @@ def main(dict_config: DictConfig) -> dict:
 
 
 def run(experiment: Experiment) -> tuple[str, float | None, dict]:
+    """Run the experiment: training followed by evaluation.
+
+    Returns the metrics of the evaluation.
+    """
     # Train the model using the dataloaders of the datamodule:
     # The Algorithm gets to "wrap" the datamodule if it wants. This might be useful in the
     # case of RL, where we need to set the actor to use in the environment, as well as

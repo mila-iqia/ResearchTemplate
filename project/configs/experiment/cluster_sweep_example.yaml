@@ -1,7 +1,6 @@
 # @package _global_
 defaults:
-  - example.yaml
-  - override /resources: one_gpu.yaml
+  - example.yaml # A configuration for a single run (that works!)
   - override /trainer/logger: wandb
   - override /hydra/launcher: submitit_slurm
   - override /hydra/sweeper: orion
@@ -11,6 +10,11 @@ name: "sweep-example"
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
 seed: ${oc.env:SLURM_PROCID,123}
 
+algorithm:
+  optimizer_config:
+    # This here will get overwritten by the sweeper.
+    lr: 0.002
+
 trainer:
   accelerator: gpu
   devices: 1
@@ -19,10 +23,10 @@ trainer:
     wandb:
       project: "ResearchTemplate"
       # TODO: Use the Orion trial name?
-      name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
+      name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID}
       save_dir: "${hydra:runtime.output_dir}"
       offline: False # set True to store all logs only locally
-      id: null # pass correct id to resume experiment!
+      id: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_ARRAY_TASK_ID,0}_${oc.env:SLURM_PROCID} # pass correct id to resume experiment!
       # entity: ""  # set to name of your wandb team
       log_model: False
       prefix: ""
@@ -32,28 +36,44 @@ trainer:
 
 hydra:
   mode: MULTIRUN
-  # TODO: Automatically setup the log dir as a symlink to somewhere on scratch if we detect that
-  # it's in $HOME.
+  # TODO: Make it so running the same command twice in the same job id resumes from the last checkpoint.
+  run:
+    # output directory, generated dynamically on each run
+    dir: logs/${name}/runs
   sweep:
+    dir: logs/${name}/multiruns/
+    # subdir: ${hydra.job.num}
     subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
 
   launcher:
-    array_parallelism: 4 # max num of jobs to run in parallel
+    cpus_per_task: 2
+    nodes: 1
+    # TODO: Pack more than one job on a single GPU.
+    tasks_per_node: 1
+    mem_gb: 16
+    gres: gpu:1
     # note: Can't currently use this argument with the submitit launcher plugin. We would need to
     # create a subclass to add support for it.
     # ntasks_per_gpu: 2
+
+    # todo: bump this up.
+    array_parallelism: 1 # max num of jobs to run in parallel
+
+    stderr_to_stdout: true
+
+    ## A list of commands to add to the generated sbatch script before running srun:
+    setup:
+    # - export LD_PRELOAD=/some/folder/with/libraries/
+
+
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00 # maximum wall time allocated for the job (D-HH:MM:SS)
-      # requeue: null  # requeue job if it fails
-    ## A list of commands to add to the generated sbatch script before running srun:
-    # setup:
-    # - unset CUDA_VISIBLE_DEVICES
 
   sweeper:
     params:
       algorithm:
-        optimizer:
+        optimizer_config:
           lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
           # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
 
@@ -63,7 +83,7 @@ hydra:
 
     algorithm:
       #  BUG: Getting a weird bug with TPE: KeyError in `dum_below_trials = [...]` at line 397.
-      type: random
+      type: tpe
       config:
         seed: 1
 

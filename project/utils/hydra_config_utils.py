@@ -46,6 +46,7 @@ def get_target_of_config(
 
     In the case of inner dataclasses (e.g. Model.HParams), this returns the outer class (Model).
     """
+    # TODO: Rework, use the same mechanism as in auto-schema.py
     if _cs is None:
         from project.configs import cs as _cs
 
