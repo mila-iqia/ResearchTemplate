@@ -4,7 +4,8 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --gpus=rtx8000:1
-#SBATCH --time=00:30:00
+#SBATCH --time=00:10:00
+#SBATCH --partition=unkillable
 #SBATCH --dependency=singleton
 #SBATCH --output=logs/runner_%j.out
 
