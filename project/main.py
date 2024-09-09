@@ -17,7 +17,7 @@ from omegaconf import DictConfig
 
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.experiment import Experiment, setup_experiment
+from project.experiment import Experiment, setup_experiment, setup_logging
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
@@ -53,6 +53,7 @@ def main(dict_config: DictConfig) -> dict:
         quiet=True,
         add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
     )
+    setup_logging(dict_config["log_level"])
 
     config: Config = resolve_dictconfig(dict_config)
 

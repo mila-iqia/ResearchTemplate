@@ -216,11 +216,11 @@ def experiment_dictconfig(
         command_line_arguments = command_line_arguments + [
             f"++trainer.default_root_dir={tmp_path}"
         ]
-
     with _setup_hydra_for_tests_and_compose(
         all_overrides=command_line_arguments,
         tmp_path_factory=tmp_path_factory,
     ) as dict_config:
+        setup_logging(dict_config.log_level)
         return dict_config
 
 
@@ -596,7 +596,7 @@ def _common_setup_experiment_part(experiment_config: Config):
     only the Network), while also only doing the common part once if we were to use more than one
     of these components in a test.
     """
-    setup_logging(experiment_config)
+    # setup_logging(experiment_config.log_level)
     seed_rng(experiment_config)
 
 

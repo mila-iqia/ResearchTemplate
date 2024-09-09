@@ -14,7 +14,6 @@ from __future__ import annotations
 import dataclasses
 import functools
 import logging
-import os
 import random
 from dataclasses import dataclass
 from logging import getLogger as get_logger
@@ -79,7 +78,6 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     NOTE: This also has the effect of seeding the random number generators, so the weights that are
     constructed are deterministic and reproducible.
     """
-    setup_logging(experiment_config)
     seed_rng(experiment_config)
     trainer = instantiate_trainer(experiment_config)
 
@@ -97,11 +95,9 @@ def setup_experiment(experiment_config: Config) -> Experiment:
     )
 
 
-def setup_logging(experiment_config: Config) -> None:
-    LOGLEVEL = os.environ.get("LOGLEVEL", "info").upper()
+def setup_logging(project_log_level: str, global_log_level: str = "WARNING") -> None:
     logging.basicConfig(
-        level=LOGLEVEL,
-        # format="%(asctime)s - %(levelname)s - %(message)s",
+        level=global_log_level.upper(),
         format="%(message)s",
         datefmt="[%X]",
         force=True,
@@ -116,11 +112,7 @@ def setup_logging(experiment_config: Config) -> None:
     )
 
     root_logger = logging.getLogger("project")
-
-    if experiment_config.debug:
-        root_logger.setLevel(logging.INFO)
-    elif experiment_config.verbose:
-        root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(project_log_level.upper())
 
 
 def seed_rng(experiment_config: Config):
@@ -145,9 +137,6 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
     # Create the Trainer.
     assert isinstance(experiment_config.trainer, dict)
-    if experiment_config.debug:
-        logger.info("Setting the max_epochs to 1, since the 'debug' flag was passed.")
-        experiment_config.trainer["max_epochs"] = 1
     if "_target_" not in experiment_config.trainer:
         experiment_config.trainer["_target_"] = Trainer
 

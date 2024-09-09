@@ -43,9 +43,6 @@ class Config:
     trainer: dict = field(default_factory=dict)
     """Keyword arguments for the Trainer constructor."""
 
-    log_level: str = "info"
-    """Logging level."""
-
     # Random seed.
     seed: int | None = field(default_factory=lambda: random.randint(0, int(1e5)))
     """Random seed for reproducibility.
@@ -53,9 +50,14 @@ class Config:
     If None, a random seed is generated.
     """
 
-    # Name for the experiment.
     name: str = "default"
+    """Name for the experiment."""
 
-    debug: bool = False
+    log_level: str = "info"
+    """Logging level for the project's logger."""
 
-    verbose: bool = False
+    global_log_level: str = "ERROR"
+    """Logging level for the global (root) logger.
+
+    This controls the logging level for all packages (including third-party packages).
+    """
