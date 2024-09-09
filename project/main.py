@@ -87,10 +87,21 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     # TODO: Add ckpt_path argument to resume a training run.
     datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
     assert isinstance(datamodule, LightningDataModule)
-    experiment.trainer.fit(
-        experiment.algorithm,
-        datamodule=datamodule,
-    )
+    from lightning import LightningModule
+
+    if experiment.algorithm.train_dataloader is not LightningModule.train_dataloader:
+        logger.info("Using the custom train dataloader on the lightningmodule.")
+        experiment.algorithm.prepare_data()
+        experiment.trainer.fit(
+            experiment.algorithm,
+            train_dataloaders=experiment.algorithm.train_dataloader(),
+            # datamodule=datamodule,
+        )
+    else:
+        experiment.trainer.fit(
+            experiment.algorithm,
+            datamodule=datamodule,
+        )
 
     metric_name, error, metrics = evaluation(experiment)
     if wandb.run:

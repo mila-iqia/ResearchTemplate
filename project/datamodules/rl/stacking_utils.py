@@ -181,8 +181,9 @@ class NestedDistribution(torch.distributions.Distribution, Generic[DistType]):
     ):
         assert is_sequence_of(args, torch.Tensor), "expected only nested tensors in args"
         _unbind_args = [arg.unbind() for arg in args]
-        _values = kwargs.values()
-        assert is_sequence_of(_values, torch.Tensor), "expected only nested tensors in kwargs"
+        _values = list(kwargs.values())
+        if not is_sequence_of(_values, torch.Tensor):
+            raise RuntimeError(f"expected only nested tensors in kwargs, but got {_values}")
         unbind_kwargs = {k: v.unbind() for k, v in zip(kwargs.keys(), _values)}
         n_dists: int | None = None
         for arg in _unbind_args:

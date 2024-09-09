@@ -1,28 +1,37 @@
 from __future__ import annotations
 
+import dataclasses
 import time
+import typing
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Literal, TypedDict, TypeVar
+from typing import Any, Literal, ParamSpec, Protocol, TypedDict, TypeVar
 
+import chex
+import flax.linen
 import gymnasium
 import gymnasium.spaces
+import gymnax
+import jax
 import lightning
 import numpy as np
 import torch
+from flax.typing import FrozenVariableDict
 from gymnasium import Space
 from gymnasium.wrappers.record_video import RecordVideo
+from gymnax.environments.environment import TEnvParams, TEnvState
+from gymnax.experimental.rollout import RolloutWrapper
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.distributions import Categorical, Normal
 from torch.optim import Adam
 from torch.optim.optimizer import Optimizer
 
-from project.datamodules.rl import episode_dataset
-from project.datamodules.rl.datamodule import RlDataModule
+from project.datamodules.rl.datamodule import EnvDataLoader, RlDataModule
 from project.datamodules.rl.envs import make_torch_vectorenv
+from project.datamodules.rl.episode_dataset import EpisodeIterableDataset
 from project.datamodules.rl.stacking_utils import NestedCategorical
 from project.datamodules.rl.types import (
     Actor,
@@ -64,16 +73,95 @@ class ReinforceActorOutput(TypedDict):
     action_distribution: torch.distributions.Distribution
     """The distribution over the action space form which the action was sampled."""
 
-    # action_log_probability: Tensor
-    # """The log-probability of the selected action at that step."""
+
+def flatten(x: jax.Array) -> jax.Array:
+    return x.reshape((*x.shape[:-1], -1))
+
+
+class JaxFcNet(flax.linen.Module):
+    num_classes: int = 10
+    num_features: int = 256
+
+    @flax.linen.compact
+    def __call__(self, x: jax.Array, forward_rng: chex.PRNGKey | None = None):
+        x = flatten(x)
+        x = flax.linen.Dense(features=self.num_features)(x)
+        x = flax.linen.relu(x)
+        x = flax.linen.Dense(features=self.num_classes)(x)
+        return x
+
+
+P = ParamSpec("P")
+Out = TypeVar("Out", covariant=True)
+
+
+class _Module(Protocol[P, Out]):
+    if typing.TYPE_CHECKING:
+
+        def __call__(self, *args: P.args, **kwagrs: P.kwargs) -> Out: ...
+
+        init = flax.linen.Module.init
+        apply = flax.linen.Module.apply
+
+
+def get_episodes(
+    env: gymnax.environments.environment.Environment[TEnvState, TEnvParams],
+    env_params: TEnvParams,
+    num_episodes: int,
+    model: _Module[[jax.Array, chex.PRNGKey], jax.Array],
+    model_params: FrozenVariableDict | dict[str, Any],
+    rollout_rng_key: chex.PRNGKey,
+):
+    rollout_wrapper = RolloutWrapper(model.apply, env_name=env.name, env_params=None)
+    rollout_wrapper.env = env
+    rollout_wrapper.env_params = env_params
+
+    rollout_rng_keys = jax.random.split(rollout_rng_key, num_episodes)
+    obs, action, reward, next_obs, done, cum_ret = rollout_wrapper.batch_rollout(
+        rollout_rng_keys, model_params
+    )
+    print(done.shape)  # it should print (3, 100), but the result is (3, 500)
+    return (obs, action, reward, next_obs, done, cum_ret)
+
+    # return EpisodeBatch(
+    #     observations=obs,
+    #     actions=action,
+    #     rewards=reward,
+    #     final_observations=next_obs,
+    # )
+
+
+def main():
+    env_id = "Pendulum-v1"
+    env, env_params = gymnax.make(env_id=env_id)
+
+    sample_obs = env.observation_space(env_params).sample(jax.random.key(1))
+    action_shape = env.action_space(env_params).shape
+
+    model = JaxFcNet(num_classes=int(np.prod(action_shape)), num_features=256)
+    net_rng = jax.random.key(123)
+    rollout_rng_key = jax.random.key(456)
+
+    policy_params = model.init(net_rng, sample_obs, forward_rng=None)
+
+    episodes = get_episodes(
+        env=env,
+        env_params=env_params,
+        num_episodes=10,
+        model=model,
+        model_params=policy_params,
+        rollout_rng_key=rollout_rng_key,
+    )
+    assert False, episodes[0].shape
+
+
+if __name__ == "__main__":
+    main()
+    exit()
 
 
 class Reinforce(LightningModule):
-    """Example of a Reinforcement Learning algorithm: Reinforce.
-
-    IDEA: Make this algorithm applicable in Supervised Learning by wrapping the
-    dataset into a gym env, just to prove a point?
-    """
+    """Example of a Reinforcement Learning algorithm: Reinforce."""
 
     @dataclass
     class HParams:
@@ -97,6 +185,10 @@ class Reinforce(LightningModule):
         self.datamodule = datamodule
         self.network = network
         self.hp = hp or self.HParams()
+        self._train_loader: EnvDataLoader[ReinforceActorOutput] | None = None
+        self.save_hyperparameters(dataclasses.asdict(self.hp))
+
+        self.automatic_optimization = False
 
     def configure_optimizers(self) -> Any:
         return Adam(self.parameters(), lr=self.hp.learning_rate)
@@ -117,21 +209,40 @@ class Reinforce(LightningModule):
         """
         network_outputs = self.network(observations.to(self.dtype))
         action_distribution = get_action_distribution(network_outputs, action_space)
-        actions = action_distribution.sample()
         actor_outputs: ReinforceActorOutput = {
             "logits": network_outputs,
             "action_distribution": action_distribution,
         }
+        actions = action_distribution.sample()
         return actions, actor_outputs
 
     def on_before_zero_grad(self, optimizer: Optimizer) -> None:
         super().on_before_zero_grad(optimizer)
-        if self.datamodule is not None:
-            logger.info("Updating the actor.")
-            self.datamodule.on_actor_update()
+        # if self.datamodule is not None:
+        #     logger.info("Updating the actor.")
+        #     self.datamodule.on_actor_update()
 
     def training_step(self, batch: EpisodeBatch):
-        return self.shared_step(batch, phase="train")
+        step_outputs = self.shared_step(batch, phase="train")
+        loss = step_outputs.pop("loss")
+        optimizer = self.optimizers()
+        assert isinstance(optimizer, Optimizer)
+        optimizer.zero_grad()
+        self.manual_backward(loss)
+        optimizer.step()
+        logger.info(f"Updating the actor! {self.global_step=}")
+        assert (
+            self._train_dataset is not None
+        ), "TODO: Using the .train_dataloader() method to create the dataloader instead of a datamodule"
+        self._train_dataset.on_actor_update()
+        # self._train_loader.on_actor_update()
+        return {"loss": loss.detach(), **step_outputs}
+
+    def transfer_batch_to_device(
+        self, batch: Episode, device: torch.device, dataloader_idx: int
+    ) -> Any:
+        assert batch.observations.device == self.device
+        return batch
 
     # NOTE: For some reason PL requires us to have a second positional argument for the batch_index
     # even if it isn't used, but the training step doesn't need it.
@@ -142,6 +253,28 @@ class Reinforce(LightningModule):
     #     # IDEA: Use this PL hook to annotate the batch however you want.
     #     return batch
 
+    def train_dataloader(self) -> Any:
+        self._train_dataset: EpisodeIterableDataset[ReinforceActorOutput] = EpisodeIterableDataset(
+            env=make_torch_vectorenv("CartPole-v1", num_envs=1, seed=123, device=self.device),
+            actor=self,
+        )
+        # self._train_loader = EnvDataLoader(
+        #     self._train_dataset,
+        #     batch_size=1,
+        # )
+        return self._train_dataset
+
+    @property
+    def device(self) -> torch.device:
+        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
+        if self._device.type == "cpu":
+            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
+        device = self._device
+        # make this more explicit to always include the index
+        if device.type == "cuda" and device.index is None:
+            return torch.device("cuda", index=torch.cuda.current_device())
+        return device
+
     def shared_step(self, batch: EpisodeBatch, phase: Literal["train", "val", "test"]):
         """Perform a single step of training or validation.
 
@@ -149,6 +282,8 @@ class Reinforce(LightningModule):
         PyTorch-Lightning will then use the loss as the training signal, but we could also do the
         backward pass ourselves if we wanted to (as shown in the manual optimization example).
         """
+        if isinstance(batch, Episode):
+            batch = EpisodeBatch.from_episodes([batch])
         batch_size = batch.batch_size
 
         # Retrieve the outputs that we saved at each step:
@@ -345,9 +480,7 @@ def collect_transitions(
     device: torch.device = default_device(),
 ) -> Sequence[Transition[ActorOutput]]:
     env = make_torch_vectorenv(env_id, num_envs=num_parallel_envs, seed=seed, device=device)
-    dataset = episode_dataset.EpisodeIterableDataset(
-        env, actor=actor, steps_per_epoch=num_transitions
-    )
+    dataset = EpisodeIterableDataset(env, actor=actor, steps_per_epoch=num_transitions)
     transitions: list[Transition[ActorOutput]] = []
     for episode in iter(dataset):
         transitions.extend(episode.as_transitions())
@@ -364,7 +497,7 @@ def collect_episodes(
     min_num_transitions: int | None = None,
 ) -> EpisodeBatch[ActorOutput]:
     assert min_episodes or min_num_transitions
-    dataset = episode_dataset.EpisodeIterableDataset(
+    dataset = EpisodeIterableDataset(
         env,
         actor=actor,
         steps_per_epoch=min_num_transitions,

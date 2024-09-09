@@ -78,6 +78,7 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch[ActorOutput]]):
 
     def on_actor_update(self) -> None:
         self.env.on_actor_update()
+        logger.debug("Resetting the iterator of the dataloader.")
         del self._iterator
         # force re-creation of the iterator, to prevent different actors in the same batch.
         self._iterator = None
@@ -227,6 +228,7 @@ class RlDataModule(
     def on_actor_update(self) -> None:
         assert self._train_dataloader is not None
         self._train_dataloader.on_actor_update()
+        assert self.train_dataset is not None
         self.train_dataset.on_actor_update()
 
     @override

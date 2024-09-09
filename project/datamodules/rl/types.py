@@ -16,6 +16,7 @@ import torch
 from gymnasium import Space
 from numpy.typing import NDArray
 from torch import Tensor
+from torch_jax_interop.to_torch import jax_to_torch_tensor
 from typing_extensions import NotRequired, TypeVar, Unpack
 
 from project.utils.typing_utils import NestedMapping, is_list_of
@@ -305,9 +306,6 @@ class EpisodeBatch(MappingMixin, Generic[ActorOutput]):
         """Collates a list of episodes into an EpisodeBatch object containing (possibly nested)
         tensors."""
         rewards = [ep.rewards for ep in episodes]
-        from torch_jax_interop import (
-            jax_to_torch_tensor,
-        )
 
         from project.datamodules.rl.stacking_utils import stack
 
