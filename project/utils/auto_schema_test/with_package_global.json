@@ -1,35 +1,7 @@
 {
+  "title": "Foo",
+  "description": "Based on the signature of <class 'project.utils.auto_schema_test.Foo'>.\n",
   "properties": {
-    "_target_": {
-      "default": "project.utils.auto_schema_test.Foo",
-      "title": "Target",
-      "type": "string",
-      "description": "Target to instantiate, in this case: `project.utils.auto_schema_test.Foo`\nSee the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n",
-      "const": "project.utils.auto_schema_test.Foo"
-    },
-    "_recursive_": {
-      "default": false,
-      "title": "Recursive",
-      "type": "boolean",
-      "description": "Whether instantiating this config should recursively instantiate children configs.\nSee: https://hydra.cc/docs/advanced/instantiate_objects/overview/#recursive-instantiation"
-    },
-    "_convert_": {
-      "default": "all",
-      "title": "Convert",
-      "type": "string",
-      "description": "See https://hydra.cc/docs/advanced/instantiate_objects/overview/#parameter-conversion-strategies",
-      "enum": [
-        "none",
-        "partial",
-        "object",
-        "all"
-      ]
-    },
-    "bar": {
-      "title": "Bar",
-      "type": "string",
-      "description": "Description of the `bar` argument."
-    },
     "defaults": {
       "title": "Hydra defaults",
       "description": "Hydra defaults for this config. See https://hydra.cc/docs/advanced/defaults_list/",
@@ -71,19 +43,42 @@
       },
       "uniqueItems": true
     },
+    "_target_": {
+      "type": "string",
+      "title": "Target",
+      "description": "Target to instantiate, in this case: `<class 'project.utils.auto_schema_test.Foo'>`\nSee the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n",
+      "default": "project.utils.auto_schema_test.Foo",
+      "const": "project.utils.auto_schema_test.Foo"
+    },
+    "_convert_": {
+      "type": "string",
+      "enum": [
+        "none",
+        "partial",
+        "object",
+        "all"
+      ],
+      "title": " Convert ",
+      "description": "The _convert_ parameter of the Foo.",
+      "default": "all"
+    },
     "_partial_": {
       "type": "boolean",
       "title": "Partial",
       "description": "Whether this config calls the target function when instantiated, or creates a `functools.partial` that will call the target.\nSee: https://hydra.cc/docs/advanced/instantiate_objects/overview"
+    },
+    "_recursive_": {
+      "type": "boolean",
+      "title": " Recursive ",
+      "description": "The _recursive_ parameter of the Foo.",
+      "default": false
+    },
+    "bar": {
+      "title": "Bar",
+      "type": "string",
+      "description": "Description of the `bar` argument."
     }
   },
-  "required": [
-    "bar"
-  ],
-  "title": "Auto-generated schema for with_package_global.yaml",
-  "type": "object",
-  "additionalProperties": false,
-  "description": "Based on the signature of <class 'project.utils.auto_schema_test.Foo'>.",
   "dependentRequired": {
     "_convert_": [
       "_target_"
@@ -97,5 +92,10 @@
     "_recursive_": [
       "_target_"
     ]
-  }
+  },
+  "additionalProperties": false,
+  "required": [
+    "bar"
+  ],
+  "type": "object"
 }
