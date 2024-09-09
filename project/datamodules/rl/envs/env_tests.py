@@ -82,7 +82,8 @@ class EnvTests:
         _check_observation(observation_from_space)
 
         action_from_space = env.action_space.sample()
-        assert isinstance(action_from_space, torch.Tensor) and action_from_space.device == device
+        assert isinstance(action_from_space, torch.Tensor)
+        assert action_from_space.device == device, (action_from_space.device, device)
         assert action_from_space in env.action_space
 
         observation_from_step, reward, terminated, truncated, info_from_step = env.step(

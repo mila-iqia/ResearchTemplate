@@ -67,8 +67,8 @@ class GymnaxToTorchWrapper(
         observation_space = self.env._env.observation_space(self.env.env_params)
         action_space = self.env._env.action_space(self.env.env_params)
 
-        self.observation_space = gymnax_space_to_torch_space(observation_space)
-        self.action_space = gymnax_space_to_torch_space(action_space)
+        self.observation_space = gymnax_space_to_torch_space(observation_space, device=device)
+        self.action_space = gymnax_space_to_torch_space(action_space, device=device)
 
     def render(self) -> gymnasium.core.RenderFrame | list[gymnasium.core.RenderFrame] | None:
         """Use underlying environment rendering if it exists, otherwise return None."""

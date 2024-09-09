@@ -38,8 +38,12 @@ class _EnvFn(Protocol):
     def __call__(self, seed: int) -> TensorEnv: ...
 
 
-class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
-    """Yields batches of episodes."""
+class EnvDataLoader(DataLoader, Iterable[EpisodeBatch[ActorOutput]]):
+    """Yields batches of episodes.
+
+    The only addition here vs [torch.utils.data.DataLoader][] is that this sets the collate
+    function, and also has a method to reset the iterator when the actor changes.
+    """
 
     def __init__(
         self,
@@ -66,7 +70,7 @@ class EnvDataLoader(DataLoader, Iterable[EpisodeBatch]):
     #         self._iterator = super().__iter__()
     #     return next(self._iterator)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[EpisodeBatch[ActorOutput]]:
         if self._iterator is None:
             self._iterator = super().__iter__()
         yield from self._iterator
@@ -131,7 +135,6 @@ class RlDataModule(
         device: Device to put the tensors on.
         """
         super().__init__()
-
         self.env_fn: _EnvFn = (
             functools.partial(
                 make_torch_vectorenv,
@@ -404,7 +407,7 @@ class RlDataModule(
             env.action_space, TensorSpace
         ):
             assert env.observation_space.device == self.device
-            assert env.action_space.device == self.device
+            assert env.action_space.device == self.device, (env.action_space.device, self.device)
             logger.debug("Env is already on the right device.")
         else:
             if self.device.type == "cuda":
