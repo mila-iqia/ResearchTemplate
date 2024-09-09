@@ -7,11 +7,7 @@ import gymnax.environments.spaces
 import jax
 import torch
 from gymnax.wrappers.gym import GymnaxToGymWrapper, GymnaxToVectorGymWrapper
-from torch_jax_interop import (
-    JaxToTorchMixin,
-    get_torch_device_from_jax_array,
-    jax_to_torch_tensor,
-)
+from torch_jax_interop.to_torch import jax_to_torch_device, jax_to_torch_tensor
 
 from project.datamodules.rl.types import VectorEnvWrapper
 from project.datamodules.rl.wrappers.tensor_spaces import (
@@ -21,6 +17,8 @@ from project.datamodules.rl.wrappers.tensor_spaces import (
     get_torch_dtype_from_jax_dtype,
 )
 from project.utils.device import default_device
+
+from .brax import JaxToTorchMixin
 
 
 def gymnax_env(env_id: str, device: torch.device = default_device(), seed: int = 123):
@@ -115,7 +113,8 @@ def _gymnax_box_to_torch_box(
     if not device:
         jax_array = gymnax_space.sample(jax.random.key(0))
         assert isinstance(jax_array, jax.Array)
-        device = get_torch_device_from_jax_array(jax_array)
+        device = jax_to_torch_device(jax_array.devices().pop())
+    assert isinstance(device, torch.device)
 
     def _keep_as_float_or_to_tensor(v: float | jax.Array):
         if isinstance(v, jax.Array):
@@ -138,7 +137,7 @@ def _gymnax_discrete_to_torch_discrete(
     if not device:
         jax_array = gymnax_space.sample(jax.random.key(0))
         assert isinstance(jax_array, jax.Array)
-        device = get_torch_device_from_jax_array(jax_array)
+        device = jax_to_torch_device(jax_array)
     assert gymnax_space.dtype == jax.numpy.int64
     torch_dtype = torch.int32
     return TensorDiscrete(
