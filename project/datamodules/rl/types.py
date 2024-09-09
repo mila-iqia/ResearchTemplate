@@ -18,7 +18,7 @@ from numpy.typing import NDArray
 from torch import Tensor
 from typing_extensions import NotRequired, TypeVar, Unpack
 
-from project.utils.types import NestedMapping, is_list_of
+from project.utils.typing_utils import NestedMapping, is_list_of
 from project.utils.utils import get_shape_ish
 
 # type _Env[ObsType, ActType] = gym.Env[ObsType, ActType] | gymnasium.Env[ObsType, ActType]
@@ -54,6 +54,8 @@ WrapperActType = TypeVar("WrapperActType")
 
 ObsType = TypeVar("ObsType", default=Any)
 ActType = TypeVar("ActType", default=Any)
+
+
 # VectorEnv doesn't have type hints in current gymnasium.
 class VectorEnv(gymnasium.vector.VectorEnv, gymnasium.Env[ObsType, ActType]):
     observation_space: Space[ObsType]
@@ -208,6 +210,7 @@ class Episode(MappingMixin, Generic[ActorOutput]):
         """Convert the episode into a sequence of `Transition`s where every transition has."""
         *full_transitions, last_full_transition, _final_transition = self.as_transitions()
         return full_transitions + [dataclasses.replace(last_full_transition, is_terminal=True)]
+
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class Transition(Generic[ActorOutput]):

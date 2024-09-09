@@ -10,7 +10,7 @@ import torch.utils.data
 from pytest_benchmark.fixture import BenchmarkFixture
 from tensor_regression import TensorRegressionFixture
 from torch import Tensor
-from torch_jax_interop import jax_to_torch_tensor
+from torch_jax_interop.to_torch import jax_to_torch_tensor
 
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.types import (
@@ -19,7 +19,7 @@ from project.datamodules.rl.types import (
     VectorEnv,
 )
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorDiscrete
-from project.utils.types import NestedDict
+from project.utils.typing_utils import NestedDict
 from project.utils.utils import get_shape_ish
 
 pytest.register_assert_rewrite(__file__)

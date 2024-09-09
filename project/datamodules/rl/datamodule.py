@@ -18,7 +18,7 @@ from typing_extensions import TypeVar, override
 from project.datamodules.rl.envs import make_torch_env, make_torch_vectorenv
 from project.datamodules.rl.wrappers.tensor_spaces import TensorSpace
 from project.utils.device import default_device
-from project.utils.types.protocols import DataModule
+from project.utils.typing_utils.protocols import DataModule
 
 from .episode_dataset import EpisodeIterableDataset
 from .types import (
@@ -426,6 +426,7 @@ class RlDataModule(
             if isinstance(self.trainer.accelerator, CUDAAccelerator)
             else "cpu"
         )
+
     @override
     def teardown(self, stage: Literal["fit", "validate", "test", None]) -> None:
         if stage in ("fit", "validate", None):

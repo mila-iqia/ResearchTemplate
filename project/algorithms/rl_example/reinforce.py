@@ -17,6 +17,7 @@ from gymnasium.wrappers.record_video import RecordVideo
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.distributions import Categorical, Normal
+from torch.optim import Adam
 from torch.optim.optimizer import Optimizer
 
 from project.datamodules.rl import episode_dataset
@@ -40,8 +41,8 @@ from project.datamodules.rl.wrappers.tensor_spaces import (
     TensorSpace,
 )
 from project.utils.device import default_device
-from project.utils.types import NestedMapping
-from project.utils.types.protocols import Module
+from project.utils.typing_utils import NestedMapping
+from project.utils.typing_utils.protocols import Module
 
 logger = get_logger(__name__)
 # torch.set_float32_matmul_precision("high")
@@ -98,7 +99,7 @@ class Reinforce(LightningModule):
         self.hp = hp or self.HParams()
 
     def configure_optimizers(self) -> Any:
-        return torch.optim.Adam(self.parameters(), lr=self.hp.learning_rate)
+        return Adam(self.parameters(), lr=self.hp.learning_rate)
 
     def forward(
         self,

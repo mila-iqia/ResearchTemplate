@@ -9,8 +9,7 @@ import numpy as np
 import torch
 from gymnax.wrappers.gym import GymnaxToVectorGymWrapper
 from pytest_benchmark.fixture import BenchmarkFixture
-
-from project.datamodules.rl.wrappers.jax_torch_interop import jax_to_torch, torch_to_jax
+from torch_jax_interop import jax_to_torch, torch_to_jax
 
 
 def bench_jax_to_torch_test(device: torch.device, benchmark: BenchmarkFixture):

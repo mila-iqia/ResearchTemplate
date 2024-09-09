@@ -25,8 +25,8 @@ from torch_jax_interop import (
 from project.datamodules.rl.types import VectorEnv
 from project.datamodules.rl.wrappers.tensor_spaces import TensorBox, TensorSpace, get_torch_dtype
 from project.utils.device import default_device
-from project.utils.types import NestedDict
-from project.utils.types.protocols import Dataclass
+from project.utils.typing_utils import NestedDict
+from project.utils.typing_utils.protocols import Dataclass
 
 logger = get_logger(__name__)
 
@@ -70,7 +70,6 @@ def brax_vectorenv(
     # env = VectorEnvCompatibility(env)  # make the env compatible with the gymnasium api
     env = BraxToTorchVectorEnv(brax_env)
     return env
-
 
 
 class _DataclassMeta(type):
@@ -120,9 +119,7 @@ class JaxToTorchMixin:
         bool | jax.Array | torch.Tensor,
         dict[Any, Any],
     ]:
-        jax_action = torch_to_jax(
-            action.contiguous() if not action.is_contiguous() else action
-        )
+        jax_action = torch_to_jax(action.contiguous() if not action.is_contiguous() else action)
         obs, reward, terminated, truncated, info = self.env.step(jax_action)
         torch_obs = jax_to_torch(obs)
 

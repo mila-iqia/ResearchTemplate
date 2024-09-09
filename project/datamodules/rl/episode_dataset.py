@@ -16,7 +16,7 @@ from torch import Tensor
 from torch.utils.data import IterableDataset
 from torch_jax_interop import jax_to_torch
 
-from project.utils.types import NestedMapping
+from project.utils.typing_utils import NestedMapping
 
 from .stacking_utils import stack_episode, unstack
 from .types import Actor, ActorOutput, Episode, EpisodeInfo, VectorEnv

@@ -10,7 +10,7 @@ from torch import Tensor
 from torch_jax_interop import jax_to_torch
 from typing_extensions import ParamSpec
 
-from project.utils.types import is_sequence_of
+from project.utils.typing_utils import is_sequence_of
 
 from .types import ActorOutput, Episode
 
@@ -107,9 +107,7 @@ def stack_jax_arrays(values: Sequence[jax.Array]) -> torch.Tensor | jax.Array:
     Torch nested tensor."""
     if all(value.shape == values[0].shape for value in values):
         return jax.numpy.stack(values)
-    return torch.nested.as_nested_tensor(
-        [jax_to_torch(value) for value in values]
-    )
+    return torch.nested.as_nested_tensor([jax_to_torch(value) for value in values])
 
 
 M = TypeVar("M", bound=Mapping)
@@ -140,9 +138,7 @@ D = TypeVar("D")
 @register_stacking_fn(torch.distributions.Distribution)
 def stack_distributions(values: Sequence[D]) -> D:
     """Stack multiple distributions."""
-    raise NotImplementedError(
-        f"Don't know how to stack distributions of type {type(values[0])}"
-    )
+    raise NotImplementedError(f"Don't know how to stack distributions of type {type(values[0])}")
 
 
 @register_stacking_fn(torch.distributions.Independent)
@@ -183,14 +179,10 @@ class NestedDistribution(torch.distributions.Distribution, Generic[DistType]):
         *args: P.args,
         **kwargs: P.kwargs,
     ):
-        assert is_sequence_of(
-            args, torch.Tensor
-        ), "expected only nested tensors in args"
+        assert is_sequence_of(args, torch.Tensor), "expected only nested tensors in args"
         _unbind_args = [arg.unbind() for arg in args]
         _values = kwargs.values()
-        assert is_sequence_of(
-            _values, torch.Tensor
-        ), "expected only nested tensors in kwargs"
+        assert is_sequence_of(_values, torch.Tensor), "expected only nested tensors in kwargs"
         unbind_kwargs = {k: v.unbind() for k, v in zip(kwargs.keys(), _values)}
         n_dists: int | None = None
         for arg in _unbind_args:
@@ -208,9 +200,7 @@ class NestedDistribution(torch.distributions.Distribution, Generic[DistType]):
                 f"couldn't infer the number of distributions from {args=} and {kwargs=}"
             )
 
-        args_for_each_dist = [
-            tuple(arg_i[j] for arg_i in _unbind_args) for j in range(n_dists)
-        ]
+        args_for_each_dist = [tuple(arg_i[j] for arg_i in _unbind_args) for j in range(n_dists)]
         kwargs_for_each_dist = [
             {k: v[j] for k, v in unbind_kwargs.items()} for j in range(n_dists)
         ]
@@ -218,9 +208,7 @@ class NestedDistribution(torch.distributions.Distribution, Generic[DistType]):
             dist_type(*args, **kwargs)
             for arg, kwargs in zip(args_for_each_dist, kwargs_for_each_dist)
         ]
-        batch_shape = torch.Size(
-            [len(self._distributions), *self._distributions[0].batch_shape]
-        )
+        batch_shape = torch.Size([len(self._distributions), *self._distributions[0].batch_shape])
         super().__init__(batch_shape=batch_shape, validate_args=False)
 
     def sample(self, sample_shape: torch.Size = torch.Size()) -> Tensor:
@@ -240,9 +228,7 @@ class NestedDistribution(torch.distributions.Distribution, Generic[DistType]):
 class NestedCategorical(NestedDistribution[torch.distributions.Categorical]):
     def __init__(self, probs: Tensor | None = None, logits: Tensor | None = None):
         if (probs is None) == (logits is None):
-            raise ValueError(
-                "Either `probs` or `logits` must be specified, but not both."
-            )
+            raise ValueError("Either `probs` or `logits` must be specified, but not both.")
         if probs is not None:
             kwargs = {"probs": probs}
         else:

@@ -6,7 +6,7 @@ import gymnasium.envs.registration
 import jax
 import numpy as np
 import torch
-from torch_jax_interop import torch_to_jax_tensor
+from torch_jax_interop.to_jax import torch_to_jax_tensor
 
 from project.datamodules.rl.types import VectorEnv
 from project.datamodules.rl.wrappers.tensor_spaces import (
@@ -247,9 +247,7 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
             start=torch.full(
                 (self.num_envs,), fill_value=-1, dtype=self.dtype, device=self.device
             ),
-            nvec=torch.full(
-                (self.num_envs,), fill_value=3, dtype=self.dtype, device=self.device
-            ),
+            nvec=torch.full((self.num_envs,), fill_value=3, dtype=self.dtype, device=self.device),
             dtype=self.dtype,
             device=self.device,
         )
@@ -268,7 +266,9 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
         self._target = self._target.expand(self.observation_space.shape)
         self._initial_state = self._initial_state.expand(self.observation_space.shape)
 
-    def step(self, action: torch.Tensor) -> tuple[
+    def step(
+        self, action: torch.Tensor
+    ) -> tuple[
         torch.Tensor,
         SupportsFloat,
         torch.Tensor,
@@ -307,9 +307,7 @@ class DebugVectorEnv(DebugEnv, VectorEnv[torch.Tensor, torch.Tensor]):
             self._episode_length[env_done] = 0
 
             old_info: DebugEnvInfo = {
-                "episode_length": torch.where(
-                    env_done, old_episode_length, self._episode_length
-                ),
+                "episode_length": torch.where(env_done, old_episode_length, self._episode_length),
                 "target": torch.where(env_done, old_target, self._target),
             }
             # We have to try to match gymnasium.vector.VectorEnv, so the final observations should be a
