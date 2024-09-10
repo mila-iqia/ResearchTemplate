@@ -1,0 +1,5 @@
+# @package _global_
+defaults:
+  - override /algorithm: rl_example
+  - override /datamodule: cartpole
+  - override /network: fcnet
