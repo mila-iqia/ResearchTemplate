@@ -60,6 +60,7 @@ repos:
     rev: 0.7.1
     hooks:
       - id: nbstripout
+        exclude: profiling.ipynb
         require_serial: true
 
   # md formatting
