@@ -6,6 +6,8 @@ import pytest
 import yaml
 from pytest_regressions.file_regression import FileRegressionFixture
 
+from project.utils.env_vars import REPO_ROOTDIR
+
 from .auto_schema import add_schema_header, create_schema_for_config, main
 
 
@@ -33,7 +35,13 @@ class Bar(Foo):
 
 
 _this_file = Path(__file__)
-test_files = list((_this_file.parent / _this_file.name).with_suffix("").rglob("*.yaml"))
+# TODO: Fix this, this is very ugly. The regression files dir is set with the overwritten
+# `original_datadir` fixture in conftest.py. IDK how to get it at this point here.
+test_files = list(
+    (REPO_ROOTDIR / ".regression_files" / "project" / "utils" / _this_file.name)
+    .with_suffix("")
+    .glob("*.yaml")
+)
 
 
 @pytest.mark.parametrize("config_file", test_files, ids=[f.name for f in test_files])
