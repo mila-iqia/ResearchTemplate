@@ -230,7 +230,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         # that have the ImageNet datamodule as their target (or a subclass of ImageNetDataModule).
 
     @pytest.fixture(scope="session")
-    def forward_pass_input(self, training_batch: PyTree[torch.Tensor]):
+    def forward_pass_input(self, training_batch: PyTree[torch.Tensor], device: torch.device):
         """Extracts the model input from a batch of data coming from the dataloader.
 
         Overwrite this if your batches are not tuples of tensors (i.e. if your algorithm isn't a
@@ -239,7 +239,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         # By default, assume that the batch is a tuple of tensors.
         batch = training_batch
         if isinstance(batch, torch.Tensor):
-            return batch
+            assert False, device
+            return batch.to(device)
         if not is_sequence_of(batch, torch.Tensor):
             raise NotImplementedError(
                 "The basic test suite assumes that a batch is a tuple of tensors, as in the"
@@ -249,7 +250,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             )
         assert len(batch) >= 1
         input = batch[0]
-        return input
+        return input.to(device)
 
     def do_one_step_of_training(
         self,

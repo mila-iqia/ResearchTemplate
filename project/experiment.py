@@ -23,8 +23,8 @@ import hydra_zen
 import rich.console
 import rich.logging
 import rich.traceback
+from hydra_zen.typing import Builds
 from lightning import Callback, LightningModule, Trainer, seed_everything
-from omegaconf import DictConfig
 from torch import nn
 
 from project.configs.config import Config
@@ -138,6 +138,7 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     callbacks: dict[str, Callback] | None = hydra_zen.instantiate(callback_configs)
     # Create the loggers, if any.
     loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
+
     # Create the Trainer.
     assert isinstance(experiment_config.trainer, dict)
     if experiment_config.debug:
@@ -155,13 +156,11 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     return trainer
 
 
-def instantiate_datamodule(datamodule_config: DictConfig | Dataclass | DataModule) -> DataModule:
+def instantiate_datamodule(datamodule_config: Builds[type[DataModule]] | DataModule) -> DataModule:
     """Instantiate the datamodule from the configuration dict.
 
     Any interpolations in the config will have already been resolved by the time we get here.
     """
-
-    datamodule: DataModule
     if isinstance(datamodule_config, DataModule):
         logger.info(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
@@ -177,12 +176,6 @@ def instantiate_datamodule(datamodule_config: DictConfig | Dataclass | DataModul
     return datamodule
 
 
-def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
-    """Creates the network given the configs."""
-    assert False, (experiment_config.algorithm, experiment_config.network)
-    # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
-
-
 def instantiate_algorithm(algorithm_config: Config, datamodule: DataModule) -> LightningModule:
     """Function used to instantiate the algorithm.
 
@@ -192,6 +185,8 @@ def instantiate_algorithm(algorithm_config: Config, datamodule: DataModule) -> L
 
     The instantiated datamodule and network will be passed to the algorithm's constructor.
     """
+    # TODO: The algorithm is now always instantiated on the CPU, whereas it used to be instantiated
+    # directly on the default device (GPU).
     # Create the algorithm
     algo_config = algorithm_config
 

@@ -69,7 +69,7 @@ class ExampleAlgorithm(LightningModule):
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
 
-        with torch.random.fork_rng():
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
             self.network = instantiate(self.network_config)

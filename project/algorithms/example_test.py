@@ -1,12 +1,14 @@
 """Example showing how the test suite can be used to add tests for a new algorithm."""
 
-import torch.nn
+import pytest
+import torch
 from transformers import PreTrainedModel
 
 from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.utils.hydra_config_utils import get_all_configs_in_group_of_type
 from project.utils.testutils import run_for_all_configs_of_type
 
 from .example import ExampleAlgorithm
@@ -14,7 +16,19 @@ from .example import ExampleAlgorithm
 
 @run_for_all_configs_of_type("algorithm", ExampleAlgorithm)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
-@run_for_all_configs_of_type("network", torch.nn.Module, excluding=PreTrainedModel)
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        f"algorithm/network={config}"
+        for config in get_all_configs_in_group_of_type(
+            config_group="algorithm/network",
+            config_target_type=torch.nn.Module,
+            include_subclasses=True,
+            excluding=PreTrainedModel,
+        )
+    ],
+    indirect=True,
+)
 class TestExampleAlgo(LearningAlgorithmTests[ExampleAlgorithm]):
     """Tests for the `ExampleAlgorithm`.
 

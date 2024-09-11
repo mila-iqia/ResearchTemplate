@@ -3,15 +3,13 @@
 defaults:
   - network: resnet18
   - optimizer: Adam
+  - _self_
 
 _target_: project.algorithms.example.ExampleAlgorithm
 # Note: Why _partial_ here? Because the config doesn't create the algo directly:
 # the datamodule is instantiated first and then passed to the algorithm.
 _partial_: true
 _recursive_: false
-network:
-  _target_: torchvision.models.resnet.resnet18
-  _recursive_: false
 
 optimizer:
   lr: 0.001
