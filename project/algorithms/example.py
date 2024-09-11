@@ -7,11 +7,11 @@ python project/main.py algorithm=example
 ```
 """
 
-import functools
 from logging import getLogger
-from typing import Any, Literal
+from typing import Literal
 
 import torch
+from hydra_zen.typing import Builds, PartialBuilds
 from lightning import LightningModule
 from torch import Tensor
 from torch.nn import functional as F
@@ -30,8 +30,9 @@ class ExampleAlgorithm(LightningModule):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: torch.nn.Module,
-        optimizer_config: Any = AdamConfig(lr=3e-4),
+        network: Builds[type[torch.nn.Module]],
+        optimizer: PartialBuilds[type[Optimizer]] = AdamConfig(lr=3e-4),
+        init_seed: int = 42,
     ):
         """Create a new instance of the algorithm.
 
@@ -39,13 +40,24 @@ class ExampleAlgorithm(LightningModule):
         ----------
         datamodule: Object used to load train/val/test data. See the lightning docs for the \
             `LightningDataModule` class more info.
-        network: The network to train.
-        optimizer_config: Configuration options for the Optimizer.
+        network: The config of the network to instantiate and train.
+        optimizer: Configuration options for the Optimizer. Note that this is an optimizer.
+        init_seed: The seed to use when initializing the weights of the network.
         """
         super().__init__()
         self.datamodule = datamodule
-        self.network = network
-        self.optimizer_config = optimizer_config
+        self.network_config = network
+        self.optimizer_config = optimizer
+        self.init_seed = init_seed
+
+        # Save hyper-parameters.
+        self.save_hyperparameters(
+            {
+                "network_config": self.network_config,
+                "optimizer_config": self.optimizer_config,
+                "init_seed": init_seed,
+            }
+        )
 
         # Save hyper-parameters.
         self.save_hyperparameters(ignore=["datamodule", "network"])
@@ -56,10 +68,16 @@ class ExampleAlgorithm(LightningModule):
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
-        if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
-            # Do a forward pass to initialize any lazy weights. This is necessary for distributed
-            # training and to display network activation shapes in the summary.
-            _ = self.network(self.example_input_array)
+
+        with torch.random.fork_rng():
+            # deterministic weight initialization
+            torch.manual_seed(self.init_seed)
+            self.network = instantiate(self.network_config)
+
+            if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
+                # Do a forward pass to initialize any lazy weights. This is necessary for distributed
+                # training and to infer shapes.
+                _ = self.network(self.example_input_array)
 
     def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
@@ -89,11 +107,9 @@ class ExampleAlgorithm(LightningModule):
         return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self):
-        optimizer_partial: functools.partial[Optimizer]
-        # todo: why are there two cases here? CLI vs programmatically? Why are they different?
-        if isinstance(self.optimizer_config, functools.partial):
-            optimizer_partial = self.optimizer_config
-        else:
-            optimizer_partial = instantiate(self.optimizer_config)
+        # Instantiate the optimizer config into a functools.partial object.
+        optimizer_partial = instantiate(self.optimizer_config)
+        # Call the functools.partial object, passing the parameters as an argument.
         optimizer = optimizer_partial(self.parameters())
+        # This then returns the optimizer.
         return optimizer

@@ -5,26 +5,26 @@ You can add configurations either with a config file or in code using
 """
 
 import hydra_zen
-import torch
-import torch.optim
 
 # NOTE: Can also create configs programmatically with hydra-zen.
 # This works the same way as creating config files for each algorithm under
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as
 # well as structured config (dataclasses).
+from hydra_zen.typing import PartialBuilds
+from torch.optim import SGD, Adam  # type: ignore
 
 # Create some configs manually so they can get nice type hints when imported.
-AdamConfig = hydra_zen.builds(
+AdamConfig: type[PartialBuilds[type[Adam]]] = hydra_zen.builds(
     # note: getting this 'Adam is not exported from `torch.optim`' typing error, but importing it
     # from torch.optim.adam doesn't work (because they del the `adam` module in torch.optim!)
-    torch.optim.Adam,  # type: ignore
+    Adam,
     zen_partial=True,
     populate_full_signature=True,
     zen_dataclass={"cls_name": "AdamConfig", "frozen": True},
 )
 
-SGDConfig = hydra_zen.builds(
-    torch.optim.SGD,  # type: ignore
+SGDConfig: type[PartialBuilds[type[SGD]]] = hydra_zen.builds(
+    SGD,
     zen_partial=True,
     populate_full_signature=True,
     zen_dataclass={"cls_name": "SGDConfig", "frozen": True},

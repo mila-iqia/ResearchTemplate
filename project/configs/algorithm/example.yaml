@@ -2,12 +2,16 @@
 # In this case we configure the example algorithm.
 defaults:
   - network: resnet18
+  - optimizer: Adam
 
 _target_: project.algorithms.example.ExampleAlgorithm
-# NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
-# that will accept the datamodule and network and create the algo.
+# Note: Why _partial_ here? Because the config doesn't create the algo directly:
+# the datamodule is instantiated first and then passed to the algorithm.
 _partial_: true
-optimizer_config:
-  _target_: torch.optim.AdamW
-  _partial_: true
+_recursive_: false
+network:
+  _target_: torchvision.models.resnet.resnet18
+  _recursive_: false
+
+optimizer:
   lr: 0.001
