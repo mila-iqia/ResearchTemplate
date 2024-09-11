@@ -110,6 +110,8 @@ class JaxExample(LightningModule):
         )
 
         self.example_input_array = example_input
+        # Fix for the `device` property in LightningModule, which is CPU by default.
+        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         logits = self.network(input)
@@ -151,17 +153,6 @@ class JaxExample(LightningModule):
             MeasureSamplesPerSecondCallback(),
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes),
         ]
-
-    @property
-    def device(self) -> torch.device:
-        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
-        if self._device.type == "cpu":
-            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
-        device = self._device
-        # make this more explicit to always include the index
-        if device.type == "cuda" and device.index is None:
-            return torch.device("cuda", index=torch.cuda.current_device())
-        return device
 
 
 # Register a handler function to "convert" `torch.nn.Parameter`s to jax Arrays: they can be viewed

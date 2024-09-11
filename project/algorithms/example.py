@@ -62,6 +62,8 @@ class ExampleAlgorithm(LightningModule):
 
         # Save hyper-parameters.
         self.save_hyperparameters(ignore=["datamodule", "network"])
+        # Small fix for the `device` property in LightningModule, which is CPU by default.
+        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
 
     def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
@@ -99,14 +101,3 @@ class ExampleAlgorithm(LightningModule):
             optimizer_partial = instantiate(self.optimizer_config)
         optimizer = optimizer_partial(self.parameters())
         return optimizer
-
-    @property
-    def device(self) -> torch.device:
-        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
-        if self._device.type == "cpu":
-            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
-        device = self._device
-        # make this more explicit to always include the index
-        if device.type == "cuda" and device.index is None:
-            return torch.device("cuda", index=torch.cuda.current_device())
-        return device
