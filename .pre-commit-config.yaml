@@ -67,7 +67,7 @@ repos:
     rev: 0.7.17
     hooks:
       - id: mdformat
-        exclude: "SUMMARY.md|testing.md"
+        exclude: "SUMMARY.md|testing.md|jax.md"
         args: ["--number"]
         additional_dependencies:
           - mdformat-gfm

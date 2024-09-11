@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 def define_env(env: MacrosPlugin):
-    @env.macro
     def inline(module_or_file: str, indent: int = 0):
         block_type: str | None = None
         # print(f"Inlining reference: {module_or_file}")
@@ -36,24 +35,29 @@ def define_env(env: MacrosPlugin):
         else:
             block_type = block_type or "python3"
             obj: Any = get_object_from_reference(module_or_file)
-            content = "".join(inspect.getsourcelines(obj)[0])
+            logger.info(f"inlining code for {obj}")
+            content = inspect.getsource(obj)
+            # BUG: Sometimes using {{ inline('some_module.SomeClass.some_method') }} will show the
+            # incorrect source code: it will show the method *above* the one we're looking for.
+            # content = "".join(inspect.getsourcelines(obj)[0])
 
         content = f"```{block_type}\n" + textwrap.indent(content + "\n```", " " * indent)
         return content
 
+    env.macro(inline, name="inline")
+
 
 def get_object_from_reference(reference: str):
     """taken from https://github.com/mkdocs/mkdocs/issues/692"""
-    split = reference.split(".")
-    right = []
-    module = None
-    while split:
+    parts = reference.split(".")
+    for i in range(1, len(parts)):
+        module_name = ".".join(parts[:i])
+        obj_path = parts[i:]
         try:
-            module = importlib.import_module(".".join(split))
-            break
-        except ModuleNotFoundError:
-            right.append(split.pop())
-    if module:
-        for entry in reversed(right):
-            module = getattr(module, entry)
-    return module
+            obj = importlib.import_module(module_name)
+            for part in obj_path:
+                obj = getattr(obj, part)
+            return obj
+        except (ModuleNotFoundError, AttributeError):
+            continue
+    raise RuntimeError(f"Unable to import the {reference=}")
