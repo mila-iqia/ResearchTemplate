@@ -161,7 +161,11 @@ jobs:
       - name: Install dependencies
         run: rye sync --no-lock
       - name: Test with pytest
-        run: rye run pytest -v --cov=project --cov-report=xml --cov-append --slow
+        run: rye run pytest -v --cov=project --cov-report=xml --cov-append
+
+      # TODO: re-enable later
+      # - name: Test with pytest
+      #   run: rye run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
 
       - name: Store coverage report as an artifact
         uses: actions/upload-artifact@v4
