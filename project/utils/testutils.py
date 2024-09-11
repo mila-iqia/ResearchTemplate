@@ -151,7 +151,6 @@ class ParametrizedFixture(Generic[T]):
 
 
 def run_for_all_datamodules(
-    datamodule_names: list[str] | None = None,
     datamodule_name_to_marks: dict[str, pytest.MarkDecorator | list[pytest.MarkDecorator]]
     | None = None,
 ):
@@ -162,16 +161,12 @@ def run_for_all_datamodules(
 
     Parameters
     ----------
-    datamodule_names: List of datamodule names to use for tests. \
-        By default, lists out the generic datamodules (the datamodules that aren't specific to a
-        single algorithm, for example the InfGendatamodules of WakeSleep.)
 
     datamodule_to_marks: Dictionary from datamodule names to pytest marks (e.g. \
         `pytest.mark.xfail`, `pytest.mark.skip`) to use for that particular datamodule.
     """
     return run_for_all_configs_in_group(
-        group_name="datamodule",
-        config_name_to_marks=datamodule_name_to_marks,
+        group_name="datamodule", config_name_to_marks=datamodule_name_to_marks
     )
 
 

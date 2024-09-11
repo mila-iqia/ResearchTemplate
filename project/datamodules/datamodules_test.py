@@ -8,6 +8,7 @@ import torch
 from lightning import LightningDataModule
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.trainer.states import RunningStage
+from omegaconf import DictConfig
 from tensor_regression.fixture import (
     TensorRegressionFixture,
     get_test_source_and_temp_file_paths,
@@ -18,6 +19,7 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
+from project.experiment import instantiate_datamodule
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.testutils import run_for_all_datamodules
 from project.utils.typing_utils import is_sequence_of
@@ -25,9 +27,13 @@ from project.utils.typing_utils import is_sequence_of
 logger = logging.getLogger(__name__)
 
 
-# @use_overrides(["datamodule.num_workers=0"])
+@pytest.fixture
+def datamodule(experiment_dictconfig: DictConfig):
+    return instantiate_datamodule(experiment_dictconfig.datamodule)
+
+
 # @pytest.mark.timeout(25, func_only=True)
-@pytest.mark.slow
+# @use_overrides(["datamodule.num_workers=0"])
 @pytest.mark.parametrize(
     "stage",
     [
