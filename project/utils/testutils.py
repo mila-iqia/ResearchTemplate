@@ -86,7 +86,7 @@ default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDec
             )
         ]
         for resnet_config, mnist_dataset_config in itertools.product(
-            get_all_configs_in_group_of_type("network", torchvision.models.ResNet),
+            get_all_configs_in_group_of_type("algorithm/network", torchvision.models.ResNet),
             get_all_configs_in_group_of_type(
                 "datamodule", (MNISTDataModule, FashionMNISTDataModule)
             ),
@@ -187,7 +187,7 @@ def run_for_all_vision_datamodules():
 
 
 def run_for_all_configs_of_type(
-    config_group: str, config_target_type: type, excluding: type | tuple[type, ...] = ()
+    config_group: str, target_type: type, excluding: type | tuple[type, ...] = ()
 ):
     """Parametrizes a test to run with all the configs in the given group that have targets which
     are subclasses of the given type.
@@ -195,9 +195,9 @@ def run_for_all_configs_of_type(
     For example:
 
     ```python
-    @run_for_all_subclasses_of("network", torch.nn.Module)
-    def test_something_about_the_network(network: torch.nn.Module):
-        ''' This test will run with all the configs in the 'network' group that produce nn.Modules! '''
+    @run_for_all_configs_of_type("algorithm", torch.nn.Module)
+    def test_something_about_the_algorithm(algorithm: torch.nn.Module):
+        ''' This test will run with all the configs in the 'algorithm' group that create nn.Modules! '''
     ```
 
     Concretely, this works by indirectly parametrizing the `f"{config_group}_config"` fixture.
@@ -205,7 +205,7 @@ def run_for_all_configs_of_type(
     https://docs.pytest.org/en/stable/example/parametrize.html#indirect-parametrization
     """
     config_names = get_all_configs_in_group_of_type(
-        config_group, config_target_type, include_subclasses=True, excluding=excluding
+        config_group, target_type, include_subclasses=True, excluding=excluding
     )
     config_name_to_marks = {
         name: default_marks_for_config_name.get(name, []) for name in config_names
@@ -291,6 +291,8 @@ def run_for_all_configs_in_group(
             k: default_marks_for_config_name.get(k, [])
             for k in get_all_configs_in_group(group_name)
         }
+    if "/" in group_name:
+        group_name = group_name.replace("/", "_")
     # Parametrize the fixture (e.g. datamodule_name) indirectly, which will make it take each group
     # member (e.g. datamodule config name), each with a parameterized mark.
     return parametrize_when_used(

@@ -137,8 +137,8 @@ def datamodule_config(request: pytest.FixtureRequest) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def network_config(request: pytest.FixtureRequest) -> str | None:
-    """The network config to use in the experiment, as if `network=<value>` was passed."""
+def algorithm_network_config(request: pytest.FixtureRequest) -> str | None:
+    """The network config to use in the experiment, as in `algorithm/network=<value>`."""
     network_config_name = getattr(request, "param", None)
     if network_config_name:
         _add_default_marks_for_config_name(network_config_name, request)
@@ -151,7 +151,7 @@ def command_line_arguments(
     accelerator: str,
     algorithm_config: str | None,
     datamodule_config: str | None,
-    network_config: str | None,
+    algorithm_network_config: str | None,
     overrides: tuple[str, ...],
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
@@ -163,7 +163,7 @@ def command_line_arguments(
     would be by Hydra in a regular run.
     """
 
-    combination = set([datamodule_config, network_config, algorithm_config])
+    combination = set([datamodule_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
         marks = [marks] if not isinstance(marks, list | tuple) else marks
         configs = set(configs)
@@ -183,8 +183,8 @@ def command_line_arguments(
     ]
     if algorithm_config:
         default_overrides.append(f"algorithm={algorithm_config}")
-    if network_config:
-        default_overrides.append(f"network={network_config}")
+    if algorithm_network_config:
+        default_overrides.append(f"algorithm/network={algorithm_network_config}")
     if datamodule_config:
         default_overrides.append(f"datamodule={datamodule_config}")
 
@@ -246,10 +246,11 @@ def datamodule(experiment_dictconfig: DictConfig) -> DataModule:
 
 
 @pytest.fixture(scope="function")
-def algorithm(experiment_config: Config, datamodule: DataModule):
+def algorithm(experiment_config: Config, datamodule: DataModule, device: torch.device, seed: int):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+    with device:
+        return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
 
 
 @pytest.fixture(scope="session")

@@ -11,6 +11,7 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, Generic, TypeVar, get_args
 
+import jax
 import lightning
 import pytest
 import torch
@@ -238,9 +239,16 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """
         # By default, assume that the batch is a tuple of tensors.
         batch = training_batch
-        if isinstance(batch, torch.Tensor):
-            assert False, device
-            return batch.to(device)
+
+        def to_device(v):
+            if hasattr(v, "to"):
+                return v.to(device)
+            return v
+
+        batch = jax.tree.map(to_device, batch)
+
+        if isinstance(batch, torch.Tensor | dict):
+            return batch
         if not is_sequence_of(batch, torch.Tensor):
             raise NotImplementedError(
                 "The basic test suite assumes that a batch is a tuple of tensors, as in the"

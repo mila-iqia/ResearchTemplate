@@ -1,7 +1,12 @@
+from collections.abc import Mapping
+from typing import Any
+
 import lightning
 import pytest
+from lightning import LightningModule
 from torch import Tensor
 from transformers import PreTrainedModel
+from typing_extensions import override
 
 from project.algorithms.hf_example import HFExample
 from project.datamodules.text.hf_text import HFDataModule
@@ -12,17 +17,19 @@ from .testsuites.algorithm_tests import LearningAlgorithmTests
 
 class RecordTrainingLossCb(lightning.Callback):
     def __init__(self):
-        self.losses = []
+        self.losses: list[Tensor] = []
 
+    @override
     def on_train_batch_end(
         self,
-        trainer,
-        pl_module,
-        outputs,
-        batch,
-        batch_idx,
+        trainer: lightning.Trainer,
+        pl_module: LightningModule,
+        outputs: Tensor | Mapping[str, Any] | None,
+        batch: Any,
+        batch_idx: int,
     ):
-        self.losses.append(outputs["loss"].detach())
+        assert isinstance(outputs, dict) and isinstance(loss := outputs.get("loss"), Tensor)
+        self.losses.append(loss.detach())
 
 
 @run_for_all_configs_of_type("algorithm", HFExample)
