@@ -68,9 +68,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any
 
-import flax.linen
 import lightning.pytorch as pl
 import numpy as np
 import pytest
@@ -78,8 +76,9 @@ import torch
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
+from lightning import LightningModule
 from omegaconf import DictConfig, open_dict
-from torch import Tensor, nn
+from torch import Tensor
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
@@ -87,7 +86,6 @@ from project.datamodules.vision import VisionDataModule
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
-    instantiate_network,
     instantiate_trainer,
     seed_rng,
     setup_logging,
@@ -233,29 +231,6 @@ def experiment_config(
     return config
 
 
-@pytest.fixture(scope="session")
-def network(
-    experiment_config: Config,
-    datamodule: DataModule,
-    device: torch.device,
-    training_batch: Any,
-):
-    with device:
-        network = instantiate_network(experiment_config, datamodule=datamodule)
-
-    if isinstance(network, flax.linen.Module):
-        return network
-
-    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
-        # a bit ugly, but we need to initialize any lazy weights before we pass the network
-        # to the tests.
-        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
-        if isinstance(training_batch, tuple):
-            input = training_batch[0]
-            _ = network(input)
-    return network
-
-
 # BUG: The network has a default config of `resnet18`, which tries to get the
 # num_classes from the datamodule. However, the hf_text datamodule doesn't have that attribute,
 # and we load the datamodule using the entire experiment config, so loading the network raises an
@@ -272,10 +247,19 @@ def datamodule(experiment_config: Config) -> DataModule:
 
 
 @pytest.fixture(scope="function")
-def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
+def algorithm(experiment_config: Config, datamodule: DataModule):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
+    return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+
+
+@pytest.fixture(scope="session")
+def network(algorithm: LightningModule):
+    if not hasattr(algorithm, "network"):
+        pytest.skip(
+            reason=f"Algorithm of type {type(algorithm)} doesn't have a 'network' attribute."
+        )
+    return algorithm.network
 
 
 @pytest.fixture(scope="function")

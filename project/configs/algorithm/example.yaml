@@ -1,5 +1,7 @@
 # This is an example of how you can use a config file to configure a LightningModule.
 # In this case we configure the example algorithm.
+defaults:
+  - network: resnet18
 
 _target_: project.algorithms.example.ExampleAlgorithm
 # NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function

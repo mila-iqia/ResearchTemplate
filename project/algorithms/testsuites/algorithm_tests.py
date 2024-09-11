@@ -53,15 +53,14 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         self,
         experiment_config: Config,
         datamodule: DataModule,
-        network: torch.nn.Module,
         seed: int,
     ):
         """Checks that the weights initialization is consistent given the a random seed."""
         with seeded_rng(seed):
-            algorithm_1 = instantiate_algorithm(experiment_config, datamodule, network)
+            algorithm_1 = instantiate_algorithm(experiment_config.algorithm, datamodule)
 
         with seeded_rng(seed):
-            algorithm_2 = instantiate_algorithm(experiment_config, datamodule, network)
+            algorithm_2 = instantiate_algorithm(experiment_config.algorithm, datamodule)
 
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
 
@@ -131,15 +130,12 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         self,
         experiment_config: Config,
         datamodule: DataModule,
-        network: torch.nn.Module,
         seed: int,
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
         with seeded_rng(seed):
-            algorithm = instantiate_algorithm(
-                experiment_config, datamodule=datamodule, network=network
-            )
+            algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
         tensor_regression.check(
             algorithm.state_dict(),
             # Save the regression files on a different subfolder for each device (cpu / cuda)

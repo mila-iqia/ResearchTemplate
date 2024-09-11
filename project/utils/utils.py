@@ -135,13 +135,19 @@ def print_config(
     queue = []
 
     for f in print_order:
-        queue.append(f) if f in config else logger.info(f"Field '{f}' not found in config")
+        if f in config:
+            queue.append(f)
+        else:
+            logger.info(f"Field '{f}' not found in config")
 
     for f in config:
         if f not in queue:
             queue.append(f)
 
     for f in queue:
+        if f not in config:
+            logger.info(f"Field '{f}' not found in config")
+            continue
         branch = tree.add(f, style=style, guide_style=style)
 
         config_group = config[f]

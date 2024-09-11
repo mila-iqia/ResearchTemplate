@@ -1,3 +1,8 @@
+# Config for the JaxExample algorithm
+defaults:
+  - network: albert-base-v2.yaml
+  # - /datamodule@_global_.datamodule: hf_text.yaml
+
 _target_: project.algorithms.hf_example.HFExample
 # NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
 # that will accept the datamodule and network and return the algo.
