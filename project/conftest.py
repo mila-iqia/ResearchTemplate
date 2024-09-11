@@ -61,7 +61,9 @@ algorithm & network & datamodule -- is used by --> some_other_test
 from __future__ import annotations
 
 import copy
+import json
 import os
+import shutil
 import sys
 import typing
 import warnings
@@ -619,6 +621,25 @@ def original_datadir(original_datadir: Path):
     regression_dir = REPO_ROOTDIR / ".regression_files"
     regression_dir.mkdir(exist_ok=True)
     new_datadir = regression_dir / path_to_test
+
+    if shutil.which("code"):
+        vscode_settings_file = REPO_ROOTDIR / ".vscode" / "settings.json"
+        try:
+            with open(vscode_settings_file) as f:
+                settings: dict = json.load(f)
+            settings.setdefault("files.exclude", {}).update(
+                {
+                    ".regression_files": True,
+                    ".venv": True,
+                    ".pytest_cache": True,
+                    ".ruff_cache": True,
+                }
+            )
+            with open(vscode_settings_file, "w") as f:
+                json.dump(settings, f, indent=2)
+        except OSError:
+            pass
+
     return new_datadir
 
 
