@@ -110,8 +110,6 @@ class JaxExample(LightningModule):
         )
 
         self.example_input_array = example_input
-        # Fix for the `device` property in LightningModule, which is CPU by default.
-        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         logits = self.network(input)
