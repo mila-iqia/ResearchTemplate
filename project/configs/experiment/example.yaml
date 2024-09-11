@@ -6,9 +6,7 @@
 defaults:
   - override /datamodule: cifar10
   - override /algorithm: example
-  - override /network: resnet18
   - override /trainer: default
-  - override /trainer/callbacks: default
   - override /trainer/logger: wandb
 
 # all parameters below will be merged with parameters from default configurations set above
