@@ -623,24 +623,31 @@ def original_datadir(original_datadir: Path):
     new_datadir = regression_dir / path_to_test
 
     if shutil.which("code"):
-        vscode_settings_file = REPO_ROOTDIR / ".vscode" / "settings.json"
-        try:
-            with open(vscode_settings_file) as f:
-                settings: dict = json.load(f)
-            settings.setdefault("files.exclude", {}).update(
-                {
-                    ".regression_files": True,
-                    ".venv": True,
-                    ".pytest_cache": True,
-                    ".ruff_cache": True,
-                }
-            )
-            with open(vscode_settings_file, "w") as f:
-                json.dump(settings, f, indent=2)
-        except OSError:
-            pass
+        add_files_exclude_entries_in_vscode_settings(REPO_ROOTDIR)
 
     return new_datadir
+
+
+def add_files_exclude_entries_in_vscode_settings(repo_root: Path):
+    vscode_settings_file = repo_root / ".vscode" / "settings.json"
+    if not vscode_settings_file.exists():
+        return
+    try:
+        logger.debug(f"Modifying {vscode_settings_file} to exclude some directories.")
+        with open(vscode_settings_file) as f:
+            settings: dict = json.load(f)
+        settings.setdefault("files.exclude", {}).update(
+            {
+                ".regression_files": True,
+                ".venv": True,
+                ".pytest_cache": True,
+                ".ruff_cache": True,
+            }
+        )
+        with open(vscode_settings_file, "w") as f:
+            json.dump(settings, f, indent=2)
+    except (OSError, json.decoder.JSONDecodeError):
+        pass
 
 
 # Incremental testing: https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps
