@@ -1,8 +1,9 @@
+# yaml-language-server: $schema=../../../.schemas/trainer_default_schema.json
 _target_: lightning.Trainer
 logger: null
 accelerator: auto
 strategy: auto
-devices: 1
+devices: auto
 
 deterministic: true
 

@@ -1,4 +1,5 @@
 # @package _global_
+# yaml-language-server: $schema=../../../.schemas/experiment_cluster_sweep_example_schema.json
 defaults:
   - example.yaml
   - override /resources: one_gpu.yaml

@@ -1,13 +1,10 @@
+# @package _global_
 defaults:
-  - override hydra/launcher: submitit_slurm
-
-trainer:
-  accelerator: cpu
-  strategy: null
-  devices: 1
+  - override /hydra/launcher: submitit_slurm
 
 hydra:
   mode: MULTIRUN
   launcher:
     gpus_per_node: null
     cpus_per_task: 1
+    mem_gb: 16

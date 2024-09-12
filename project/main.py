@@ -11,16 +11,15 @@ from pathlib import Path
 import hydra
 import omegaconf
 import rich
-import wandb
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 
+import wandb
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.experiment import Experiment, setup_experiment
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.utils import print_config
 
 if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
     # NOTE: Perhaps unsetting it would also work, but this works atm.
@@ -39,7 +38,8 @@ add_configs_to_hydra_store()
 )
 def main(dict_config: DictConfig) -> dict:
     """Main entry point for training a model."""
-    print_config(dict_config, resolve=False)
+    # print_config(dict_config, resolve=False)
+    ## add if statement contingent on global? env variables
 
     from project.utils.auto_schema import add_schemas_to_all_hydra_configs
 

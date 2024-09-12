@@ -10,7 +10,8 @@ defaults:
   - hydra: default.yaml
 
   # Allows launching LOTS of runs in parallel on a cluster thanks to the submitit launcher.
-  - resources: null
+  - optional resources: null
+
 
   # experiment configs allow for version control of specific hyperparameters
   # e.g. best hyperparameters for given model and datamodule
