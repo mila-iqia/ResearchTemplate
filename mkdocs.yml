@@ -1,5 +1,5 @@
-site_name: Research Project Template (wip)
-site_description: A project template and directory structure for Python data science projects. (Work-in-Progress)
+site_name: Research Project Template
+site_description: Template for a ML Research project.
 site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
@@ -40,6 +40,9 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
   - pymdownx.magiclink
   - attr_list
   - md_in_html
@@ -57,7 +60,7 @@ markdown_extensions:
 plugins:
   - search
   - awesome-pages
-  - macros:  #https://mkdocs-macros-plugin.readthedocs.io/en/latest/#declaration-of-the-macros-plugin
+  - macros: #https://mkdocs-macros-plugin.readthedocs.io/en/latest/#declaration-of-the-macros-plugin
       module_name: docs/macros
   - autorefs
   - gen-files:

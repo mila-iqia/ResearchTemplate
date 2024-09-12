@@ -38,17 +38,16 @@ For more context, see [this  introduction to the project.](intro.md).
     You can use both PyTorch and Jax for your algorithms!
     ([Lightning](https://lightning.ai/docs/pytorch/stable/) handles the rest.)
 
-    [:octicons-arrow-right-24: Check out the Jax example](examples/jax.md)
+    [:octicons-arrow-right-24: Check out the Jax example](features/jax.md)
 
 - :fontawesome-solid-plane-departure:{ .lg .middle } __Ready-to-use examples__
 
     ---
 
-    Includes examples for Supervised learning(1) and NLP 🤗(2), with unsupervised learning and RL coming soon.
+    Includes examples for Supervised learning(1) and NLP 🤗, with unsupervised learning and RL coming soon.
     { .annotate }
 
     1. The source code for the example is available [here](https://github.com/mila-iqia/ResearchTemplate/blob/master/project/algorithms/example.py)
-    2. 👷 Coming soon-ish
 
     [:octicons-arrow-right-24: Check out the examples here](examples/examples.md)
 
@@ -69,7 +68,7 @@ This project makes use of the following libraries:
 
 - [Hydra](https://hydra.cc/) is used to configure the project. It allows you to define configuration files and override them from the command line.
 - [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) is used to as the training framework. It provides a high-level interface to organize ML research code.
-    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as is shown in the [Jax example](examples/jax.md) 🔥
+    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as described in the [Jax example](features/jax.md) 🔥
 - [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
 - [pytest](https://docs.pytest.org/en/stable/) is used for testing.
 

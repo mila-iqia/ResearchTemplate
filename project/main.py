@@ -22,9 +22,6 @@ from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
 
-if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
-    # NOTE: Perhaps unsetting it would also work, but this works atm.
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 logger = get_logger(__name__)
 
 PROJECT_NAME = Path(__file__).parent.name

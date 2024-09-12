@@ -10,7 +10,7 @@ Please note: This is a Work-in-Progress. The goal is to make a first release by 
 This is a template repository for a research project in machine learning. It is meant to be a starting point for new ML researchers that run jobs on SLURM clusters.
 The main target audience is [Mila](https://mila.quebec/en) researchers and students, but this should still be useful to anyone that uses PyTorch-Lightning with Hydra.
 
-For more context, see [this  introduction to the project.](https://mila-iqia.github.io/ResearchTemplate/overview/intro).
+For more context, see [this  introduction to the project.](https://mila-iqia.github.io/ResearchTemplate/intro).
 
 ## Overview
 
