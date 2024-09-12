@@ -13,12 +13,14 @@
 absl-py==2.1.0
     # via brax
     # via chex
+    # via distrax
     # via dm-env
     # via ml-collections
     # via mujoco
     # via mujoco-mjx
     # via optax
     # via orbax-checkpoint
+    # via tensorflow-probability
 aiohappyeyeballs==2.4.0
     # via aiohttp
 aiohttp==3.10.5
@@ -48,6 +50,7 @@ blinker==1.8.2
 bracex==2.5
     # via wcmatch
 brax==0.10.5
+    # via rejax
     # via research-project-template
 certifi==2024.8.30
     # via requests
@@ -57,6 +60,8 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
     # via requests
 chex==0.1.86
+    # via distrax
+    # via evosax
     # via gymnax
     # via optax
 click==8.1.7
@@ -70,6 +75,7 @@ cloudpickle==3.0.0
     # via gymnasium
     # via orion
     # via submitit
+    # via tensorflow-probability
 colorama==0.4.6
     # via griffe
     # via mkdocs-material
@@ -87,22 +93,29 @@ cycler==0.12.1
 datasets==2.21.0
     # via evaluate
     # via research-project-template
+decorator==5.1.1
+    # via tensorflow-probability
 dill==0.3.8
     # via datasets
     # via evaluate
     # via multiprocess
 distlib==0.3.8
     # via virtualenv
+distrax==0.1.5
+    # via rejax
 dm-env==1.6
     # via brax
 dm-tree==0.1.8
     # via dm-env
+    # via tensorflow-probability
 dnspython==2.6.1
     # via pymongo
 docker-pycreds==0.4.0
     # via wandb
 docstring-parser==0.16
     # via simple-parsing
+dotmap==1.3.30
+    # via evosax
 etils==1.9.4
     # via brax
     # via mujoco
@@ -111,6 +124,8 @@ etils==1.9.4
     # via orbax-checkpoint
 evaluate==0.4.2
     # via research-project-template
+evosax==0.1.6
+    # via rejax
 exceptiongroup==1.2.2
     # via pytest
 execnet==2.1.1
@@ -138,7 +153,9 @@ flask-cors==5.0.0
     # via brax
 flax==0.8.5
     # via brax
+    # via evosax
     # via gymnax
+    # via rejax
     # via torch-jax-interop
 fonttools==4.53.1
     # via matplotlib
@@ -153,6 +170,8 @@ fsspec==2024.6.1
     # via lightning
     # via pytorch-lightning
     # via torch
+gast==0.6.0
+    # via tensorflow-probability
 gdown==5.2.0
     # via research-project-template
 ghp-import==2.1.0
@@ -179,6 +198,7 @@ gymnasium==0.29.1
     # via gymnax
     # via research-project-template
 gymnax==0.0.8
+    # via rejax
     # via research-project-template
 huggingface-hub==0.24.6
     # via datasets
@@ -215,6 +235,8 @@ itsdangerous==2.2.0
 jax==0.4.31
     # via brax
     # via chex
+    # via distrax
+    # via evosax
     # via flax
     # via gymnax
     # via jaxopt
@@ -231,6 +253,8 @@ jax-cuda12-plugin==0.4.31
 jaxlib==0.4.31
     # via brax
     # via chex
+    # via distrax
+    # via evosax
     # via gymnax
     # via jax
     # via jaxopt
@@ -280,6 +304,7 @@ markupsafe==2.1.5
     # via mkdocstrings
     # via werkzeug
 matplotlib==3.9.2
+    # via evosax
     # via gymnax
     # via research-project-template
     # via seaborn
@@ -342,6 +367,7 @@ mujoco==3.2.2
     # via mujoco-mjx
 mujoco-mjx==3.2.2
     # via brax
+    # via research-project-template
 multidict==6.0.5
     # via aiohttp
     # via yarl
@@ -363,8 +389,10 @@ numpy==1.26.4
     # via chex
     # via contourpy
     # via datasets
+    # via distrax
     # via dm-env
     # via evaluate
+    # via evosax
     # via flax
     # via gym
     # via gymnasium
@@ -380,12 +408,14 @@ numpy==1.26.4
     # via orion
     # via pandas
     # via pyarrow
+    # via rejax
     # via scikit-learn
     # via scikit-optimize
     # via scipy
     # via seaborn
     # via tensor-regression
     # via tensorboardx
+    # via tensorflow-probability
     # via tensorstore
     # via torchmetrics
     # via torchvision
@@ -439,6 +469,7 @@ opt-einsum==3.3.0
 optax==0.2.3
     # via brax
     # via flax
+    # via rejax
 orbax-checkpoint==0.6.1
     # via brax
     # via flax
@@ -555,6 +586,7 @@ pytz==2024.1
     # via pandas
 pyyaml==6.0.2
     # via datasets
+    # via evosax
     # via flax
     # via gymnax
     # via huggingface-hub
@@ -572,6 +604,7 @@ pyyaml==6.0.2
     # via pytest-regressions
     # via pytorch-lightning
     # via pyyaml-env-tag
+    # via rejax
     # via transformers
     # via wandb
 pyyaml-env-tag==0.1
@@ -579,6 +612,8 @@ pyyaml-env-tag==0.1
 regex==2024.7.24
     # via mkdocs-material
     # via transformers
+rejax==0.1.0
+    # via research-project-template
 requests==2.32.3
     # via datasets
     # via evaluate
@@ -624,6 +659,7 @@ six==1.16.0
     # via docker-pycreds
     # via ml-collections
     # via python-dateutil
+    # via tensorflow-probability
 smmap==5.0.1
     # via gitdb
 soupsieve==2.6
@@ -639,6 +675,8 @@ tenacity==9.0.0
 tensor-regression==0.0.6
 tensorboardx==2.6.2.2
     # via brax
+tensorflow-probability==0.24.0
+    # via distrax
 tensorstore==0.1.65
     # via flax
     # via orbax-checkpoint

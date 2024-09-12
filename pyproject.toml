@@ -34,6 +34,8 @@ dependencies = [
     "gymnasium>=0.29.1",
     "brax>=0.10.5",
     "gymnax>=0.0.8",
+    "rejax>=0.1.0",
+    "mujoco-mjx>=3.2.2",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
