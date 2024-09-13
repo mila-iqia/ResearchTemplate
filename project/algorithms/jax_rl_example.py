@@ -175,13 +175,14 @@ def get_episodes(
     return rollout_wrapper.batch_rollout(rollout_rng_keys, model_params)
 
 
-class RlExample(lightning.LightningModule):
-    def __init__(self, env: Environment):
+class JaxRlExample(lightning.LightningModule):
+    def __init__(
+        self, env: gymnax.environments.environment.Environment, env_params: gymnax.EnvParams
+    ):
         super().__init__()
         self.env = env
-        self.env_params = env.default_params
+        self.env_params = env_params
 
-        # https://github.com/RobertTLange/gymnax-blines/blob/main/utils/ppo.py
         sample_obs = env.observation_space(self.env_params).sample(jax.random.key(1))
         action_shape = env.action_space(self.env_params).shape
 
@@ -197,9 +198,10 @@ class RlExample(lightning.LightningModule):
         )
 
         self.automatic_optimization = False
-        _agent = PPOLearner.create_agent(config={}, env=self.env, env_params=self.env_params)
-        actor = _agent["actor"]
-        critic = _agent["critic"]
+
+        _agents = PPOLearner.create_agent(config={}, env=self.env, env_params=self.env_params)
+        actor = _agents["actor"]
+        critic = _agents["critic"]
 
         # TODO: Super ugly. Remove this.
         def _eval_callback(algo: PPOLearner, ts: PPOTrainState, rng: chex.PRNGKey):
@@ -236,15 +238,38 @@ class RlExample(lightning.LightningModule):
             vf_coef=0.5,
             normalize_observations=True,
         )
+        iteration_steps = self.learner.num_envs * self.learner.num_steps
+        self.num_train_iterations = np.ceil(self.learner.eval_freq / iteration_steps).astype(int)
+        # todo: number of epochs:
+        # num_evals = np.ceil(self.learner.total_timesteps / self.learner.eval_freq).astype(int)
+
         self.train_state = self.learner.init_state(jax.random.key(0))
 
     @override
     def train_dataloader(self) -> Iterable[Trajectory]:
-        for batch_idx in range(10):
+        env_rng = jax.random.key(self.current_epoch)
+        obs, env_state = self.learner.vmap_reset(
+            jax.random.split(env_rng, self.learner.num_envs), self.learner.env_params
+        )
+        collection_state = TrajectoryCollectionState(
+            last_obs=obs,
+            rms_state=RMSState.create(
+                shape=(1, *self.env.observation_space(self.env_params).shape)
+            ),
+            global_step=self.train_state.global_step,
+            env_state=env_state,
+            last_done=jnp.zeros(self.learner.num_envs, dtype=bool),
+        )
+        for batch_idx in range(self.num_train_iterations):
             # TODO: Use a `TrajectoryCollectionState` instead of the full train state, and tie in
             # the rng key somehow.
-            # episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
-            self.train_state, trajectories = self.learner.collect_trajectories(self.train_state)
+            episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
+            collection_state, trajectories = self.learner.collect_trajectories_custom(
+                collection_state,
+                rng=episode_key,
+                actor_params=self.train_state.actor_ts.params,
+                critic_params=self.train_state.critic_ts.params,
+            )
             yield trajectories
             # yield get_episodes(
             #     env=self.env,
@@ -389,7 +414,12 @@ class PPOTrainState(flax.struct.PyTreeNode):
 
 
 # TODO: Use this as an input type to `collect_transitions`, and return the modified obj.
-# class TrajectoryCollectionState(TrainState): ...
+class TrajectoryCollectionState(flax.struct.PyTreeNode):
+    last_obs: jax.Array
+    env_state: gymnax.EnvState
+    rms_state: RMSState
+    last_done: jax.Array
+    global_step: int
 
 
 def get_actor_loss_fn(actor: flax.linen.Module):
@@ -493,23 +523,34 @@ class PPOLearner(rejax.PPO):
     ) -> tuple[jax.Array, jax.Array]:
         return super().calculate_gae(trajectories, last_val)
 
+    def shuffle_and_split(self, data: AdvantageMinibatch, rng: chex.PRNGKey):
+        shuffle_split_data = super().shuffle_and_split(data, rng)
+        assert isinstance(shuffle_split_data, type(data))
+        return shuffle_split_data
+
     # TODO: Ideally we wouldn't need to return the full PPOTrainState, since it gives the
     # impression that we're changing the weights or something like that. Instead we could/should
     # just return what changed.
-    def collect_trajectories(self, ts: PPOTrainState):
-        def env_step(ts: PPOTrainState, unused_input):
+    def collect_trajectories_custom(
+        self,
+        collection_state: TrajectoryCollectionState,
+        rng: chex.PRNGKey,
+        actor_params: FrozenVariableDict,
+        critic_params: FrozenVariableDict,
+    ):
+        def env_step(collection_state: TrajectoryCollectionState, step_index: int):
             # Get keys for sampling action and stepping environment
-            rng, new_rng = jax.random.split(ts.rng)
-            ts = ts.replace(rng=rng)
-            rng_steps, rng_action = jax.random.split(new_rng, 2)
+            rng_steps = jax.random.fold_in(rng, 0)
+            rng_action = jax.random.fold_in(rng, 1)
+
             rng_steps = jax.random.split(rng_steps, self.num_envs)
 
             # Sample action
             unclipped_action, log_prob = self.actor.apply(
-                ts.actor_ts.params, ts.last_obs, rng_action, method="action_log_prob"
+                actor_params, collection_state.last_obs, rng_action, method="action_log_prob"
             )
             assert isinstance(log_prob, jax.Array)
-            value = self.critic.apply(ts.critic_ts.params, ts.last_obs)
+            value = self.critic.apply(critic_params, collection_state.last_obs)
             assert isinstance(value, jax.Array)
 
             # Clip action
@@ -521,25 +562,31 @@ class PPOLearner(rejax.PPO):
                 action = jnp.clip(unclipped_action, low, high)
 
             # Step environment
-            t = self.vmap_step(rng_steps, ts.env_state, action, self.env_params)
+            t = self.vmap_step(rng_steps, collection_state.env_state, action, self.env_params)
             next_obs, env_state, reward, done, _ = t
 
             if self.normalize_observations:
-                rms_state, next_obs = self.update_and_normalize(ts.rms_state, next_obs)
-                ts = ts.replace(rms_state=rms_state)
+                rms_state, next_obs = self.update_and_normalize(
+                    collection_state.rms_state, next_obs
+                )
+                collection_state = collection_state.replace(rms_state=rms_state)
 
             # Return updated runner state and transition
-            transition = Trajectory(ts.last_obs, unclipped_action, log_prob, reward, value, done)
-            ts = ts.replace(
+            transition = Trajectory(
+                collection_state.last_obs, unclipped_action, log_prob, reward, value, done
+            )
+            collection_state = collection_state.replace(
                 env_state=env_state,
                 last_obs=next_obs,
                 last_done=done,
-                global_step=ts.global_step + self.num_envs,
+                global_step=collection_state.global_step + self.num_envs,
             )
-            return ts, transition
+            return collection_state, transition
 
-        ts, trajectories = jax.lax.scan(env_step, ts, None, self.num_steps)
-        return ts, trajectories
+        collection_state, trajectories = jax.lax.scan(
+            env_step, collection_state, xs=jnp.arange(self.num_steps), length=self.num_steps
+        )
+        return collection_state, trajectories
 
     # NOTE: Changed the signature vs update_actor: not accepts/returns the actor TrainState.
     def update_actor_only(self, actor_ts: TrainState, batch: AdvantageMinibatch):
@@ -677,7 +724,7 @@ def main():
     else:
         env, env_params = gymnax.make(env_id=env_id)
 
-    algo = RlExample(env=env)
+    algo = JaxRlExample(env=env, env_params=env_params)
     trainer = lightning.Trainer(max_epochs=1)
     trainer.fit(algo)
     metrics = trainer.validate(algo)
