@@ -11,18 +11,20 @@ from typing import Any, Literal, ParamSpec, Protocol, TypedDict, TypeVar
 
 import chex
 import flax.linen
+import flax.struct
 import gymnasium
 import gymnasium.spaces
 import gymnax
+import gymnax.experimental.rollout
 import jax
 import lightning
 import numpy as np
 import torch
+import torch_jax_interop
 from flax.typing import FrozenVariableDict
 from gymnasium import Space
 from gymnasium.wrappers.record_video import RecordVideo
-from gymnax.environments.environment import TEnvParams, TEnvState
-from gymnax.experimental.rollout import RolloutWrapper
+from gymnax.environments.environment import Environment, TEnvParams, TEnvState
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.distributions import Categorical, Normal
@@ -104,6 +106,30 @@ class _Module(Protocol[P, Out]):
         apply = flax.linen.Module.apply
 
 
+class Episodes(flax.struct.PyTreeNode):
+    obs: jax.Array
+    action: jax.Array
+    reward: jax.Array
+    next_obs: jax.Array
+    done: jax.Array
+    cum_ret: jax.Array
+
+
+class RolloutWrapper(gymnax.experimental.rollout.RolloutWrapper):
+    def __init__(
+        self,
+        env: Environment,
+        env_params: gymnax.EnvParams,
+        model_forward: Callable,
+    ):
+        # Define the RL environment & network forward function
+        self.env = env
+        self.env_params = env_params
+        self.model_forward = model_forward
+
+        self.num_env_steps = self.env_params.max_steps_in_episode
+
+
 def get_episodes(
     env: gymnax.environments.environment.Environment[TEnvState, TEnvParams],
     env_params: TEnvParams,
@@ -111,17 +137,20 @@ def get_episodes(
     model: _Module[[jax.Array, chex.PRNGKey], jax.Array],
     model_params: FrozenVariableDict | dict[str, Any],
     rollout_rng_key: chex.PRNGKey,
-):
-    rollout_wrapper = RolloutWrapper(model.apply, env_name=env.name, env_params=None)
-    rollout_wrapper.env = env
-    rollout_wrapper.env_params = env_params
+) -> Episodes:
+    rollout_wrapper = RolloutWrapper(
+        env=env,
+        env_params=env_params,
+        model_forward=model.apply,
+    )
 
     rollout_rng_keys = jax.random.split(rollout_rng_key, num_episodes)
     obs, action, reward, next_obs, done, cum_ret = rollout_wrapper.batch_rollout(
         rollout_rng_keys, model_params
     )
-    print(done.shape)  # it should print (3, 100), but the result is (3, 500)
-    return (obs, action, reward, next_obs, done, cum_ret)
+    return Episodes(
+        obs=obs, action=action, reward=reward, next_obs=next_obs, done=done, cum_ret=cum_ret
+    )
 
     # return EpisodeBatch(
     #     observations=obs,
@@ -133,26 +162,69 @@ def get_episodes(
 
 def main():
     env_id = "Pendulum-v1"
-    env, env_params = gymnax.make(env_id=env_id)
 
-    sample_obs = env.observation_space(env_params).sample(jax.random.key(1))
-    action_shape = env.action_space(env_params).shape
+    from brax.envs import _envs as brax_envs
+    from rejax.compat.brax2gymnax import create_brax
 
-    model = JaxFcNet(num_classes=int(np.prod(action_shape)), num_features=256)
-    net_rng = jax.random.key(123)
-    rollout_rng_key = jax.random.key(456)
+    if env_id in brax_envs:
+        env, env_params = create_brax(
+            env_id,
+            episode_length=1000,
+            action_repeat=1,
+            auto_reset=True,
+            batch_size=None,
+        )
+    else:
+        env, env_params = gymnax.make(env_id=env_id)
 
-    policy_params = model.init(net_rng, sample_obs, forward_rng=None)
+    algo = RlExample(env=env)
+    trainer = lightning.Trainer(max_epochs=1)
+    trainer.fit(algo)
+    metrics = trainer.validate(algo)
+    print(metrics)
+    return
 
-    episodes = get_episodes(
-        env=env,
-        env_params=env_params,
-        num_episodes=10,
-        model=model,
-        model_params=policy_params,
-        rollout_rng_key=rollout_rng_key,
-    )
-    assert False, episodes[0].shape
+
+class RlExample(lightning.LightningModule):
+    def __init__(self, env: Environment):
+        super().__init__()
+        self.env = env
+        self.env_params = env.default_params
+
+        # https://github.com/RobertTLange/gymnax-blines/blob/main/utils/ppo.py
+        sample_obs = env.observation_space(self.env_params).sample(jax.random.key(1))
+        action_shape = env.action_space(self.env_params).shape
+
+        net_rng = jax.random.key(123)
+        self.network = JaxFcNet(num_classes=int(np.prod(action_shape)), num_features=256)
+        self.network_params = self.network.init(net_rng, sample_obs, forward_rng=None)
+        self.rollout_rng_key = jax.random.key(123)
+
+        self.torch_network_params = torch.nn.ParameterList(
+            jax.tree.leaves(
+                jax.tree.map(torch_jax_interop.to_torch.jax_to_torch_tensor, self.network_params)
+            )
+        )
+
+        self.automatic_optimization = False
+
+    def train_dataloader(self) -> Any:
+        for batch_idx in range(10):
+            episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
+            yield get_episodes(
+                env=self.env,
+                env_params=self.env_params,
+                num_episodes=10,
+                model=self.network,
+                model_params=self.network_params,
+                rollout_rng_key=episode_key,
+            )
+
+    def training_step(self, batch: Episodes, batch_idx: int):
+        assert False, batch
+
+    def configure_optimizers(self) -> Any:
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
 
 
 if __name__ == "__main__":

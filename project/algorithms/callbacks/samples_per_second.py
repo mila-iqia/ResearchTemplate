@@ -56,18 +56,25 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         now = time.perf_counter()
         if phase in self.last_step_times:
             elapsed = now - self.last_step_times[phase]
-            if is_sequence_of(batch, Tensor):
-                batch_size = batch[0].shape[0]
-                pl_module.log(
-                    f"{phase}/samples_per_second",
-                    batch_size / elapsed,
-                    prog_bar=True,
-                    on_step=True,
-                    on_epoch=True,
-                    sync_dist=True,
-                )
+            num_samples = self.get_num_samples(batch)
+            pl_module.log(
+                f"{phase}/samples_per_second",
+                num_samples / elapsed,
+                prog_bar=True,
+                on_step=True,
+                on_epoch=True,
+                batch_size=1,
+                sync_dist=True,
+            )
             # todo: support other kinds of batches
         self.last_step_times[phase] = now
+
+    def get_num_samples(self, batch) -> int:
+        if is_sequence_of(batch, Tensor):
+            return batch[0].shape[0]
+        raise NotImplementedError(
+            f"Don't know how many 'samples' there are in this batch of type {type(batch)}!"
+        )
 
     @override
     def on_before_optimizer_step(
