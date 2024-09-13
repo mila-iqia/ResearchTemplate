@@ -201,7 +201,8 @@ class RlExample(lightning.LightningModule):
         actor = _agent["actor"]
         critic = _agent["critic"]
 
-        def eval_callback(algo: PPOLearner, ts: PPOTrainState, rng: chex.PRNGKey):
+        # TODO: Super ugly. Remove this.
+        def _eval_callback(algo: PPOLearner, ts: PPOTrainState, rng: chex.PRNGKey):
             act = algo.make_act(ts)
             max_steps = algo.env_params.max_steps_in_episode
             return rejax.evaluate.evaluate(
@@ -216,14 +217,26 @@ class RlExample(lightning.LightningModule):
         self.learner = PPOLearner(
             env=self.env,
             env_params=self.env_params,
-            eval_callback=eval_callback,
+            eval_callback=_eval_callback,
             actor=actor,
             critic=critic,
+            # https://github.com/keraJLi/rejax/blob/a1428ad3d661e31985c5c19460cec70bc95aef6e/configs/gymnax/pendulum.yaml#L1
+            num_envs=100,
+            num_steps=100,
+            num_epochs=10,
+            num_minibatches=10,
+            learning_rate=0.001,
+            max_grad_norm=10,
+            total_timesteps=150_000,
+            eval_freq=2000,
+            gamma=0.995,
+            gae_lambda=0.95,
+            clip_eps=0.2,
+            ent_coef=0.0,
+            vf_coef=0.5,
+            normalize_observations=True,
         )
-        self.learner.train()
         self.train_state = self.learner.init_state(jax.random.key(0))
-
-        # self.actor_loss_fn = get_actor_loss_fn(self.learner.actor)
 
     @override
     def train_dataloader(self) -> Iterable[Trajectory]:
@@ -247,11 +260,11 @@ class RlExample(lightning.LightningModule):
         shapes = jax.tree.map(jnp.shape, batch)
         logger.debug(f"Shapes: {shapes}")
 
-        # assert False, shapes
+        # initial_actor_state = copy.deepcopy(self.train_state.actor_ts.params)
+        # initial_critic_state = copy.deepcopy(self.train_state.critic_ts.params)
         ts = self.train_state
 
         trajectories = batch
-        # ts, trajectories = self.learner.collect_trajectories(ts)
 
         last_val = self.learner.critic.apply(ts.critic_ts.params, ts.last_obs)
         assert isinstance(last_val, jax.Array)
@@ -264,32 +277,46 @@ class RlExample(lightning.LightningModule):
         # tensors, not a copy, so we dont use extra memory). This would perhaps make this
         # compatible with pytorch-lightning manual optimization.
 
-        # actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
-        #     self.train_state.actor_ts.params,
-        #     self.learner.actor,
-        #     batch=batch_with_advantage,
-        #     clip_eps=self.learner.clip_eps,
-        #     ent_coef=self.learner.ent_coef,
-        # )
-        # assert isinstance(actor_loss, jax.Array)
-        # assert False, actor_loss
+        def update(ts: PPOTrainState, batch: AdvantageMinibatch):
+            actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
+                ts.actor_ts.params,
+                actor=self.learner.actor,
+                batch=batch,
+                clip_eps=self.learner.clip_eps,
+                ent_coef=self.learner.ent_coef,
+            )
+            assert isinstance(actor_loss, jax.Array)
+            critic_loss, critic_grads = jax.value_and_grad(critic_loss_fn)(
+                ts.critic_ts.params,
+                critic=self.learner.critic,
+                batch=batch,
+                clip_eps=self.learner.clip_eps,
+                vf_coef=self.learner.vf_coef,
+            )
+            assert isinstance(critic_loss, jax.Array)
 
-        # TODO: to log the loss here?
+            # TODO: to log the loss here?
+            actor_ts = ts.actor_ts.apply_gradients(grads=actor_grads)
+            critic_ts = ts.critic_ts.apply_gradients(grads=critic_grads)
 
-        def update_epoch(ts: PPOTrainState, unused_input):
-            rng, minibatch_rng = jax.random.split(ts.rng)
-            ts = ts.replace(rng=rng)
+            return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
+
+        @jax.jit
+        def update_epoch(ts: PPOTrainState, epoch_index: int):
+            minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
             minibatches = self.learner.shuffle_and_split(batch_with_advantage, minibatch_rng)
-            ts, losses = jax.lax.scan(
-                self.learner.update,
+            return jax.lax.scan(
+                update,
                 ts,
                 minibatches,
             )
-            return ts, losses
 
         # Equivalent of a for loop (8 "epochs")
         ts, (actor_losses, critic_losses) = jax.lax.scan(
-            jax.jit(update_epoch), ts, None, self.learner.num_epochs
+            update_epoch,
+            init=ts,
+            xs=jnp.arange(self.learner.num_epochs),
+            length=self.learner.num_epochs,
         )
 
         self.train_state = ts
@@ -421,6 +448,26 @@ def actor_loss_fn(
     return pi_loss - ent_coef * entropy
 
 
+@functools.partial(jax.jit, static_argnames="critic")
+def critic_loss_fn(
+    params: FrozenVariableDict,
+    critic: flax.linen.Module,
+    batch: AdvantageMinibatch,
+    clip_eps: float,
+    vf_coef: float,
+):
+    value = critic.apply(params, batch.trajectories.obs)
+    assert isinstance(value, jax.Array)
+    value_pred_clipped = batch.trajectories.value + (value - batch.trajectories.value).clip(
+        -clip_eps, clip_eps
+    )
+    assert isinstance(value_pred_clipped, jax.Array)
+    value_losses = jnp.square(value - batch.targets)
+    value_losses_clipped = jnp.square(value_pred_clipped - batch.targets)
+    value_loss = 0.5 * jnp.maximum(value_losses, value_losses_clipped).mean()
+    return vf_coef * value_loss
+
+
 class PPOLearner(rejax.PPO):
     """Subclass that just adds some type hints to rejax.PPO."""
 
@@ -437,6 +484,9 @@ class PPOLearner(rejax.PPO):
             return jnp.squeeze(action)
 
         return act
+
+    def train_iteration(self, ts):
+        return super().train_iteration(ts)
 
     def calculate_gae(
         self, trajectories: Trajectory, last_val: jax.Array
