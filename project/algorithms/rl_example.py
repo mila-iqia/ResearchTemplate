@@ -207,7 +207,7 @@ class RlExample(lightning.LightningModule):
             return rejax.evaluate.evaluate(
                 act,
                 rng,
-                env,
+                env=self.env,
                 env_params=self.env_params,
                 num_seeds=128,
                 max_steps_in_episode=max_steps,
@@ -220,7 +220,10 @@ class RlExample(lightning.LightningModule):
             actor=actor,
             critic=critic,
         )
+        self.learner.train()
         self.train_state = self.learner.init_state(jax.random.key(0))
+
+        # self.actor_loss_fn = get_actor_loss_fn(self.learner.actor)
 
     @override
     def train_dataloader(self) -> Iterable[Trajectory]:
@@ -240,9 +243,97 @@ class RlExample(lightning.LightningModule):
             # )
 
     @override
+    def training_step(self, batch: Trajectory, batch_idx: int):
+        shapes = jax.tree.map(jnp.shape, batch)
+        logger.debug(f"Shapes: {shapes}")
+
+        # assert False, shapes
+        ts = self.train_state
+
+        trajectories = batch
+        # ts, trajectories = self.learner.collect_trajectories(ts)
+
+        last_val = self.learner.critic.apply(ts.critic_ts.params, ts.last_obs)
+        assert isinstance(last_val, jax.Array)
+        last_val = jnp.where(ts.last_done, 0, last_val)
+        advantages, targets = self.learner.calculate_gae(trajectories, last_val)
+        batch_with_advantage = AdvantageMinibatch(trajectories, advantages, targets)
+
+        # Perhaps instead of doing it this way, we could just get the losses, the grads, then put
+        # them on the torch params .grad attribute (hopefully the .data is pointing to the jax
+        # tensors, not a copy, so we dont use extra memory). This would perhaps make this
+        # compatible with pytorch-lightning manual optimization.
+
+        # actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
+        #     self.train_state.actor_ts.params,
+        #     self.learner.actor,
+        #     batch=batch_with_advantage,
+        #     clip_eps=self.learner.clip_eps,
+        #     ent_coef=self.learner.ent_coef,
+        # )
+        # assert isinstance(actor_loss, jax.Array)
+        # assert False, actor_loss
+
+        # TODO: to log the loss here?
+
+        def update_epoch(ts: PPOTrainState, unused_input):
+            rng, minibatch_rng = jax.random.split(ts.rng)
+            ts = ts.replace(rng=rng)
+            minibatches = self.learner.shuffle_and_split(batch_with_advantage, minibatch_rng)
+            ts, losses = jax.lax.scan(
+                self.learner.update,
+                ts,
+                minibatches,
+            )
+            return ts, losses
+
+        # Equivalent of a for loop (8 "epochs")
+        ts, (actor_losses, critic_losses) = jax.lax.scan(
+            jax.jit(update_epoch), ts, None, self.learner.num_epochs
+        )
+
+        self.train_state = ts
+
+        self.log("actor_loss", actor_losses.mean().item())
+        self.log("critic_loss", critic_losses.mean().item())
+
+    def val_dataloader(self) -> Any:
+        # todo: unsure what this should be yielding..
+        yield from range(10)
+
+    def validation_step(self, batch, batch_index: int):
+        # self.learner.eval_callback()
+        act = self.learner.make_act(self.train_state)
+        rng = jax.random.key(batch_index)
+        max_steps = self.learner.env_params.max_steps_in_episode
+        episode_lengths, cumulative_rewards = rejax.evaluate.evaluate(
+            act,
+            rng,
+            env=self.env,
+            env_params=self.env_params,
+            num_seeds=128,
+            max_steps_in_episode=max_steps,
+        )
+        assert isinstance(episode_lengths, jax.Array)
+        assert isinstance(cumulative_rewards, jax.Array)
+        self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
+        self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
+
+    @override
+    def configure_optimizers(self) -> Any:
+        # todo: Note, this one isn't used atm!
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
+
+    @override
+    def configure_callbacks(self) -> list[MeasureSamplesPerSecondCallback]:
+        return [RlThroughputCallback()]
+
+    @override
     def transfer_batch_to_device(
         self, batch: Trajectory, device: torch.device, dataloader_idx: int
     ) -> Trajectory:
+        if not isinstance(batch, Trajectory | EpisodeData):
+            return batch
         _batch_jax_devices = batch.obs.devices()
         assert len(_batch_jax_devices) == 1
         batch_jax_device = _batch_jax_devices.pop()
@@ -257,48 +348,6 @@ class RlExample(lightning.LightningModule):
 
         jax_self_device = torch_jax_interop.to_jax.torch_to_jax_device(torch_self_device)
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
-
-    @override
-    def training_step(self, batch: Trajectory, batch_idx: int):
-        ts = self.train_state
-
-        trajectories = batch
-        # ts, trajectories = self.learner.collect_trajectories(ts)
-
-        last_val = self.learner.critic.apply(ts.critic_ts.params, ts.last_obs)
-        assert isinstance(last_val, jax.Array)
-        last_val = jnp.where(ts.last_done, 0, last_val)
-        advantages, targets = self.learner.calculate_gae(trajectories, last_val)
-
-        def update_epoch(ts: PPOTrainState, unused_input):
-            rng, minibatch_rng = jax.random.split(ts.rng)
-            ts = ts.replace(rng=rng)
-            batch = AdvantageMinibatch(trajectories, advantages, targets)
-            minibatches = self.learner.shuffle_and_split(batch, minibatch_rng)
-            ts, losses = jax.lax.scan(
-                lambda ts, mbs: self.learner.update(ts, mbs),
-                ts,
-                minibatches,
-            )
-            return ts, losses
-
-        ts, (actor_losses, critic_losses) = jax.lax.scan(
-            update_epoch, ts, None, self.learner.num_epochs
-        )
-        self.train_state = ts
-
-        self.log("actor_loss", actor_losses.mean().item())
-        self.log("critic_loss", critic_losses.mean().item())
-        # return loss
-        # TODO: IDK how to do the update here!
-
-    @override
-    def configure_optimizers(self) -> Any:
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-    @override
-    def configure_callbacks(self) -> list[MeasureSamplesPerSecondCallback]:
-        return [RlThroughputCallback()]
 
 
 class PPOTrainState(flax.struct.PyTreeNode):
@@ -316,11 +365,78 @@ class PPOTrainState(flax.struct.PyTreeNode):
 # class TrajectoryCollectionState(TrainState): ...
 
 
+def get_actor_loss_fn(actor: flax.linen.Module):
+    @jax.jit
+    def actor_loss_fn(
+        params: FrozenVariableDict,
+        batch: AdvantageMinibatch,
+        clip_eps: float,
+        ent_coef: float,
+    ) -> jax.Array:
+        log_prob, entropy = actor.apply(
+            params,
+            batch.trajectories.obs,
+            batch.trajectories.action,
+            method="log_prob_entropy",
+        )
+        assert isinstance(entropy, jax.Array)
+        entropy = entropy.mean()
+
+        # Calculate actor loss
+        ratio = jnp.exp(log_prob - batch.trajectories.log_prob)
+        advantages = (batch.advantages - batch.advantages.mean()) / (batch.advantages.std() + 1e-8)
+        clipped_ratio = jnp.clip(ratio, 1 - clip_eps, 1 + clip_eps)
+        pi_loss1 = ratio * advantages
+        pi_loss2 = clipped_ratio * advantages
+        pi_loss = -jnp.minimum(pi_loss1, pi_loss2).mean()
+        return pi_loss - ent_coef * entropy
+
+    return actor_loss_fn
+
+
+@functools.partial(jax.jit, static_argnames="actor")
+def actor_loss_fn(
+    params: FrozenVariableDict,
+    actor: flax.linen.Module,
+    batch: AdvantageMinibatch,
+    clip_eps: float,
+    ent_coef: float,
+) -> jax.Array:
+    log_prob, entropy = actor.apply(
+        params,
+        batch.trajectories.obs,
+        batch.trajectories.action,
+        method="log_prob_entropy",
+    )
+    assert isinstance(entropy, jax.Array)
+    entropy = entropy.mean()
+
+    # Calculate actor loss
+    ratio = jnp.exp(log_prob - batch.trajectories.log_prob)
+    advantages = (batch.advantages - batch.advantages.mean()) / (batch.advantages.std() + 1e-8)
+    clipped_ratio = jnp.clip(ratio, 1 - clip_eps, 1 + clip_eps)
+    pi_loss1 = ratio * advantages
+    pi_loss2 = clipped_ratio * advantages
+    pi_loss = -jnp.minimum(pi_loss1, pi_loss2).mean()
+    return pi_loss - ent_coef * entropy
+
+
 class PPOLearner(rejax.PPO):
     """Subclass that just adds some type hints to rejax.PPO."""
 
     def init_state(self, rng: jax.Array) -> PPOTrainState:
         return super().init_state(rng)
+
+    def make_act(self, ts: PPOTrainState):
+        def act(obs: jax.Array, rng: chex.PRNGKey):
+            if getattr(self, "normalize_observations", False):
+                obs = self.normalize_obs(ts.rms_state, obs)
+
+            obs = jnp.expand_dims(obs, 0)
+            action = self.actor.apply(ts.actor_ts.params, obs, rng, method="act")
+            return jnp.squeeze(action)
+
+        return act
 
     def calculate_gae(
         self, trajectories: Trajectory, last_val: jax.Array
@@ -377,7 +493,7 @@ class PPOLearner(rejax.PPO):
 
     # NOTE: Changed the signature vs update_actor: not accepts/returns the actor TrainState.
     def update_actor_only(self, actor_ts: TrainState, batch: AdvantageMinibatch):
-        def actor_loss_fn(params: FrozenVariableDict):
+        def _actor_loss_fn(params: FrozenVariableDict):
             log_prob, entropy = self.actor.apply(
                 params,
                 batch.trajectories.obs,
@@ -398,7 +514,15 @@ class PPOLearner(rejax.PPO):
             pi_loss = -jnp.minimum(pi_loss1, pi_loss2).mean()
             return pi_loss - self.ent_coef * entropy
 
-        actor_loss, grads = jax.value_and_grad(actor_loss_fn)(actor_ts.params)
+        actor_loss, grads = jax.value_and_grad(actor_loss_fn)(
+            actor_ts.params,
+            actor=self.actor,
+            batch=batch,
+            clip_eps=self.clip_eps,
+            ent_coef=self.ent_coef,
+        )
+        assert isinstance(actor_loss, jax.Array)
+
         # TODO: to log the loss here?
         return actor_ts.apply_gradients(grads=grads), actor_loss
 
@@ -468,6 +592,8 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
 
     @override
     def get_num_samples(self, batch: EpisodeData) -> int:
+        if isinstance(batch, int):  # fixme
+            return 1
         return int(np.prod(batch.obs.shape[:2]).item())
 
     @override
