@@ -4,6 +4,7 @@ import os
 from collections.abc import Callable
 from typing import Concatenate, Literal, ParamSpec, TypeVar
 
+import chex
 import flax.linen
 import jax
 import rich
@@ -58,7 +59,7 @@ class JaxFcNet(flax.linen.Module):
     num_features: int = 256
 
     @flax.linen.compact
-    def __call__(self, x: jax.Array):
+    def __call__(self, x: jax.Array, forward_rng: chex.PRNGKey | None = None):
         x = flatten(x)
         x = flax.linen.Dense(features=self.num_features)(x)
         x = flax.linen.relu(x)

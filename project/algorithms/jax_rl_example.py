@@ -30,7 +30,7 @@ from rejax.algos.ppo import AdvantageMinibatch, Trajectory
 from typing_extensions import TypeVar, override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.networks.jax_fcnet import JaxFcNet
+from project.algorithms.jax_example import JaxFcNet
 
 logger = get_logger(__name__)
 
@@ -51,6 +51,14 @@ class _Module(Protocol[P, Out]):
 _ContentType = TypeVar("_ContentType", default=jax.Array)
 
 
+class _EpisodeStepData(flax.struct.PyTreeNode):
+    obs: jax.Array
+    action: jax.Array
+    reward: jax.Array
+    next_obs: jax.Array
+    done: jax.Array
+
+
 class EpisodeData(flax.struct.PyTreeNode, Generic[_ContentType]):
     obs: _ContentType
     action: _ContentType
@@ -58,14 +66,6 @@ class EpisodeData(flax.struct.PyTreeNode, Generic[_ContentType]):
     next_obs: _ContentType
     done: _ContentType
     cum_return: _ContentType
-
-
-class _EpisodeStepData(flax.struct.PyTreeNode):
-    obs: jax.Array
-    action: jax.Array
-    reward: jax.Array
-    next_obs: jax.Array
-    done: jax.Array
 
 
 class _StateInput(NamedTuple):
@@ -261,15 +261,34 @@ class JaxRlExample(lightning.LightningModule):
             last_done=jnp.zeros(self.learner.num_envs, dtype=bool),
         )
         for batch_idx in range(self.num_train_iterations):
-            # TODO: Use a `TrajectoryCollectionState` instead of the full train state, and tie in
-            # the rng key somehow.
             episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
+            start = time.perf_counter()
             collection_state, trajectories = self.learner.collect_trajectories_custom(
                 collection_state,
                 rng=episode_key,
                 actor_params=self.train_state.actor_ts.params,
                 critic_params=self.train_state.critic_ts.params,
             )
+            duration = time.perf_counter() - start
+            print(
+                f"Took {duration} seconds to collect {self.learner.num_steps} steps in {self.learner.num_envs} envs."
+            )
+            # last_val = self.learner.critic.apply(
+            #     self.train_state.critic_ts.params, collection_state.last_obs
+            # )
+            # assert isinstance(last_val, jax.Array)
+            # last_val = jnp.where(collection_state.last_done, 0, last_val)
+            # advantages, targets = self.learner.calculate_gae(trajectories, last_val)
+            # batch = AdvantageMinibatch(trajectories, advantages, targets)
+
+            # for _epoch in range(self.learner.num_epochs):
+            #     epoch_key = jax.random.fold_in(episode_key, _epoch)
+            #     minibatches = self.learner.shuffle_and_split(batch, epoch_key)
+
+            #     for i in range(self.learner.num_minibatches):
+            #         minibatch = jax.tree.map(operator.itemgetter(i), minibatches)
+            #         yield minibatch
+
             yield trajectories
             # yield get_episodes(
             #     env=self.env,
@@ -302,52 +321,63 @@ class JaxRlExample(lightning.LightningModule):
         # tensors, not a copy, so we dont use extra memory). This would perhaps make this
         # compatible with pytorch-lightning manual optimization.
 
-        def update(ts: PPOTrainState, batch: AdvantageMinibatch):
-            actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
-                ts.actor_ts.params,
-                actor=self.learner.actor,
-                batch=batch,
-                clip_eps=self.learner.clip_eps,
-                ent_coef=self.learner.ent_coef,
-            )
-            assert isinstance(actor_loss, jax.Array)
-            critic_loss, critic_grads = jax.value_and_grad(critic_loss_fn)(
-                ts.critic_ts.params,
-                critic=self.learner.critic,
-                batch=batch,
-                clip_eps=self.learner.clip_eps,
-                vf_coef=self.learner.vf_coef,
-            )
-            assert isinstance(critic_loss, jax.Array)
-
-            # TODO: to log the loss here?
-            actor_ts = ts.actor_ts.apply_gradients(grads=actor_grads)
-            critic_ts = ts.critic_ts.apply_gradients(grads=critic_grads)
-
-            return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
-
-        @jax.jit
-        def update_epoch(ts: PPOTrainState, epoch_index: int):
-            minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
-            minibatches = self.learner.shuffle_and_split(batch_with_advantage, minibatch_rng)
-            return jax.lax.scan(
-                update,
-                ts,
-                minibatches,
-            )
-
-        # Equivalent of a for loop (8 "epochs")
+        # Note: This scan is equivalent to a for loop (8 "epochs")
+        # while the other scan in `ppo_update_epoch` is a for loop over minibatches.
+        start = time.perf_counter()
         ts, (actor_losses, critic_losses) = jax.lax.scan(
-            update_epoch,
+            functools.partial(self.ppo_update_epoch, batch=batch_with_advantage),
             init=ts,
             xs=jnp.arange(self.learner.num_epochs),
             length=self.learner.num_epochs,
         )
+        duration = time.perf_counter() - start
+        updates_per_second = (self.learner.num_epochs * self.learner.num_minibatches) / duration
+        self.log("train/updates_per_second", updates_per_second, logger=True, prog_bar=True)
+        samples_per_update = self.learner.minibatch_size
+        self.log(
+            "train/samples_per_second",
+            updates_per_second * samples_per_update,
+            logger=True,
+            prog_bar=True,
+            on_step=True,
+        )
 
         self.train_state = ts
 
-        self.log("actor_loss", actor_losses.mean().item())
-        self.log("critic_loss", critic_losses.mean().item())
+        self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
+        self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
+
+    @functools.partial(jax.jit, static_argnames="self")
+    def ppo_update(self, ts: PPOTrainState, batch: AdvantageMinibatch):
+        actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
+            ts.actor_ts.params,
+            actor=self.learner.actor,
+            batch=batch,
+            clip_eps=self.learner.clip_eps,
+            ent_coef=self.learner.ent_coef,
+        )
+        assert isinstance(actor_loss, jax.Array)
+        critic_loss, critic_grads = jax.value_and_grad(critic_loss_fn)(
+            ts.critic_ts.params,
+            critic=self.learner.critic,
+            batch=batch,
+            clip_eps=self.learner.clip_eps,
+            vf_coef=self.learner.vf_coef,
+        )
+        assert isinstance(critic_loss, jax.Array)
+
+        # TODO: to log the loss here?
+        actor_ts = ts.actor_ts.apply_gradients(grads=actor_grads)
+        critic_ts = ts.critic_ts.apply_gradients(grads=critic_grads)
+
+        return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
+
+    @functools.partial(jax.jit, static_argnames="self")
+    def ppo_update_epoch(self, ts: PPOTrainState, epoch_index: int, batch: AdvantageMinibatch):
+        # shuffle the data and split it into minibatches
+        minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
+        minibatches = self.learner.shuffle_and_split(batch, minibatch_rng)
+        return jax.lax.scan(self.ppo_update, ts, minibatches, length=self.learner.num_minibatches)
 
     def val_dataloader(self) -> Any:
         # todo: unsure what this should be yielding..
@@ -538,7 +568,7 @@ class PPOLearner(rejax.PPO):
         actor_params: FrozenVariableDict,
         critic_params: FrozenVariableDict,
     ):
-        def env_step(collection_state: TrajectoryCollectionState, step_index: int):
+        def env_step(collection_state: TrajectoryCollectionState, step_index: jax.Array):
             # Get keys for sampling action and stepping environment
             rng_steps = jax.random.fold_in(rng, 0)
             rng_action = jax.random.fold_in(rng, 1)
@@ -562,8 +592,9 @@ class PPOLearner(rejax.PPO):
                 action = jnp.clip(unclipped_action, low, high)
 
             # Step environment
-            t = self.vmap_step(rng_steps, collection_state.env_state, action, self.env_params)
-            next_obs, env_state, reward, done, _ = t
+            next_obs, env_state, reward, done, _ = self.vmap_step(
+                rng_steps, collection_state.env_state, action, self.env_params
+            )
 
             if self.normalize_observations:
                 rms_state, next_obs = self.update_and_normalize(
@@ -686,6 +717,16 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         num_transitions = np.prod(episodes.obs.shape[:2])
         self.total_episodes += num_episodes
         self.total_transitions += num_transitions
+        steps_per_second = self.total_transitions / (time.perf_counter() - self._start)
+        updates_per_second = (self._updates) / (time.perf_counter() - self._start)
+        episodes_per_second = self.total_episodes / (time.perf_counter() - self._start)
+        logger.info(
+            f"Total transitions: {self.total_transitions}, total episodes: {self.total_episodes}"
+        )
+        print(f"Steps per second: {steps_per_second}")
+        logger.info(f"Steps per second: {steps_per_second}")
+        logger.info(f"Episodes per second: {episodes_per_second}")
+        logger.info(f"Updates per second: {updates_per_second}")
 
     @override
     def get_num_samples(self, batch: EpisodeData) -> int:
@@ -696,15 +737,6 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
     @override
     def on_fit_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         super().on_fit_end(trainer, pl_module)
-        steps_per_second = self.total_transitions / (time.perf_counter() - self._start)
-        updates_per_second = (self._updates) / (time.perf_counter() - self._start)
-        episodes_per_second = self.total_episodes / (time.perf_counter() - self._start)
-        logger.info(
-            f"Total transitions: {self.total_transitions}, total episodes: {self.total_episodes}"
-        )
-        logger.info(f"Steps per second: {steps_per_second}")
-        logger.info(f"Episodes per second: {episodes_per_second}")
-        logger.info(f"Updates per second: {updates_per_second}")
 
 
 def main():
@@ -725,7 +757,13 @@ def main():
         env, env_params = gymnax.make(env_id=env_id)
 
     algo = JaxRlExample(env=env, env_params=env_params)
-    trainer = lightning.Trainer(max_epochs=1)
+    from lightning.pytorch.loggers.csv_logs import CSVLogger
+
+    # todo: number of epochs:
+    num_evals = np.ceil(algo.learner.total_timesteps / algo.learner.eval_freq).astype(int)
+    trainer = lightning.Trainer(
+        max_epochs=num_evals, logger=CSVLogger(save_dir="logs/jax_rl_debug")
+    )
     trainer.fit(algo)
     metrics = trainer.validate(algo)
     print(metrics)
