@@ -1,5 +1,5 @@
 # @package _global_
-# yaml-language-server: $schema=../../../.schemas/experiment_profiling_rtx8000_schema.json
+# yaml-language-server: $schema=../../../.schemas/experiment_profiling_gpu_schema.json
 
 defaults:
   - override /datamodule: imagenet
