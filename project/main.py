@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import dataclasses
 import os
 import warnings
 from logging import getLogger as get_logger
 from pathlib import Path
 
 import hydra
-import omegaconf
 import rich
 from lightning import LightningDataModule
 from omegaconf import DictConfig
@@ -53,23 +51,21 @@ def main(dict_config: DictConfig) -> dict:
         quiet=True,
         add_headers=False,
     )
-
     config: Config = resolve_dictconfig(dict_config)
-
+    # assert False, OmegaConf.resolve(dict_config)["datamodule"]
     experiment: Experiment = setup_experiment(config)
-
-    if wandb.run:
-        wandb.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
-        wandb.config.update(
-            omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
-        )
-        wandb.config.update(
-            dataclasses.asdict(config),
-            allow_val_change=True,
-        )
 
     metric_name, objective, _metrics = run(experiment)
     assert objective is not None
+
+    if wandb.run:
+        wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
+        # wandb.run.config.update(
+        #     omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
+        # )
+        # wandb.run.config.update(dataclasses.asdict(config), allow_val_change=True)
+        wandb.run.finish()
+
     return dict(name=metric_name, type="objective", value=objective)
     # return {metric_name: objective}
 
@@ -88,8 +84,7 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     )
 
     metric_name, error, metrics = evaluation(experiment)
-    if wandb.run:
-        wandb.finish()
+
     return metric_name, error, metrics
 
 

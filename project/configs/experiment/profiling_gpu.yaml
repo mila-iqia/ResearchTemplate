@@ -1,0 +1,19 @@
+# @package _global_
+# yaml-language-server: $schema=../../../.schemas/experiment_profiling_rtx8000_schema.json
+
+defaults:
+  - override /datamodule: imagenet
+  - override /algorithm: example
+  - override /trainer/logger: wandb
+  - override /resources: one_gpu
+
+hydra:
+  launcher:
+    partition: unkillable
+
+trainer:
+  min_epochs: 1
+  max_epochs: 2
+  limit_train_batches: 2
+  limit_val_batches: 2
+  num_sanity_val_steps: 0

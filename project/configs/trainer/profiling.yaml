@@ -1,8 +1,0 @@
-# yaml-language-server: $schema=../../../.schemas/trainer_profiling_schema.json
-_target_: lightning.Trainer
-max_epochs: 1
-limit_train_batches: 30
-limit_val_batches: 30
-
-wandb:
-  tags: ["profiling"]
