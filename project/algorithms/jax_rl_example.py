@@ -6,7 +6,7 @@ import time
 import typing
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
-from typing import Any, Generic, NamedTuple, ParamSpec, Protocol
+from typing import Any, ParamSpec, Protocol
 
 import chex
 import flax.core
@@ -29,7 +29,6 @@ from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment, TEnvParams, TEnvState
 from jax._src.sharding_impls import UNSPECIFIED
 from jaxlib.xla_client import Device
-from lightning import LightningModule, Trainer
 from rejax.algos.mixins import RMSState
 from torch.utils.data import DataLoader, IterableDataset
 from typing_extensions import TypeVar, override
@@ -99,41 +98,15 @@ def jit(
     )
 
 
-_ContentType = TypeVar("_ContentType", default=jax.Array)
-
-
-class _EpisodeStepData(flax.struct.PyTreeNode):
-    obs: jax.Array
-    action: jax.Array
-    reward: jax.Array
-    next_obs: jax.Array
-    done: jax.Array
-
-
-class _EpisodeData(flax.struct.PyTreeNode, Generic[_ContentType]):
-    obs: _ContentType
-    action: _ContentType
-    reward: _ContentType
-    next_obs: _ContentType
-    done: _ContentType
-    cum_return: _ContentType
-
-
-class _StateInput(NamedTuple):
-    obs: jax.Array
-    state: gymnax.EnvState
-    policy_params: flax.core.FrozenDict[str, jax.Array]
-    rng: jax.Array
-    cum_reward: jax.Array
-    valid_mask: jax.Array
-
-
 class TrajectoryWithLastObs(flax.struct.PyTreeNode):
     trajectories: Trajectory
     last_done: jax.Array
     last_obs: jax.Array
 
 
+@functools.partial(
+    jit, static_argnames=["actor", "critic", "env", "discrete", "normalize_observations"]
+)
 def env_step(
     collection_state: TrajectoryCollectionState,
     step_index: jax.Array,
@@ -418,7 +391,7 @@ class JaxRlExample(lightning.LightningModule):
 
         self.automatic_optimization = False
 
-        _agents = PPOLearner.create_agent(config={}, env=self.env, env_params=self.env_params)
+        _agents = rejax.PPO.create_agent(config={}, env=self.env, env_params=self.env_params)
         self.actor: flax.linen.Module = _agents["actor"]
         self.critic: flax.linen.Module = _agents["critic"]
 
@@ -553,7 +526,7 @@ class JaxRlExample(lightning.LightningModule):
 
     def validation_step(self, batch: int, batch_index: int):
         # self.learner.eval_callback()
-        actor = make_act(ts=self.train_state, hp=self.hp)
+        actor = make_actor(ts=self.train_state, hp=self.hp)
         rng = jax.random.key(batch_index)
         max_steps = self.env_params.max_steps_in_episode
         episode_lengths, cumulative_rewards = rejax.evaluate.evaluate(
@@ -705,17 +678,6 @@ class PPOState(flax.struct.PyTreeNode):
     data_collection_state: TrajectoryCollectionState
 
 
-class PPOTrainState(flax.struct.PyTreeNode):
-    actor_ts: TrainState
-    critic_ts: TrainState
-    rng: chex.PRNGKey
-    last_obs: jax.Array
-    global_step: int
-    env_state: gymnax.EnvState
-    last_done: jax.Array
-    rms_state: RMSState
-
-
 class TrajectoryCollectionState(flax.struct.PyTreeNode):
     last_obs: jax.Array
     env_state: gymnax.EnvState
@@ -725,36 +687,7 @@ class TrajectoryCollectionState(flax.struct.PyTreeNode):
     rng: chex.PRNGKey
 
 
-def get_actor_loss_fn(actor: flax.linen.Module):
-    @jax.jit
-    def actor_loss_fn(
-        params: FrozenVariableDict,
-        batch: AdvantageMinibatch,
-        clip_eps: float,
-        ent_coef: float,
-    ) -> jax.Array:
-        log_prob, entropy = actor.apply(
-            params,
-            batch.trajectories.obs,
-            batch.trajectories.action,
-            method="log_prob_entropy",
-        )
-        assert isinstance(entropy, jax.Array)
-        entropy = entropy.mean()
-
-        # Calculate actor loss
-        ratio = jnp.exp(log_prob - batch.trajectories.log_prob)
-        advantages = (batch.advantages - batch.advantages.mean()) / (batch.advantages.std() + 1e-8)
-        clipped_ratio = jnp.clip(ratio, 1 - clip_eps, 1 + clip_eps)
-        pi_loss1 = ratio * advantages
-        pi_loss2 = clipped_ratio * advantages
-        pi_loss = -jnp.minimum(pi_loss1, pi_loss2).mean()
-        return pi_loss - ent_coef * entropy
-
-    return actor_loss_fn
-
-
-@functools.partial(jax.jit, static_argnames="actor")
+@functools.partial(jit, static_argnames="actor")
 def actor_loss_fn(
     params: FrozenVariableDict,
     actor: flax.linen.Module,
@@ -781,7 +714,7 @@ def actor_loss_fn(
     return pi_loss - ent_coef * entropy
 
 
-@functools.partial(jax.jit, static_argnames="critic")
+@functools.partial(jit, static_argnames="critic")
 def critic_loss_fn(
     params: FrozenVariableDict,
     critic: flax.linen.Module,
@@ -801,7 +734,7 @@ def critic_loss_fn(
     return vf_coef * value_loss
 
 
-def _act(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, hp: JaxRlExample.HParams):
+def _actor(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, hp: JaxRlExample.HParams):
     if hp.normalize_observations:
         obs = _normalize_obs(ts.rms_state, obs)
 
@@ -810,160 +743,8 @@ def _act(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, hp: JaxRlExample.HPara
     return jnp.squeeze(action)
 
 
-def make_act(ts: PPOState, hp: JaxRlExample.HParams):
-    return functools.partial(_act, ts=ts, hp=hp)
-
-
-class PPOLearner(rejax.PPO):
-    """Subclass that just adds some type hints to rejax.PPO."""
-
-    def init_state(self, rng: jax.Array) -> PPOTrainState:
-        return super().init_state(rng)
-
-    def make_act(self, ts: PPOTrainState):
-        def act(obs: jax.Array, rng: chex.PRNGKey):
-            if getattr(self, "normalize_observations", False):
-                obs = self.normalize_obs(ts.rms_state, obs)
-
-            obs = jnp.expand_dims(obs, 0)
-            action = self.actor.apply(ts.actor_ts.params, obs, rng, method="act")
-            return jnp.squeeze(action)
-
-        return act
-
-    def train_iteration(self, ts):
-        return super().train_iteration(ts)
-
-    # def calculate_gae(
-    #     self, trajectories: Trajectory, last_val: jax.Array
-    # ) -> tuple[jax.Array, jax.Array]:
-    #     return super().calculate_gae(trajectories, last_val)
-
-    def shuffle_and_split(self, data: AdvantageMinibatch, rng: chex.PRNGKey):
-        shuffle_split_data = super().shuffle_and_split(data, rng)
-        assert isinstance(shuffle_split_data, type(data))
-        return shuffle_split_data
-
-    # TODO: Ideally we wouldn't need to return the full PPOTrainState, since it gives the
-    # impression that we're changing the weights or something like that. Instead we could/should
-    # just return what changed.
-    def collect_trajectories_custom(
-        self,
-        collection_state: TrajectoryCollectionState,
-        rng: chex.PRNGKey,
-        actor_params: FrozenVariableDict,
-        critic_params: FrozenVariableDict,
-    ):
-        def env_step(collection_state: TrajectoryCollectionState, step_index: jax.Array):
-            # Get keys for sampling action and stepping environment
-            rng_steps = jax.random.fold_in(rng, 0)
-            rng_action = jax.random.fold_in(rng, 1)
-
-            rng_steps = jax.random.split(rng_steps, self.num_envs)
-
-            # Sample action
-            unclipped_action, log_prob = self.actor.apply(
-                actor_params, collection_state.last_obs, rng_action, method="action_log_prob"
-            )
-            assert isinstance(log_prob, jax.Array)
-            value = self.critic.apply(critic_params, collection_state.last_obs)
-            assert isinstance(value, jax.Array)
-
-            # Clip action
-            if self.discrete:
-                action = unclipped_action
-            else:
-                low = self.env.action_space(self.env_params).low
-                high = self.env.action_space(self.env_params).high
-                action = jnp.clip(unclipped_action, low, high)
-
-            # Step environment
-            next_obs, env_state, reward, done, _ = self.vmap_step(
-                rng_steps, collection_state.env_state, action, self.env_params
-            )
-
-            if self.normalize_observations:
-                rms_state, next_obs = self.update_and_normalize(
-                    collection_state.rms_state, next_obs
-                )
-                collection_state = collection_state.replace(rms_state=rms_state)
-
-            # Return updated runner state and transition
-            transition = Trajectory(
-                collection_state.last_obs, unclipped_action, log_prob, reward, value, done
-            )
-            collection_state = collection_state.replace(
-                env_state=env_state,
-                last_obs=next_obs,
-                last_done=done,
-                global_step=collection_state.global_step + self.num_envs,
-            )
-            return collection_state, transition
-
-        collection_state, trajectories = jax.lax.scan(
-            env_step, collection_state, xs=jnp.arange(self.num_steps), length=self.num_steps
-        )
-        return collection_state, trajectories
-
-    # NOTE: Changed the signature vs update_actor: not accepts/returns the actor TrainState.
-    def update_actor_only(self, actor_ts: TrainState, batch: AdvantageMinibatch):
-        def _actor_loss_fn(params: FrozenVariableDict):
-            log_prob, entropy = self.actor.apply(
-                params,
-                batch.trajectories.obs,
-                batch.trajectories.action,
-                method="log_prob_entropy",
-            )
-            assert isinstance(entropy, jax.Array)
-            entropy = entropy.mean()
-
-            # Calculate actor loss
-            ratio = jnp.exp(log_prob - batch.trajectories.log_prob)
-            advantages = (batch.advantages - batch.advantages.mean()) / (
-                batch.advantages.std() + 1e-8
-            )
-            clipped_ratio = jnp.clip(ratio, 1 - self.clip_eps, 1 + self.clip_eps)
-            pi_loss1 = ratio * advantages
-            pi_loss2 = clipped_ratio * advantages
-            pi_loss = -jnp.minimum(pi_loss1, pi_loss2).mean()
-            return pi_loss - self.ent_coef * entropy
-
-        actor_loss, grads = jax.value_and_grad(actor_loss_fn)(
-            actor_ts.params,
-            actor=self.actor,
-            batch=batch,
-            clip_eps=self.clip_eps,
-            ent_coef=self.ent_coef,
-        )
-        assert isinstance(actor_loss, jax.Array)
-
-        # TODO: to log the loss here?
-        return actor_ts.apply_gradients(grads=grads), actor_loss
-
-    def update_critic_only(self, critic_ts: TrainState, batch: AdvantageMinibatch):
-        def critic_loss_fn(params: FrozenVariableDict):
-            value = self.critic.apply(params, batch.trajectories.obs)
-            assert isinstance(value, jax.Array)
-            value_pred_clipped = batch.trajectories.value + (
-                value - batch.trajectories.value
-            ).clip(-self.clip_eps, self.clip_eps)
-            assert isinstance(value_pred_clipped, jax.Array)
-            value_losses = jnp.square(value - batch.targets)
-            value_losses_clipped = jnp.square(value_pred_clipped - batch.targets)
-            value_loss = 0.5 * jnp.maximum(value_losses, value_losses_clipped).mean()
-            return self.vf_coef * value_loss
-
-        critic_loss, grads = jax.value_and_grad(critic_loss_fn)(critic_ts.params)
-        assert isinstance(critic_loss, jax.Array)
-        return critic_ts.apply_gradients(grads=grads), critic_loss
-
-    def update(self, ts: PPOTrainState, batch: AdvantageMinibatch):
-        actor_ts, actor_loss = self.update_actor_only(ts.actor_ts, batch)
-        critic_ts, critic_loss = self.update_critic_only(ts.critic_ts, batch)
-        # ts, actor_loss = self.update_actor(ts, batch)
-        # ts, critic_loss = self.update_critic(ts, batch)
-        # return ts, (actor_loss, critic_loss)
-        return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
+def make_actor(ts: PPOState, hp: JaxRlExample.HParams):
+    return functools.partial(_actor, ts=ts, hp=hp)
 
 
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):
@@ -979,8 +760,8 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
     @override
     def on_fit_start(
         self,
-        trainer: Trainer,
-        pl_module: LightningModule,
+        trainer: lightning.Trainer,
+        pl_module: lightning.LightningModule,
     ) -> None:
         super().on_fit_start(trainer, pl_module)
         self.total_transitions = 0
@@ -990,15 +771,15 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
     @override
     def on_train_batch_end(
         self,
-        trainer: Trainer,
-        pl_module: LightningModule,
+        trainer: lightning.Trainer,
+        pl_module: lightning.LightningModule,
         outputs: dict[str, torch.Tensor],
         batch: TrajectoryWithLastObs,
         batch_index: int,
     ) -> None:
         super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_index)
         episodes = batch.trajectories
-
+        assert episodes.obs.shape
         num_episodes = episodes.obs.shape[0]
         num_transitions = np.prod(episodes.obs.shape[:2])
         self.total_episodes += num_episodes
@@ -1015,13 +796,13 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         logger.info(f"Updates per second: {updates_per_second}")
 
     @override
-    def get_num_samples(self, batch: _EpisodeData) -> int:
+    def get_num_samples(self, batch: TrajectoryWithLastObs) -> int:
         if isinstance(batch, int):  # fixme
             return 1
-        return int(np.prod(batch.obs.shape[:2]).item())
+        return int(np.prod(batch.trajectories.obs.shape[:2]).item())
 
     @override
-    def on_fit_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
+    def on_fit_end(self, trainer: lightning.Trainer, pl_module: lightning.LightningModule) -> None:
         super().on_fit_end(trainer, pl_module)
 
 
