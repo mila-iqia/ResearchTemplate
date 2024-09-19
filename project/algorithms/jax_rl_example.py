@@ -22,7 +22,7 @@ import numpy as np
 import optax
 import rejax
 import rejax.evaluate
-import torch  # noqa
+import torch
 import torch_jax_interop
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
@@ -33,8 +33,8 @@ from rejax.algos.mixins import RMSState
 from torch.utils.data import DataLoader
 from typing_extensions import TypeVar, override
 
-from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_example import JaxFcNet
+from project.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -300,13 +300,16 @@ class JaxRlExample(lightning.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
     @override
-    def configure_callbacks(self) -> list[MeasureSamplesPerSecondCallback]:
-        return [RlThroughputCallback()]
+    def configure_callbacks(self) -> list:  # MeasureSamplesPerSecondCallback]:
+        return []  # RlThroughputCallback()]
 
     @override
     def transfer_batch_to_device(
-        self, batch: Trajectory, device: torch.device, dataloader_idx: int
-    ) -> Trajectory:
+        self, batch: TrajectoryWithLastObs | int, device: torch.device, dataloader_idx: int
+    ) -> TrajectoryWithLastObs | int:
+        if isinstance(batch, int):
+            # FIXME: valid dataloader currently just yields ints, not trajectories.
+            return batch
         _batch_jax_devices = batch.obs.devices()
         assert len(_batch_jax_devices) == 1
         batch_jax_device = _batch_jax_devices.pop()
