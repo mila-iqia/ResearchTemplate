@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-import os
 from collections.abc import Callable
 from typing import Concatenate, Literal, ParamSpec, TypeVar
 
@@ -21,8 +20,6 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.typing_utils.protocols import ClassificationDataModule
-
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 
 def flatten(x: jax.Array) -> jax.Array:

@@ -11,9 +11,16 @@
 
 -e file:.
 absl-py==2.1.0
+    # via brax
     # via chex
+    # via distrax
+    # via dm-env
+    # via ml-collections
+    # via mujoco
+    # via mujoco-mjx
     # via optax
     # via orbax-checkpoint
+    # via tensorflow-probability
 aiohappyeyeballs==2.4.0
     # via aiohttp
 aiohttp==3.10.5
@@ -38,28 +45,41 @@ beautifulsoup4==4.12.3
     # via gdown
 black==24.8.0
     # via research-project-template
+blinker==1.8.2
+    # via flask
 bracex==2.5
     # via wcmatch
+brax==0.10.5
+    # via rejax
 certifi==2024.8.30
     # via requests
     # via sentry-sdk
 charset-normalizer==3.3.2
     # via requests
 chex==0.1.86
+    # via distrax
+    # via evosax
+    # via gymnax
     # via optax
 click==8.1.7
     # via black
+    # via flask
     # via mkdocs
     # via mkdocstrings
     # via wandb
 cloudpickle==3.0.0
+    # via gym
+    # via gymnasium
     # via orion
     # via submitit
+    # via tensorflow-probability
 colorama==0.4.6
     # via griffe
     # via mkdocs-material
 colorlog==6.8.2
     # via hydra-colorlog
+contextlib2==21.6.0
+    # via ml-collections
 contourpy==1.3.0
     # via matplotlib
 cycler==0.12.1
@@ -67,21 +87,37 @@ cycler==0.12.1
 datasets==2.21.0
     # via evaluate
     # via research-project-template
+decorator==5.1.1
+    # via tensorflow-probability
 dill==0.3.8
     # via datasets
     # via evaluate
     # via multiprocess
+distrax==0.1.5
+    # via rejax
+dm-env==1.6
+    # via brax
+dm-tree==0.1.8
+    # via dm-env
+    # via tensorflow-probability
 dnspython==2.6.1
     # via pymongo
 docker-pycreds==0.4.0
     # via wandb
 docstring-parser==0.16
     # via simple-parsing
+dotmap==1.3.30
+    # via evosax
 etils==1.9.4
+    # via brax
+    # via mujoco
+    # via mujoco-mjx
     # via optax
     # via orbax-checkpoint
 evaluate==0.4.2
     # via research-project-template
+evosax==0.1.6
+    # via rejax
 exceptiongroup==1.2.2
     # via pytest
 falcon==3.1.3
@@ -89,6 +125,8 @@ falcon==3.1.3
     # via orion
 falcon-cors==1.1.7
     # via orion
+farama-notifications==0.0.4
+    # via gymnasium
 filelock==3.15.4
     # via datasets
     # via gdown
@@ -97,7 +135,16 @@ filelock==3.15.4
     # via torch
     # via transformers
     # via triton
+flask==3.0.3
+    # via brax
+    # via flask-cors
+flask-cors==5.0.0
+    # via brax
 flax==0.8.5
+    # via brax
+    # via evosax
+    # via gymnax
+    # via rejax
     # via torch-jax-interop
 fonttools==4.53.1
     # via matplotlib
@@ -112,6 +159,8 @@ fsspec==2024.6.1
     # via lightning
     # via pytorch-lightning
     # via torch
+gast==0.6.0
+    # via tensorflow-probability
 gdown==5.2.0
     # via research-project-template
 ghp-import==2.1.0
@@ -121,10 +170,24 @@ gitdb==4.0.11
 gitpython==3.1.43
     # via orion
     # via wandb
+glfw==2.7.0
+    # via mujoco
 griffe==1.2.0
     # via mkdocstrings-python
+grpcio==1.66.1
+    # via brax
 gunicorn==23.0.0
     # via orion
+gym==0.26.2
+    # via brax
+    # via gymnax
+gym-notices==0.0.8
+    # via gym
+gymnasium==0.29.1
+    # via gymnax
+gymnax==0.0.8
+    # via rejax
+    # via research-project-template
 huggingface-hub==0.24.6
     # via datasets
     # via evaluate
@@ -153,9 +216,17 @@ importlib-resources==6.4.4
     # via etils
 iniconfig==2.0.0
     # via pytest
+itsdangerous==2.2.0
+    # via flask
 jax==0.4.31
+    # via brax
     # via chex
+    # via distrax
+    # via evosax
     # via flax
+    # via gymnax
+    # via jaxopt
+    # via mujoco-mjx
     # via optax
     # via orbax-checkpoint
     # via pytorch2jax
@@ -166,12 +237,22 @@ jax-cuda12-pjrt==0.4.31
 jax-cuda12-plugin==0.4.31
     # via jax
 jaxlib==0.4.31
+    # via brax
     # via chex
+    # via distrax
+    # via evosax
+    # via gymnax
     # via jax
+    # via jaxopt
+    # via mujoco-mjx
     # via optax
     # via orbax-checkpoint
     # via pytorch2jax
+jaxopt==0.8.3
+    # via brax
 jinja2==3.1.4
+    # via brax
+    # via flask
     # via mkdocs
     # via mkdocs-macros-plugin
     # via mkdocs-material
@@ -207,8 +288,12 @@ markupsafe==2.1.5
     # via mkdocs
     # via mkdocs-autorefs
     # via mkdocstrings
+    # via werkzeug
 matplotlib==3.9.2
+    # via evosax
+    # via gymnax
     # via research-project-template
+    # via seaborn
 mdurl==0.1.2
     # via markdown-it-py
 mergedeep==1.3.4
@@ -251,6 +336,8 @@ mkdocstrings==0.26.0
     # via research-project-template
 mkdocstrings-python==1.11.1
     # via mkdocstrings
+ml-collections==0.1.1
+    # via brax
 ml-dtypes==0.4.0
     # via jax
     # via jaxlib
@@ -260,6 +347,11 @@ mpmath==1.3.0
 msgpack==1.0.8
     # via flax
     # via orbax-checkpoint
+mujoco==3.2.3
+    # via brax
+    # via mujoco-mjx
+mujoco-mjx==3.2.3
+    # via brax
 multidict==6.0.5
     # via aiohttp
     # via yarl
@@ -275,28 +367,41 @@ nest-asyncio==1.6.0
 networkx==3.3
     # via torch
 numpy==2.1.1
+    # via brax
     # via chex
     # via contourpy
     # via datasets
+    # via distrax
+    # via dm-env
     # via evaluate
+    # via evosax
     # via flax
+    # via gym
+    # via gymnasium
     # via jax
     # via jaxlib
+    # via jaxopt
     # via matplotlib
     # via ml-dtypes
+    # via mujoco
     # via opt-einsum
     # via optax
     # via orbax-checkpoint
     # via orion
     # via pandas
     # via pyarrow
+    # via rejax
     # via scikit-learn
     # via scikit-optimize
     # via scipy
+    # via seaborn
+    # via tensorboardx
+    # via tensorflow-probability
     # via tensorstore
     # via torchmetrics
     # via torchvision
     # via transformers
+    # via trimesh
 nvidia-cublas-cu12==12.1.3.1
     # via jax-cuda12-plugin
     # via nvidia-cudnn-cu12
@@ -343,8 +448,11 @@ omegaconf==2.3.0
 opt-einsum==3.3.0
     # via jax
 optax==0.2.3
+    # via brax
     # via flax
+    # via rejax
 orbax-checkpoint==0.6.1
+    # via brax
     # via flax
 orion==0.2.7
     # via hydra-orion-sweeper
@@ -363,6 +471,7 @@ packaging==24.1
     # via pytest
     # via pytorch-lightning
     # via scikit-optimize
+    # via tensorboardx
     # via torchmetrics
     # via transformers
 paginate==0.5.7
@@ -371,10 +480,12 @@ pandas==2.2.2
     # via datasets
     # via evaluate
     # via orion
+    # via seaborn
 pathspec==0.12.1
     # via black
     # via mkdocs
 pillow==10.4.0
+    # via brax
     # via matplotlib
     # via torchvision
 platformdirs==4.2.2
@@ -388,6 +499,7 @@ pluggy==1.5.0
     # via pytest
 protobuf==5.28.0
     # via orbax-checkpoint
+    # via tensorboardx
     # via wandb
 psutil==6.0.0
     # via orion
@@ -408,6 +520,8 @@ pymdown-extensions==10.9
     # via mkdocstrings
 pymongo==4.8.0
     # via orion
+pyopengl==3.1.7
+    # via mujoco
 pyparsing==3.1.4
     # via matplotlib
 pysocks==1.7.1
@@ -419,6 +533,8 @@ python-dateutil==2.9.0.post0
     # via matplotlib
     # via mkdocs-macros-plugin
     # via pandas
+pytinyrenderer==0.0.14
+    # via brax
 pytorch-lightning==2.4.0
     # via lightning
 pytorch2jax==0.1.0
@@ -427,12 +543,15 @@ pytz==2024.1
     # via pandas
 pyyaml==6.0.2
     # via datasets
+    # via evosax
     # via flax
+    # via gymnax
     # via huggingface-hub
     # via lightning
     # via mkdocs
     # via mkdocs-get-deps
     # via mkdocs-macros-plugin
+    # via ml-collections
     # via omegaconf
     # via orbax-checkpoint
     # via orion
@@ -440,6 +559,7 @@ pyyaml==6.0.2
     # via pymdown-extensions
     # via pytorch-lightning
     # via pyyaml-env-tag
+    # via rejax
     # via transformers
     # via wandb
 pyyaml-env-tag==0.1
@@ -447,6 +567,8 @@ pyyaml-env-tag==0.1
 regex==2024.7.24
     # via mkdocs-material
     # via transformers
+rejax==0.1.0
+    # via research-project-template
 requests==2.32.3
     # via datasets
     # via evaluate
@@ -468,11 +590,16 @@ scikit-learn==1.5.1
 scikit-optimize==0.10.2
     # via orion
 scipy==1.14.1
+    # via brax
     # via jax
     # via jaxlib
+    # via jaxopt
+    # via mujoco-mjx
     # via orion
     # via scikit-learn
     # via scikit-optimize
+seaborn==0.13.2
+    # via gymnax
 sentry-sdk==2.13.0
     # via wandb
 setproctitle==1.3.3
@@ -484,7 +611,9 @@ simple-parsing==0.1.5
     # via research-project-template
 six==1.16.0
     # via docker-pycreds
+    # via ml-collections
     # via python-dateutil
+    # via tensorflow-probability
 smmap==5.0.1
     # via gitdb
 soupsieve==2.6
@@ -497,6 +626,10 @@ tabulate==0.9.0
     # via orion
 tenacity==9.0.0
     # via plotly
+tensorboardx==2.6.2.2
+    # via brax
+tensorflow-probability==0.24.0
+    # via distrax
 tensorstore==0.1.64
     # via flax
     # via orbax-checkpoint
@@ -537,13 +670,18 @@ tqdm==4.66.5
     # via transformers
 transformers==4.44.2
     # via research-project-template
+trimesh==4.4.9
+    # via brax
+    # via mujoco-mjx
 triton==3.0.0
     # via torch
 typing-extensions==4.12.2
     # via black
+    # via brax
     # via chex
     # via etils
     # via flax
+    # via gymnasium
     # via huggingface-hub
     # via hydra-orion-sweeper
     # via hydra-zen
@@ -567,6 +705,8 @@ watchdog==5.0.2
     # via mkdocs
 wcmatch==9.0
     # via mkdocs-awesome-pages-plugin
+werkzeug==3.0.4
+    # via flask
 xxhash==3.5.0
     # via datasets
     # via evaluate

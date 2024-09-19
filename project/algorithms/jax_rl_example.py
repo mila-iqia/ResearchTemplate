@@ -22,7 +22,7 @@ import numpy as np
 import optax
 import rejax
 import rejax.evaluate
-import torch
+import torch  # noqa
 import torch_jax_interop
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
@@ -30,13 +30,14 @@ from gymnax.environments.environment import Environment, TEnvParams, TEnvState
 from jax._src.sharding_impls import UNSPECIFIED
 from jaxlib.xla_client import Device
 from rejax.algos.mixins import RMSState
-from torch.utils.data import DataLoader, IterableDataset
+from torch.utils.data import DataLoader
 from typing_extensions import TypeVar, override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_example import JaxFcNet
 
 logger = get_logger(__name__)
+# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 
 class Trajectory(flax.struct.PyTreeNode):
@@ -52,19 +53,6 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     trajectories: Trajectory
     advantages: chex.Array
     targets: chex.Array
-
-
-P = ParamSpec("P")
-Out = TypeVar("Out", covariant=True)
-
-
-class _Module(Protocol[P, Out]):
-    if typing.TYPE_CHECKING:
-
-        def __call__(self, *args: P.args, **kwagrs: P.kwargs) -> Out: ...
-
-        init = flax.linen.Module.init
-        apply = flax.linen.Module.apply
 
 
 def jit(
@@ -96,239 +84,6 @@ def jit(
         inline=inline,
         abstracted_axes=abstracted_axes,
     )
-
-
-class TrajectoryWithLastObs(flax.struct.PyTreeNode):
-    trajectories: Trajectory
-    last_done: jax.Array
-    last_obs: jax.Array
-
-
-@functools.partial(
-    jit, static_argnames=["actor", "critic", "env", "discrete", "normalize_observations"]
-)
-def env_step(
-    collection_state: TrajectoryCollectionState,
-    step_index: jax.Array,
-    rng: chex.PRNGKey,
-    num_envs: int,
-    actor: flax.linen.Module,
-    actor_params: FrozenVariableDict,
-    critic: flax.linen.Module,
-    critic_params: FrozenVariableDict,
-    env: Environment,
-    env_params: gymnax.EnvParams,
-    discrete: bool,
-    normalize_observations: bool,
-):
-    # Get keys for sampling action and stepping environment
-    rng_steps = jax.random.fold_in(rng, 0)
-    rng_action = jax.random.fold_in(rng, 1)
-
-    rng_steps = jax.random.split(rng_steps, num_envs)
-
-    # Sample action
-    unclipped_action, log_prob = actor.apply(
-        actor_params, collection_state.last_obs, rng_action, method="action_log_prob"
-    )
-    assert isinstance(log_prob, jax.Array)
-    value = critic.apply(critic_params, collection_state.last_obs)
-    assert isinstance(value, jax.Array)
-
-    # Clip action
-    if discrete:
-        action = unclipped_action
-    else:
-        low = env.action_space(env_params).low
-        high = env.action_space(env_params).high
-        action = jnp.clip(unclipped_action, low, high)
-
-    # Step environment
-    #     return jax.vmap(self.env.reset, in_axes=(0, None))
-    # return jax.vmap(self.env.step, in_axes=(0, 0, 0, None))
-    next_obs, env_state, reward, done, _ = jax.vmap(env.step, in_axes=(0, 0, 0, None))(
-        rng_steps, collection_state.env_state, action, env_params
-    )
-
-    if normalize_observations:
-        # rms_state, next_obs = learner.update_and_normalize(collection_state.rms_state, next_obs)
-        rms_state = _update_rms(collection_state.rms_state, obs=next_obs, batched=True)
-        next_obs = _normalize_obs(rms_state, obs=next_obs)
-
-        collection_state = collection_state.replace(rms_state=rms_state)
-
-    # Return updated runner state and transition
-    transition = Trajectory(
-        collection_state.last_obs, unclipped_action, log_prob, reward, value, done
-    )
-    collection_state = collection_state.replace(
-        env_state=env_state,
-        last_obs=next_obs,
-        last_done=done,
-        global_step=collection_state.global_step + num_envs,
-    )
-    return collection_state, transition
-
-
-def _update_rms(rms_state: RMSState, obs: jax.Array, batched: bool = True):
-    batch = obs if batched else jnp.expand_dims(obs, 0)
-
-    batch_count = batch.shape[0]
-    batch_mean, batch_var = batch.mean(axis=0), batch.var(axis=0)
-
-    delta = batch_mean - rms_state.mean
-    tot_count = rms_state.count + batch_count
-
-    new_mean = rms_state.mean + delta * batch_count / tot_count
-    m_a = rms_state.var * rms_state.count
-    m_b = batch_var * batch_count
-    M2 = m_a + m_b + delta**2 * rms_state.count * batch_count / tot_count
-    new_var = M2 / tot_count
-    new_count = tot_count
-
-    return RMSState(mean=new_mean, var=new_var, count=new_count)
-
-
-def _normalize_obs(rms_state: RMSState, obs: jax.Array):
-    return (obs - rms_state.mean) / jnp.sqrt(rms_state.var + 1e-8)
-
-
-@functools.partial(
-    jit,
-    static_argnames=(
-        "actor",
-        "critic",
-        "env",
-        "num_steps",
-        "num_envs",
-        "discrete",
-        "normalize_observations",
-    ),
-)
-def collect_trajectories(
-    env: Environment[TEnvState, TEnvParams],
-    env_params: TEnvParams,
-    collection_state: TrajectoryCollectionState,
-    *,
-    rng: chex.PRNGKey,
-    actor: flax.linen.Module,
-    actor_params: FrozenVariableDict,
-    critic: flax.linen.Module,
-    critic_params: FrozenVariableDict,
-    num_envs: int,
-    num_steps: int,
-    discrete: bool,
-    normalize_observations: bool,
-):
-    env_step_fn = functools.partial(
-        env_step,
-        rng=rng,
-        num_envs=num_envs,
-        actor=actor,
-        actor_params=actor_params,
-        critic=critic,
-        critic_params=critic_params,
-        env=env,
-        env_params=env_params,
-        discrete=discrete,
-        normalize_observations=normalize_observations,
-    )
-    collection_state, trajectories = jax.lax.scan(
-        env_step_fn,
-        collection_state,
-        xs=jnp.arange(num_steps),
-        length=num_steps,
-    )
-    trajectories_with_last = TrajectoryWithLastObs(
-        trajectories=trajectories,
-        last_done=collection_state.last_done,
-        last_obs=collection_state.last_obs,
-    )
-    return collection_state, trajectories_with_last
-
-
-class EnvDataset(IterableDataset):
-    def __init__(
-        self,
-        # learner: PPOLearner,
-        current_epoch: int,
-        env_params: gymnax.EnvParams,
-        actor: flax.linen.Module,
-        critic: flax.linen.Module,
-        env: Environment,
-        hp: JaxRlExample.HParams,
-        train_state: PPOState,
-        num_train_iterations: int,
-        rollout_rng_key: chex.PRNGKey,
-    ):
-        # self.learner = learner
-        self.current_epoch = current_epoch
-        self.collection_state = train_state.data_collection_state
-        self.env_params = env_params
-        self.env = env
-        self.actor = actor
-        self.critic = critic
-        self.hp = hp
-        self.train_state = train_state
-        self.num_train_iterations = num_train_iterations
-        self.rollout_rng_key = rollout_rng_key
-
-        _action_space = self.env.action_space(self.env_params)
-        self.discrete = isinstance(_action_space, gymnax.environments.spaces.Discrete)
-
-    def __iter__(self):
-        # env_rng = jax.random.key(self.current_epoch)
-        # obs, env_state = rejax.PPOvmap_reset(
-        #     jax.random.split(env_rng, self.learner.num_envs), self.learner.env_params
-        # )
-        # collection_state = TrajectoryCollectionState(
-        #     last_obs=obs,
-        #     rms_state=RMSState.create(
-        #         shape=(1, *self.env.observation_space(self.env_params).shape)
-        #     ),
-        #     global_step=self.train_state.global_step,
-        #     env_state=env_state,
-        #     last_done=jnp.zeros(self.learner.num_envs, dtype=bool),
-        # )
-        for batch_idx in range(self.num_train_iterations):
-            episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
-            start = time.perf_counter()
-            self.collection_state, trajectories = collect_trajectories(
-                env=self.env,
-                env_params=self.env_params,
-                collection_state=self.collection_state,
-                rng=episode_key,
-                num_envs=self.hp.num_envs,
-                num_steps=self.hp.num_steps,
-                actor=self.actor,
-                actor_params=self.train_state.actor_ts.params,
-                critic=self.critic,
-                critic_params=self.train_state.critic_ts.params,
-                discrete=self.discrete,
-                normalize_observations=self.hp.normalize_observations,
-            )
-
-            duration = time.perf_counter() - start
-            logger.debug(
-                f"Took {duration} seconds to collect {self.hp.num_steps} steps in {self.hp.num_envs} envs."
-            )
-            # last_val = self.learner.critic.apply(
-            #     self.train_state.critic_ts.params, collection_state.last_obs
-            # )
-            # assert isinstance(last_val, jax.Array)
-            # last_val = jnp.where(collection_state.last_done, 0, last_val)
-            # advantages, targets = self.learner.calculate_gae(trajectories, last_val)
-            # batch = AdvantageMinibatch(trajectories, advantages, targets)
-
-            # for _epoch in range(self.learner.num_epochs):
-            #     epoch_key = jax.random.fold_in(episode_key, _epoch)
-            #     minibatches = self.learner.shuffle_and_split(batch, epoch_key)
-
-            #     for i in range(self.learner.num_minibatches):
-            #         minibatch = jax.tree.map(operator.itemgetter(i), minibatches)
-            #         yield minibatch
-
-            yield trajectories
 
 
 class JaxRlExample(lightning.LightningModule):
@@ -510,13 +265,10 @@ class JaxRlExample(lightning.LightningModule):
         num_envs = self.hp.num_envs
         num_minibatches = self.hp.num_minibatches
         assert (num_envs * num_steps) % num_minibatches == 0
-        minibatch_size = (num_envs * num_steps) // num_minibatches
-        iteration_size = minibatch_size * num_minibatches
         minibatches = shuffle_and_split(
             batch,
             minibatch_rng,
             num_minibatches=num_minibatches,
-            iteration_size=iteration_size,
         )
         return jax.lax.scan(self.ppo_update, ts, minibatches, length=self.hp.num_minibatches)
 
@@ -571,6 +323,252 @@ class JaxRlExample(lightning.LightningModule):
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
 
 
+P = ParamSpec("P")
+Out = TypeVar("Out", covariant=True)
+
+
+class _Module(Protocol[P, Out]):
+    if typing.TYPE_CHECKING:
+
+        def __call__(self, *args: P.args, **kwagrs: P.kwargs) -> Out: ...
+
+        init = flax.linen.Module.init
+        apply = flax.linen.Module.apply
+
+
+class TrajectoryWithLastObs(flax.struct.PyTreeNode):
+    trajectories: Trajectory
+    last_done: jax.Array
+    last_obs: jax.Array
+
+
+@functools.partial(
+    jit, static_argnames=["actor", "critic", "env", "discrete", "normalize_observations"]
+)
+def env_step(
+    collection_state: TrajectoryCollectionState,
+    step_index: jax.Array,
+    rng: chex.PRNGKey,
+    num_envs: int,
+    actor: flax.linen.Module,
+    actor_params: FrozenVariableDict,
+    critic: flax.linen.Module,
+    critic_params: FrozenVariableDict,
+    env: Environment,
+    env_params: gymnax.EnvParams,
+    discrete: bool,
+    normalize_observations: bool,
+):
+    # Get keys for sampling action and stepping environment
+    rng_steps = jax.random.fold_in(rng, 0)
+    rng_action = jax.random.fold_in(rng, 1)
+
+    rng_steps = jax.random.split(rng_steps, num_envs)
+
+    # Sample action
+    unclipped_action, log_prob = actor.apply(
+        actor_params, collection_state.last_obs, rng_action, method="action_log_prob"
+    )
+    assert isinstance(log_prob, jax.Array)
+    value = critic.apply(critic_params, collection_state.last_obs)
+    assert isinstance(value, jax.Array)
+
+    # Clip action
+    if discrete:
+        action = unclipped_action
+    else:
+        low = env.action_space(env_params).low
+        high = env.action_space(env_params).high
+        action = jnp.clip(unclipped_action, low, high)
+
+    # Step environment
+    #     return jax.vmap(self.env.reset, in_axes=(0, None))
+    # return jax.vmap(self.env.step, in_axes=(0, 0, 0, None))
+    next_obs, env_state, reward, done, _ = jax.vmap(env.step, in_axes=(0, 0, 0, None))(
+        rng_steps, collection_state.env_state, action, env_params
+    )
+
+    if normalize_observations:
+        # rms_state, next_obs = learner.update_and_normalize(collection_state.rms_state, next_obs)
+        rms_state = _update_rms(collection_state.rms_state, obs=next_obs, batched=True)
+        next_obs = _normalize_obs(rms_state, obs=next_obs)
+
+        collection_state = collection_state.replace(rms_state=rms_state)
+
+    # Return updated runner state and transition
+    transition = Trajectory(
+        collection_state.last_obs, unclipped_action, log_prob, reward, value, done
+    )
+    collection_state = collection_state.replace(
+        env_state=env_state,
+        last_obs=next_obs,
+        last_done=done,
+        global_step=collection_state.global_step + num_envs,
+    )
+    return collection_state, transition
+
+
+def _update_rms(rms_state: RMSState, obs: jax.Array, batched: bool = True):
+    batch = obs if batched else jnp.expand_dims(obs, 0)
+
+    batch_count = batch.shape[0]
+    batch_mean, batch_var = batch.mean(axis=0), batch.var(axis=0)
+
+    delta = batch_mean - rms_state.mean
+    tot_count = rms_state.count + batch_count
+
+    new_mean = rms_state.mean + delta * batch_count / tot_count
+    m_a = rms_state.var * rms_state.count
+    m_b = batch_var * batch_count
+    M2 = m_a + m_b + delta**2 * rms_state.count * batch_count / tot_count
+    new_var = M2 / tot_count
+    new_count = tot_count
+
+    return RMSState(mean=new_mean, var=new_var, count=new_count)
+
+
+def _normalize_obs(rms_state: RMSState, obs: jax.Array):
+    return (obs - rms_state.mean) / jnp.sqrt(rms_state.var + 1e-8)
+
+
+@functools.partial(
+    jit,
+    static_argnames=(
+        "actor",
+        "critic",
+        "env",
+        "num_steps",
+        "num_envs",
+        "discrete",
+        "normalize_observations",
+    ),
+)
+def collect_trajectories(
+    env: Environment[TEnvState, TEnvParams],
+    env_params: TEnvParams,
+    collection_state: TrajectoryCollectionState,
+    *,
+    rng: chex.PRNGKey,
+    actor: flax.linen.Module,
+    actor_params: FrozenVariableDict,
+    critic: flax.linen.Module,
+    critic_params: FrozenVariableDict,
+    num_envs: int,
+    num_steps: int,
+    discrete: bool,
+    normalize_observations: bool,
+):
+    env_step_fn = functools.partial(
+        env_step,
+        rng=rng,
+        num_envs=num_envs,
+        actor=actor,
+        actor_params=actor_params,
+        critic=critic,
+        critic_params=critic_params,
+        env=env,
+        env_params=env_params,
+        discrete=discrete,
+        normalize_observations=normalize_observations,
+    )
+    collection_state, trajectories = jax.lax.scan(
+        env_step_fn,
+        collection_state,
+        xs=jnp.arange(num_steps),
+        length=num_steps,
+    )
+    trajectories_with_last = TrajectoryWithLastObs(
+        trajectories=trajectories,
+        last_done=collection_state.last_done,
+        last_obs=collection_state.last_obs,
+    )
+    return collection_state, trajectories_with_last
+
+
+class EnvDataset:  # IterableDataset):
+    def __init__(
+        self,
+        # learner: PPOLearner,
+        current_epoch: int,
+        env_params: gymnax.EnvParams,
+        actor: flax.linen.Module,
+        critic: flax.linen.Module,
+        env: Environment,
+        hp: JaxRlExample.HParams,
+        train_state: PPOState,
+        num_train_iterations: int,
+        rollout_rng_key: chex.PRNGKey,
+    ):
+        # self.learner = learner
+        self.current_epoch = current_epoch
+        self.collection_state = train_state.data_collection_state
+        self.env_params = env_params
+        self.env = env
+        self.actor = actor
+        self.critic = critic
+        self.hp = hp
+        self.train_state = train_state
+        self.num_train_iterations = num_train_iterations
+        self.rollout_rng_key = rollout_rng_key
+
+        _action_space = self.env.action_space(self.env_params)
+        self.discrete = isinstance(_action_space, gymnax.environments.spaces.Discrete)
+
+    def __iter__(self):
+        # env_rng = jax.random.key(self.current_epoch)
+        # obs, env_state = rejax.PPOvmap_reset(
+        #     jax.random.split(env_rng, self.learner.num_envs), self.learner.env_params
+        # )
+        # collection_state = TrajectoryCollectionState(
+        #     last_obs=obs,
+        #     rms_state=RMSState.create(
+        #         shape=(1, *self.env.observation_space(self.env_params).shape)
+        #     ),
+        #     global_step=self.train_state.global_step,
+        #     env_state=env_state,
+        #     last_done=jnp.zeros(self.learner.num_envs, dtype=bool),
+        # )
+        for batch_idx in range(self.num_train_iterations):
+            episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
+            start = time.perf_counter()
+            self.collection_state, trajectories = collect_trajectories(
+                env=self.env,
+                env_params=self.env_params,
+                collection_state=self.collection_state,
+                rng=episode_key,
+                num_envs=self.hp.num_envs,
+                num_steps=self.hp.num_steps,
+                actor=self.actor,
+                actor_params=self.train_state.actor_ts.params,
+                critic=self.critic,
+                critic_params=self.train_state.critic_ts.params,
+                discrete=self.discrete,
+                normalize_observations=self.hp.normalize_observations,
+            )
+
+            duration = time.perf_counter() - start
+            logger.debug(
+                f"Took {duration} seconds to collect {self.hp.num_steps} steps in {self.hp.num_envs} envs."
+            )
+            # last_val = self.learner.critic.apply(
+            #     self.train_state.critic_ts.params, collection_state.last_obs
+            # )
+            # assert isinstance(last_val, jax.Array)
+            # last_val = jnp.where(collection_state.last_done, 0, last_val)
+            # advantages, targets = self.learner.calculate_gae(trajectories, last_val)
+            # batch = AdvantageMinibatch(trajectories, advantages, targets)
+
+            # for _epoch in range(self.learner.num_epochs):
+            #     epoch_key = jax.random.fold_in(episode_key, _epoch)
+            #     minibatches = self.learner.shuffle_and_split(batch, epoch_key)
+
+            #     for i in range(self.learner.num_minibatches):
+            #         minibatch = jax.tree.map(operator.itemgetter(i), minibatches)
+            #         yield minibatch
+
+            yield trajectories
+
+
 def init_train_state(
     env: Environment[TEnvState, TEnvParams],
     env_params: TEnvParams,
@@ -615,22 +613,21 @@ def init_train_state(
 
 
 def shuffle_and_split(
-    data: AdvantageMinibatch, rng: chex.PRNGKey, num_minibatches: int, iteration_size: int
-):
+    data: AdvantageMinibatch, rng: chex.PRNGKey, num_minibatches: int
+) -> AdvantageMinibatch:
+    assert data.trajectories.obs.shape
+    iteration_size = data.trajectories.obs.shape[0] * data.trajectories.obs.shape[1]
     permutation = jax.random.permutation(rng, iteration_size)
     _shuffle_and_split_fn = functools.partial(
         _shuffle_and_split,
         permutation=permutation,
-        iteration_size=iteration_size,
         num_minibatches=num_minibatches,
     )
     return jax.tree.map(_shuffle_and_split_fn, data)
 
 
-def _shuffle_and_split(
-    x: jax.Array, permutation: jax.Array, iteration_size: int, num_minibatches: int
-):
-    x = x.reshape((iteration_size, *x.shape[2:]))
+def _shuffle_and_split(x: jax.Array, permutation: jax.Array, num_minibatches: int):
+    x = x.reshape((x.shape[0] * x.shape[1], *x.shape[2:]))
     x = jnp.take(x, permutation, axis=0)
     return x.reshape(num_minibatches, -1, *x.shape[1:])
 
@@ -808,6 +805,8 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
 
 def main():
     env_id = "Pendulum-v1"
+    # env_id = "halfcheetah"
+    env_id = "humanoid"
 
     from brax.envs import _envs as brax_envs
     from rejax.compat.brax2gymnax import create_brax
@@ -819,7 +818,9 @@ def main():
             action_repeat=1,
             auto_reset=True,
             batch_size=None,
+            backend="generalized",
         )
+
     else:
         env, env_params = gymnax.make(env_id=env_id)
 
@@ -843,19 +844,28 @@ def main():
             normalize_observations=True,
         ),
     )
-    from lightning.pytorch.loggers.csv_logs import CSVLogger
 
     # todo: number of epochs:
     num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
     trainer = lightning.Trainer(
         max_epochs=num_evals,
-        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
         devices=1,
     )
     trainer.fit(algo)
     # metrics = trainer.validate(algo)
     print(trainer.logged_metrics)
     return
+
+
+def train_fn(algo: JaxRlExample):
+    num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
+    trainer = lightning.Trainer(
+        max_epochs=num_evals,
+        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        devices=1,
+    )
+    trainer.fit(algo)
 
 
 if __name__ == "__main__":
