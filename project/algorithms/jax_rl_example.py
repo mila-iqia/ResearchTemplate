@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import dataclasses
 import functools
 import time
 import typing
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable
 from logging import getLogger as get_logger
 from typing import Any, ParamSpec, Protocol
 
@@ -27,26 +25,32 @@ import torch_jax_interop
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment, TEnvParams, TEnvState
-from jax._src.sharding_impls import UNSPECIFIED
-from jaxlib.xla_client import Device
+from lightning.pytorch.loggers.csv_logs import CSVLogger
 from rejax.algos.mixins import RMSState
-from torch.utils.data import DataLoader
-from typing_extensions import TypeVar, override
+from torch.utils.data import DataLoader, IterableDataset
+from typing_extensions import Self, TypeVar, override
+from xtils.jitpp import Static, jit
 
+from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_example import JaxFcNet
-from project.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 
 class Trajectory(flax.struct.PyTreeNode):
-    obs: chex.Array
-    action: chex.Array
-    log_prob: chex.Array
-    reward: chex.Array
-    value: chex.Array
-    done: chex.Array
+    obs: jax.Array
+    action: jax.Array
+    log_prob: jax.Array
+    reward: jax.Array
+    value: jax.Array
+    done: jax.Array
+
+
+class TrajectoryWithLastObs(flax.struct.PyTreeNode):
+    trajectories: Trajectory
+    last_done: jax.Array
+    last_obs: jax.Array
 
 
 class AdvantageMinibatch(flax.struct.PyTreeNode):
@@ -55,35 +59,52 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     targets: chex.Array
 
 
-def jit(
-    fn: Callable[P, Out],
-    in_shardings=UNSPECIFIED,
-    out_shardings=UNSPECIFIED,
-    static_argnums: int | Sequence[int] | None = None,
-    static_argnames: str | Iterable[str] | None = None,
-    donate_argnums: int | Sequence[int] | None = None,
-    donate_argnames: str | Iterable[str] | None = None,
-    keep_unused: bool = False,
-    device: Device | None = None,
-    backend: str | None = None,
-    inline: bool = False,
-    abstracted_axes: Any | None = None,
-) -> Callable[P, Out]:
-    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-    return jax.jit(
-        fn,
-        in_shardings=in_shardings,
-        out_shardings=out_shardings,
-        static_argnums=static_argnums,
-        static_argnames=static_argnames,
-        donate_argnums=donate_argnums,
-        donate_argnames=donate_argnames,
-        keep_unused=keep_unused,
-        device=device,
-        backend=backend,
-        inline=inline,
-        abstracted_axes=abstracted_axes,
-    )
+class TrajectoryCollectionState(flax.struct.PyTreeNode):
+    last_obs: jax.Array
+    env_state: gymnax.EnvState
+    rms_state: RMSState
+    last_done: jax.Array
+    global_step: int
+    rng: chex.PRNGKey
+
+
+class PPOState(flax.struct.PyTreeNode):
+    actor_ts: TrainState
+    critic_ts: TrainState
+    rng: chex.PRNGKey
+    rms_state: RMSState
+    data_collection_state: TrajectoryCollectionState
+
+
+# def jit(
+#     fn: Callable[P, Out],
+#     in_shardings=UNSPECIFIED,
+#     out_shardings=UNSPECIFIED,
+#     static_argnums: int | Sequence[int] | None = None,
+#     static_argnames: str | Iterable[str] | None = None,
+#     donate_argnums: int | Sequence[int] | None = None,
+#     donate_argnames: str | Iterable[str] | None = None,
+#     keep_unused: bool = False,
+#     device: Device | None = None,
+#     backend: str | None = None,
+#     inline: bool = False,
+#     abstracted_axes: Any | None = None,
+# ) -> Callable[P, Out]:
+#     """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
+#     return jax.jit(
+#         fn,
+#         in_shardings=in_shardings,
+#         out_shardings=out_shardings,
+#         static_argnums=static_argnums,
+#         static_argnames=static_argnames,
+#         donate_argnums=donate_argnums,
+#         donate_argnames=donate_argnames,
+#         keep_unused=keep_unused,
+#         device=device,
+#         backend=backend,
+#         inline=inline,
+#         abstracted_axes=abstracted_axes,
+#     )
 
 
 class JaxRlExample(lightning.LightningModule):
@@ -232,8 +253,8 @@ class JaxRlExample(lightning.LightningModule):
         self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
         self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
 
-    @functools.partial(jit, static_argnames="self")
-    def ppo_update(self, ts: PPOState, batch: AdvantageMinibatch):
+    @jit
+    def ppo_update(self: Static[Self], ts: PPOState, batch: AdvantageMinibatch):
         actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
             ts.actor_ts.params,
             actor=self.actor,
@@ -257,8 +278,10 @@ class JaxRlExample(lightning.LightningModule):
 
         return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
 
-    @functools.partial(jit, static_argnames="self")
-    def ppo_update_epoch(self, ts: PPOState, epoch_index: int, batch: AdvantageMinibatch):
+    @jit
+    def ppo_update_epoch(
+        self: Static[Self], ts: PPOState, epoch_index: int, batch: AdvantageMinibatch
+    ):
         # shuffle the data and split it into minibatches
         minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
         num_steps = self.hp.num_steps
@@ -300,8 +323,8 @@ class JaxRlExample(lightning.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
     @override
-    def configure_callbacks(self) -> list:  # MeasureSamplesPerSecondCallback]:
-        return []  # RlThroughputCallback()]
+    def configure_callbacks(self) -> list[lightning.Callback]:
+        return [RlThroughputCallback()]
 
     @override
     def transfer_batch_to_device(
@@ -310,7 +333,7 @@ class JaxRlExample(lightning.LightningModule):
         if isinstance(batch, int):
             # FIXME: valid dataloader currently just yields ints, not trajectories.
             return batch
-        _batch_jax_devices = batch.obs.devices()
+        _batch_jax_devices = batch.trajectories.obs.devices()
         assert len(_batch_jax_devices) == 1
         batch_jax_device = _batch_jax_devices.pop()
         torch_self_device = device
@@ -339,28 +362,20 @@ class _Module(Protocol[P, Out]):
         apply = flax.linen.Module.apply
 
 
-class TrajectoryWithLastObs(flax.struct.PyTreeNode):
-    trajectories: Trajectory
-    last_done: jax.Array
-    last_obs: jax.Array
-
-
-@functools.partial(
-    jit, static_argnames=["actor", "critic", "env", "discrete", "normalize_observations"]
-)
+@jit
 def env_step(
     collection_state: TrajectoryCollectionState,
     step_index: jax.Array,
     rng: chex.PRNGKey,
-    num_envs: int,
-    actor: flax.linen.Module,
+    num_envs: Static[int],
+    actor: Static[flax.linen.Module],
     actor_params: FrozenVariableDict,
-    critic: flax.linen.Module,
+    critic: Static[flax.linen.Module],
     critic_params: FrozenVariableDict,
-    env: Environment,
-    env_params: gymnax.EnvParams,
-    discrete: bool,
-    normalize_observations: bool,
+    env: Static[Environment[gymnax.EnvState, TEnvParams]],
+    env_params: TEnvParams,
+    discrete: Static[bool],
+    normalize_observations: Static[bool],
 ):
     # Get keys for sampling action and stepping environment
     rng_steps = jax.random.fold_in(rng, 0)
@@ -434,32 +449,21 @@ def _normalize_obs(rms_state: RMSState, obs: jax.Array):
     return (obs - rms_state.mean) / jnp.sqrt(rms_state.var + 1e-8)
 
 
-@functools.partial(
-    jit,
-    static_argnames=(
-        "actor",
-        "critic",
-        "env",
-        "num_steps",
-        "num_envs",
-        "discrete",
-        "normalize_observations",
-    ),
-)
+@jit
 def collect_trajectories(
-    env: Environment[TEnvState, TEnvParams],
+    env: Static[Environment[TEnvState, TEnvParams]],
     env_params: TEnvParams,
     collection_state: TrajectoryCollectionState,
     *,
     rng: chex.PRNGKey,
-    actor: flax.linen.Module,
+    actor: Static[flax.linen.Module],
     actor_params: FrozenVariableDict,
-    critic: flax.linen.Module,
+    critic: Static[flax.linen.Module],
     critic_params: FrozenVariableDict,
-    num_envs: int,
-    num_steps: int,
-    discrete: bool,
-    normalize_observations: bool,
+    num_envs: Static[int],
+    num_steps: Static[int],
+    discrete: Static[bool],
+    normalize_observations: Static[bool],
 ):
     env_step_fn = functools.partial(
         env_step,
@@ -488,7 +492,7 @@ def collect_trajectories(
     return collection_state, trajectories_with_last
 
 
-class EnvDataset:  # IterableDataset):
+class EnvDataset(IterableDataset):
     def __init__(
         self,
         # learner: PPOLearner,
@@ -670,27 +674,10 @@ def get_advantages(
     return (advantage, transition_data.value), advantage
 
 
-class PPOState(flax.struct.PyTreeNode):
-    actor_ts: TrainState
-    critic_ts: TrainState
-    rng: chex.PRNGKey
-    rms_state: RMSState
-    data_collection_state: TrajectoryCollectionState
-
-
-class TrajectoryCollectionState(flax.struct.PyTreeNode):
-    last_obs: jax.Array
-    env_state: gymnax.EnvState
-    rms_state: RMSState
-    last_done: jax.Array
-    global_step: int
-    rng: chex.PRNGKey
-
-
-@functools.partial(jit, static_argnames="actor")
+@jit
 def actor_loss_fn(
     params: FrozenVariableDict,
-    actor: flax.linen.Module,
+    actor: Static[flax.linen.Module],
     batch: AdvantageMinibatch,
     clip_eps: float,
     ent_coef: float,
@@ -714,10 +701,10 @@ def actor_loss_fn(
     return pi_loss - ent_coef * entropy
 
 
-@functools.partial(jit, static_argnames="critic")
+@jit
 def critic_loss_fn(
     params: FrozenVariableDict,
-    critic: flax.linen.Module,
+    critic: Static[flax.linen.Module],
     batch: AdvantageMinibatch,
     clip_eps: float,
     vf_coef: float,
@@ -852,7 +839,7 @@ def main():
     num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
     trainer = lightning.Trainer(
         max_epochs=num_evals,
-        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
         devices=1,
     )
     trainer.fit(algo)
@@ -865,7 +852,7 @@ def train_fn(algo: JaxRlExample):
     num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
     trainer = lightning.Trainer(
         max_epochs=num_evals,
-        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
         devices=1,
     )
     trainer.fit(algo)

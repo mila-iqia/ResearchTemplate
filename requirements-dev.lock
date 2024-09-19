@@ -244,6 +244,7 @@ jax==0.4.33
     # via pytorch2jax
     # via research-project-template
     # via torch-jax-interop
+    # via xtils
 jax-cuda12-pjrt==0.4.33
     # via jax-cuda12-plugin
 jax-cuda12-plugin==0.4.33
@@ -772,6 +773,8 @@ wcmatch==9.0
     # via mkdocs-awesome-pages-plugin
 werkzeug==3.0.4
     # via flask
+xtils @ git+https://github.com/jessefarebro/xtils@b20807d980b059c598a77ff2ef05075594f49f63
+    # via research-project-template
 xxhash==3.5.0
     # via datasets
     # via evaluate

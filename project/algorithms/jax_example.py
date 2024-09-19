@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import os
 from collections.abc import Callable
 from typing import Concatenate, Literal, ParamSpec, TypeVar
 
@@ -87,6 +88,8 @@ class JaxExample(LightningModule):
         hp: HParams = HParams(),
     ):
         super().__init__()
+        os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+
         self.datamodule = datamodule
         self.hp = hp or self.HParams()
 

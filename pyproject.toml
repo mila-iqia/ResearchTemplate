@@ -34,6 +34,7 @@ dependencies = [
     "hydra-orion-sweeper>=1.6.4",
     "gymnax>=0.0.8",
     "rejax>=0.1.0",
+    "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
