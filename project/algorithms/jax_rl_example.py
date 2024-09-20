@@ -2,8 +2,9 @@ import dataclasses
 import functools
 import time
 import typing
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
+from pathlib import Path
 from typing import Any, ParamSpec, Protocol
 
 import chex
@@ -25,11 +26,13 @@ import torch_jax_interop
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment, TEnvParams, TEnvState
+from jax._src.sharding_impls import UNSPECIFIED, Device
 from lightning.pytorch.loggers.csv_logs import CSVLogger
 from rejax.algos.mixins import RMSState
 from torch.utils.data import DataLoader, IterableDataset
 from typing_extensions import Self, TypeVar, override
-from xtils.jitpp import Static, jit
+from xtils import jitpp
+from xtils.jitpp import Static
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_example import JaxFcNet
@@ -76,35 +79,39 @@ class PPOState(flax.struct.PyTreeNode):
     data_collection_state: TrajectoryCollectionState
 
 
-# def jit(
-#     fn: Callable[P, Out],
-#     in_shardings=UNSPECIFIED,
-#     out_shardings=UNSPECIFIED,
-#     static_argnums: int | Sequence[int] | None = None,
-#     static_argnames: str | Iterable[str] | None = None,
-#     donate_argnums: int | Sequence[int] | None = None,
-#     donate_argnames: str | Iterable[str] | None = None,
-#     keep_unused: bool = False,
-#     device: Device | None = None,
-#     backend: str | None = None,
-#     inline: bool = False,
-#     abstracted_axes: Any | None = None,
-# ) -> Callable[P, Out]:
-#     """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-#     return jax.jit(
-#         fn,
-#         in_shardings=in_shardings,
-#         out_shardings=out_shardings,
-#         static_argnums=static_argnums,
-#         static_argnames=static_argnames,
-#         donate_argnums=donate_argnums,
-#         donate_argnames=donate_argnames,
-#         keep_unused=keep_unused,
-#         device=device,
-#         backend=backend,
-#         inline=inline,
-#         abstracted_axes=abstracted_axes,
-#     )
+P = ParamSpec("P")
+Out = TypeVar("Out", covariant=True)
+
+
+def jit(
+    fn: Callable[P, Out],
+    in_shardings=UNSPECIFIED,
+    out_shardings=UNSPECIFIED,
+    static_argnums: int | Sequence[int] | None = None,
+    static_argnames: str | Iterable[str] | None = None,
+    donate_argnums: int | Sequence[int] | None = None,
+    donate_argnames: str | Iterable[str] | None = None,
+    keep_unused: bool = False,
+    device: Device | None = None,
+    backend: str | None = None,
+    inline: bool = False,
+    abstracted_axes: Any | None = None,
+) -> Callable[P, Out]:
+    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
+    return jax.jit(
+        fn,
+        in_shardings=in_shardings,
+        out_shardings=out_shardings,
+        static_argnums=static_argnums,
+        static_argnames=static_argnames,
+        donate_argnums=donate_argnums,
+        donate_argnames=donate_argnames,
+        keep_unused=keep_unused,
+        device=device,
+        backend=backend,
+        inline=inline,
+        abstracted_axes=abstracted_axes,
+    )
 
 
 class JaxRlExample(lightning.LightningModule):
@@ -253,8 +260,8 @@ class JaxRlExample(lightning.LightningModule):
         self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
         self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
 
-    @jit
-    def ppo_update(self: Static[Self], ts: PPOState, batch: AdvantageMinibatch):
+    @functools.partial(jit, static_argnames=["self"])
+    def ppo_update(self, ts: PPOState, batch: AdvantageMinibatch):
         actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
             ts.actor_ts.params,
             actor=self.actor,
@@ -278,7 +285,7 @@ class JaxRlExample(lightning.LightningModule):
 
         return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
 
-    @jit
+    @functools.partial(jit, static_argnames=["self"])
     def ppo_update_epoch(
         self: Static[Self], ts: PPOState, epoch_index: int, batch: AdvantageMinibatch
     ):
@@ -297,7 +304,7 @@ class JaxRlExample(lightning.LightningModule):
 
     def val_dataloader(self) -> Any:
         # todo: unsure what this should be yielding..
-        yield from range(10)
+        yield from range(2)
 
     def validation_step(self, batch: int, batch_index: int):
         # self.learner.eval_callback()
@@ -316,6 +323,37 @@ class JaxRlExample(lightning.LightningModule):
         assert isinstance(cumulative_rewards, jax.Array)
         self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
         self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
+
+    def on_train_epoch_end(self) -> None:
+        from gymnax.visualize import Visualizer
+
+        actor = make_actor(ts=self.train_state, hp=self.hp)
+        rng = jax.random.key(123)
+        state_seq, reward_seq = [], []
+        rng, rng_reset = jax.random.split(rng)
+        obs, env_state = self.env.reset(rng_reset, self.env_params)
+        num_steps = 5_000
+        for step in range(num_steps):
+            state_seq.append(env_state)
+            rng, rng_act, rng_step = jax.random.split(rng, 3)
+            action = actor(obs, rng_act)
+            next_obs, next_env_state, reward, done, info = self.env.step(
+                rng_step, env_state, action, self.env_params
+            )
+            reward_seq.append(reward)
+            # if done or t_counter >= 500:
+            #     break
+            obs = next_obs
+            env_state = next_env_state
+
+        cum_rewards = jnp.cumsum(jnp.array(reward_seq))
+        vis = Visualizer(self.env, self.env_params, state_seq, cum_rewards)
+        assert self.trainer.log_dir
+        gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
+        logger.info(f"Saving gif to {gif_path}")
+        print(f"Saving gif to {gif_path}")
+        vis.animate(str(gif_path))
+        return super().on_train_epoch_end()
 
     @override
     def configure_optimizers(self) -> Any:
@@ -362,7 +400,7 @@ class _Module(Protocol[P, Out]):
         apply = flax.linen.Module.apply
 
 
-@jit
+@jitpp.jit
 def env_step(
     collection_state: TrajectoryCollectionState,
     step_index: jax.Array,
@@ -449,7 +487,7 @@ def _normalize_obs(rms_state: RMSState, obs: jax.Array):
     return (obs - rms_state.mean) / jnp.sqrt(rms_state.var + 1e-8)
 
 
-@jit
+@jitpp.jit
 def collect_trajectories(
     env: Static[Environment[TEnvState, TEnvParams]],
     env_params: TEnvParams,
@@ -619,8 +657,9 @@ def init_train_state(
     )
 
 
+@jitpp.jit
 def shuffle_and_split(
-    data: AdvantageMinibatch, rng: chex.PRNGKey, num_minibatches: int
+    data: AdvantageMinibatch, rng: chex.PRNGKey, num_minibatches: Static[int]
 ) -> AdvantageMinibatch:
     assert data.trajectories.obs.shape
     iteration_size = data.trajectories.obs.shape[0] * data.trajectories.obs.shape[1]
@@ -633,12 +672,14 @@ def shuffle_and_split(
     return jax.tree.map(_shuffle_and_split_fn, data)
 
 
-def _shuffle_and_split(x: jax.Array, permutation: jax.Array, num_minibatches: int):
+@jitpp.jit
+def _shuffle_and_split(x: jax.Array, permutation: jax.Array, num_minibatches: Static[int]):
     x = x.reshape((x.shape[0] * x.shape[1], *x.shape[2:]))
     x = jnp.take(x, permutation, axis=0)
     return x.reshape(num_minibatches, -1, *x.shape[1:])
 
 
+@jitpp.jit
 def calculate_gae(
     trajectories: TrajectoryWithLastObs,
     last_val: jax.Array,
@@ -655,6 +696,7 @@ def calculate_gae(
     return advantages, advantages + trajectories.trajectories.value
 
 
+@jitpp.jit
 def get_advantages(
     advantage_and_next_value: tuple[jax.Array, jax.Array],
     transition: TrajectoryWithLastObs,
@@ -674,7 +716,7 @@ def get_advantages(
     return (advantage, transition_data.value), advantage
 
 
-@jit
+@jitpp.jit
 def actor_loss_fn(
     params: FrozenVariableDict,
     actor: Static[flax.linen.Module],
@@ -701,7 +743,7 @@ def actor_loss_fn(
     return pi_loss - ent_coef * entropy
 
 
-@jit
+@jitpp.jit
 def critic_loss_fn(
     params: FrozenVariableDict,
     critic: Static[flax.linen.Module],
@@ -777,7 +819,7 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         logger.info(
             f"Total transitions: {self.total_transitions}, total episodes: {self.total_episodes}"
         )
-        print(f"Steps per second: {steps_per_second}")
+        # print(f"Steps per second: {steps_per_second}")
         logger.info(f"Steps per second: {steps_per_second}")
         logger.info(f"Episodes per second: {episodes_per_second}")
         logger.info(f"Updates per second: {updates_per_second}")
@@ -794,9 +836,9 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
 
 
 def main():
-    env_id = "Pendulum-v1"
+    env_id = "CartPole-v1"
     # env_id = "halfcheetah"
-    env_id = "humanoid"
+    # env_id = "humanoid"
 
     from brax.envs import _envs as brax_envs
     from rejax.compat.brax2gymnax import create_brax
