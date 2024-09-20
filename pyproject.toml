@@ -32,7 +32,7 @@ dependencies = [
     # Only pinning this so that we can install the hydra-orion-sweeper.
     "kaleido==0.2.1",
     "hydra-orion-sweeper>=1.6.4",
-    "gymnax>=0.0.8",
+    "gymnax @ git+https://github.com/lebrice/gymnax@fix-classic-control-rendering",
     "rejax>=0.1.0",
     "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
     "gymnasium[classic-control]>=0.29.1",

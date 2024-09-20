@@ -1,11 +1,10 @@
 import dataclasses
 import functools
 import time
-import typing
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, ParamSpec, Protocol
+from typing import Any, ParamSpec
 
 import chex
 import flax.core
@@ -36,6 +35,7 @@ from xtils.jitpp import Static
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_example import JaxFcNet
+from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -121,8 +121,8 @@ class JaxRlExample(lightning.LightningModule):
     """
 
     class HParams(flax.struct.PyTreeNode):
+        # TODO: Need to rename a few of these to make it less confusing.
         num_epochs: int = flax.struct.field(pytree_node=False, default=8)
-
         num_envs: int = flax.struct.field(pytree_node=False, default=64)  # overwrite default
         num_steps: int = flax.struct.field(pytree_node=False, default=64)
         num_minibatches: int = flax.struct.field(pytree_node=False, default=16)
@@ -179,6 +179,7 @@ class JaxRlExample(lightning.LightningModule):
         self.critic: flax.linen.Module = _agents["critic"]
 
         iteration_steps = self.hp.num_envs * self.hp.num_steps
+        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
         self.num_train_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
         # todo: number of epochs:
         # num_evals = np.ceil(self.learner.total_timesteps / self.learner.eval_freq).astype(int)
@@ -324,7 +325,10 @@ class JaxRlExample(lightning.LightningModule):
         self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
         self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
 
-    def on_train_epoch_end(self) -> None:
+    def on_train_epoch_start(self) -> None:
+        if not isinstance(self.env, gymnax.environments.environment.Environment):
+            return
+
         from gymnax.visualize import Visualizer
 
         actor = make_actor(ts=self.train_state, hp=self.hp)
@@ -332,7 +336,7 @@ class JaxRlExample(lightning.LightningModule):
         state_seq, reward_seq = [], []
         rng, rng_reset = jax.random.split(rng)
         obs, env_state = self.env.reset(rng_reset, self.env_params)
-        num_steps = 5_000
+        num_steps = 100
         for step in range(num_steps):
             state_seq.append(env_state)
             rng, rng_act, rng_step = jax.random.split(rng, 3)
@@ -341,7 +345,7 @@ class JaxRlExample(lightning.LightningModule):
                 rng_step, env_state, action, self.env_params
             )
             reward_seq.append(reward)
-            # if done or t_counter >= 500:
+            # if done or step >= 500:
             #     break
             obs = next_obs
             env_state = next_env_state
@@ -385,19 +389,6 @@ class JaxRlExample(lightning.LightningModule):
 
         jax_self_device = torch_jax_interop.to_jax.torch_to_jax_device(torch_self_device)
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
-
-
-P = ParamSpec("P")
-Out = TypeVar("Out", covariant=True)
-
-
-class _Module(Protocol[P, Out]):
-    if typing.TYPE_CHECKING:
-
-        def __call__(self, *args: P.args, **kwagrs: P.kwargs) -> Out: ...
-
-        init = flax.linen.Module.init
-        apply = flax.linen.Module.apply
 
 
 @jitpp.jit
@@ -558,6 +549,9 @@ class EnvDataset(IterableDataset):
 
         _action_space = self.env.action_space(self.env_params)
         self.discrete = isinstance(_action_space, gymnax.environments.spaces.Discrete)
+
+    def __len__(self):
+        return self.num_train_iterations
 
     def __iter__(self):
         # env_rng = jax.random.key(self.current_epoch)
@@ -763,8 +757,8 @@ def critic_loss_fn(
     return vf_coef * value_loss
 
 
-def _actor(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, hp: JaxRlExample.HParams):
-    if hp.normalize_observations:
+def _actor(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, normalize_observations: bool):
+    if normalize_observations:
         obs = _normalize_obs(ts.rms_state, obs)
 
     obs = jnp.expand_dims(obs, 0)
@@ -773,7 +767,7 @@ def _actor(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, hp: JaxRlExample.HPa
 
 
 def make_actor(ts: PPOState, hp: JaxRlExample.HParams):
-    return functools.partial(_actor, ts=ts, hp=hp)
+    return functools.partial(_actor, ts=ts, normalize_observations=hp.normalize_observations)
 
 
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):
@@ -836,7 +830,7 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
 
 
 def main():
-    env_id = "CartPole-v1"
+    env_id = "Pendulum-v1"
     # env_id = "halfcheetah"
     # env_id = "humanoid"
 
@@ -877,16 +871,7 @@ def main():
         ),
     )
 
-    # todo: number of epochs:
-    num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
-    trainer = lightning.Trainer(
-        max_epochs=num_evals,
-        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
-        devices=1,
-    )
-    trainer.fit(algo)
-    # metrics = trainer.validate(algo)
-    print(trainer.logged_metrics)
+    train_fn(algo)
     return
 
 
@@ -896,6 +881,7 @@ def train_fn(algo: JaxRlExample):
         max_epochs=num_evals,
         logger=CSVLogger(save_dir="logs/jax_rl_debug"),
         devices=1,
+        default_root_dir=REPO_ROOTDIR / "logs",
     )
     trainer.fit(algo)
 

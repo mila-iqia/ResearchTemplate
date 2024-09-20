@@ -196,7 +196,7 @@ gym-notices==0.0.8
 gymnasium==0.29.1
     # via gymnax
     # via research-project-template
-gymnax==0.0.8
+gymnax @ git+https://github.com/lebrice/gymnax@67390db8bb3e0067219dd5ecafc154c183dd87a6
     # via rejax
     # via research-project-template
 huggingface-hub==0.25.0
