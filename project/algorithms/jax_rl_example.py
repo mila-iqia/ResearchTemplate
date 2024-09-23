@@ -1,3 +1,4 @@
+import contextlib
 import dataclasses
 import functools
 import time
@@ -26,7 +27,6 @@ from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment, TEnvParams, TEnvState
 from jax._src.sharding_impls import UNSPECIFIED, Device
-from lightning.pytorch.loggers.csv_logs import CSVLogger
 from rejax.algos.mixins import RMSState
 from torch.utils.data import DataLoader, IterableDataset
 from typing_extensions import Self, TypeVar, override
@@ -35,7 +35,6 @@ from xtils.jitpp import Static
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_example import JaxFcNet
-from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -75,7 +74,6 @@ class PPOState(flax.struct.PyTreeNode):
     actor_ts: TrainState
     critic_ts: TrainState
     rng: chex.PRNGKey
-    rms_state: RMSState
     data_collection_state: TrajectoryCollectionState
 
 
@@ -206,7 +204,6 @@ class JaxRlExample(lightning.LightningModule):
             hp=self.hp,
             train_state=self.train_state,
             num_train_iterations=self.num_train_iterations,
-            rollout_rng_key=self.rollout_rng_key,
         )
 
         return DataLoader(dataset, num_workers=0, batch_size=None, shuffle=False, collate_fn=None)
@@ -220,14 +217,6 @@ class JaxRlExample(lightning.LightningModule):
 
         trajectories = batch
 
-        last_val = self.critic.apply(ts.critic_ts.params, batch.last_obs)
-        assert isinstance(last_val, jax.Array)
-        last_val = jnp.where(batch.last_done, 0, last_val)
-        advantages, targets = calculate_gae(
-            trajectories, last_val, gamma=self.hp.gamma, gae_lambda=self.hp.gae_lambda
-        )
-        batch_with_advantage = AdvantageMinibatch(trajectories.trajectories, advantages, targets)
-
         # Perhaps instead of doing it this way, we could just get the losses, the grads, then put
         # them on the torch params .grad attribute (hopefully the .data is pointing to the jax
         # tensors, not a copy, so we dont use extra memory). This would perhaps make this
@@ -238,9 +227,9 @@ class JaxRlExample(lightning.LightningModule):
         start = time.perf_counter()
         with jax.disable_jit(self.hp.debug):
             ts, (actor_losses, critic_losses) = jax.lax.scan(
-                functools.partial(self.ppo_update_epoch, batch=batch_with_advantage),
+                functools.partial(self.ppo_update_epoch, trajectories=trajectories),
                 init=ts,
-                xs=jnp.arange(self.hp.num_epochs),
+                xs=jnp.arange(self.hp.num_epochs),  # type: ignore
                 length=self.hp.num_epochs,
             )
         duration = time.perf_counter() - start
@@ -260,6 +249,38 @@ class JaxRlExample(lightning.LightningModule):
 
         self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
         self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
+
+    @functools.partial(jit, static_argnames=["self", "iteration"])
+    def training_step_jax(self, ts: PPOState, iteration: int):
+        """Training step in pure jax (joined data collection + training).
+
+        *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
+        """
+        data_collection_state, trajectories = collect_trajectories(
+            env=self.env,
+            env_params=self.env_params,
+            collection_state=ts.data_collection_state,
+            actor=self.actor,
+            actor_params=ts.actor_ts.params,
+            critic=self.critic,
+            critic_params=ts.critic_ts.params,
+            num_envs=self.hp.num_envs,
+            num_steps=self.hp.num_steps,
+            discrete=False,
+            normalize_observations=self.hp.normalize_observations,
+        )
+        ts = ts.replace(data_collection_state=data_collection_state)
+
+        # batch = AdvantageMinibatch(trajectories.trajectories, advantages, targets)
+
+        ts, (actor_losses, critic_losses) = jax.lax.scan(
+            functools.partial(self.ppo_update_epoch, trajectories=trajectories),
+            init=ts,
+            xs=jnp.arange(self.hp.num_epochs),  # type: ignore
+            length=self.hp.num_epochs,
+        )
+
+        return ts
 
     @functools.partial(jit, static_argnames=["self"])
     def ppo_update(self, ts: PPOState, batch: AdvantageMinibatch):
@@ -286,12 +307,25 @@ class JaxRlExample(lightning.LightningModule):
 
         return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
 
-    @functools.partial(jit, static_argnames=["self"])
+    @functools.partial(jit, static_argnames=["self", "epoch_index"])
     def ppo_update_epoch(
-        self: Static[Self], ts: PPOState, epoch_index: int, batch: AdvantageMinibatch
+        self: Static[Self], ts: PPOState, epoch_index: int, trajectories: TrajectoryWithLastObs
     ):
-        # shuffle the data and split it into minibatches
         minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
+
+        last_val = self.critic.apply(ts.critic_ts.params, ts.data_collection_state.last_obs)
+        assert isinstance(last_val, jax.Array)
+        last_val = jnp.where(ts.data_collection_state.last_done, 0, last_val)
+        advantages, targets = calculate_gae(
+            trajectories, last_val, gamma=self.hp.gamma, gae_lambda=self.hp.gae_lambda
+        )
+        batch = AdvantageMinibatch(trajectories.trajectories, advantages, targets)
+        minibatches = shuffle_and_split(
+            batch, minibatch_rng, num_minibatches=self.hp.num_minibatches
+        )
+
+        # shuffle the data and split it into minibatches
+
         num_steps = self.hp.num_steps
         num_envs = self.hp.num_envs
         num_minibatches = self.hp.num_minibatches
@@ -328,35 +362,10 @@ class JaxRlExample(lightning.LightningModule):
     def on_train_epoch_start(self) -> None:
         if not isinstance(self.env, gymnax.environments.environment.Environment):
             return
-
-        from gymnax.visualize import Visualizer
-
         actor = make_actor(ts=self.train_state, hp=self.hp)
-        rng = jax.random.key(123)
-        state_seq, reward_seq = [], []
-        rng, rng_reset = jax.random.split(rng)
-        obs, env_state = self.env.reset(rng_reset, self.env_params)
-        num_steps = 100
-        for step in range(num_steps):
-            state_seq.append(env_state)
-            rng, rng_act, rng_step = jax.random.split(rng, 3)
-            action = actor(obs, rng_act)
-            next_obs, next_env_state, reward, done, info = self.env.step(
-                rng_step, env_state, action, self.env_params
-            )
-            reward_seq.append(reward)
-            # if done or step >= 500:
-            #     break
-            obs = next_obs
-            env_state = next_env_state
-
-        cum_rewards = jnp.cumsum(jnp.array(reward_seq))
-        vis = Visualizer(self.env, self.env_params, state_seq, cum_rewards)
-        assert self.trainer.log_dir
+        assert self.trainer.log_dir is not None
         gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
-        logger.info(f"Saving gif to {gif_path}")
-        print(f"Saving gif to {gif_path}")
-        vis.animate(str(gif_path))
+        visualize_gymnax(actor=actor, env=self.env, env_params=self.env_params, gif_path=gif_path)
         return super().on_train_epoch_end()
 
     @override
@@ -390,12 +399,97 @@ class JaxRlExample(lightning.LightningModule):
         jax_self_device = torch_jax_interop.to_jax.torch_to_jax_device(torch_self_device)
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
 
+    def visualize(self, ts: PPOState | None, gif_path: str | Path):
+        ts = ts or self.train_state
+        actor = make_actor(ts=ts, hp=self.hp)
+        visualize_gymnax(
+            actor=actor, env=self.env, env_params=self.env_params, gif_path=Path(gif_path)
+        )
+
+    @functools.partial(jax.jit, static_argnames=["self", "skip_initial_evaluation"])
+    def fit_pure_jax(
+        self,
+        rng: jax.Array,
+        train_state: PPOState | None = None,
+        skip_initial_evaluation: bool = False,
+    ) -> tuple[PPOState, jax.Array]:
+        """Training loop in pure jax (MUCH faster than using pytorch-lightning)."""
+        if train_state is None and rng is None:
+            raise ValueError("Either train_state or rng must be provided")
+
+        rng, networks_rng, env_rng = jax.random.split(rng, 3)
+
+        agent_kwargs = {}  # todo: use `self.hp.agent_kwargs` or similar?
+        activation = agent_kwargs.pop("activation", "swish")
+        agent_kwargs["activation"] = getattr(flax.linen, activation)
+
+        hidden_layer_sizes = agent_kwargs.pop("hidden_layer_sizes", (64, 64))
+        agent_kwargs["hidden_layer_sizes"] = tuple(hidden_layer_sizes)
+
+        _agents = rejax.PPO.create_agent(config={}, env=self.env, env_params=self.env_params)
+        actor: flax.linen.Module = _agents["actor"]
+        critic: flax.linen.Module = _agents["critic"]
+        # assert actor == self.actor
+        # assert critic == self.critic
+
+        # iteration_steps = self.hp.num_envs * self.hp.num_steps
+        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
+        # self.num_train_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
+        # todo: number of epochs:
+        # num_evals = np.ceil(self.learner.total_timesteps / self.learner.eval_freq).astype(int)
+
+        ts = train_state or init_train_state(
+            env=self.env,
+            env_params=self.env_params,
+            actor=actor,
+            critic=critic,
+            hp=self.hp,
+            networks_rng=networks_rng,
+            env_rng=env_rng,
+        )
+        from rejax.evaluate import evaluate
+
+        def eval_callback(algo: JaxRlExample, ts: PPOState, rng: chex.PRNGKey):
+            actor = make_actor(ts=ts, hp=algo.hp)
+            max_steps = algo.env_params.max_steps_in_episode
+            return evaluate(actor, rng, algo.env, algo.env_params, 128, max_steps)
+
+        initial_evaluation: jax.Array | None = None
+        if not skip_initial_evaluation:
+            initial_evaluation = eval_callback(self, ts, ts.rng)
+
+        def eval_iteration(ts: PPOState, unused):
+            # Run a few training iterations
+            iteration_steps = self.hp.num_envs * self.hp.num_steps
+            num_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
+            ts = jax.lax.fori_loop(
+                0,
+                num_iterations,
+                lambda iteration, ts: self.training_step_jax(ts, iteration),
+                ts,
+            )
+            rejax.PPO.train_iteration
+            # Run evaluation
+            return ts, eval_callback(self, ts, ts.rng)
+
+        num_evals = np.ceil(self.hp.total_timesteps / self.hp.eval_freq).astype(int)
+        ts, evaluation = jax.lax.scan(eval_iteration, ts, None, num_evals)
+
+        if not skip_initial_evaluation:
+            assert initial_evaluation is not None
+            evaluation = jax.tree_map(
+                lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
+                initial_evaluation,
+                evaluation,
+            )
+
+        return ts, evaluation
+
 
 @jitpp.jit
 def env_step(
     collection_state: TrajectoryCollectionState,
     step_index: jax.Array,
-    rng: chex.PRNGKey,
     num_envs: Static[int],
     actor: Static[flax.linen.Module],
     actor_params: FrozenVariableDict,
@@ -407,9 +501,9 @@ def env_step(
     normalize_observations: Static[bool],
 ):
     # Get keys for sampling action and stepping environment
-    rng_steps = jax.random.fold_in(rng, 0)
-    rng_action = jax.random.fold_in(rng, 1)
-
+    # doing it this way to try to get *exactly* the same rngs as in rejax.PPO.
+    rng, new_rngs = jax.random.split(collection_state.rng, 2)
+    rng_steps, rng_action = jax.random.split(new_rngs, 2)
     rng_steps = jax.random.split(rng_steps, num_envs)
 
     # Sample action
@@ -429,10 +523,11 @@ def env_step(
         action = jnp.clip(unclipped_action, low, high)
 
     # Step environment
-    #     return jax.vmap(self.env.reset, in_axes=(0, None))
-    # return jax.vmap(self.env.step, in_axes=(0, 0, 0, None))
     next_obs, env_state, reward, done, _ = jax.vmap(env.step, in_axes=(0, 0, 0, None))(
-        rng_steps, collection_state.env_state, action, env_params
+        key=rng_steps,
+        state=collection_state.env_state,
+        action=action,
+        params=env_params,
     )
 
     if normalize_observations:
@@ -451,6 +546,7 @@ def env_step(
         last_obs=next_obs,
         last_done=done,
         global_step=collection_state.global_step + num_envs,
+        rng=rng,
     )
     return collection_state, transition
 
@@ -484,7 +580,6 @@ def collect_trajectories(
     env_params: TEnvParams,
     collection_state: TrajectoryCollectionState,
     *,
-    rng: chex.PRNGKey,
     actor: Static[flax.linen.Module],
     actor_params: FrozenVariableDict,
     critic: Static[flax.linen.Module],
@@ -496,7 +591,6 @@ def collect_trajectories(
 ):
     env_step_fn = functools.partial(
         env_step,
-        rng=rng,
         num_envs=num_envs,
         actor=actor,
         actor_params=actor_params,
@@ -533,7 +627,6 @@ class EnvDataset(IterableDataset):
         hp: JaxRlExample.HParams,
         train_state: PPOState,
         num_train_iterations: int,
-        rollout_rng_key: chex.PRNGKey,
     ):
         # self.learner = learner
         self.current_epoch = current_epoch
@@ -545,7 +638,6 @@ class EnvDataset(IterableDataset):
         self.hp = hp
         self.train_state = train_state
         self.num_train_iterations = num_train_iterations
-        self.rollout_rng_key = rollout_rng_key
 
         _action_space = self.env.action_space(self.env_params)
         self.discrete = isinstance(_action_space, gymnax.environments.spaces.Discrete)
@@ -568,13 +660,12 @@ class EnvDataset(IterableDataset):
         #     last_done=jnp.zeros(self.learner.num_envs, dtype=bool),
         # )
         for batch_idx in range(self.num_train_iterations):
-            episode_key = jax.random.fold_in(self.rollout_rng_key, batch_idx)
+            # episode_key = jax.random.fold_in(self.collection_state.rng, batch_idx)
             start = time.perf_counter()
             self.collection_state, trajectories = collect_trajectories(
                 env=self.env,
                 env_params=self.env_params,
                 collection_state=self.collection_state,
-                rng=episode_key,
                 num_envs=self.hp.num_envs,
                 num_steps=self.hp.num_steps,
                 actor=self.actor,
@@ -617,7 +708,6 @@ def init_train_state(
     networks_rng: chex.PRNGKey,
     env_rng: chex.PRNGKey,
 ) -> PPOState:
-    obs_shape = (1, *env.observation_space(env_params).shape)
     rng, rng_actor, rng_critic = jax.random.split(networks_rng, 3)
     obs_ph = jnp.empty([1, *env.observation_space(env_params).shape])
 
@@ -643,7 +733,6 @@ def init_train_state(
     )
 
     return PPOState(
-        rms_state=RMSState.create(obs_shape),
         actor_ts=actor_ts,
         critic_ts=critic_ts,
         rng=rng,
@@ -757,17 +846,29 @@ def critic_loss_fn(
     return vf_coef * value_loss
 
 
-def _actor(obs: jax.Array, rng: chex.PRNGKey, ts: PPOState, normalize_observations: bool):
+def _actor(
+    obs: jax.Array,
+    rng: chex.PRNGKey,
+    actor_ts: TrainState,
+    rms_state: RMSState | None,
+    normalize_observations: bool,
+):
     if normalize_observations:
-        obs = _normalize_obs(ts.rms_state, obs)
+        assert rms_state is not None
+        obs = _normalize_obs(rms_state, obs)
 
     obs = jnp.expand_dims(obs, 0)
-    action = ts.actor_ts.apply_fn(ts.actor_ts.params, obs, rng, method="act")
+    action = actor_ts.apply_fn(actor_ts.params, obs, rng, method="act")
     return jnp.squeeze(action)
 
 
 def make_actor(ts: PPOState, hp: JaxRlExample.HParams):
-    return functools.partial(_actor, ts=ts, normalize_observations=hp.normalize_observations)
+    return functools.partial(
+        _actor,
+        actor_ts=ts.actor_ts,
+        rms_state=ts.data_collection_state.rms_state,
+        normalize_observations=hp.normalize_observations,
+    )
 
 
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):
@@ -829,6 +930,41 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         super().on_fit_end(trainer, pl_module)
 
 
+def visualize_gymnax(
+    actor: Callable[[jax.Array, chex.PRNGKey], jax.Array],
+    env: Environment[Any, TEnvParams],
+    env_params: TEnvParams,
+    gif_path: Path,
+    rng: chex.PRNGKey = jax.random.key(123),
+    num_steps: int = 100,
+):
+    from gymnax.visualize.visualizer import Visualizer
+
+    state_seq, reward_seq = [], []
+    rng, rng_reset = jax.random.split(rng)
+    obs, env_state = env.reset(rng_reset, env_params)
+    for step in range(num_steps):
+        state_seq.append(env_state)
+        rng, rng_act, rng_step = jax.random.split(rng, 3)
+        action = actor(obs, rng_act)
+        next_obs, next_env_state, reward, done, info = env.step(
+            key=rng_step, state=env_state, action=action, params=env_params
+        )
+        reward_seq.append(reward)
+        # if done or step >= 500:
+        #     break
+        obs = next_obs
+        env_state = next_env_state
+
+    cum_rewards = jnp.cumsum(jnp.array(reward_seq))
+    vis = Visualizer(env, env_params, state_seq, cum_rewards)
+    # gif_path = Path(log_dir) / f"epoch_{current_epoch}.gif"
+    logger.info(f"Saving gif to {gif_path}")
+    # print(f"Saving gif to {gif_path}")
+    with contextlib.redirect_stdout(None):
+        vis.animate(str(gif_path))
+
+
 def main():
     env_id = "Pendulum-v1"
     # env_id = "halfcheetah"
@@ -846,7 +982,6 @@ def main():
             batch_size=None,
             backend="generalized",
         )
-
     else:
         env, env_params = gymnax.make(env_id=env_id)
 
@@ -870,22 +1005,90 @@ def main():
             normalize_observations=True,
         ),
     )
-
     train_fn(algo)
+
     return
 
 
 def train_fn(algo: JaxRlExample):
-    num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
-    trainer = lightning.Trainer(
-        max_epochs=num_evals,
-        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
-        devices=1,
-        default_root_dir=REPO_ROOTDIR / "logs",
+    # num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
+
+    print("Compiling...")
+    start = time.perf_counter()
+    rng = jax.random.key(123)
+    train_fn = jax.jit(algo.fit_pure_jax).lower(rng).compile()
+    print(f"Finished compiling in {time.perf_counter() - start} seconds.")
+
+    print("Training...")
+    start = time.perf_counter()
+    train_state, evaluations = train_fn(rng)
+    print(f"Finished training in {time.perf_counter() - start} seconds.")
+    assert isinstance(train_state, PPOState)
+    algo.visualize(train_state, gif_path=Path("pure_jax.gif"))
+
+    # Fit with pytorch-lightning.
+    # trainer = lightning.Trainer(
+    #     max_epochs=num_evals,
+    #     logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+    #     devices=1,
+    #     default_root_dir=REPO_ROOTDIR / "logs",
+    # )
+    # # algo.fit(rng)
+    # actor = functools.partial(
+    #     _actor,
+    #     actor_ts=train_state.actor_ts,
+    #     rms_state=train_state.darms_state,
+    #     normalize_observations=algo.hp.normalize_observations,
+    # )
+
+    # visualize_gymnax(actor=actor, env=env, env_params=env_params, gif_path=Path("rejax.gif"))
+
+
+def train_rejax():
+    env, env_params = gymnax.make(env_id="Pendulum-v1")
+    algo = rejax.PPO.create(
+        env=env,
+        env_params=env_params,
+        num_envs=100,
+        num_steps=100,
+        num_epochs=10,
+        num_minibatches=10,
+        learning_rate=0.001,
+        max_grad_norm=10,
+        total_timesteps=150_000,
+        eval_freq=2000,
+        gamma=0.995,
+        gae_lambda=0.95,
+        clip_eps=0.2,
+        ent_coef=0.0,
+        vf_coef=0.5,
+        normalize_observations=True,
     )
-    trainer.fit(algo)
+    print("Compiling...")
+    start = time.perf_counter()
+    rng = jax.random.key(123)
+    train_fn = jax.jit(algo.train).lower(rng).compile()
+    print(f"Compiled in {time.perf_counter() - start} seconds.")
+    print("Training...")
+    start = time.perf_counter()
+    ts, eval = train_fn(rng)
+    print(f"Finished training in {time.perf_counter() - start} seconds.")
+
+    actor_ts = ts.actor_ts.replace(apply_fn=algo.actor.apply)
+    actor = functools.partial(
+        _actor,
+        actor_ts=actor_ts,
+        rms_state=ts.rms_state,
+        normalize_observations=algo.normalize_observations,
+    )
+
+    rejax.PPO
+    visualize_gymnax(actor=actor, env=env, env_params=env_params, gif_path=Path("rejax.gif"))
+
+    # print(ts)
 
 
 if __name__ == "__main__":
+    # train_rejax()
     main()
     exit()
