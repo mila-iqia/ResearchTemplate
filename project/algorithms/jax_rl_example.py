@@ -183,7 +183,7 @@ class JaxRlExample(lightning.LightningModule):
         self.env_params = env_params
         self.hp = hp or self.HParams()
         self.save_hyperparameters(
-            {"hp": dataclasses.asdict(self.hp)}, ignore=["env", "env_params"]
+            {"hp": dataclasses.asdict(self.hp), "rng": rng}, ignore=["env", "env_params", "rng"]
         )
 
         _agents = rejax.PPO.create_agent(config={}, env=self.env, env_params=self.env_params)
@@ -262,7 +262,8 @@ class JaxRlExample(lightning.LightningModule):
         ts = self.train_state
         start = time.perf_counter()
         with jax.disable_jit(self.hp.debug):
-            ts, (actor_losses, critic_losses) = training_step_jax(self.args, batch_idx, ts)
+            algo_struct = self.args
+            ts, (actor_losses, critic_losses) = training_step_jax(algo_struct, batch_idx, ts)
         duration = time.perf_counter() - start
 
         self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
@@ -431,7 +432,7 @@ def fit_pure_jax(
 
     if not skip_initial_evaluation:
         assert initial_evaluation is not None
-        evaluation = jax.tree_map(
+        evaluation = jax.tree.map(
             lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
             initial_evaluation,
             evaluation,
@@ -461,8 +462,8 @@ def training_epoch(algo: _PPOArgs, ts: PPOState, unused):
     return ts, eval_callback(algo, ts, ts.rng)
 
 
-@functools.partial(jit, static_argnames=["iteration"])
-def training_step_jax(algo: _PPOArgs, iteration: int, ts: PPOState):
+@jit
+def training_step_jax(algo: PPOArgs, iteration: int, ts: PPOState):
     """Training step in pure jax (joined data collection + training).
 
     *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
@@ -520,9 +521,9 @@ def ppo_update(algo: _PPOArgs, ts: PPOState, batch: AdvantageMinibatch):
     return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
 
 
-@functools.partial(jit, static_argnames=["algo", "epoch_index"])
+@jit  # , static_argnames=["epoch_index"])
 def ppo_update_epoch(
-    algo: _PPOArgs, ts: PPOState, epoch_index: int, trajectories: TrajectoryWithLastObs
+    algo: PPOArgs, ts: PPOState, epoch_index: int, trajectories: TrajectoryWithLastObs
 ):
     minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
 
@@ -780,8 +781,9 @@ def init_train_state(algo: _PPOArgs, rng: chex.PRNGKey) -> PPOState:
     actor_ts = TrainState.create(apply_fn=algo.actor.apply, params=actor_params, tx=tx)
     critic_ts = TrainState.create(apply_fn=algo.critic.apply, params=critic_params, tx=tx)
 
+    env_rng, reset_rng = jax.random.split(env_rng)
     obs, env_state = jax.vmap(algo.env.reset, in_axes=(0, None))(
-        jax.random.split(algo.hp.env_rng, algo.hp.num_envs), algo.env_params
+        jax.random.split(reset_rng, algo.hp.num_envs), algo.env_params
     )
 
     collection_state = TrajectoryCollectionState(
@@ -1068,26 +1070,20 @@ def main():
             normalize_observations=True,
         ),
     )
-    # train_pure_jax(algo)
+    train_pure_jax(algo)
     # train_rejax()
-    train_lightning(algo)
+    # train_lightning(algo)
     return
 
 
 def train_pure_jax(algo: JaxRlExample):
     import jax._src.deprecations
 
-    # jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
+    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
     print("Compiling...")
     start = time.perf_counter()
     rng = jax.random.key(123)
-    algo_struct = PPOArgs(
-        env=algo.env,
-        env_params=algo.env_params,
-        actor=algo.actor,
-        critic=algo.critic,
-        hp=algo.hp,
-    )
+    algo_struct = algo.args
 
     train_fn = jax.jit(fit_pure_jax).lower(algo_struct, rng).compile()
     print(f"Finished compiling in {time.perf_counter() - start} seconds.")
