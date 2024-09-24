@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import functools
+import operator
 import time
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger as get_logger
@@ -28,7 +29,9 @@ import torch_jax_interop
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment, TEnvParams, TEnvState
+from gymnax.visualize.visualizer import Visualizer
 from jax._src.sharding_impls import UNSPECIFIED, Device
+from matplotlib import pyplot as plt
 from rejax.algos.mixins import RMSState
 from rejax.evaluate import evaluate
 from rejax.networks import DiscretePolicy, GaussianPolicy, VNetwork
@@ -154,6 +157,9 @@ class _NetworkConfig(TypedDict):
     agent_kwargs: _AgentKwargs
 
 
+_EnvParams = TypeVar("_EnvParams", bound=gymnax.EnvParams)
+
+
 class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     """PPO algorithm based on `rejax.PPO`.
 
@@ -178,9 +184,9 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     @classmethod
     def create_networks(
         cls,
-        config: _NetworkConfig,
         env: Environment[gymnax.EnvState, TEnvParams],
         env_params: TEnvParams,
+        config: _NetworkConfig,
     ):
         # Equivalent to:
         # return rejax.PPO.create_agent(config, env, env_params)
@@ -192,8 +198,8 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     @classmethod
     def create_actor(
         cls,
-        env: Environment[gymnax.EnvState, TEnvParams],
-        env_params: TEnvParams,
+        env: Environment[Any, _EnvParams],
+        env_params: _EnvParams,
         activation: str | Callable[[jax.Array], jax.Array] = "swish",
         hidden_layer_sizes: Sequence[int] = (64, 64),
         **actor_kwargs,
@@ -228,7 +234,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
         **critic_kwargs,
     ) -> VNetwork:
         activation_fn: Callable[[jax.Array], jax.Array] = (
-            getattr(flax.linen, activation) if not callable(activation) else activation
+            getattr(flax.linen, activation) if isinstance(activation, str) else activation
         )
         hidden_layer_sizes = tuple(hidden_layer_sizes)
         return VNetwork(
@@ -236,7 +242,6 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
         )
 
     def init_train_state(self, rng: chex.PRNGKey) -> PPOState[TEnvState]:
-        # todo: the rng shouldn't be in the hparams, but in the state.
         rng, networks_rng, env_rng = jax.random.split(rng, 3)
 
         rng_actor, rng_critic = jax.random.split(networks_rng, 2)
@@ -272,22 +277,22 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
             data_collection_state=collection_state,
         )
 
-    @functools.partial(jax.jit, static_argnames=["skip_initial_evaluation"])
-    def fit_pure_jax(
+    @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
+    def train(
         self,
         rng: jax.Array,
         train_state: PPOState | None = None,
         skip_initial_evaluation: bool = False,
     ) -> tuple[PPOState, tuple[jax.Array, jax.Array]]:
-        """Training loop in pure jax (MUCH faster than using pytorch-lightning)."""
+        """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
+
+        Unfolded version of `rejax.PPO.train`.
+
+        Training loop in pure jax (a lot faster than when using pytorch-lightning).
+        """
         if train_state is None and rng is None:
             raise ValueError("Either train_state or rng must be provided")
 
-        # iteration_steps = self.hp.num_envs * self.hp.num_steps
-        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
-        # self.num_train_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
-        # todo: number of epochs:
-        # num_evals = np.ceil(self.learner.total_timesteps / self.learner.eval_freq).astype(int)
         ts = train_state if train_state is not None else self.init_train_state(rng)
 
         initial_evaluation: tuple[jax.Array, jax.Array] | None = None
@@ -304,12 +309,15 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
 
         if not skip_initial_evaluation:
             assert initial_evaluation is not None
-            evaluation = jax.tree.map(
-                lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
-                initial_evaluation,
-                evaluation,
+            evaluation = (
+                jnp.concatenate((jnp.expand_dims(initial_evaluation[0], 0), evaluation[0])),
+                jnp.concatenate((jnp.expand_dims(initial_evaluation[1], 0), evaluation[1])),
             )
-            assert isinstance(evaluation, tuple) and len(evaluation) == 2
+            # evaluation = jax.tree.map(
+            #     lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
+            #     initial_evaluation,
+            #     evaluation,
+            # )
 
         return ts, evaluation
 
@@ -356,8 +364,9 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
             xs=jnp.arange(self.hp.num_epochs),  # type: ignore
             length=self.hp.num_epochs,
         )
-        jax.debug.print("actor_losses {}: {}", iteration, actor_losses.mean())
-        jax.debug.print("critic_losses {}: {}", iteration, critic_losses.mean())
+        # todo: perhaps we could have a callback that updates a progress bar?
+        # jax.debug.print("actor_losses {}: {}", iteration, actor_losses.mean())
+        # jax.debug.print("critic_losses {}: {}", iteration, critic_losses.mean())
 
         return ts, (actor_losses, critic_losses)
 
@@ -517,6 +526,12 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
             self.env.action_space(self.env_params), gymnax.environments.spaces.Discrete
         )
 
+    def visualize(self, ts: PPOState, gif_path: str | Path):
+        actor = make_actor(ts=ts, hp=self.hp)
+        render_episode(
+            actor=actor, env=self.env, env_params=self.env_params, gif_path=Path(gif_path)
+        )
+
 
 def has_discrete_actions(
     env: Environment[gymnax.EnvState, TEnvParams], env_params: TEnvParams
@@ -545,193 +560,6 @@ def _update_rms(rms_state: RMSState, obs: jax.Array, batched: bool = True):
 
 def _normalize_obs(rms_state: RMSState, obs: jax.Array):
     return (obs - rms_state.mean) / jnp.sqrt(rms_state.var + 1e-8)
-
-
-## Pytorch-Lightning wrapper around this learner:
-
-
-class JaxRlExample(lightning.LightningModule):
-    """Example of a RL algorithm written in Jax, in this case, PPO.
-
-    This is an un-folded version of `rejax.PPO`.
-    """
-
-    def __init__(
-        self,
-        env: gymnax.environments.environment.Environment[gymnax.EnvState, TEnvParams],
-        env_params: TEnvParams,
-        hp: PPOHParams | None = None,
-        rng: chex.PRNGKey = jax.random.key(0),
-    ):
-        # https://github.com/keraJLi/rejax/blob/a1428ad3d661e31985c5c19460cec70bc95aef6e/configs/gymnax/pendulum.yaml#L1
-
-        super().__init__()
-        self.env = env
-        self.env_params = env_params
-        self.hp = hp or PPOHParams()
-        self.save_hyperparameters(
-            {"hp": dataclasses.asdict(self.hp), "rng": rng}, ignore=["env", "env_params", "rng"]
-        )
-        _agents = rejax.PPO.create_agent(config={}, env=self.env, env_params=self.env_params)
-        self.actor: flax.linen.Module = _agents["actor"]
-        self.critic: flax.linen.Module = _agents["critic"]
-
-        # todo: number of epochs:
-        # num_evals = np.ceil(self.learner.total_timesteps / self.learner.eval_freq).astype(int)
-
-        self.train_state = self.learner.init_train_state(rng=rng)
-
-        self.actor_params = torch.nn.ParameterList(
-            jax.tree.leaves(
-                jax.tree.map(
-                    torch_jax_interop.to_torch.jax_to_torch_tensor,
-                    self.train_state.actor_ts.params,
-                )
-            )
-        )
-        self.critic_params = torch.nn.ParameterList(
-            jax.tree.leaves(
-                jax.tree.map(
-                    torch_jax_interop.to_torch.jax_to_torch_tensor,
-                    self.train_state.critic_ts.params,
-                )
-            )
-        )
-
-        self.automatic_optimization = False
-
-        iteration_steps = self.hp.num_envs * self.hp.num_steps
-        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
-        self.num_train_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
-
-    @override
-    def train_dataloader(self) -> Iterable[Trajectory]:
-        # BUG: what's probably happening is that the dataloader keeps getting batches with the
-        # initial train state!
-        from torch.utils.data import TensorDataset
-
-        dataset = TensorDataset(torch.arange(self.num_train_iterations))
-        return DataLoader(dataset, batch_size=None, num_workers=0, shuffle=False, collate_fn=None)
-
-    @property
-    def learner(self) -> PPOLearner:
-        # Returns a view of the same components, as a "learner".
-        return PPOLearner(
-            env=self.env,
-            env_params=self.env_params,
-            actor=self.actor,
-            critic=self.critic,
-            hp=self.hp,
-        )
-
-    @override
-    def training_step(self, batch: torch.Tensor, batch_idx: int):
-        # shapes = jax.tree.map(jnp.shape, batch)
-        # logger.debug(f"Shapes: {shapes}")
-
-        ts = self.train_state
-        start = time.perf_counter()
-        with jax.disable_jit(self.hp.debug):
-            algo_struct = self.learner
-            ts, (actor_losses, critic_losses) = algo_struct.training_step(batch_idx, ts)
-        duration = time.perf_counter() - start
-        logger.debug(f"Training step took {duration:.1f} seconds.")
-
-        self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
-        self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
-
-        updates_per_second = (self.hp.num_epochs * self.hp.num_minibatches) / duration
-        self.log("train/updates_per_second", updates_per_second, logger=True, prog_bar=True)
-        minibatch_size = (self.hp.num_envs * self.hp.num_steps) // self.hp.num_minibatches
-        samples_per_update = minibatch_size
-        self.log(
-            "train/samples_per_second",
-            updates_per_second * samples_per_update,
-            logger=True,
-            prog_bar=True,
-            on_step=True,
-        )
-
-        # for jax_param, torch_param in zip(
-        #     jax.tree.leaves(self.train_state.actor_ts.params), self.actor_params
-        # ):
-        #     torch_param.set_(torch_jax_interop.to_torch.jax_to_torch_tensor(jax_param))
-
-        # for jax_param, torch_param in zip(
-        #     jax.tree.leaves(self.train_state.critic_ts.params), self.critic_params
-        # ):
-        #     torch_param.set_(torch_jax_interop.to_torch.jax_to_torch_tensor(jax_param))
-
-        return
-
-    def val_dataloader(self) -> Any:
-        # todo: unsure what this should be yielding..
-        yield from range(2)
-
-    def validation_step(self, batch: int, batch_index: int):
-        # self.learner.eval_callback()
-        episode_lengths, cumulative_rewards = self.learner.eval_callback(
-            ts=self.train_state, rng=self.train_state.rng
-        )
-        self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
-        self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
-
-    def on_train_epoch_start(self) -> None:
-        if not isinstance(self.env, gymnax.environments.environment.Environment):
-            return
-        actor = make_actor(ts=self.train_state, hp=self.hp)
-        assert self.trainer.log_dir is not None
-        gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
-        visualize_gymnax(
-            actor=actor,
-            env=self.env,
-            env_params=self.env_params,
-            gif_path=gif_path,
-            num_steps=200,
-        )
-        return super().on_train_epoch_end()
-
-    @override
-    def configure_optimizers(self) -> Any:
-        # todo: Note, this one isn't used atm!
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-    @override
-    def configure_callbacks(self) -> list[lightning.Callback]:
-        return [RlThroughputCallback()]
-
-    @override
-    def transfer_batch_to_device(
-        self, batch: TrajectoryWithLastObs | int, device: torch.device, dataloader_idx: int
-    ) -> TrajectoryWithLastObs | int:
-        if isinstance(batch, int):
-            # FIXME: valid dataloader currently just yields ints, not trajectories.
-            return batch
-        if isinstance(batch, list) and len(batch) == 1:
-            # FIXME: train dataloader currently just yields ints, not trajectories.
-            return batch
-
-        _batch_jax_devices = batch.trajectories.obs.devices()
-        assert len(_batch_jax_devices) == 1
-        batch_jax_device = _batch_jax_devices.pop()
-        torch_self_device = device
-        if (
-            torch_self_device.type == "cuda"
-            and "cuda" in str(batch_jax_device)
-            and (torch_self_device.index == -1 or torch_self_device.index == batch_jax_device.id)
-        ):
-            # All good, both are on the same GPU.
-            return batch
-
-        jax_self_device = torch_jax_interop.to_jax.torch_to_jax_device(torch_self_device)
-        return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
-
-    def visualize(self, ts: PPOState | None, gif_path: str | Path):
-        ts = ts or self.train_state
-        actor = make_actor(ts=ts, hp=self.hp)
-        visualize_gymnax(
-            actor=actor, env=self.env, env_params=self.env_params, gif_path=Path(gif_path)
-        )
 
 
 @functools.partial(jit, static_argnames=["num_minibatches"])
@@ -865,6 +693,199 @@ def make_actor(ts: PPOState, hp: PPOHParams):
     )
 
 
+## Pytorch-Lightning wrapper around this learner:
+
+
+class JaxRlExample(lightning.LightningModule):
+    """Example of a RL algorithm written in Jax, in this case, PPO.
+
+    This is an un-folded version of `rejax.PPO`.
+    """
+
+    def __init__(
+        self,
+        env: gymnax.environments.environment.Environment[gymnax.EnvState, TEnvParams],
+        env_params: TEnvParams,
+        actor: flax.linen.Module | None = None,
+        critic: flax.linen.Module | None = None,
+        hp: PPOHParams | None = None,
+        rng: chex.PRNGKey = jax.random.key(0),
+    ):
+        # https://github.com/keraJLi/rejax/blob/a1428ad3d661e31985c5c19460cec70bc95aef6e/configs/gymnax/pendulum.yaml#L1
+
+        super().__init__()
+        self.env = env
+        self.env_params = env_params
+        self.hp = hp or PPOHParams()
+        self.actor: flax.linen.Module = actor or PPOLearner.create_actor(
+            env=self.env, env_params=self.env_params
+        )
+        self.critic: flax.linen.Module = critic or PPOLearner.create_critic(
+            env=self.env, env_params=self.env_params
+        )
+
+        self.save_hyperparameters(
+            {"hp": dataclasses.asdict(self.hp), "rng": rng}, ignore=["env", "env_params", "rng"]
+        )
+
+        # todo: number of epochs:
+        # num_evals = np.ceil(self.learner.total_timesteps / self.learner.eval_freq).astype(int)
+
+        self.train_state = self.learner.init_train_state(rng=rng)
+
+        self.actor_params = torch.nn.ParameterList(
+            jax.tree.leaves(
+                jax.tree.map(
+                    torch_jax_interop.to_torch.jax_to_torch_tensor,
+                    self.train_state.actor_ts.params,
+                )
+            )
+        )
+        self.critic_params = torch.nn.ParameterList(
+            jax.tree.leaves(
+                jax.tree.map(
+                    torch_jax_interop.to_torch.jax_to_torch_tensor,
+                    self.train_state.critic_ts.params,
+                )
+            )
+        )
+
+        self.automatic_optimization = False
+
+        iteration_steps = self.hp.num_envs * self.hp.num_steps
+        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
+        self.num_train_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
+
+    @property
+    def learner(self) -> PPOLearner:
+        # Returns a view of the same components, as a "learner".
+        return PPOLearner(
+            env=self.env,
+            env_params=self.env_params,
+            actor=self.actor,
+            critic=self.critic,
+            hp=self.hp,
+        )
+
+    @override
+    def training_step(self, batch: torch.Tensor, batch_idx: int):
+        # shapes = jax.tree.map(jnp.shape, batch)
+        # logger.debug(f"Shapes: {shapes}")
+
+        ts = self.train_state
+        start = time.perf_counter()
+        with jax.disable_jit(self.hp.debug):
+            algo_struct = self.learner
+            ts, (actor_losses, critic_losses) = algo_struct.training_step(batch_idx, ts)
+        duration = time.perf_counter() - start
+        logger.debug(f"Training step took {duration:.1f} seconds.")
+
+        self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
+        self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
+
+        updates_per_second = (self.hp.num_epochs * self.hp.num_minibatches) / duration
+        self.log("train/updates_per_second", updates_per_second, logger=True, prog_bar=True)
+        minibatch_size = (self.hp.num_envs * self.hp.num_steps) // self.hp.num_minibatches
+        samples_per_update = minibatch_size
+        self.log(
+            "train/samples_per_second",
+            updates_per_second * samples_per_update,
+            logger=True,
+            prog_bar=True,
+            on_step=True,
+        )
+
+        # for jax_param, torch_param in zip(
+        #     jax.tree.leaves(self.train_state.actor_ts.params), self.actor_params
+        # ):
+        #     torch_param.set_(torch_jax_interop.to_torch.jax_to_torch_tensor(jax_param))
+
+        # for jax_param, torch_param in zip(
+        #     jax.tree.leaves(self.train_state.critic_ts.params), self.critic_params
+        # ):
+        #     torch_param.set_(torch_jax_interop.to_torch.jax_to_torch_tensor(jax_param))
+
+        return
+
+    @override
+    def train_dataloader(self) -> Iterable[Trajectory]:
+        # BUG: what's probably happening is that the dataloader keeps getting batches with the
+        # initial train state!
+        from torch.utils.data import TensorDataset
+
+        assert False, (self.device, self.trainer.accelerator)
+        dataset = TensorDataset(torch.arange(self.num_train_iterations, device=self.device))
+        return DataLoader(dataset, batch_size=None, num_workers=0, shuffle=False, collate_fn=None)
+
+    def val_dataloader(self) -> Any:
+        # todo: unsure what this should be yielding..
+        from torch.utils.data import TensorDataset
+
+        dataset = TensorDataset(torch.arange(1, device=self.device))
+        return DataLoader(dataset, batch_size=None, num_workers=0, shuffle=False, collate_fn=None)
+
+    def validation_step(self, batch: int, batch_index: int):
+        # self.learner.eval_callback()
+        # return  # skip the rest for now while we compare the performance?
+        episode_lengths, cumulative_rewards = self.learner.eval_callback(
+            ts=self.train_state, rng=self.train_state.rng
+        )
+        self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
+        self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
+
+    def on_train_epoch_start(self) -> None:
+        if not isinstance(self.env, gymnax.environments.environment.Environment):
+            return
+        assert self.trainer.log_dir is not None
+        gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
+        self.learner.visualize(ts=self.train_state, gif_path=gif_path)
+        return  # skip the rest for now while we compare the performance
+        actor = make_actor(ts=self.train_state, hp=self.hp)
+        render_episode(
+            actor=actor,
+            env=self.env,
+            env_params=self.env_params,
+            gif_path=gif_path,
+            num_steps=200,
+        )
+        return super().on_train_epoch_end()
+
+    @override
+    def configure_optimizers(self) -> Any:
+        # todo: Note, this one isn't used atm!
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
+
+    @override
+    def configure_callbacks(self) -> list[lightning.Callback]:
+        return [RlThroughputCallback()]
+
+    @override
+    def transfer_batch_to_device(
+        self, batch: TrajectoryWithLastObs | int, device: torch.device, dataloader_idx: int
+    ) -> TrajectoryWithLastObs | int:
+        if isinstance(batch, int):
+            # FIXME: valid dataloader currently just yields ints, not trajectories.
+            return batch
+        if isinstance(batch, list) and len(batch) == 1:
+            # FIXME: train dataloader currently just yields ints, not trajectories.
+            return batch
+
+        _batch_jax_devices = batch.trajectories.obs.devices()
+        assert len(_batch_jax_devices) == 1
+        batch_jax_device = _batch_jax_devices.pop()
+        torch_self_device = device
+        if (
+            torch_self_device.type == "cuda"
+            and "cuda" in str(batch_jax_device)
+            and (torch_self_device.index == -1 or torch_self_device.index == batch_jax_device.id)
+        ):
+            # All good, both are on the same GPU.
+            return batch
+
+        jax_self_device = torch_jax_interop.to_jax.torch_to_jax_device(torch_self_device)
+        return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
+
+
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):
     """A callback to measure the throughput of RL algorithms."""
 
@@ -926,7 +947,7 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         super().on_fit_end(trainer, pl_module)
 
 
-def visualize_gymnax(
+def render_episode(
     actor: Callable[[jax.Array, chex.PRNGKey], jax.Array],
     env: Environment[Any, TEnvParams],
     env_params: TEnvParams,
@@ -934,8 +955,6 @@ def visualize_gymnax(
     rng: chex.PRNGKey = jax.random.key(123),
     num_steps: int = 200,
 ):
-    from gymnax.visualize.visualizer import Visualizer
-
     state_seq, reward_seq = [], []
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
@@ -959,18 +978,22 @@ def visualize_gymnax(
     # print(f"Saving gif to {gif_path}")
     with contextlib.redirect_stderr(None):
         vis.animate(str(gif_path))
+    plt.close(vis.fig)
 
 
 def main():
     env_id = "Pendulum-v1"
+    env_id = gymnax.environments.classic_control.pendulum.Pendulum
     # env_id = "halfcheetah"
     # env_id = "humanoid"
 
     from brax.envs import _envs as brax_envs
     from rejax.compat.brax2gymnax import create_brax
 
+    env: Environment[gymnax.EnvState, gymnax.EnvParams]
+    env_params: gymnax.EnvParams
     if env_id in brax_envs:
-        env, env_params = create_brax(
+        env, env_params = create_brax(  # type: ignore
             env_id,
             episode_length=1000,
             action_repeat=1,
@@ -978,12 +1001,17 @@ def main():
             batch_size=None,
             backend="generalized",
         )
+    elif isinstance(env_id, str):
+        env, env_params = gymnax.make(env_id=env_id)  # type: ignore
     else:
-        env, env_params = gymnax.make(env_id=env_id)
+        env = env_id()  # type: ignore
+        env_params = env.default_params
 
-    algo = JaxRlExample(
+    algo = PPOLearner(
         env=env,
         env_params=env_params,
+        actor=PPOLearner.create_actor(env, env_params),
+        critic=PPOLearner.create_critic(),
         hp=PPOHParams(
             num_envs=100,
             num_steps=100,
@@ -1001,79 +1029,138 @@ def main():
             normalize_observations=True,
         ),
     )
-    train_pure_jax(algo)
-    # train_rejax()
-    # train_lightning(algo)
+    # train_pure_jax(algo, backend="cpu")
+    # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend="cpu")
+    # train_lightning(algo, accelerator="cpu")
+    rng = jax.random.key(123)
+
+    train_pure_jax(algo, rng=rng, backend=None, n_agents=100)
+    # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend=None, rng=rng)
+    # train_lightning(algo, accelerator="cuda", devices=1)
+
     return
 
 
-def train_pure_jax(algo: JaxRlExample):
-    import jax._src.deprecations
-
-    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
+def train_pure_jax(
+    algo: PPOLearner, rng: chex.PRNGKey, n_agents: int | None = None, backend: str | None = None
+):
+    print("Pure Jax (ours)")
     print("Compiling...")
     start = time.perf_counter()
-    rng = jax.random.key(123)
-    algo_struct = algo.learner
 
-    train_fn = jax.jit(algo_struct.fit_pure_jax).lower(rng).compile()
+    train_fn = algo.train
+
+    if n_agents:
+        train_fn = jax.vmap(algo.train)
+        rng = jax.random.split(rng, n_agents)
+
+    train_fn = jax.jit(train_fn, backend=backend).lower(rng).compile()
     print(f"Finished compiling in {time.perf_counter() - start} seconds.")
 
-    print("Training...")
+    print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
     start = time.perf_counter()
     train_state, evaluations = train_fn(rng)
+    jax.block_until_ready((train_state, evaluations))
     print(f"Finished training in {time.perf_counter() - start} seconds.")
     assert isinstance(train_state, PPOState)
-    algo.visualize(train_state, gif_path=Path("pure_jax.gif"))
+    episode_lengths, cumulative_rewards = evaluations
+
+    if n_agents is None:
+        algo.visualize(ts=train_state, gif_path=Path("pure_jax.gif"))
+    else:
+        # Visualize the first agent
+        first_agent_ts: PPOState = jax.tree.map(operator.itemgetter(0), train_state)
+        algo.visualize(ts=first_agent_ts, gif_path=Path("pure_jax_first.gif"))
+        last_evals = cumulative_rewards[:, -1]
+        best_agent = jnp.argmax(last_evals)
+        print(f"Best agent is #{best_agent}, with rng: {rng[best_agent]}")
+
+        best_agent_ts: PPOState = jax.tree.map(operator.itemgetter(best_agent), train_state)
+        algo.visualize(ts=best_agent_ts, gif_path=Path("pure_jax_best.gif"))
+
+        algo.visualize(
+            ts=first_agent_ts.replace(
+                actor_ts=train_state.actor_ts.replace(
+                    params=jax.tree.map(
+                        lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
+                        train_state.actor_ts.params,
+                    )
+                ),
+                critic_ts=train_state.critic_ts.replace(
+                    params=jax.tree.map(
+                        lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
+                        train_state.critic_ts.params,
+                    )
+                ),
+            ),
+            gif_path=Path("pure_jax_avg.gif"),
+        )
 
 
-def train_lightning(algo: JaxRlExample):
+def train_lightning(
+    algo: PPOLearner, accelerator: str = "auto", devices: int | list[int] | str = "auto"
+):
     # Fit with pytorch-lightning.
+    print("Lightning")
 
-    from lightning.pytorch.loggers.csv_logs import CSVLogger
+    module = JaxRlExample(
+        env=algo.env, env_params=algo.env_params, actor=algo.actor, critic=algo.critic, hp=algo.hp
+    )
 
     from project.utils.env_vars import REPO_ROOTDIR
 
     num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
     trainer = lightning.Trainer(
         max_epochs=num_evals,
-        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
-        devices=1,
+        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        accelerator=accelerator,
+        devices=devices,
         default_root_dir=REPO_ROOTDIR / "logs",
+        # reload_dataloaders_every_n_epochs=1,  # todo: use this if we end up making a generator in train_dataloader
+        barebones=True,
     )
-    trainer.fit(algo)
+    start = time.perf_counter()
+    trainer.fit(module)
+    print(f"Trained in {time.perf_counter() - start:.1f} seconds.")
+    train_state = module.train_state
+    module.visualize(train_state, gif_path=Path("lightning.gif"))
 
-    # visualize_gymnax(actor=actor, env=env, env_params=env_params, gif_path=Path("rejax.gif"))
 
-
-def train_rejax():
-    env, env_params = gymnax.make(env_id="Pendulum-v1")
+def train_rejax(
+    env: Environment[gymnax.EnvState, TEnvParams],
+    env_params: TEnvParams,
+    hp: PPOHParams,
+    rng: chex.PRNGKey,
+    backend: str | None = None,
+):
+    print("Rejax")
+    # env, env_params = gymnax.make(env_id="Pendulum-v1")
     algo = rejax.PPO.create(
         env=env,
         env_params=env_params,
-        num_envs=100,
-        num_steps=100,
-        num_epochs=10,
-        num_minibatches=10,
-        learning_rate=0.001,
-        max_grad_norm=10,
-        total_timesteps=150_000,
-        eval_freq=2000,
-        gamma=0.995,
-        gae_lambda=0.95,
-        clip_eps=0.2,
-        ent_coef=0.0,
-        vf_coef=0.5,
-        normalize_observations=True,
+        num_envs=hp.num_envs,  # =100,
+        num_steps=hp.num_steps,  # =100,
+        num_epochs=hp.num_epochs,  # =10,
+        num_minibatches=hp.num_minibatches,  # =10,
+        learning_rate=hp.learning_rate,  # =0.001,
+        max_grad_norm=hp.max_grad_norm,  # =10,
+        total_timesteps=hp.total_timesteps,  # =150_000,
+        eval_freq=hp.eval_freq,  # =2000,
+        gamma=hp.gamma,  # =0.995,
+        gae_lambda=hp.gae_lambda,  # =0.95,
+        clip_eps=hp.clip_eps,  # =0.2,
+        ent_coef=hp.ent_coef,  # =0.0,
+        vf_coef=hp.vf_coef,  # =0.5,
+        normalize_observations=hp.normalize_observations,  # =True,
     )
     print("Compiling...")
     start = time.perf_counter()
-    rng = jax.random.key(123)
-    train_fn = jax.jit(algo.train).lower(rng).compile()
+    train_fn = jax.jit(algo.train, backend=backend).lower(rng).compile()
     print(f"Compiled in {time.perf_counter() - start} seconds.")
     print("Training...")
     start = time.perf_counter()
     ts, eval = train_fn(rng)
+    jax.block_until_ready(ts)
     print(f"Finished training in {time.perf_counter() - start} seconds.")
 
     actor_ts = ts.actor_ts.replace(apply_fn=algo.actor.apply)
@@ -1083,7 +1170,7 @@ def train_rejax():
         rms_state=ts.rms_state,
         normalize_observations=algo.normalize_observations,
     )
-    visualize_gymnax(actor=actor, env=env, env_params=env_params, gif_path=Path("rejax.gif"))
+    render_episode(actor=actor, env=env, env_params=env_params, gif_path=Path("rejax.gif"))
 
     # print(ts)
 
