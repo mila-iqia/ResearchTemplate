@@ -767,9 +767,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
     # num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
     training_steps_per_epoch: int
 
-    # algo: PPOLearner
     # training_step_fn: Callable[[TrainState, int], tuple[TrainState, Any]]
-    callbacks: Sequence[lightning.Callback] = flax.struct.field(
+    callbacks: Sequence[lightning.Callback | JaxCallback] = flax.struct.field(
         pytree_node=False, default_factory=list
     )
 
@@ -777,9 +776,9 @@ class JaxTrainer(flax.struct.PyTreeNode):
         pytree_node=False, default=None
     )
 
-    accelerator: str = flax.struct.field(pytree_node=False, default="auto")
-    strategy: str = flax.struct.field(pytree_node=False, default="auto")
-    devices: int | str = flax.struct.field(pytree_node=False, default="auto")
+    # accelerator: str = flax.struct.field(pytree_node=False, default="auto")
+    # strategy: str = flax.struct.field(pytree_node=False, default="auto")
+    # devices: int | str = flax.struct.field(pytree_node=False, default="auto")
 
     # min_epochs: int
 
@@ -789,6 +788,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
     default_root_dir: str | Path | None = flax.struct.field(
         pytree_node=False, default=""
     )  # ${hydra:runtime.output_dir}
+
+    _mutable_state: dict = flax.struct.field(pytree_node=False, default_factory=dict)
 
     @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
     def fit(
@@ -807,25 +808,40 @@ class JaxTrainer(flax.struct.PyTreeNode):
         if train_state is None and rng is None:
             raise ValueError("Either train_state or rng must be provided")
 
-        ts = train_state if train_state is not None else algo.init_train_state(rng)
+        for callback in self.callbacks:
+            jax.experimental.io_callback(
+                functools.partial(callback.setup, stage="fit"),
+                (),
+                self,
+                algo,
+                **({"ts": train_state} if isinstance(callback, JaxCallback) else {}),
+            )
+            jax.experimental.io_callback(
+                callback.on_fit_start,
+                (),
+                self,
+                algo,
+                *([train_state] if isinstance(callback, JaxCallback) else []),
+            )
+
+        if self.logger:
+            self.logger.log_hyperparams(dataclasses.asdict(algo.hp))
+
+        train_state = train_state if train_state is not None else algo.init_train_state(rng)
 
         initial_evaluation: EvalMetrics | None = None
         if not skip_initial_evaluation:
-            initial_evaluation = algo.eval_callback(ts, ts.rng)
+            initial_evaluation = algo.eval_callback(train_state, train_state.rng)
 
-        ts, evaluations = jax.lax.scan(
+        train_state, evaluations = jax.lax.scan(
             functools.partial(self.epoch_loop, algo=algo),
-            init=ts,
+            init=train_state,
             xs=None,
             length=self.max_epochs,
         )
 
         if not skip_initial_evaluation:
             assert initial_evaluation is not None
-            # evaluations = (
-            #     jnp.concatenate((jnp.expand_dims(initial_evaluation[0], 0), evaluations[0])),
-            #     jnp.concatenate((jnp.expand_dims(initial_evaluation[1], 0), evaluations[1])),
-            # )
             evaluations = jax.tree.map(
                 lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
                 initial_evaluation,
@@ -834,14 +850,28 @@ class JaxTrainer(flax.struct.PyTreeNode):
             assert isinstance(evaluations, EvalMetrics)
 
         if self.logger is not None:
+            jax.block_until_ready((train_state, evaluations))
+            # jax.debug.print("Saving...")
+            jax.experimental.io_callback(self.logger.save, ())
             jax.experimental.io_callback(
                 functools.partial(self.logger.finalize, status="success"), ()
             )
+        for callback in self.callbacks:
+            jax.experimental.io_callback(
+                callback.on_fit_end,
+                (),
+                self,
+                algo,
+                *([train_state] if isinstance(callback, JaxCallback) else []),
+            )
 
-        return ts, evaluations
+        return train_state, evaluations
 
     @jit
     def epoch_loop(self, ts: PPOState, epoch: int, algo: PPOLearner):
+        jax.experimental.io_callback(
+            functools.partial(self._mutable_state.__setitem__, "epoch"), (), epoch
+        )
         ts = self.training_epoch(ts=ts, epoch=epoch, algo=algo)
         eval_metrics = self.eval_epoch(ts=ts, epoch=epoch, algo=algo)
         return ts, eval_metrics
@@ -853,7 +883,14 @@ class JaxTrainer(flax.struct.PyTreeNode):
         # num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
 
         for callback in self.callbacks:
-            jax.experimental.io_callback(callback.on_train_epoch_start, (), self, algo)
+            jax.experimental.io_callback(
+                callback.on_train_epoch_start,
+                (),
+                self,
+                algo,
+                # We also pass the training state as an argument for these callbacks.
+                *([ts] if isinstance(callback, JaxCallback) else []),
+            )
 
         ts = jax.lax.fori_loop(
             0,
@@ -864,20 +901,41 @@ class JaxTrainer(flax.struct.PyTreeNode):
         )
 
         for callback in self.callbacks:
-            jax.experimental.io_callback(callback.on_train_epoch_end, (), self, algo)
+            jax.experimental.io_callback(
+                callback.on_train_epoch_end,
+                (),
+                self,
+                algo,
+                # We also pass the training state as an argument for these callbacks.
+                *([ts] if isinstance(callback, JaxCallback) else []),
+            )
 
         return ts
 
     @jit
     def eval_epoch(self, ts: PPOState, epoch: int, algo: PPOLearner):
         for callback in self.callbacks:
-            jax.experimental.io_callback(callback.on_validation_epoch_start, (), self, algo)
+            jax.experimental.io_callback(
+                callback.on_validation_epoch_start,
+                (),
+                self,
+                algo,
+                # We also pass the training state as an argument for these callbacks.
+                *([ts] if isinstance(callback, JaxCallback) else []),
+            )
 
         # todo: split up into eval batch and eval step?
         eval_metrics = algo.eval_callback(ts=ts, rng=ts.rng)
 
         for callback in self.callbacks:
-            jax.experimental.io_callback(callback.on_validation_epoch_end, (), self, algo)
+            jax.experimental.io_callback(
+                callback.on_validation_epoch_end,
+                (),
+                self,
+                algo,
+                # We also pass the training state as an argument for these callbacks.
+                *([ts] if isinstance(callback, JaxCallback) else []),
+            )
 
         return eval_metrics
 
@@ -892,7 +950,14 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         for callback in self.callbacks:
             jax.experimental.io_callback(
-                callback.on_train_batch_start, (), self, algo, batch, batch_idx
+                callback.on_train_batch_start,
+                (),
+                self,
+                algo,
+                batch,
+                batch_idx,
+                # We also pass the training state as an argument for these callbacks.
+                *([ts] if isinstance(callback, JaxCallback) else []),
             )
 
         ts, metrics = algo.training_step(batch_idx=batch_idx, ts=ts, batch=batch)
@@ -902,7 +967,15 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         for callback in self.callbacks:
             jax.experimental.io_callback(
-                callback.on_train_batch_end, (), self, algo, metrics, batch, batch_idx
+                callback.on_train_batch_end,
+                (),
+                self,
+                algo,
+                metrics,
+                batch,
+                batch_idx,
+                # We also pass the training state as an argument for these callbacks.
+                *([ts] if isinstance(callback, JaxCallback) else []),
             )
 
         # todo: perhaps we could have a callback that updates a progress bar?
@@ -910,6 +983,32 @@ class JaxTrainer(flax.struct.PyTreeNode):
         # jax.debug.print("critic_losses {}: {}", iteration, critic_losses.mean())
         # dropping metrics for now.
         return ts
+
+    # Compat for RichProgressBar
+    @property
+    def is_global_zero(self) -> bool:
+        return True
+
+    @property
+    def num_training_batches(self) -> int:
+        return self.training_steps_per_epoch
+
+    @property
+    def current_epoch(self) -> int:
+        return self._mutable_state["epoch"]
+
+    @property
+    def loggers(self) -> list[lightning.pytorch.loggers.Logger]:
+        if isinstance(self.logger, list | tuple):
+            return list(self.logger)
+        if self.logger is not None:
+            return [self.logger]
+        return []
+
+    @property
+    def progress_bar_metrics(self) -> dict[str, float]:
+        # return self._logger_connector.progress_bar_metrics
+        return {}
 
 
 class JaxRlExample(lightning.LightningModule):
@@ -1103,14 +1202,54 @@ class JaxRlExample(lightning.LightningModule):
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
 
 
-class VisualizeEveryEpochCallback(lightning.Callback):
-    @override
-    def on_train_epoch_start(
-        self, trainer: lightning.Trainer, pl_module: lightning.LightningModule
-    ):
-        assert self.trainer.log_dir is not None
-        gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
-        self.learner.visualize(ts=self.train_state, gif_path=gif_path)
+Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode)
+
+
+class JaxCallback(Generic[Ts], flax.struct.PyTreeNode):
+    def setup(self, trainer: JaxTrainer, module: PPOLearner, stage: str, ts: Ts): ...
+    def on_fit_start(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_fit_end(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_train_batch_start(
+        self,
+        trainer: JaxTrainer,
+        pl_module: PPOLearner,
+        batch: Any,
+        batch_index: int,
+        ts: Ts,
+    ) -> None: ...
+    def on_train_batch_end(
+        self,
+        trainer: JaxTrainer,
+        module: PPOLearner,
+        outputs: Any,
+        batch: Any,
+        batch_index: int,
+        ts: Ts,
+    ) -> None: ...
+    def on_train_epoch_start(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_train_epoch_end(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_validation_epoch_start(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_validation_epoch_end(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+
+
+class RenderEpisodesCallback(JaxCallback[PPOState]):
+    on_every_epoch: int = False
+
+    def on_fit_start(self, trainer: JaxTrainer, module: PPOLearner, ts: PPOState):
+        if not self.on_every_epoch:
+            return
+        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        assert log_dir is not None
+        gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
+        module.visualize(ts=ts, gif_path=gif_path)
+
+    def on_train_epoch_start(self, trainer: JaxTrainer, module: PPOLearner, ts: PPOState):
+        if not self.on_every_epoch:
+            return
+        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        assert log_dir is not None
+        gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
+        module.visualize(ts=ts, gif_path=gif_path)
 
 
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):
@@ -1248,14 +1387,19 @@ def train_pure_jax(
     num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
     training_steps_per_epoch: int = num_iterations
 
+    from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
     from lightning.pytorch.loggers import CSVLogger
 
     trainer = JaxTrainer(
         max_epochs=max_epochs,
         training_steps_per_epoch=training_steps_per_epoch,
-        logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        logger=CSVLogger(save_dir="logs/jax_rl_debug", flush_logs_every_n_steps=1),
         default_root_dir=REPO_ROOTDIR / "logs",
-        callbacks=[RlThroughputCallback()],
+        callbacks=[
+            RlThroughputCallback(),
+            RenderEpisodesCallback(on_every_epoch=False),
+            RichProgressBar(),
+        ],
     )
 
     train_fn = functools.partial(trainer.fit, algo)
@@ -1274,6 +1418,7 @@ def train_pure_jax(
     print(f"Finished training in {time.perf_counter() - start} seconds.")
     assert isinstance(train_state, PPOState)
     assert isinstance(evaluations, EvalMetrics)
+
     if n_agents is None:
         algo.visualize(ts=train_state, gif_path=Path("pure_jax.gif"))
     else:
