@@ -825,7 +825,11 @@ class JaxTrainer(flax.struct.PyTreeNode):
             )
 
         if self.logger:
-            self.logger.log_hyperparams(dataclasses.asdict(algo.hp))
+            jax.experimental.io_callback(
+                lambda algo: self.logger and self.logger.log_hyperparams(hparams_to_dict(algo)),
+                (),
+                algo,
+            )
 
         train_state = train_state if train_state is not None else algo.init_train_state(rng)
 
@@ -833,6 +837,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
         if not skip_initial_evaluation:
             initial_evaluation = algo.eval_callback(train_state, train_state.rng)
 
+        # Run the epoch loop `self.max_epoch` times.
         train_state, evaluations = jax.lax.scan(
             functools.partial(self.epoch_loop, algo=algo),
             init=train_state,
@@ -852,7 +857,6 @@ class JaxTrainer(flax.struct.PyTreeNode):
         if self.logger is not None:
             jax.block_until_ready((train_state, evaluations))
             # jax.debug.print("Saving...")
-            jax.experimental.io_callback(self.logger.save, ())
             jax.experimental.io_callback(
                 functools.partial(self.logger.finalize, status="success"), ()
             )
@@ -869,6 +873,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
     @jit
     def epoch_loop(self, ts: PPOState, epoch: int, algo: PPOLearner):
+        # todo: unsure if this is the right way to go. The problem is that some lightning
+        # try to get the "trainer.current_epoch".
         jax.experimental.io_callback(
             functools.partial(self._mutable_state.__setitem__, "epoch"), (), epoch
         )
@@ -945,7 +951,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
         """
-        # todo:
+        # todo: rename to `get_training_batch`?
         ts, batch = algo.get_batch(ts, batch_idx=batch_idx)
 
         for callback in self.callbacks:
@@ -978,10 +984,6 @@ class JaxTrainer(flax.struct.PyTreeNode):
                 *([ts] if isinstance(callback, JaxCallback) else []),
             )
 
-        # todo: perhaps we could have a callback that updates a progress bar?
-        # jax.debug.print("actor_losses {}: {}", iteration, actor_losses.mean())
-        # jax.debug.print("critic_losses {}: {}", iteration, critic_losses.mean())
-        # dropping metrics for now.
         return ts
 
     # Compat for RichProgressBar
@@ -1007,8 +1009,24 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
     @property
     def progress_bar_metrics(self) -> dict[str, float]:
+        # todo
         # return self._logger_connector.progress_bar_metrics
         return {}
+
+    @property
+    def log_dir(self) -> Path:
+        # copied from lightning.Trainer
+        if len(self.loggers) > 0:
+            if not isinstance(
+                self.loggers[0],
+                lightning.pytorch.loggers.TensorBoardLogger | lightning.pytorch.loggers.CSVLogger,
+            ):
+                dirpath = self.loggers[0].save_dir
+            else:
+                dirpath = self.loggers[0].log_dir
+        else:
+            dirpath = self.default_root_dir
+        return dirpath
 
 
 class JaxRlExample(lightning.LightningModule):
@@ -1390,6 +1408,7 @@ def train_pure_jax(
     from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
     from lightning.pytorch.loggers import CSVLogger
 
+    lightning.Trainer.log_dir
     trainer = JaxTrainer(
         max_epochs=max_epochs,
         training_steps_per_epoch=training_steps_per_epoch,
@@ -1449,6 +1468,15 @@ def train_pure_jax(
             ),
             gif_path=Path("pure_jax_avg.gif"),
         )
+
+
+def hparams_to_dict(hp: PPOLearner) -> dict:
+    """Convert the learner struct to a serializable dict."""
+    val = dataclasses.asdict(
+        jax.tree.map(lambda arr: arr.tolist(), hp, is_leaf=lambda x: isinstance(x, jnp.ndarray))
+    )
+    val = jax.tree.map(lambda v: getattr(v, "__name__", str(v)) if callable(v) else v, val)
+    return val
 
 
 def train_lightning(
