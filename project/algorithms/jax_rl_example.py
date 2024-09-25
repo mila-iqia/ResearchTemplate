@@ -22,7 +22,12 @@ import jax.experimental
 import jax.numpy as jnp
 import lightning
 import lightning.pytorch
+import lightning.pytorch.callbacks
+import lightning.pytorch.callbacks.progress
+import lightning.pytorch.callbacks.progress.rich_progress
 import lightning.pytorch.loggers
+import lightning.pytorch.trainer
+import lightning.pytorch.trainer.states
 import numpy as np
 import optax
 import rejax
@@ -789,8 +794,6 @@ class JaxTrainer(flax.struct.PyTreeNode):
         pytree_node=False, default=""
     )  # ${hydra:runtime.output_dir}
 
-    _mutable_state: dict = flax.struct.field(pytree_node=False, default_factory=dict)
-
     @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
     def fit(
         self,
@@ -809,6 +812,9 @@ class JaxTrainer(flax.struct.PyTreeNode):
             raise ValueError("Either train_state or rng must be provided")
 
         for callback in self.callbacks:
+            if isinstance(callback, lightning.pytorch.callbacks.ProgressBar):
+                jax.experimental.io_callback(callback.enable, ())
+
             jax.experimental.io_callback(
                 functools.partial(callback.setup, stage="fit"),
                 (),
@@ -818,6 +824,15 @@ class JaxTrainer(flax.struct.PyTreeNode):
             )
             jax.experimental.io_callback(
                 callback.on_fit_start,
+                (),
+                self,
+                algo,
+                *([train_state] if isinstance(callback, JaxCallback) else []),
+            )
+            # Seems to be the one that is currently used by the progress bar.
+            # todo: Should this be called within each epoch before / after the training portion?
+            jax.experimental.io_callback(
+                callback.on_train_start,
                 (),
                 self,
                 algo,
@@ -873,11 +888,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
     @jit
     def epoch_loop(self, ts: PPOState, epoch: int, algo: PPOLearner):
-        # todo: unsure if this is the right way to go. The problem is that some lightning
-        # try to get the "trainer.current_epoch".
-        jax.experimental.io_callback(
-            functools.partial(self._mutable_state.__setitem__, "epoch"), (), epoch
-        )
+        # todo: Some lightning callbacks try to get the "trainer.current_epoch".
         ts = self.training_epoch(ts=ts, epoch=epoch, algo=algo)
         eval_metrics = self.eval_epoch(ts=ts, epoch=epoch, algo=algo)
         return ts, eval_metrics
@@ -892,7 +903,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
             jax.experimental.io_callback(
                 callback.on_train_epoch_start,
                 (),
-                self,
+                self.replace(_current_epoch=epoch),
                 algo,
                 # We also pass the training state as an argument for these callbacks.
                 *([ts] if isinstance(callback, JaxCallback) else []),
@@ -910,7 +921,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
             jax.experimental.io_callback(
                 callback.on_train_epoch_end,
                 (),
-                self,
+                self.replace(_current_epoch=epoch),
                 algo,
                 # We also pass the training state as an argument for these callbacks.
                 *([ts] if isinstance(callback, JaxCallback) else []),
@@ -924,7 +935,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
             jax.experimental.io_callback(
                 callback.on_validation_epoch_start,
                 (),
-                self,
+                self.replace(_current_epoch=epoch),
                 algo,
                 # We also pass the training state as an argument for these callbacks.
                 *([ts] if isinstance(callback, JaxCallback) else []),
@@ -937,7 +948,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
             jax.experimental.io_callback(
                 callback.on_validation_epoch_end,
                 (),
-                self,
+                self.replace(_current_epoch=epoch),
                 algo,
                 # We also pass the training state as an argument for these callbacks.
                 *([ts] if isinstance(callback, JaxCallback) else []),
@@ -969,7 +980,16 @@ class JaxTrainer(flax.struct.PyTreeNode):
         ts, metrics = algo.training_step(batch_idx=batch_idx, ts=ts, batch=batch)
 
         if self.logger is not None:
-            jax.experimental.io_callback(self.logger.log_metrics, (), metrics, batch_idx)
+            lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar
+            jax.experimental.io_callback(
+                lambda metrics, batch_index: self.logger
+                and self.logger.log_metrics(
+                    jax.tree.map(lambda v: v.mean(), metrics), batch_index
+                ),
+                (),
+                metrics,
+                batch_idx,
+            )
 
         for callback in self.callbacks:
             jax.experimental.io_callback(
@@ -995,9 +1015,12 @@ class JaxTrainer(flax.struct.PyTreeNode):
     def num_training_batches(self) -> int:
         return self.training_steps_per_epoch
 
+    _current_epoch: int = flax.struct.field(pytree_node=False, default=0)
+
     @property
     def current_epoch(self) -> int:
-        return self._mutable_state["epoch"]
+        jax.debug.print("Epoch is {}", self._current_epoch)
+        return self._current_epoch
 
     @property
     def loggers(self) -> list[lightning.pytorch.loggers.Logger]:
@@ -1012,6 +1035,39 @@ class JaxTrainer(flax.struct.PyTreeNode):
         # todo
         # return self._logger_connector.progress_bar_metrics
         return {}
+
+    @property
+    def progress_bar_callback(self) -> lightning.pytorch.callbacks.ProgressBar | None:
+        for c in self.callbacks:
+            if isinstance(c, lightning.pytorch.callbacks.ProgressBar):
+                return c
+        return None
+
+    @property
+    def state(self):
+        from lightning.pytorch.trainer.states import RunningStage, TrainerFn, TrainerStatus
+
+        return lightning.pytorch.trainer.states.TrainerState(
+            fn=TrainerFn.FITTING,
+            status=TrainerStatus.RUNNING,
+            stage=RunningStage.TRAINING,
+        )
+        #     self._trainer.state.fn != "fit"
+        #     or self._trainer.sanity_checking
+        #     or self._trainer.progress_bar_callback.train_progress_bar_id != task.id
+        # ):
+
+    @property
+    def sanity_checking(self) -> bool:
+        from lightning.pytorch.trainer.states import RunningStage
+
+        return self.state.stage == RunningStage.SANITY_CHECKING
+
+    @property
+    def training(self) -> bool:
+        from lightning.pytorch.trainer.states import RunningStage
+
+        return self.state.stage == RunningStage.TRAINING
 
     @property
     def log_dir(self) -> Path:
@@ -1227,6 +1283,8 @@ class JaxCallback(Generic[Ts], flax.struct.PyTreeNode):
     def setup(self, trainer: JaxTrainer, module: PPOLearner, stage: str, ts: Ts): ...
     def on_fit_start(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
     def on_fit_end(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_train_start(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
+    def on_train_end(self, trainer: JaxTrainer, module: PPOLearner, ts: Ts): ...
     def on_train_batch_start(
         self,
         trainer: JaxTrainer,
