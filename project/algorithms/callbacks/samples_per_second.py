@@ -1,5 +1,5 @@
 import time
-from typing import Literal
+from typing import Any, Literal
 
 from lightning import LightningModule, Trainer
 from torch import Tensor
@@ -57,9 +57,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         if phase in self.last_step_times:
             elapsed = now - self.last_step_times[phase]
             batch_size = self.get_num_samples(batch)
-            pl_module.log(
+            self.log(
                 f"{phase}/samples_per_second",
                 batch_size / elapsed,
+                module=pl_module,
+                trainer=trainer,
                 prog_bar=True,
                 on_step=True,
                 on_epoch=True,
@@ -68,6 +70,22 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
             )
             # todo: support other kinds of batches
         self.last_step_times[phase] = now
+
+    def log(
+        self,
+        name: str,
+        value: Any,
+        module: LightningModule | Any,
+        trainer: Trainer | Any,
+        **kwargs,
+    ):
+        # Used to possibly customize how the values are logged (e.g. for non-LightningModules).
+        # By default, uses the LightningModule.log method.
+        return module.log(
+            name,
+            value,
+            **kwargs,
+        )
 
     def get_num_samples(self, batch: BatchType) -> int:
         if is_sequence_of(batch, Tensor):
@@ -96,9 +114,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
             key = "ups"
         else:
             key = f"optimizer_{opt_idx}/ups"
-        pl_module.log(
+        self.log(
             key,
             updates_per_second,
+            module=pl_module,
+            trainer=trainer,
             prog_bar=False,
             on_step=True,
         )
