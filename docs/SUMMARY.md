@@ -8,6 +8,7 @@
     * reference/*
   * Examples
     * examples/*
+    * [Profiling your code](examples/profiling.ipynb)
 * [Related projects](related.md)
 * [Getting Help](help.md)
 * [Contributing](contributing.md)
