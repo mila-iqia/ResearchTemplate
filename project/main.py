@@ -52,7 +52,6 @@ def main(dict_config: DictConfig) -> dict:
         add_headers=False,
     )
     config: Config = resolve_dictconfig(dict_config)
-    # assert False, OmegaConf.resolve(dict_config)["datamodule"]
     experiment: Experiment = setup_experiment(config)
 
     metric_name, objective, _metrics = run(experiment)
