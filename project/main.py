@@ -103,7 +103,7 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
         # We want to report the training error.
         metrics = {
             **experiment.trainer.logged_metrics,
-            **experiment.trainer._metrics,
+            **experiment.trainer.callback_metrics,
             **experiment.trainer.progress_bar_metrics,
         }
         rich.print(metrics)
