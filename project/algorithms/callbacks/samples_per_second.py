@@ -11,11 +11,11 @@ from project.utils.typing_utils import is_sequence_of
 
 
 class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
-    def __init__(self):
+    def __init__(self, num_optimizers: int | None = None):
         super().__init__()
         self.last_step_times: dict[Literal["train", "val", "test"], float] = {}
         self.last_update_time: dict[int, float | None] = {}
-        self.num_optimizers: int | None = None
+        self.num_optimizers: int | None = num_optimizers
 
     @override
     def on_shared_epoch_start(
