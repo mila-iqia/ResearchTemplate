@@ -1,5 +1,4 @@
 # @package _global_
-# yaml-language-server: $schema=../../../.schemas/resources_one_gpu_schema.json
 defaults:
   - override /hydra/launcher: submitit_slurm
 trainer:
