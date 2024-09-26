@@ -75,7 +75,6 @@ import torch
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
-from lightning import LightningModule
 from omegaconf import DictConfig, open_dict
 from torch import Tensor
 from torch.utils.data import DataLoader
@@ -251,15 +250,6 @@ def algorithm(experiment_config: Config, datamodule: DataModule, device: torch.d
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
     with device:
         return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
-
-
-@pytest.fixture(scope="session")
-def network(algorithm: LightningModule):
-    if not hasattr(algorithm, "network"):
-        pytest.skip(
-            reason=f"Algorithm of type {type(algorithm)} doesn't have a 'network' attribute."
-        )
-    return algorithm.network
 
 
 @pytest.fixture(scope="function")
