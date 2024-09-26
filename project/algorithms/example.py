@@ -7,14 +7,12 @@ python project/main.py algorithm=example
 ```
 """
 
-import dataclasses
 import functools
 from logging import getLogger
 from typing import Any, Literal
 
 import torch
 from lightning import LightningModule
-from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
@@ -48,20 +46,20 @@ class ExampleAlgorithm(LightningModule):
         self.datamodule = datamodule
         self.network = network
         self.optimizer_config = optimizer_config
-        assert dataclasses.is_dataclass(optimizer_config) or isinstance(
-            optimizer_config, dict | DictConfig
-        ), optimizer_config
 
+        # Save hyper-parameters.
+        self.save_hyperparameters(ignore=["datamodule", "network"])
+
+        # Small fix for the `device` property in LightningModule, which is CPU by default.
+        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
-        # Do a forward pass to initialize any lazy weights. This is necessary for distributed
-        # training and to infer shapes.
-        _ = self.network(self.example_input_array)
-
-        # Save hyper-parameters.
-        self.save_hyperparameters(ignore=["datamodule", "network"])
+        if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
+            # Do a forward pass to initialize any lazy weights. This is necessary for distributed
+            # training and to display network activation shapes in the summary.
+            _ = self.network(self.example_input_array)
 
     def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
@@ -99,14 +97,3 @@ class ExampleAlgorithm(LightningModule):
             optimizer_partial = instantiate(self.optimizer_config)
         optimizer = optimizer_partial(self.parameters())
         return optimizer
-
-    @property
-    def device(self) -> torch.device:
-        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
-        if self._device.type == "cpu":
-            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
-        device = self._device
-        # make this more explicit to always include the index
-        if device.type == "cuda" and device.index is None:
-            return torch.device("cuda", index=torch.cuda.current_device())
-        return device

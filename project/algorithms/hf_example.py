@@ -47,6 +47,9 @@ class HFExample(LightningModule):
             experiment_id=datetime.now().strftime("%d-%m-%Y_%H-%M-%S"),
         )
 
+        # Small fix for the `device` property in LightningModule, which is CPU by default.
+        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
+
     def forward(
         self,
         input_ids: torch.Tensor,
