@@ -54,7 +54,7 @@ def jit(
     )
 
 
-Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode)
+Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
 _B = TypeVar("_B", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
 _MetricsT = TypeVar(
     "_MetricsT", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode, covariant=True
