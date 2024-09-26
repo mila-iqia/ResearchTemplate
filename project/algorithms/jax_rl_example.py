@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import functools
 import operator
 import time
@@ -36,7 +35,7 @@ import torch
 import torch_jax_interop
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
-from gymnax.environments.environment import Environment, TEnvParams, TEnvState
+from gymnax.environments.environment import Environment
 from gymnax.visualize.visualizer import Visualizer
 from jax._src.sharding_impls import UNSPECIFIED, Device
 from matplotlib import pyplot as plt
@@ -48,11 +47,14 @@ from typing_extensions import TypeVar, override
 from xtils.jitpp import Static
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.algorithms.jax_trainer import JaxCallback, JaxTrainer
+from project.algorithms.jax_trainer import JaxCallback, JaxTrainer, hparams_to_dict
 from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+
+_EnvParams = TypeVar("_EnvParams", bound=gymnax.EnvParams, default=gymnax.EnvParams)
+_EnvState = TypeVar("_EnvState", bound=gymnax.EnvState, default=gymnax.EnvState)
 
 
 class Trajectory(flax.struct.PyTreeNode):
@@ -76,20 +78,20 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     targets: chex.Array
 
 
-class TrajectoryCollectionState(flax.struct.PyTreeNode, Generic[TEnvState]):
+class TrajectoryCollectionState(flax.struct.PyTreeNode, Generic[_EnvState]):
     last_obs: jax.Array
-    env_state: TEnvState
+    env_state: _EnvState
     rms_state: RMSState
     last_done: jax.Array
     global_step: int
     rng: chex.PRNGKey
 
 
-class PPOState(flax.struct.PyTreeNode, Generic[TEnvState]):
+class PPOState(flax.struct.PyTreeNode, Generic[_EnvState]):
     actor_ts: TrainState
     critic_ts: TrainState
     rng: chex.PRNGKey
-    data_collection_state: TrajectoryCollectionState[TEnvState]
+    data_collection_state: TrajectoryCollectionState[_EnvState]
 
 
 class PPOHParams(flax.struct.PyTreeNode):
@@ -177,10 +179,7 @@ class EvalMetrics(flax.struct.PyTreeNode):
     cumulative_reward: jax.Array
 
 
-_EnvParams = TypeVar("_EnvParams", bound=gymnax.EnvParams)
-
-
-class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
+class PPOLearner(flax.struct.PyTreeNode, Generic[_EnvState, _EnvParams]):
     """PPO algorithm based on `rejax.PPO`.
 
     Differences w.r.t. rejax.PPO:
@@ -195,8 +194,8 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     The logic is exactly the same: The losses / updates are computed in the exact same way.
     """
 
-    env: Environment[TEnvState, TEnvParams] = flax.struct.field(pytree_node=False)
-    env_params: TEnvParams
+    env: Environment[_EnvState, _EnvParams] = flax.struct.field(pytree_node=False)
+    env_params: _EnvParams
     actor: flax.linen.Module = flax.struct.field(pytree_node=False)
     critic: flax.linen.Module = flax.struct.field(pytree_node=False)
     hp: PPOHParams = flax.struct.field(pytree_node=True)
@@ -204,8 +203,8 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     @classmethod
     def create_networks(
         cls,
-        env: Environment[gymnax.EnvState, TEnvParams],
-        env_params: TEnvParams,
+        env: Environment[gymnax.EnvState, _EnvParams],
+        env_params: _EnvParams,
         config: _NetworkConfig,
     ):
         # Equivalent to:
@@ -261,7 +260,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
             hidden_layer_sizes=hidden_layer_sizes, activation=activation_fn, **critic_kwargs
         )
 
-    def init_train_state(self, rng: chex.PRNGKey) -> PPOState[TEnvState]:
+    def init_train_state(self, rng: chex.PRNGKey) -> PPOState[_EnvState]:
         rng, networks_rng, env_rng = jax.random.split(rng, 3)
 
         rng_actor, rng_critic = jax.random.split(networks_rng, 2)
@@ -301,9 +300,9 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     def train(
         self,
         rng: jax.Array,
-        train_state: PPOState | None = None,
+        train_state: PPOState[_EnvState] | None = None,
         skip_initial_evaluation: bool = False,
-    ) -> tuple[PPOState, EvalMetrics]:
+    ) -> tuple[PPOState[_EnvState], EvalMetrics]:
         """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
 
         Unfolded version of `rejax.PPO.train`.
@@ -317,7 +316,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
 
         initial_evaluation: EvalMetrics | None = None
         if not skip_initial_evaluation:
-            initial_evaluation = self.eval_callback(ts, ts.rng)
+            initial_evaluation = self.eval_callback(ts)
 
         num_evals = np.ceil(self.hp.total_timesteps / self.hp.eval_freq).astype(int)
         ts, evaluation = jax.lax.scan(
@@ -339,7 +338,9 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
         return ts, evaluation
 
     @jit
-    def training_epoch(self, ts: PPOState, epoch: int):
+    def training_epoch(
+        self, ts: PPOState[_EnvState], epoch: int
+    ) -> tuple[PPOState[_EnvState], EvalMetrics]:
         # Run a few training iterations
         iteration_steps = self.hp.num_envs * self.hp.num_steps
         num_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
@@ -354,7 +355,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
         return ts, self.eval_callback(ts, ts.rng)
 
     @jit
-    def fused_training_step(self, iteration: int, ts: PPOState):
+    def fused_training_step(self, iteration: int, ts: PPOState[_EnvState]):
         """Fused training step in jax (joined data collection + training).
 
         *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
@@ -377,7 +378,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
         return self.training_step(iteration, ts, trajectories)
 
     @jit
-    def training_step(self, batch_idx: int, ts: PPOState, batch: TrajectoryWithLastObs):
+    def training_step(self, batch_idx: int, ts: PPOState[_EnvState], batch: TrajectoryWithLastObs):
         """Training step in pure jax."""
         trajectories = batch
 
@@ -395,7 +396,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
 
     @jit
     def ppo_update_epoch(
-        self, ts: PPOState, epoch_index: int, trajectories: TrajectoryWithLastObs
+        self, ts: PPOState[_EnvState], epoch_index: int, trajectories: TrajectoryWithLastObs
     ):
         minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
 
@@ -424,7 +425,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
         return jax.lax.scan(self.ppo_update, ts, minibatches, length=self.hp.num_minibatches)
 
     @jit
-    def ppo_update(self, ts: PPOState, batch: AdvantageMinibatch):
+    def ppo_update(self, ts: PPOState[_EnvState], batch: AdvantageMinibatch):
         actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
             ts.actor_ts.params,
             actor=self.actor,
@@ -448,13 +449,17 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
 
         return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
 
-    def eval_callback(self, ts: PPOState, rng: chex.PRNGKey) -> EvalMetrics:
+    def eval_callback(self, ts: PPOState[_EnvState]) -> EvalMetrics:
         actor = make_actor(ts=ts, hp=self.hp)
         max_steps = self.env_params.max_steps_in_episode
-        ep_lengths, cum_rewards = evaluate(actor, rng, self.env, self.env_params, 128, max_steps)
+        ep_lengths, cum_rewards = evaluate(
+            actor, ts.rng, self.env, self.env_params, 128, max_steps
+        )
         return EvalMetrics(episode_length=ep_lengths, cumulative_reward=cum_rewards)
 
-    def get_batch(self, ts: PPOState, batch_idx: int) -> tuple[PPOState, TrajectoryWithLastObs]:
+    def get_batch(
+        self, ts: PPOState[_EnvState], batch_idx: int
+    ) -> tuple[PPOState[_EnvState], TrajectoryWithLastObs]:
         data_collection_state, trajectories = self.collect_trajectories(
             ts.data_collection_state,
             actor_params=ts.actor_ts.params,
@@ -466,7 +471,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     @jit
     def collect_trajectories(
         self,
-        collection_state: TrajectoryCollectionState[TEnvState],
+        collection_state: TrajectoryCollectionState[_EnvState],
         actor_params: FrozenVariableDict,
         critic_params: FrozenVariableDict,
     ):
@@ -498,7 +503,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
     @jit
     def env_step(
         self,
-        collection_state: TrajectoryCollectionState[TEnvState],
+        collection_state: TrajectoryCollectionState[_EnvState],
         step_index: jax.Array,
         actor_params: FrozenVariableDict,
         critic_params: FrozenVariableDict,
@@ -567,7 +572,7 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[TEnvState, TEnvParams]):
 
 
 def has_discrete_actions(
-    env: Environment[gymnax.EnvState, TEnvParams], env_params: TEnvParams
+    env: Environment[gymnax.EnvState, _EnvParams], env_params: _EnvParams
 ) -> bool:
     return isinstance(env.action_space(env_params), gymnax.environments.spaces.Discrete)
 
@@ -717,7 +722,9 @@ def _actor(
     return jnp.squeeze(action)
 
 
-def make_actor(ts: PPOState, hp: PPOHParams):
+def make_actor(
+    ts: PPOState[Any], hp: PPOHParams
+) -> Callable[[jax.Array, chex.PRNGKey], jax.Array]:
     return functools.partial(
         _actor,
         actor_ts=ts.actor_ts,
@@ -728,8 +735,8 @@ def make_actor(ts: PPOState, hp: PPOHParams):
 
 def render_episode(
     actor: Callable[[jax.Array, chex.PRNGKey], jax.Array],
-    env: Environment[Any, TEnvParams],
-    env_params: TEnvParams,
+    env: Environment[Any, _EnvParams],
+    env_params: _EnvParams,
     gif_path: Path,
     rng: chex.PRNGKey = jax.random.key(123),
     num_steps: int = 200,
@@ -867,7 +874,7 @@ class JaxRlExample(lightning.LightningModule):
     def validation_step(self, batch: int, batch_index: int):
         # self.learner.eval_callback()
         # return  # skip the rest for now while we compare the performance?
-        eval_metrics = self.learner.eval_callback(ts=self.train_state, rng=self.train_state.rng)
+        eval_metrics = self.learner.eval_callback(ts=self.train_state)
         episode_lengths = eval_metrics.episode_length
         cumulative_rewards = eval_metrics.cumulative_reward
         self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
@@ -893,7 +900,9 @@ class JaxRlExample(lightning.LightningModule):
     @override
     def configure_optimizers(self) -> Any:
         # todo: Note, this one isn't used atm!
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+        from torch.optim.adam import Adam
+
+        return Adam(self.parameters(), lr=1e-3)
 
     @override
     def configure_callbacks(self) -> list[lightning.Callback]:
@@ -1106,6 +1115,7 @@ def train_pure_jax(
     num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
     training_steps_per_epoch: int = num_iterations
 
+    from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
     from lightning.pytorch.loggers import CSVLogger
 
     lightning.Trainer.log_dir
@@ -1118,22 +1128,22 @@ def train_pure_jax(
             # Can't use callbacks when using `vmap`!
             # RlThroughputCallback(),
             # RenderEpisodesCallback(on_every_epoch=False),
-            # RichProgressBar(),
+            RichProgressBar(),
         ],
     )
 
-    train_fn = functools.partial(trainer.fit, algo)
+    train_fn = functools.partial(trainer.fit)
 
     if n_agents:
         train_fn = jax.vmap(train_fn)
         rng = jax.random.split(rng, n_agents)
 
-    train_fn = jax.jit(train_fn, backend=backend).lower(rng).compile()
+    train_fn = jax.jit(train_fn, backend=backend).lower(algo, rng).compile()
     print(f"Finished compiling in {time.perf_counter() - start} seconds.")
 
     print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
     start = time.perf_counter()
-    train_state, evaluations = train_fn(rng)
+    train_state, evaluations = train_fn(algo, rng)
     jax.block_until_ready((train_state, evaluations))
     print(f"Finished training in {time.perf_counter() - start} seconds.")
     assert isinstance(train_state, PPOState)
@@ -1171,23 +1181,18 @@ def train_pure_jax(
         )
 
 
-def hparams_to_dict(hp: PPOLearner) -> dict:
-    """Convert the learner struct to a serializable dict."""
-    val = dataclasses.asdict(
-        jax.tree.map(lambda arr: arr.tolist(), hp, is_leaf=lambda x: isinstance(x, jnp.ndarray))
-    )
-    val = jax.tree.map(lambda v: getattr(v, "__name__", str(v)) if callable(v) else v, val)
-    return val
-
-
 def train_lightning(
-    algo: PPOLearner, accelerator: str = "auto", devices: int | list[int] | str = "auto"
+    algo: PPOLearner,
+    rng: chex.PRNGKey,
+    accelerator: str = "auto",
+    devices: int | list[int] | str = "auto",
 ):
     # Fit with pytorch-lightning.
     print("Lightning")
 
     module = JaxRlExample(
-        env=algo.env, env_params=algo.env_params, actor=algo.actor, critic=algo.critic, hp=algo.hp
+        learner=algo,
+        ts=algo.init_train_state(rng),
     )
 
     from project.utils.env_vars import REPO_ROOTDIR
@@ -1210,14 +1215,13 @@ def train_lightning(
 
 
 def train_rejax(
-    env: Environment[gymnax.EnvState, TEnvParams],
-    env_params: TEnvParams,
+    env: Environment[gymnax.EnvState, _EnvParams],
+    env_params: _EnvParams,
     hp: PPOHParams,
     rng: chex.PRNGKey,
     backend: str | None = None,
 ):
     print("Rejax")
-    # env, env_params = gymnax.make(env_id="Pendulum-v1")
     algo = rejax.PPO.create(
         env=env,
         env_params=env_params,
