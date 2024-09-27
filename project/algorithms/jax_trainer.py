@@ -4,7 +4,7 @@ import dataclasses
 import functools
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Generic, ParamSpec, Protocol
+from typing import Any, Generic, ParamSpec, Protocol, runtime_checkable
 
 import chex
 import flax.core
@@ -16,6 +16,7 @@ import jax.numpy as jnp
 import lightning
 import lightning.pytorch.callbacks
 import lightning.pytorch.loggers
+import torch  # noqa
 from jax._src.sharding_impls import UNSPECIFIED, Device
 from typing_extensions import TypeVar
 
@@ -61,6 +62,7 @@ _MetricsT = TypeVar(
 )
 
 
+@runtime_checkable
 class JaxModule(Protocol[Ts, _B, _MetricsT]):
     def get_batch(self, ts: Ts, batch_idx: int) -> tuple[Ts, _B]: ...
     def training_step(
@@ -141,6 +143,16 @@ class JaxTrainer(flax.struct.PyTreeNode, Generic[Ts, _B, _MetricsT]):
     global_step: int = flax.struct.field(pytree_node=True, default=0)
 
     # TODO: Add a checkpoint callback with orbax-checkpoint?
+    limit_val_batches: int = 0
+    limit_test_batches: int = 0
+    logged_metrics: dict = flax.struct.field(pytree_node=True, default_factory=dict)
+    callback_metrics: dict = flax.struct.field(pytree_node=True, default_factory=dict)
+    # todo: get the metrics from the callbacks?
+    # lightning.pytorch.loggers.CSVLogger.log_metrics
+    # TODO: Take a look at this method:
+    # lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar.get_metrics
+    # return lightning.Trainer._logger_connector.progress_bar_metrics
+    progress_bar_metrics: dict = flax.struct.field(pytree_node=True, default_factory=dict)
 
     @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
     def fit(
@@ -156,6 +168,7 @@ class JaxTrainer(flax.struct.PyTreeNode, Generic[Ts, _B, _MetricsT]):
 
         Training loop in pure jax (a lot faster than when using pytorch-lightning).
         """
+        jax.debug.print("Starting training!")
         if train_state is None and rng is None:
             raise ValueError("Either train_state or rng must be provided")
 
@@ -219,6 +232,8 @@ class JaxTrainer(flax.struct.PyTreeNode, Generic[Ts, _B, _MetricsT]):
         # chex.assert_scalar_in(epoch, 0, self.max_epochs)
         # TODO: Can't just set current_epoch to `epoch` as `epoch` is a Traced value.
         # todo: need to have the callback take in the actual int value.
+        jax.debug.print("Starting epoch {epoch}", epoch=epoch)
+
         self = self.replace(current_epoch=epoch)  # doesn't quite work!
         ts = self.training_epoch(ts=ts, epoch=epoch, algo=algo)
         eval_metrics = self.eval_epoch(ts=ts, epoch=epoch, algo=algo)
@@ -329,14 +344,10 @@ class JaxTrainer(flax.struct.PyTreeNode, Generic[Ts, _B, _MetricsT]):
             return [self.logger]
         return []
 
-    @property
-    def progress_bar_metrics(self) -> dict[str, float]:
-        # todo: get the metrics from the callbacks?
-        # lightning.pytorch.loggers.CSVLogger.log_metrics
-        # TODO: Take a look at this method:
-        # lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar.get_metrics
-        # return lightning.Trainer._logger_connector.progress_bar_metrics
-        return {}
+    # @property
+    # def progress_bar_metrics(self) -> dict[str, float]:
+
+    #     return {}
 
     @property
     def progress_bar_callback(self) -> lightning.pytorch.callbacks.ProgressBar | None:

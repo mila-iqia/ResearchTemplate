@@ -200,6 +200,47 @@ class PPOLearner(flax.struct.PyTreeNode, Generic[_EnvState, _EnvParams]):
     critic: flax.linen.Module = flax.struct.field(pytree_node=False)
     hp: PPOHParams = flax.struct.field(pytree_node=True)
 
+    HParams = PPOHParams
+
+    @classmethod
+    def create(
+        cls,
+        env_id: str | None = None,
+        env: Environment[_EnvState, _EnvParams] | None = None,
+        env_params: _EnvParams | None = None,
+        hp: PPOHParams | None = None,
+    ):
+        from brax.envs import _envs as brax_envs
+        from rejax.compat.brax2gymnax import create_brax
+
+        # env_params: gymnax.EnvParams
+        if env_id is None:
+            assert env is not None
+            env_params = env_params or env.default_params  # type: ignore
+        elif env_id in brax_envs:
+            env, env_params = create_brax(  # type: ignore
+                env_id,
+                episode_length=1000,
+                action_repeat=1,
+                auto_reset=True,
+                batch_size=None,
+                backend="generalized",
+            )
+        elif isinstance(env_id, str):
+            env, env_params = gymnax.make(env_id=env_id)  # type: ignore
+        else:
+            raise NotImplementedError(env_id)
+
+        assert env is not None
+        assert env_params is not None
+        return cls(
+            env=env,
+            env_params=env_params,
+            actor=cls.create_actor(env, env_params),
+            critic=cls.create_critic(),
+            hp=hp or cls.HParams(),
+        )
+
     @classmethod
     def create_networks(
         cls,
@@ -1092,7 +1133,7 @@ def main():
     # train_lightning(algo, accelerator="cpu")
     rng = jax.random.key(123)
 
-    train_pure_jax(algo, rng=rng, backend=None, n_agents=100)
+    train_pure_jax(algo, rng=rng, backend=None, n_agents=None)
     # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend=None, rng=rng)
     # train_lightning(algo, accelerator="cuda", devices=1)
 
@@ -1127,11 +1168,10 @@ def train_pure_jax(
         callbacks=[
             # Can't use callbacks when using `vmap`!
             # RlThroughputCallback(),
-            # RenderEpisodesCallback(on_every_epoch=False),
+            RenderEpisodesCallback(on_every_epoch=False),
             RichProgressBar(),
         ],
     )
-
     train_fn = functools.partial(trainer.fit)
 
     if n_agents:

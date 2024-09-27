@@ -22,7 +22,6 @@ from typing import Any
 
 import hydra
 import hydra.utils
-import hydra_zen
 import rich.console
 import rich.logging
 import rich.traceback
@@ -42,7 +41,7 @@ logger = get_logger(__name__)
 #     return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
 # instantiate = _use_pydantic(hydra_zen.instantiate)
 
-instantiate = hydra_zen.instantiate
+# instantiate = hydra_zen.instantiate
 
 
 @dataclass
@@ -126,11 +125,12 @@ def seed_rng(experiment_config: Config):
 
 
 def instantiate_trainer(experiment_config: Config) -> Trainer:
-    # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
-    # fields have the right type.
-
+    # The callbacks are in a dict (because it's easier to merge with Hydra than a list).
+    # We need to make it a list before it's passed to the Trainer.
     # instantiate all the callbacks
     callback_configs = experiment_config.trainer.pop("callbacks", {})
+    if isinstance(callback_configs, list):
+        callback_configs = dict(enumerate(callback_configs))
     callback_configs = {k: v for k, v in callback_configs.items() if v is not None}
     callbacks: dict[str, Callback] | None = hydra.utils.instantiate(
         callback_configs, _convert_="object"

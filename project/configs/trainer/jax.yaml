@@ -1,0 +1,11 @@
+# defaults:
+  # - override /callbacks: none
+_target_: project.algorithms.jax_trainer.JaxTrainer
+max_epochs: 75
+training_steps_per_epoch: 1
+# callbacks:
+#   render_episodes:
+#     _target_: project.algorithms.jax_rl_example.RenderEpisodesCallback
+#     on_every_epoch: false
+#   progress_bar:
+#     _target_: lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar
