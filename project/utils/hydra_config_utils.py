@@ -128,16 +128,17 @@ def import_object(target_path: str):
 
 
 def get_all_configs_in_group_of_type(
-    group_name: str,
+    config_group: str,
     config_target_type: type | tuple[type, ...],
     include_subclasses: bool = True,
     excluding: type | tuple[type, ...] = (),
 ) -> list[str]:
     """Returns the names of all the configs in the given config group that have this target or a
     subclass of it."""
-    config_names = get_all_configs_in_group(group_name)
+    config_names = get_all_configs_in_group(config_group)
     names_to_targets = {
-        config_name: get_target_of_config(group_name, config_name) for config_name in config_names
+        config_name: get_target_of_config(config_group, config_name)
+        for config_name in config_names
     }
     names_to_types: dict[str, type] = {}
     for name, target in names_to_targets.items():
@@ -161,7 +162,7 @@ def get_all_configs_in_group_of_type(
         logger.warning(
             RuntimeWarning(
                 f"Unable to tell what kind of object will be created by the target {target} of "
-                f"config {name} in group {group_name}. This config will be skipped in tests."
+                f"config {name} in group {config_group}. This config will be skipped in tests."
             )
         )
     config_target_type = (

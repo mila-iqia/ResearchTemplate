@@ -155,6 +155,7 @@ class JaxExample(LightningModule):
 
 # Register a handler function to "convert" `torch.nn.Parameter`s to jax Arrays: they can be viewed
 # as jax Arrays by just viewing their data as a jax array.
+# TODO: move this to the torch_jax_interop package?
 @torch_to_jax.register(torch.nn.Parameter)
 def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
     return torch_to_jax(value.data)

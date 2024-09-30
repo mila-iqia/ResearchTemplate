@@ -15,7 +15,7 @@ LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
 @dataclass
 class Config:
-    """All the options required for a run. This dataclass acts as a schema for the Hydra configs.
+    """The options required for a run. This dataclass acts as a structure for the Hydra configs.
 
     For more info, see https://hydra.cc/docs/tutorials/structured_config/schema/
     """
@@ -37,7 +37,7 @@ class Config:
     For more info, see the [instantiate_algorithm][project.experiment.instantiate_algorithm] function.
     """
 
-    network: Any
+    network: Any | None = None
     """The network to use."""
 
     trainer: dict = field(default_factory=dict)

@@ -1,12 +1,14 @@
 import sys
 from pathlib import Path
 
+import hydra_zen
 import matplotlib.pyplot as plt
 import pytest
 import torch
 from lightning import LightningDataModule
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.trainer.states import RunningStage
+from omegaconf import DictConfig
 from tensor_regression.fixture import (
     TensorRegressionFixture,
     get_test_source_and_temp_file_paths,
@@ -19,6 +21,11 @@ from project.datamodules.image_classification.image_classification import (
 from project.datamodules.vision import VisionDataModule
 from project.utils.testutils import run_for_all_datamodules
 from project.utils.typing_utils import is_sequence_of
+
+
+@pytest.fixture()
+def datamodule(experiment_dictconfig: DictConfig) -> LightningDataModule:
+    return hydra_zen.instantiate(experiment_dictconfig.datamodule)
 
 
 # @use_overrides(["datamodule.num_workers=0"])

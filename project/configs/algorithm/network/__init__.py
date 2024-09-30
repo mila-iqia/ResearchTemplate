@@ -1,7 +1,6 @@
 from hydra_zen import store
 
 network_store = store(group="network")
-
 # note; Can also create configs programmatically with hydra-zen.
 # This works the same way as creating config files for each algorithm under
 # `configs/algorithm`. From the command-line, you can select both configs that are yaml files as

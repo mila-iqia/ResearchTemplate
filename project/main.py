@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import os
 import warnings
 from logging import getLogger as get_logger
@@ -54,15 +53,10 @@ def main(dict_config: DictConfig) -> dict:
     config: Config = resolve_dictconfig(dict_config)
 
     experiment: Experiment = setup_experiment(config)
-
     if wandb.run:
-        wandb.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
-        wandb.config.update(
+        wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
+        wandb.run.config.update(
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
-        )
-        wandb.config.update(
-            dataclasses.asdict(config),
-            allow_val_change=True,
         )
 
     metric_name, objective, _metrics = run(experiment)
@@ -76,6 +70,7 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
 
     Returns the metrics of the evaluation.
     """
+
     # Train the model using the dataloaders of the datamodule:
     # The Algorithm gets to "wrap" the datamodule if it wants. This might be useful in the
     # case of RL, where we need to set the actor to use in the environment, as well as

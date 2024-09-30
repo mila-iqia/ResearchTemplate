@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
 
+from project.configs.algorithm.network import network_store
 from project.configs.algorithm.optimizer import optimizers_store
 from project.configs.config import Config
 from project.configs.datamodule import datamodule_store
-from project.configs.network import network_store
 
 # from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID, SLURM_TMPDIR
 

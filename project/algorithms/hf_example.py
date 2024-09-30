@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 from evaluate import load as load_metric
 from lightning import LightningModule
-from torch.optim import AdamW
+from torch.optim.adamw import AdamW
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,

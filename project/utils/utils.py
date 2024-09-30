@@ -10,6 +10,7 @@ from typing import TypeVar
 import rich
 import rich.syntax
 import rich.tree
+import torch
 from lightning import LightningDataModule, Trainer
 from omegaconf import DictConfig, OmegaConf
 from torchvision import transforms
@@ -135,13 +136,19 @@ def print_config(
     queue = []
 
     for f in print_order:
-        queue.append(f) if f in config else logger.info(f"Field '{f}' not found in config")
+        if f in config:
+            queue.append(f)
+        else:
+            logger.info(f"Field '{f}' not found in config")
 
     for f in config:
         if f not in queue:
             queue.append(f)
 
     for f in queue:
+        if f not in config:
+            logger.info(f"Field '{f}' not found in config")
+            continue
         branch = tree.add(f, style=style, guide_style=style)
 
         config_group = config[f]
@@ -156,3 +163,10 @@ def print_config(
 
     # with open("config_tree.log", "w") as file:
     #     rich.print(tree, file=file)
+
+
+def default_device() -> torch.device:
+    """Returns the default device (GPU if available, else CPU)."""
+    return torch.device(
+        f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
+    )

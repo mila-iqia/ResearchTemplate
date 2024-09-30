@@ -65,7 +65,6 @@ hydra:
     setup:
     # - export LD_PRELOAD=/some/folder/with/libraries/
 
-
     # Other things to pass to `sbatch`:
     additional_parameters:
       time: 0-00:10:00 # maximum wall time allocated for the job (D-HH:MM:SS)

@@ -68,37 +68,34 @@ from collections import defaultdict
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any
+from typing import Literal
 
-import flax.linen
 import lightning.pytorch as pl
-import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, open_dict
-from torch import Tensor, nn
+from torch import Tensor
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.vision import VisionDataModule
+from project.datamodules.vision import VisionDataModule, num_cpus_on_node
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
-    instantiate_network,
     instantiate_trainer,
     seed_rng,
     setup_logging,
 )
 from project.main import PROJECT_NAME
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
-    seeded_rng,
 )
 from project.utils.typing_utils import is_mapping_of, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
@@ -140,8 +137,8 @@ def datamodule_config(request: pytest.FixtureRequest) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def network_config(request: pytest.FixtureRequest) -> str | None:
-    """The network config to use in the experiment, as if `network=<value>` was passed."""
+def algorithm_network_config(request: pytest.FixtureRequest) -> str | None:
+    """The network config to use in the experiment, as in `algorithm/network=<value>`."""
     network_config_name = getattr(request, "param", None)
     if network_config_name:
         _add_default_marks_for_config_name(network_config_name, request)
@@ -154,7 +151,7 @@ def command_line_arguments(
     accelerator: str,
     algorithm_config: str | None,
     datamodule_config: str | None,
-    network_config: str | None,
+    algorithm_network_config: str | None,
     overrides: tuple[str, ...],
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
@@ -166,7 +163,7 @@ def command_line_arguments(
     would be by Hydra in a regular run.
     """
 
-    combination = set([datamodule_config, network_config, algorithm_config])
+    combination = set([datamodule_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
         marks = [marks] if not isinstance(marks, list | tuple) else marks
         configs = set(configs)
@@ -186,8 +183,8 @@ def command_line_arguments(
     ]
     if algorithm_config:
         default_overrides.append(f"algorithm={algorithm_config}")
-    if network_config:
-        default_overrides.append(f"network={network_config}")
+    if algorithm_network_config:
+        default_overrides.append(f"algorithm/network={algorithm_network_config}")
     if datamodule_config:
         default_overrides.append(f"datamodule={datamodule_config}")
 
@@ -233,29 +230,6 @@ def experiment_config(
     return config
 
 
-@pytest.fixture(scope="session")
-def network(
-    experiment_config: Config,
-    datamodule: DataModule,
-    device: torch.device,
-    training_batch: Any,
-):
-    with device:
-        network = instantiate_network(experiment_config, datamodule=datamodule)
-
-    if isinstance(network, flax.linen.Module):
-        return network
-
-    if any(torch.nn.parameter.is_lazy(p) for p in network.parameters()):
-        # a bit ugly, but we need to initialize any lazy weights before we pass the network
-        # to the tests.
-        # TODO: Investigate the false positives with example_from_config, resnets, cifar10
-        if isinstance(training_batch, tuple):
-            input = training_batch[0]
-            _ = network(input)
-    return network
-
-
 # BUG: The network has a default config of `resnet18`, which tries to get the
 # num_classes from the datamodule. However, the hf_text datamodule doesn't have that attribute,
 # and we load the datamodule using the entire experiment config, so loading the network raises an
@@ -265,24 +239,26 @@ def network(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_config: Config) -> DataModule:
+def datamodule(experiment_dictconfig: DictConfig) -> DataModule:
     """Fixture that creates the datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_config.datamodule)
+    return instantiate_datamodule(experiment_dictconfig.datamodule)
 
 
 @pytest.fixture(scope="function")
-def algorithm(experiment_config: Config, datamodule: DataModule, network: nn.Module):
+def algorithm(experiment_config: Config, datamodule: DataModule, device: torch.device, seed: int):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    return instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
+    with device:
+        return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
 
 
 @pytest.fixture(scope="function")
 def trainer(
     experiment_config: Config,
-    _common_setup_experiment_part: None,  # noqa
 ) -> pl.Trainer:
+    setup_logging(experiment_config)
+    seed_rng(experiment_config)
     return instantiate_trainer(experiment_config)
 
 
@@ -433,21 +409,6 @@ def accelerator(request: pytest.FixtureRequest):
     return accelerator
 
 
-@pytest.fixture(
-    scope="session",
-    params=None,
-    # ids=lambda args: f"gpus={args}" if _cuda_available else f"cpus={args}",
-)
-def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
-    if accelerator == "gpu":
-        num_gpus = getattr(request, "param", 1)
-        assert isinstance(num_gpus, int)
-        return num_gpus  # Use only one GPU by default.
-    else:
-        assert accelerator == "cpu"
-        return getattr(request, "param", 1)
-
-
 @pytest.fixture(scope="session")
 def device(accelerator: str) -> torch.device:
     worker_index = int(os.environ.get("PYTEST_XDIST_WORKER", "gw0").removeprefix("gw"))
@@ -458,27 +419,49 @@ def device(accelerator: str) -> torch.device:
     raise NotImplementedError(accelerator)
 
 
+@pytest.fixture(
+    scope="session",
+    params=None,
+    # ids=lambda args: f"gpus={args}" if _cuda_available else f"cpus={args}",
+)
+def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
+    num_devices = getattr(request, "param", 1)
+    assert isinstance(num_devices, int)
+    return num_devices
+
+
 @pytest.fixture(scope="session")
-def devices(accelerator: str, num_devices_to_use: int) -> list[int] | int:
+def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int | Literal["auto"]:
     """Fixture that creates the 'devices' argument for the Trainer config."""
-    _worker_count = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "0"))
+    # When using pytest-xdist to distribute tests, each worker will use different devices.
+
+    devices = getattr(request, "param", None)
+    if devices is not None:
+        # The 'devices' flag was set using indirect parametrization.
+        return devices
+
+    num_pytest_workers = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1"))
     worker_index = int(os.environ.get("PYTEST_XDIST_WORKER", "gw0").removeprefix("gw"))
-    assert accelerator in ["cpu", "gpu"]
-    if accelerator == "cpu":
-        n_cpus = os.cpu_count() or torch.get_num_threads()
-        num_devices_to_use = min(num_devices_to_use, n_cpus)
-        logger.info(f"Using {num_devices_to_use} CPUs.")
-        # NOTE: PyTorch-Lightning Trainer expects to get a number of CPUs, not a list of CPU ids.
-        return num_devices_to_use
-    if accelerator == "gpu":
+
+    if accelerator == "cpu" or (accelerator == "auto" and not torch.cuda.is_available()):
+        n_cpus = num_cpus_on_node()
+        # Split the CPUS as evenly as possible (last worker might get less).
+        if num_pytest_workers == 1:
+            return "auto"
+        n_cpus_for_this_worker = (
+            n_cpus // num_pytest_workers
+            if worker_index != num_pytest_workers - 1
+            else n_cpus - n_cpus // num_pytest_workers * (num_pytest_workers - 1)
+        )
+        assert 1 <= n_cpus_for_this_worker <= n_cpus
+        return n_cpus_for_this_worker
+
+    if accelerator == "gpu" or (accelerator == "auto" and torch.cuda.is_available()):
+        # Alternate GPUS between workers.
         n_gpus = torch.cuda.device_count()
         first_gpu_to_use = worker_index % n_gpus
-        num_devices_to_use = min(num_devices_to_use, n_gpus)
-        gpus_to_use = sorted(
-            set(((np.arange(num_devices_to_use) + first_gpu_to_use) % n_gpus).tolist())
-        )
-        logger.info(f"Using GPUs: {gpus_to_use}")
-        return gpus_to_use
+        logger.info(f"Using GPU #{first_gpu_to_use}")
+        return [first_gpu_to_use]
     return 1  # Use only one GPU by default if not distributed.
 
 
@@ -586,18 +569,6 @@ def _add_default_marks_for_config_name(config_name: str, request: pytest.Fixture
         for marker in default_marks_for_config_name[config_name]:
             request.applymarker(marker)
     # TODO: ALSO add all the marks for config combinations that contain this config?
-
-
-@pytest.fixture(scope="session")
-def _common_setup_experiment_part(experiment_config: Config):
-    """Fixture that is used to run the common part of `setup_experiment`.
-
-    This is there so that we can instantiate only one or a few of the experiment components (e.g.
-    only the Network), while also only doing the common part once if we were to use more than one
-    of these components in a test.
-    """
-    setup_logging(experiment_config)
-    seed_rng(experiment_config)
 
 
 @pytest.fixture
