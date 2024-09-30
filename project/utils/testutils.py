@@ -5,18 +5,14 @@ from __future__ import annotations
 import itertools
 import os
 import typing
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from logging import getLogger as get_logger
-from typing import Any, Generic, TypeVar
 
 import pytest
-import torch
 import torchvision.models
-from torch import nn
 
 from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
 from project.datamodules.image_classification.mnist import MNISTDataModule
-from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_config_utils import (
     get_all_configs_in_group,
@@ -86,97 +82,10 @@ default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDec
         )
     },
 }
+"""Dict with some default marks to add to tests when some config combinations are present.
 
-
-def parametrized_fixture(name: str, values: Sequence, ids=None, **kwargs):
-    """Small helper function that creates a parametrized pytest fixture for the given values.
-
-    NOTE: When writing a fixture in a test class, use `ParametrizedFixture` instead.
-    """
-
-    @pytest.fixture(name=name, params=values, ids=ids or [f"{name}={v}" for v in values], **kwargs)
-    def _parametrized_fixture(request: pytest.FixtureRequest):
-        return request.param
-
-    return _parametrized_fixture
-
-
-T = TypeVar("T")
-
-
-class ParametrizedFixture(Generic[T]):
-    """Small helper function that creates a parametrized pytest fixture for the given values.
-
-    The name of the fixture will be the name that is used for this variable on a class.
-
-    For example:
-
-    ```python
-
-    class TestFoo:
-        odd = ParametrizedFixture([True, False])
-
-        def test_something(self, odd: bool):
-            '''some kind of test that uses odd'''
-
-        # NOTE: This fixture can also be used by other fixtures:
-
-        @pytest.fixture
-        def some_number(self, odd: bool):
-            return 1 if odd else 2
-
-        def test_foo(self, some_number: int):
-            '''some kind of test that uses some_number'''
-    ```
-    """
-
-    def __init__(self, values: list[T], name: str | None = None, **fixture_kwargs):
-        self.values = values
-        self.fixture_kwargs = fixture_kwargs
-        self.name = name
-
-    def __set_name__(self, owner: Any, name: str):
-        self.name = name
-
-    def __get__(self, obj, objtype=None):
-        assert self.name is not None
-        fixture_kwargs = self.fixture_kwargs.copy()
-        fixture_kwargs.setdefault("ids", [f"{self.name}={v}" for v in self.values])
-
-        @pytest.fixture(name=self.name, params=self.values, **fixture_kwargs)
-        def _parametrized_fixture_method(request: pytest.FixtureRequest):
-            return request.param
-
-        return _parametrized_fixture_method
-
-
-def run_for_all_datamodules(
-    datamodule_names: list[str] | None = None,
-    datamodule_name_to_marks: dict[str, pytest.MarkDecorator | list[pytest.MarkDecorator]]
-    | None = None,
-):
-    """Apply this marker to a test to make it run with all available datasets (datamodules).
-
-    The test should use the `datamodule` fixture, either as an input argument to the test
-    function or indirectly by using a fixture that depends on the `datamodule` fixture.
-
-    Parameters
-    ----------
-    datamodule_names: List of datamodule names to use for tests. \
-        By default, lists out the generic datamodules (the datamodules that aren't specific to a
-        single algorithm, for example the InfGendatamodules of WakeSleep.)
-
-    datamodule_to_marks: Dictionary from datamodule names to pytest marks (e.g. \
-        `pytest.mark.xfail`, `pytest.mark.skip`) to use for that particular datamodule.
-    """
-    return run_for_all_configs_in_group(
-        group_name="datamodule",
-        config_name_to_marks=datamodule_name_to_marks,
-    )
-
-
-def run_for_all_vision_datamodules():
-    return run_for_all_configs_of_type("datamodule", VisionDataModule)
+For example, ResNet networks can't be applied to the MNIST datasets.
+"""
 
 
 def run_for_all_configs_of_type(
@@ -272,12 +181,12 @@ def run_for_all_configs_in_group(
 
     Parameters
     ----------
-    datamodule_names: List of datamodule names to use for tests. \
-        By default, lists out the generic datamodules (the datamodules that aren't specific to a
-        single algorithm, for example the InfGendatamodules of WakeSleep.)
+    group_name: List of datamodule names to use for tests. \
+        By default, lists out the generic datamodules (the datamodules that aren't specific \
+        to a single algorithm, for example the InfGendatamodules of WakeSleep.)
 
-    datamodule_to_marks: Dictionary from datamodule names to pytest marks (e.g. \
-        `pytest.mark.xfail`, `pytest.mark.skip`) to use for that particular datamodule.
+    config_name_to_marks: Dictionary from config names to pytest marks (e.g. \
+        `pytest.mark.xfail`, `pytest.mark.skip`) to use for that particular config.
     """
     if config_name_to_marks is None:
         config_name_to_marks = {
@@ -300,15 +209,3 @@ def run_for_all_configs_in_group(
         ],
         indirect=True,
     )
-
-
-def assert_all_params_initialized(module: nn.Module):
-    for name, param in module.named_parameters():
-        assert not isinstance(param, nn.UninitializedParameter | nn.UninitializedBuffer), name
-
-
-def assert_no_nans_in_params_or_grads(module: nn.Module):
-    for name, param in module.named_parameters():
-        assert not torch.isnan(param).any(), name
-        if param.grad is not None:
-            assert not torch.isnan(param.grad).any(), name

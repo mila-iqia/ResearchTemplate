@@ -144,7 +144,7 @@ hydra-orion-sweeper==1.6.4
     # via research-project-template
 hydra-submitit-launcher==1.2.0
     # via research-project-template
-hydra-zen==0.13.0
+hydra-zen==0.13.1rc1
     # via research-project-template
 idna==3.8
     # via requests
