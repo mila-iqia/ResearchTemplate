@@ -34,14 +34,9 @@ class RecordTrainingLossCb(lightning.Callback):
 
 @run_for_all_configs_of_type("algorithm", HFExample)
 @run_for_all_configs_of_type("datamodule", HFDataModule)
-@run_for_all_configs_of_type("network", PreTrainedModel)
+@run_for_all_configs_of_type("algorithm/network", PreTrainedModel)
 class TestHFExample(LearningAlgorithmTests[HFExample]):
     """Tests for the HF example."""
-
-    @pytest.fixture(scope="session")
-    def forward_pass_input(self, training_batch: dict[str, Tensor]):
-        assert isinstance(training_batch, dict)
-        return training_batch
 
     @pytest.mark.slow
     def test_overfit_batch(
