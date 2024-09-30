@@ -23,13 +23,13 @@ from project.experiment import instantiate
 
 logger = getLogger(__name__)
 
+
+# NOTE: These are just type hints. Don't worry about it. It's just to make the code more readable.
 T = TypeVar("T")
-
 # Config that returns the object of type T when instantiated.
-Config = Builds[type[T]]
-
-# Config that returns a function that creates the object of type T.
-PartialConfig = PartialBuilds[type[T]]
+_Config = Builds[type[T]]
+# Config that returns a function that creates the object of type T when instantiated.
+_PartialConfig = PartialBuilds[type[T]]
 
 
 class ExampleAlgorithm(LightningModule):
@@ -38,15 +38,16 @@ class ExampleAlgorithm(LightningModule):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: Config[torch.nn.Module],
-        optimizer: PartialConfig[Optimizer] = AdamConfig(lr=3e-4),
+        network: _Config[torch.nn.Module],
+        optimizer: _PartialConfig[Optimizer] = AdamConfig(lr=3e-4),
         init_seed: int = 42,
     ):
         """Create a new instance of the algorithm.
 
         Parameters:
-            datamodule: Object used to load train/val/test data. See the lightning docs for the \
-                [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule] class for more info.
+            datamodule: Object used to load train/val/test data.
+                See the lightning docs for [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule]
+                for more info.
             network: The config of the network to instantiate and train.
             optimizer: The config for the Optimizer. Instantiating this will return a function \
                 (a [functools.partial][]) that will create the Optimizer given the hyper-parameters.
