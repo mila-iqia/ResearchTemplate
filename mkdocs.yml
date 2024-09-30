@@ -88,8 +88,9 @@ plugins:
             - https://docs.python.org/3/objects.inv
             - https://pytorch.org/docs/stable/objects.inv
             - https://jax.readthedocs.io/en/latest/objects.inv
+            - https://mit-ll-responsible-ai.github.io/hydra-zen/objects.inv
           options:
-            docstring_style: google
+            docstring_style: numpy
             members_order: source
             annotations_path: brief
             show_docstring_attributes: true
