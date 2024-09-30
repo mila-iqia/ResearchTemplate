@@ -20,7 +20,8 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.testutils import ParametrizedFixture, seeded_rng
+from project.utils.seeding import seeded_rng
+from project.utils.testutils import ParametrizedFixture
 from project.utils.typing_utils import PyTree, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
@@ -96,7 +97,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         algorithm_1 = copy.deepcopy(algorithm)
         algorithm_2 = copy.deepcopy(algorithm)
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm_1,
@@ -111,7 +113,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         gradients_1 = gradients_callback.grads
         training_step_outputs_1 = gradients_callback.outputs
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm_2,
@@ -137,7 +140,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
-        with seeded_rng(seed):
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
             algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
         tensor_regression.check(
             algorithm.state_dict(),

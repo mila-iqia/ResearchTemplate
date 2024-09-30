@@ -91,11 +91,11 @@ from project.experiment import (
 )
 from project.main import PROJECT_NAME
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
-    seeded_rng,
 )
 from project.utils.typing_utils import is_mapping_of, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule

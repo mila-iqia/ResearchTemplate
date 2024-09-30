@@ -2,20 +2,13 @@
 
 from __future__ import annotations
 
-import contextlib
-import copy
-import dataclasses
 import itertools
 import os
-import random
 import typing
 from collections.abc import Mapping, Sequence
-from contextlib import contextmanager
 from logging import getLogger as get_logger
 from typing import Any, Generic, TypeVar
 
-import lightning
-import numpy as np
 import pytest
 import torch
 import torchvision.models
@@ -319,64 +312,3 @@ def assert_no_nans_in_params_or_grads(module: nn.Module):
         assert not torch.isnan(param).any(), name
         if param.grad is not None:
             assert not torch.isnan(param.grad).any(), name
-
-
-@contextlib.contextmanager
-def fork_rng():
-    """Forks the RNG, so that when you return, the RNG is reset to the state that it was previously
-    in."""
-    rng_state = RngState.get()
-    yield
-    rng_state.set()
-
-
-@contextmanager
-def seeded_rng(seed: int = 42):
-    """Forks the RNG and seeds the torch, numpy, and random RNGs while inside the block."""
-    with fork_rng():
-        random_state = RngState.seed(seed)
-        yield random_state
-
-
-def _get_cuda_rng_states():
-    return tuple(
-        torch.cuda.get_rng_state(torch.device("cuda", index=index))
-        for index in range(torch.cuda.device_count())
-    )
-
-
-@dataclasses.dataclass(frozen=True)
-class RngState:
-    random_state: tuple[Any, ...] = dataclasses.field(default_factory=random.getstate)
-    numpy_random_state: dict[str, Any] = dataclasses.field(default_factory=np.random.get_state)
-
-    torch_cpu_rng_state: torch.Tensor = torch.get_rng_state()
-    torch_device_rng_states: tuple[torch.Tensor, ...] = dataclasses.field(
-        default_factory=_get_cuda_rng_states
-    )
-
-    @classmethod
-    def get(cls):
-        """Gets the state of the random/numpy/torch random number generators.
-
-        Note: do a deepcopy just in case the libraries return the rng state "by reference" and keep
-        modifying it.
-        """
-        return copy.deepcopy(cls())
-
-    def set(self):
-        """Resets the state of the random/numpy/torch random number generators with the contents of
-        `self`."""
-        random.setstate(self.random_state)
-        np.random.set_state(self.numpy_random_state)
-        torch.set_rng_state(self.torch_cpu_rng_state)
-        for index, state in enumerate(self.torch_device_rng_states):
-            torch.cuda.set_rng_state(state, torch.device("cuda", index=index))
-
-    @classmethod
-    def seed(cls, base_seed: int):
-        lightning.seed_everything(base_seed, workers=True)
-        # random.seed(base_seed)
-        # np.random.seed(base_seed)
-        # torch.random.manual_seed(base_seed)
-        return cls()
