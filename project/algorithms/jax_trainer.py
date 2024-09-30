@@ -104,7 +104,7 @@ class JaxCallback(Generic[Ts, _B], flax.struct.PyTreeNode):
     def teardown(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], stage: str, ts: Ts): ...
 
 
-class JaxTrainer(flax.struct.PyTreeNode, Generic[Ts, _B, _MetricsT]):
+class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
     """Somewhat similar to a `lightning.Trainer`."""
 
     # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
@@ -232,7 +232,7 @@ class JaxTrainer(flax.struct.PyTreeNode, Generic[Ts, _B, _MetricsT]):
         # chex.assert_scalar_in(epoch, 0, self.max_epochs)
         # TODO: Can't just set current_epoch to `epoch` as `epoch` is a Traced value.
         # todo: need to have the callback take in the actual int value.
-        jax.debug.print("Starting epoch {epoch}", epoch=epoch)
+        # jax.debug.print("Starting epoch {epoch}", epoch=epoch)
 
         self = self.replace(current_epoch=epoch)  # doesn't quite work!
         ts = self.training_epoch(ts=ts, epoch=epoch, algo=algo)

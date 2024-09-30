@@ -1,5 +1,5 @@
 # defaults:
-  # - override /callbacks: none
+# - override /callbacks: none
 _target_: project.algorithms.jax_trainer.JaxTrainer
 max_epochs: 75
 training_steps_per_epoch: 1

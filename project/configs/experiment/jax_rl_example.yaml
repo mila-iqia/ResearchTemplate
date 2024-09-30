@@ -14,5 +14,5 @@ trainer:
     render_episodes:
       _target_: project.algorithms.jax_rl_example.RenderEpisodesCallback
       on_every_epoch: false
-    progress_bar:
-      _target_: lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar
+    # progress_bar:
+    #   _target_: lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar

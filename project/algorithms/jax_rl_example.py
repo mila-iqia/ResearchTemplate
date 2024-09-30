@@ -47,7 +47,7 @@ from typing_extensions import TypeVar, override
 from xtils.jitpp import Static
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.algorithms.jax_trainer import JaxCallback, JaxTrainer, hparams_to_dict
+from project.algorithms.jax_trainer import JaxCallback, JaxModule, JaxTrainer, hparams_to_dict
 from project.utils.env_vars import REPO_ROOTDIR
 
 logger = get_logger(__name__)
@@ -78,7 +78,7 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     targets: chex.Array
 
 
-class TrajectoryCollectionState(flax.struct.PyTreeNode, Generic[_EnvState]):
+class TrajectoryCollectionState(Generic[_EnvState], flax.struct.PyTreeNode):
     last_obs: jax.Array
     env_state: _EnvState
     rms_state: RMSState
@@ -87,7 +87,7 @@ class TrajectoryCollectionState(flax.struct.PyTreeNode, Generic[_EnvState]):
     rng: chex.PRNGKey
 
 
-class PPOState(flax.struct.PyTreeNode, Generic[_EnvState]):
+class PPOState(Generic[_EnvState], flax.struct.PyTreeNode):
     actor_ts: TrainState
     critic_ts: TrainState
     rng: chex.PRNGKey
@@ -179,7 +179,11 @@ class EvalMetrics(flax.struct.PyTreeNode):
     cumulative_reward: jax.Array
 
 
-class PPOLearner(flax.struct.PyTreeNode, Generic[_EnvState, _EnvParams]):
+class PPOLearner(
+    flax.struct.PyTreeNode,
+    JaxModule[PPOState[_EnvState], TrajectoryWithLastObs, EvalMetrics],
+    Generic[_EnvState, _EnvParams],
+):
     """PPO algorithm based on `rejax.PPO`.
 
     Differences w.r.t. rejax.PPO:
@@ -976,7 +980,7 @@ class JaxRlExample(lightning.LightningModule):
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
 
 
-class RenderEpisodesCallback(JaxCallback[PPOState]):
+class RenderEpisodesCallback(JaxCallback):
     on_every_epoch: int = False
 
     def on_fit_start(self, trainer: JaxTrainer, module: PPOLearner, ts: PPOState):

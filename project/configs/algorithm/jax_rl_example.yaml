@@ -1,7 +1,7 @@
 # defaults:
-  # - override /trainer@_global_.trainer: jax
-  # - override /datamodule@_global_.datamodule: null
-  # - override /network@_global_.network: null
+# - override /trainer@_global_.trainer: jax
+# - override /datamodule@_global_.datamodule: null
+# - override /network@_global_.network: null
 _target_: project.algorithms.jax_rl_example.PPOLearner.create
 env:
   _target_: gymnax.environments.classic_control.pendulum.Pendulum
