@@ -6,7 +6,6 @@ defaults:
   - override /trainer: jax
   # - override /trainer/callbacks: none
   - override /datamodule: null
-  - override /network: null
 trainer:
   max_epochs: 75
   training_steps_per_epoch: 1

@@ -1163,7 +1163,7 @@ def train_pure_jax(
     from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
     from lightning.pytorch.loggers import CSVLogger
 
-    lightning.Trainer.log_dir
+    # TODO: The progress bar doesn't work anymore!
     trainer = JaxTrainer(
         max_epochs=max_epochs,
         training_steps_per_epoch=training_steps_per_epoch,
