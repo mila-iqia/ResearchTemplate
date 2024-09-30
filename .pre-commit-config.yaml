@@ -67,7 +67,7 @@ repos:
     rev: 0.7.17
     hooks:
       - id: mdformat
-        exclude: "SUMMARY.md|testing.md|jax.md"
+        exclude: "SUMMARY.md|testing.md|jax.md|docs/examples/"
         args: ["--number"]
         additional_dependencies:
           - mdformat-gfm
@@ -77,6 +77,7 @@ repos:
           - mdformat-config
           - mdformat-black
           # see https://github.com/KyleKing/mdformat-mkdocs
+          # Doesn't seem to work!
           - mdformat-mkdocs[recommended]>=2.1.0
         require_serial: true
 

@@ -49,7 +49,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
     1. The source code for the example is available [here](https://github.com/mila-iqia/ResearchTemplate/blob/master/project/algorithms/example.py)
 
-    [:octicons-arrow-right-24: Check out the examples here](examples/examples.md)
+    [:octicons-arrow-right-24: Check out the examples here](examples/index.md)
 
 <!--
 -   :material-scale-balance:{ .lg .middle } __Open Source, MIT__
@@ -80,7 +80,7 @@ To see all available options:
 python project/main.py --help
 ```
 
-For a detailed list of examples, see the [examples page](examples/examples.md).
+For a detailed list of examples, see the [examples page](examples/index.md).
 
 <!-- * `mkdocs new [dir-name]` - Create a new project.
 * `mkdocs serve` - Start the live-reloading docs server.
