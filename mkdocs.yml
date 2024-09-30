@@ -79,6 +79,7 @@ plugins:
             - https://lightning.ai/docs/pytorch/stable/objects.inv
             - https://docs.pytest.org/en/stable/objects.inv
             - https://flax.readthedocs.io/en/latest/objects.inv
+            - https://docs.python.org/3/objects.inv
           options:
             docstring_style: google
             members_order: source

@@ -8,7 +8,7 @@ python project/main.py algorithm=example
 """
 
 from logging import getLogger
-from typing import Literal
+from typing import Literal, TypeVar
 
 import torch
 from hydra_zen.typing import Builds, PartialBuilds
@@ -23,6 +23,14 @@ from project.experiment import instantiate
 
 logger = getLogger(__name__)
 
+T = TypeVar("T")
+
+# Config that returns the object of type T when instantiated.
+Config = Builds[type[T]]
+
+# Config that returns a function that creates the object of type T.
+PartialConfig = PartialBuilds[type[T]]
+
 
 class ExampleAlgorithm(LightningModule):
     """Example learning algorithm for image classification."""
@@ -30,19 +38,19 @@ class ExampleAlgorithm(LightningModule):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: Builds[type[torch.nn.Module]],
-        optimizer: PartialBuilds[type[Optimizer]] = AdamConfig(lr=3e-4),
+        network: Config[torch.nn.Module],
+        optimizer: PartialConfig[Optimizer] = AdamConfig(lr=3e-4),
         init_seed: int = 42,
     ):
         """Create a new instance of the algorithm.
 
-        Parameters
-        ----------
-        datamodule: Object used to load train/val/test data. See the lightning docs for the \
-            `LightningDataModule` class more info.
-        network: The config of the network to instantiate and train.
-        optimizer: Configuration options for the Optimizer. Note that this is an optimizer.
-        init_seed: The seed to use when initializing the weights of the network.
+        Parameters:
+            datamodule: Object used to load train/val/test data. See the lightning docs for the \
+                [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule] class for more info.
+            network: The config of the network to instantiate and train.
+            optimizer: The config for the Optimizer. Instantiating this will return a function \
+                (a [functools.partial][]) that will create the Optimizer given the hyper-parameters.
+            init_seed: The seed to use when initializing the weights of the network.
         """
         super().__init__()
         self.datamodule = datamodule
@@ -75,8 +83,8 @@ class ExampleAlgorithm(LightningModule):
             self.network = instantiate(self.network_config)
 
             if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
-                # Do a forward pass to initialize any lazy weights. This is necessary for distributed
-                # training and to infer shapes.
+                # Do a forward pass to initialize any lazy weights. This is necessary for
+                # distributed training and to infer shapes.
                 _ = self.network(self.example_input_array)
 
     def forward(self, input: Tensor) -> Tensor:
