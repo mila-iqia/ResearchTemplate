@@ -80,6 +80,8 @@ plugins:
             - https://docs.pytest.org/en/stable/objects.inv
             - https://flax.readthedocs.io/en/latest/objects.inv
             - https://docs.python.org/3/objects.inv
+            - https://pytorch.org/docs/stable/objects.inv
+            - https://jax.readthedocs.io/en/latest/objects.inv
           options:
             docstring_style: google
             members_order: source
