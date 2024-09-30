@@ -9,7 +9,7 @@ from abc import ABC
 from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, TypeVar, get_args
+from typing import Any, Generic, Literal, TypeVar, get_args
 
 import jax
 import lightning
@@ -71,10 +71,13 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Checks that the forward pass output is consistent given the a random seed and a given
         input."""
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
             out1 = forward_pass(algorithm, forward_pass_input)
-        with seeded_rng(seed):
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
             out2 = forward_pass(algorithm, forward_pass_input)
+
         torch.testing.assert_close(out1, out2)
 
     # @pytest.mark.timeout(10)
@@ -84,7 +87,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
-        devices: int | list[int],
+        devices: int | list[int] | Literal["auto"],
         tmp_path: Path,
     ):
         """Check that the backward pass is reproducible given the same input, weights, and random
@@ -118,7 +121,6 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
                 callbacks=[gradients_callback],
                 tmp_path=tmp_path / "run2",
             )
-
         batch_2 = gradients_callback.batch
         gradients_2 = gradients_callback.grads
         training_step_outputs_2 = gradients_callback.outputs
@@ -265,7 +267,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         algorithm: AlgorithmType,
         datamodule: LightningDataModule,
         accelerator: str,
-        devices: int | list[int],
+        devices: int | list[int] | Literal["auto"],
         callbacks: list[lightning.Callback],
         tmp_path: Path,
     ):

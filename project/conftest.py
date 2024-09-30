@@ -68,6 +68,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
+from typing import Literal
 
 import lightning.pytorch as pl
 import pytest
@@ -430,7 +431,7 @@ def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
 
 
 @pytest.fixture(scope="session")
-def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int:
+def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int | Literal["auto"]:
     """Fixture that creates the 'devices' argument for the Trainer config."""
     # When using pytest-xdist to distribute tests, each worker will use different devices.
 
@@ -446,7 +447,7 @@ def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int
         n_cpus = num_cpus_on_node()
         # Split the CPUS as evenly as possible (last worker might get less).
         if num_pytest_workers == 1:
-            return n_cpus
+            return "auto"
         n_cpus_for_this_worker = (
             n_cpus // num_pytest_workers
             if worker_index != num_pytest_workers - 1
