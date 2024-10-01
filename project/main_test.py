@@ -4,6 +4,7 @@ from __future__ import annotations
 import shutil
 
 import hydra_zen
+import omegaconf
 import pytest
 import torch
 from omegaconf import DictConfig
@@ -12,6 +13,7 @@ from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
 from project.conftest import use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
+from project.utils.hydra_utils import resolve_dictconfig
 
 from .main import main
 
@@ -37,9 +39,17 @@ def test_torch_can_use_the_GPU():
 
 
 @pytest.mark.parametrize("overrides", [""], indirect=True)
-def test_defaults(experiment_config: Config) -> None:
+def test_defaults(experiment_dictconfig: DictConfig) -> None:
     """Test to check what the default values are when not specifying anything on the command-
     line."""
+    with pytest.raises(omegaconf.errors.MissingMandatoryValue):
+        _ = resolve_dictconfig(experiment_dictconfig)
+
+
+@pytest.mark.parametrize("overrides", ["algorithm=example"], indirect=True)
+def test_example_experiment_defaults(experiment_config: Config) -> None:
+    """Test to check what the default values are when specifying an algorithm to use from the
+    command-line."""
     assert experiment_config.algorithm["_target_"] == (
         ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__qualname__
     )
@@ -49,7 +59,7 @@ def test_defaults(experiment_config: Config) -> None:
     )
 
 
-@use_overrides(["seed=1 +trainer.fast_dev_run=True"])
+@use_overrides(["algorithm=example seed=1 +trainer.fast_dev_run=True"])
 def test_fast_dev_run(experiment_dictconfig: DictConfig):
     result = main(experiment_dictconfig)
     assert isinstance(result, dict)
