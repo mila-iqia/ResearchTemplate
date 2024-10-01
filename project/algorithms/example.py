@@ -71,9 +71,6 @@ class ExampleAlgorithm(LightningModule):
             }
         )
 
-        # Save hyper-parameters.
-        self.save_hyperparameters(ignore=["datamodule", "network"])
-
         # Small fix for the `device` property in LightningModule, which is CPU by default.
         self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
@@ -84,7 +81,10 @@ class ExampleAlgorithm(LightningModule):
         with torch.random.fork_rng():
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
-            self.network = instantiate(self.network_config)
+            if isinstance(self.network_config, torch.nn.Module):
+                self.network = self.network_config
+            else:
+                self.network = instantiate(self.network_config)
 
             if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
                 # Do a forward pass to initialize any lazy weights. This is necessary for
