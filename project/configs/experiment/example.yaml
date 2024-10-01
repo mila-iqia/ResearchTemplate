@@ -4,8 +4,8 @@
 # python main.py experiment=example
 
 defaults:
-  - override /datamodule: cifar10
   - override /algorithm: example
+  - override /datamodule: cifar10
   - override /trainer: default
   - override /trainer/logger: wandb
 
