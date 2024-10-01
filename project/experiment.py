@@ -212,7 +212,10 @@ def instantiate_algorithm(
         algo_or_algo_partial = hydra.utils.instantiate(algo_config)
 
     if isinstance(algo_or_algo_partial, functools.partial):
-        algorithm = algo_or_algo_partial(datamodule=datamodule)
+        if datamodule:
+            algorithm = algo_or_algo_partial(datamodule=datamodule)
+        else:
+            algorithm = algo_or_algo_partial()
     else:
         # logger.warning(
         #     f"Your algorithm config {algo_config} doesn't have '_partial_: true' set, which is "
