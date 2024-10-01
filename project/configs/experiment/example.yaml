@@ -4,7 +4,6 @@
 # python main.py experiment=example
 
 defaults:
-  - /trainer/callbacks: default
   - override /datamodule: cifar10
   - override /algorithm: example
   - override /trainer: default
