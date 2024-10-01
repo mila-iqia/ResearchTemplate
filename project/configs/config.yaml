@@ -2,7 +2,7 @@ defaults:
   - base_config
   - _self_
   - optional datamodule: null
-  - algorithm: ???
+  - optional algorithm: null
   - trainer: default.yaml
   - hydra: default.yaml
 
