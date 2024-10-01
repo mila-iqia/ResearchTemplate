@@ -47,9 +47,19 @@ def test_defaults(experiment_dictconfig: DictConfig) -> None:
 
 
 @pytest.mark.parametrize("overrides", ["algorithm=example"], indirect=True)
+def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
+    """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
+    with pytest.raises(
+        omegaconf.errors.InterpolationResolutionError,
+        match="Could not find any of these attributes ('datamodule.num_classes',)",
+    ):
+        _ = resolve_dictconfig(experiment_dictconfig)
+
+
+@pytest.mark.parametrize("overrides", ["algorithm=example datamodule=cifar10"], indirect=True)
 def test_example_experiment_defaults(experiment_config: Config) -> None:
-    """Test to check what the default values are when specifying an algorithm to use from the
-    command-line."""
+    """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
+
     assert experiment_config.algorithm["_target_"] == (
         ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__qualname__
     )
