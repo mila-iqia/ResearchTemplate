@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import shutil
 
+import hydra.errors
 import hydra_zen
-import omegaconf
+import omegaconf.errors
 import pytest
 import torch
 from omegaconf import DictConfig
@@ -42,7 +43,7 @@ def test_torch_can_use_the_GPU():
 def test_defaults(experiment_dictconfig: DictConfig) -> None:
     """Test to check what the default values are when not specifying anything on the command-
     line."""
-    with pytest.raises(omegaconf.errors.MissingMandatoryValue):
+    with pytest.raises(hydra.errors.ConfigCompositionException):
         _ = resolve_dictconfig(experiment_dictconfig)
 
 
@@ -51,7 +52,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
     with pytest.raises(
         omegaconf.errors.InterpolationResolutionError,
-        match="Could not find any of these attributes ('datamodule.num_classes',)",
+        match="Could not find any of these attributes",
     ):
         _ = resolve_dictconfig(experiment_dictconfig)
 
