@@ -114,7 +114,6 @@ def print_config(
     config: DictConfig,
     print_order: Sequence[str] = (
         "algorithm",
-        "network",
         "datamodule",
         "trainer",
     ),
