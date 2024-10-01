@@ -11,6 +11,7 @@ an instantiated object instead of a config.
 
 from __future__ import annotations
 
+import copy
 import functools
 import logging
 import os
@@ -19,21 +20,17 @@ from dataclasses import dataclass
 from logging import getLogger as get_logger
 from typing import Any
 
+import hydra
+import hydra.utils
 import hydra_zen
 import rich.console
 import rich.logging
 import rich.traceback
 from hydra_zen.typing import Builds
 from lightning import Callback, LightningModule, Trainer, seed_everything
-from torch import nn
 
 from project.configs.config import Config
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
-from project.utils.hydra_utils import get_outer_class
-from project.utils.typing_utils import Dataclass
-from project.utils.typing_utils.protocols import DataModule, Module
+from project.utils.typing_utils.protocols import DataModule
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)
@@ -58,7 +55,7 @@ class Experiment:
     """
 
     algorithm: LightningModule
-    datamodule: DataModule
+    datamodule: DataModule | None
     trainer: Trainer
 
 
@@ -135,32 +132,42 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     # instantiate all the callbacks
     callback_configs = experiment_config.trainer.pop("callbacks", {})
     callback_configs = {k: v for k, v in callback_configs.items() if v is not None}
-    callbacks: dict[str, Callback] | None = hydra_zen.instantiate(callback_configs)
+    callbacks: dict[str, Callback] | None = hydra.utils.instantiate(
+        callback_configs, _convert_="object"
+    )
     # Create the loggers, if any.
-    loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
+    loggers: dict[str, Any] | None = hydra.utils.instantiate(
+        experiment_config.trainer.pop("logger", {})
+    )
 
     # Create the Trainer.
-    assert isinstance(experiment_config.trainer, dict)
-    if experiment_config.debug:
-        logger.info("Setting the max_epochs to 1, since the 'debug' flag was passed.")
-        experiment_config.trainer["max_epochs"] = 1
-    if "_target_" not in experiment_config.trainer:
-        experiment_config.trainer["_target_"] = Trainer
 
-    trainer = instantiate(
-        experiment_config.trainer,
-        callbacks=list(callbacks.values()) if callbacks else None,
-        logger=list(loggers.values()) if loggers else None,
-    )
-    assert isinstance(trainer, Trainer)
+    # BUG: `hydra.utils.instantiate` doesn't work with override **kwargs when some of them are
+    # dataclasses (e.g. a callback).
+    # trainer = hydra.utils.instantiate(
+    #     config,
+    #     callbacks=list(callbacks.values()) if callbacks else None,
+    #     logger=list(loggers.values()) if loggers else None,
+    # )
+    assert isinstance(experiment_config.trainer, dict)
+    config = copy.deepcopy(experiment_config.trainer)
+    target = hydra.utils.get_object(config.pop("_target_"))
+    _callbacks = list(callbacks.values()) if callbacks else None
+    _loggers = list(loggers.values()) if loggers else None
+
+    trainer = target(**config, callbacks=_callbacks, logger=_loggers)
     return trainer
 
 
-def instantiate_datamodule(datamodule_config: Builds[type[DataModule]] | DataModule) -> DataModule:
+def instantiate_datamodule(
+    datamodule_config: Builds[type[DataModule]] | DataModule | None,
+) -> DataModule | None:
     """Instantiate the datamodule from the configuration dict.
 
     Any interpolations in the config will have already been resolved by the time we get here.
     """
+    if not datamodule_config:
+        return None
     if isinstance(datamodule_config, DataModule):
         logger.info(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
@@ -170,13 +177,15 @@ def instantiate_datamodule(datamodule_config: Builds[type[DataModule]] | DataMod
     else:
         logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
         datamodule = instantiate(datamodule_config)
-        assert isinstance(datamodule, DataModule)
+        # assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)
     return datamodule
 
 
-def instantiate_algorithm(algorithm_config: Config, datamodule: DataModule) -> LightningModule:
+def instantiate_algorithm(
+    algorithm_config: Config, datamodule: DataModule | None
+) -> LightningModule:
     """Function used to instantiate the algorithm.
 
     It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
@@ -197,7 +206,11 @@ def instantiate_algorithm(algorithm_config: Config, datamodule: DataModule) -> L
         )
         return algo_config
 
-    algo_or_algo_partial = instantiate(algo_config, datamodule=datamodule)
+    if datamodule:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
+    else:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config)
+
     if isinstance(algo_or_algo_partial, functools.partial):
         algorithm = algo_or_algo_partial(datamodule=datamodule)
     else:
@@ -214,27 +227,5 @@ def instantiate_algorithm(algorithm_config: Config, datamodule: DataModule) -> L
                 f"explicitly supported at the moment."
             )
         )
+
     return algorithm
-
-
-def instantiate_network_from_hparams(network_hparams: Dataclass, datamodule: DataModule) -> Module:
-    """TODO: Refactor this if possible. Shouldn't be as complicated as it currently is.
-
-    Perhaps we could register handler functions for each pair of datamodule and network type, a bit
-    like a multiple dispatch?
-    """
-    network_type = get_outer_class(type(network_hparams))
-    assert issubclass(network_type, nn.Module)
-    assert isinstance(
-        network_hparams,
-        network_type.HParams,  # type: ignore
-    ), "HParams type should match net type"
-    if isinstance(datamodule, ImageClassificationDataModule):
-        # if issubclass(network_type, ImageClassifierNetwork):
-        return network_type(
-            in_channels=datamodule.dims[0],
-            n_classes=datamodule.num_classes,  # type: ignore
-            hparams=network_hparams,
-        )
-
-    raise NotImplementedError(datamodule, network_hparams)

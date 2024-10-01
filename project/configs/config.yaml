@@ -1,7 +1,7 @@
 defaults:
   - base_config
   - _self_
-  - datamodule: cifar10
+  - optional datamodule: cifar10
   - algorithm: example
   - trainer: default.yaml
   - hydra: default.yaml

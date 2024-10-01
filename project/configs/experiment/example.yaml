@@ -4,6 +4,7 @@
 # python main.py experiment=example
 
 defaults:
+  - /trainer/callbacks: default
   - override /datamodule: cifar10
   - override /algorithm: example
   - override /trainer: default
@@ -15,14 +16,14 @@ name: example
 
 seed: ${oc.env:SLURM_PROCID,12345}
 
-hydra:
-  run:
-    # output directory, generated dynamically on each run
-    # DOESN'T WORK! This won't get interpolated correctly!
-    # TODO: Make it so running the same command twice in the same job id resumes from the last checkpoint.
-    dir: logs/${name}/runs/${oc.env:SLURM_JOB_ID,${hydra.job.id}}
-  sweep:
-    dir: logs/${name}/multiruns/
+# hydra:
+#   run:
+#     # output directory, generated dynamically on each run
+#     # DOESN'T WORK! This won't get interpolated correctly!
+#     # TODO: Make it so running the same command twice in the same job id resumes from the last checkpoint.
+#     dir: logs/${name}/runs/${oc.env:SLURM_JOB_ID,${hydra.job.id}}
+#   sweep:
+#     dir: logs/${name}/multiruns/
 
 algorithm:
   optimizer_config:

@@ -40,15 +40,18 @@ def main(dict_config: DictConfig) -> dict:
     from project.utils.auto_schema import add_schemas_to_all_hydra_configs
 
     # Note: running this should take ~5 seconds the first time and <1s after that.
-    add_schemas_to_all_hydra_configs(
-        config_files=None,
-        repo_root=REPO_ROOTDIR,
-        configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
-        regen_schemas=False,
-        stop_on_error=False,
-        quiet=True,
-        add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
-    )
+    try:
+        add_schemas_to_all_hydra_configs(
+            config_files=None,
+            repo_root=REPO_ROOTDIR,
+            configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
+            regen_schemas=False,
+            stop_on_error=False,
+            quiet=True,
+            add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
+        )
+    except Exception:
+        logger.error("Unable to add schemas to all hydra configs.")
 
     config: Config = resolve_dictconfig(dict_config)
 
@@ -77,11 +80,15 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
     # TODO: Add ckpt_path argument to resume a training run.
     datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
-    assert isinstance(datamodule, LightningDataModule)
-    experiment.trainer.fit(
-        experiment.algorithm,
-        datamodule=datamodule,
-    )
+
+    if datamodule is None:
+        experiment.trainer.fit(experiment.algorithm)
+    else:
+        assert isinstance(datamodule, LightningDataModule)
+        experiment.trainer.fit(
+            experiment.algorithm,
+            datamodule=datamodule,
+        )
 
     metric_name, error, metrics = evaluation(experiment)
     if wandb.run:
