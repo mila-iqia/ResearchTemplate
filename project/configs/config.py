@@ -30,9 +30,6 @@ class Config:
     For more info, see the [instantiate_algorithm][project.experiment.instantiate_algorithm] function.
     """
 
-    network: Any | None = None
-    """The network to use."""
-
     datamodule: Any | None = None
     """Configuration for the datamodule (dataset + transforms + dataloader creation).
 
