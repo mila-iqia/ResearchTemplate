@@ -36,7 +36,7 @@ from project.utils.typing_utils import is_sequence_of
         ),
     ],
 )
-# @pytest.mark.parametrize("overrides", ["algorithm=no_op"], indirect=True)
+@pytest.mark.parametrize("overrides", ["algorithm=no_op"], indirect=True)
 @run_for_all_datamodules()
 def test_first_batch(
     datamodule: LightningDataModule,

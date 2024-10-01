@@ -3,10 +3,6 @@
 defaults:
   - network: resnet18
   - optimizer: Adam
-  # Set the default for the `/datamodule` config group using a package directive. This is just here
-  # so that using `algorithm=example` also sets a default for `datamodule=cifar10` (unless it's
-  # overwritten in the experiment or on the command-line).
-  - override /datamodule@_global_.datamodule: cifar10
   - _self_
 
 _target_: project.algorithms.example.ExampleAlgorithm
