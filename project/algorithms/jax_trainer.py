@@ -104,7 +104,7 @@ class JaxCallback(Generic[Ts, _B], flax.struct.PyTreeNode):
     def teardown(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], stage: str, ts: Ts): ...
 
 
-class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
+class JaxTrainer(flax.struct.PyTreeNode):
     """Somewhat similar to a `lightning.Trainer`."""
 
     # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
@@ -115,8 +115,8 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
     training_steps_per_epoch: int
 
     # training_step_fn: Callable[[TrainState, int], tuple[TrainState, Any]]
-    callbacks: Sequence[lightning.Callback | JaxCallback] = flax.struct.field(
-        pytree_node=False, default_factory=list
+    callbacks: tuple[lightning.Callback | JaxCallback, ...] = flax.struct.field(
+        pytree_node=False, default_factory=tuple
     )
 
     logger: lightning.pytorch.loggers.Logger | None = flax.struct.field(
@@ -154,6 +154,8 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
     # return lightning.Trainer._logger_connector.progress_bar_metrics
     progress_bar_metrics: dict = flax.struct.field(pytree_node=True, default_factory=dict)
 
+    verbose: bool = flax.struct.field(pytree_node=False, default=False)
+
     @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
     def fit(
         self,
@@ -168,13 +170,15 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
 
         Training loop in pure jax (a lot faster than when using pytorch-lightning).
         """
-        jax.debug.print("Starting training!")
+
         if train_state is None and rng is None:
             raise ValueError("Either train_state or rng must be provided")
 
         train_state = train_state if train_state is not None else algo.init_train_state(rng)
 
         if self.progress_bar_callback is not None:
+            if self.verbose:
+                jax.debug.print("Enabling the progress bar callback.")
             jax.experimental.io_callback(self.progress_bar_callback.enable, ())
 
         self._callback_hook("setup", self, algo, ts=train_state, partial_kwargs=dict(stage="fit"))
@@ -186,6 +190,7 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
                 lambda algo: self.logger and self.logger.log_hyperparams(hparams_to_dict(algo)),
                 (),
                 algo,
+                ordered=True,
             )
 
         initial_evaluation: _MetricsT | None = None
@@ -234,7 +239,7 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
         # todo: need to have the callback take in the actual int value.
         # jax.debug.print("Starting epoch {epoch}", epoch=epoch)
 
-        self = self.replace(current_epoch=epoch)  # doesn't quite work!
+        self = self.replace(current_epoch=epoch)  # doesn't quite work?
         ts = self.training_epoch(ts=ts, epoch=epoch, algo=algo)
         eval_metrics = self.eval_epoch(ts=ts, epoch=epoch, algo=algo)
         return ts, eval_metrics
@@ -307,16 +312,27 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
         ts: Ts,
         partial_kwargs: dict | None = None,
         sharding: jax.sharding.SingleDeviceSharding | None = None,
-        ordered: bool = False,
+        ordered: bool = True,
         **hook_kwargs,
     ):
         """Call a hook on all callbacks."""
+        # with jax.disable_jit():
         for i, callback in enumerate(self.callbacks):
-            assert hasattr(callback, hook_name)
+            # assert hasattr(callback, hook_name)
+
             method = getattr(callback, hook_name)
             if partial_kwargs:
                 method = functools.partial(method, **partial_kwargs)
-
+            if self.verbose:
+                jax.debug.print(
+                    "Epoch {current_epoch}/{max_epochs}: "
+                    + f"Calling hook {hook_name} on callback {callback}"
+                    + "{i}",
+                    i=i,
+                    current_epoch=self.current_epoch,
+                    ordered=True,
+                    max_epochs=self.max_epochs,
+                )
             jax.experimental.io_callback(
                 method,
                 (),
@@ -324,7 +340,7 @@ class JaxTrainer(Generic[Ts, _B, _MetricsT], flax.struct.PyTreeNode):
                 **({"ts": ts} if isinstance(callback, JaxCallback) else {}),
                 **hook_kwargs,
                 sharding=sharding,
-                ordered=ordered,
+                ordered=ordered if not isinstance(callback, JaxCallback) else False,
             )
 
     # Compat for RichProgressBar

@@ -990,6 +990,7 @@ class RenderEpisodesCallback(JaxCallback):
         assert log_dir is not None
         gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
+        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
 
     def on_train_epoch_start(self, trainer: JaxTrainer, module: PPOLearner, ts: PPOState):
         if not self.on_every_epoch:
@@ -998,6 +999,7 @@ class RenderEpisodesCallback(JaxCallback):
         assert log_dir is not None
         gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
+        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
 
 
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):
@@ -1130,6 +1132,7 @@ def main():
             ent_coef=0.0,
             vf_coef=0.5,
             normalize_observations=True,
+            debug=False,
         ),
     )
     # train_pure_jax(algo, backend="cpu")
@@ -1148,8 +1151,6 @@ def train_pure_jax(
     algo: PPOLearner, rng: chex.PRNGKey, n_agents: int | None = None, backend: str | None = None
 ):
     print("Pure Jax (ours)")
-    print("Compiling...")
-    start = time.perf_counter()
     import jax._src.deprecations
 
     jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
@@ -1169,12 +1170,11 @@ def train_pure_jax(
         training_steps_per_epoch=training_steps_per_epoch,
         logger=CSVLogger(save_dir="logs/jax_rl_debug", name=None, flush_logs_every_n_steps=1),
         default_root_dir=REPO_ROOTDIR / "logs",
-        callbacks=[
-            # Can't use callbacks when using `vmap`!
-            # RlThroughputCallback(),
-            RenderEpisodesCallback(on_every_epoch=False),
+        callbacks=(
+            # RlThroughputCallback(),  # Can't use this callback with `vmap`!
+            # RenderEpisodesCallback(on_every_epoch=False),
             RichProgressBar(),
-        ],
+        ),
     )
     train_fn = functools.partial(trainer.fit)
 
@@ -1182,13 +1182,17 @@ def train_pure_jax(
         train_fn = jax.vmap(train_fn)
         rng = jax.random.split(rng, n_agents)
 
-    train_fn = jax.jit(train_fn, backend=backend).lower(algo, rng).compile()
-    print(f"Finished compiling in {time.perf_counter() - start} seconds.")
+    with jax.disable_jit(algo.hp.debug):
+        if not algo.hp.debug:
+            print("Compiling...")
+            start = time.perf_counter()
+            train_fn = jax.jit(train_fn, backend=backend).lower(algo, rng).compile()
+            print(f"Finished compiling in {time.perf_counter() - start} seconds.")
 
-    print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
-    start = time.perf_counter()
-    train_state, evaluations = train_fn(algo, rng)
-    jax.block_until_ready((train_state, evaluations))
+        print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
+        start = time.perf_counter()
+        train_state, evaluations = train_fn(algo, rng)
+        jax.block_until_ready((train_state, evaluations))
     print(f"Finished training in {time.perf_counter() - start} seconds.")
     assert isinstance(train_state, PPOState)
     assert isinstance(evaluations, EvalMetrics)
