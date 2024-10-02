@@ -1,14 +1,14 @@
 # @package _global_
 defaults:
-  - example.yaml  # A configuration for a single run (that works!)
-  - override /hydra/sweeper: orion  # Select the orion sweeper plugin
+  - example.yaml # A configuration for a single run (that works!)
+  - override /hydra/sweeper: orion # Select the orion sweeper plugin
 
 log_level: DEBUG
 name: "local-sweep-example"
 seed: 123
 
 algorithm:
-  optimizer_config:
+  optimizer:
     # This here will get overwritten by the sweeper.
     lr: 0.002
 
@@ -45,7 +45,7 @@ hydra:
   sweeper:
     params:
       algorithm:
-        optimizer_config:
+        optimizer:
           lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
           # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
 

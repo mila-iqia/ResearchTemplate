@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import typing
 from collections.abc import Sequence
 from logging import getLogger as get_logger
@@ -20,18 +19,6 @@ from project.utils.typing_utils.protocols import (
 )
 
 logger = get_logger(__name__)
-
-
-# todo: doesn't work? keeps logging each time!
-@functools.cache
-def log_once(message: str, level: int) -> None:
-    """Logs a message once. The message is logged at the specified level.
-
-    Args:
-        message: The message to log.
-        level: The logging level to use.
-    """
-    logger.log(level=level, msg=message, stacklevel=2)
 
 
 def get_log_dir(trainer: Trainer | None) -> Path:
@@ -114,7 +101,6 @@ def print_config(
     config: DictConfig,
     print_order: Sequence[str] = (
         "algorithm",
-        "network",
         "datamodule",
         "trainer",
     ),

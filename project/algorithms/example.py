@@ -7,16 +7,19 @@ python project/main.py algorithm=example
 ```
 """
 
+from collections.abc import Sequence
 from logging import getLogger
 from typing import Literal, TypeVar
 
 import torch
 from hydra_zen.typing import Builds, PartialBuilds
 from lightning import LightningModule
+from lightning.pytorch.callbacks.callback import Callback
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 
+from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import instantiate
@@ -67,9 +70,6 @@ class ExampleAlgorithm(LightningModule):
                 "init_seed": init_seed,
             }
         )
-
-        # Save hyper-parameters.
-        self.save_hyperparameters(ignore=["datamodule", "network"])
 
         # Small fix for the `device` property in LightningModule, which is CPU by default.
         self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
@@ -122,3 +122,8 @@ class ExampleAlgorithm(LightningModule):
         optimizer = optimizer_partial(self.parameters())
         # This then returns the optimizer.
         return optimizer
+
+    def configure_callbacks(self) -> Sequence[Callback] | Callback:
+        return [
+            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+        ]

@@ -239,14 +239,16 @@ def experiment_config(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_dictconfig: DictConfig) -> DataModule:
+def datamodule(experiment_dictconfig: DictConfig) -> DataModule | None:
     """Fixture that creates the datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_dictconfig.datamodule)
+    return instantiate_datamodule(experiment_dictconfig["datamodule"])
 
 
 @pytest.fixture(scope="function")
-def algorithm(experiment_config: Config, datamodule: DataModule, device: torch.device, seed: int):
+def algorithm(
+    experiment_config: Config, datamodule: DataModule | None, device: torch.device, seed: int
+):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
     with device:
