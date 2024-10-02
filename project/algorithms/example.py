@@ -81,10 +81,7 @@ class ExampleAlgorithm(LightningModule):
         with torch.random.fork_rng():
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
-            if isinstance(self.network_config, torch.nn.Module):
-                self.network = self.network_config
-            else:
-                self.network = instantiate(self.network_config)
+            self.network = instantiate(self.network_config)
 
             if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
                 # Do a forward pass to initialize any lazy weights. This is necessary for
