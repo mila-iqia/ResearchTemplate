@@ -418,17 +418,17 @@ def add_schemas_to_all_hydra_configs(
 
     if not add_headers:
         try:
-            logger.debug(
-                "Found the `code` executable, will add schema paths to the vscode settings."
-            )
             _install_yaml_vscode_extension()
-            _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
+        except OSError:
+            pass
+
+        try:
+           _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
         except Exception as exc:
             logger.error(
                 f"Unable to write schemas in the vscode settings file. "
                 f"Falling back to adding a header to config files. (exc={exc})"
             )
-
             if add_headers is not None:
                 # Unable to do it. Don't try to add headers, just return.
                 return
@@ -493,13 +493,17 @@ def _add_schemas_to_vscode_settings(
     vscode_settings_content = vscode_settings_file.read_text()
     # Remove any trailing commas from the content:
     vscode_settings_content = (
-        vscode_settings_content.strip().removesuffix("}").rstrip().rstrip(",") + "}"
+        # Remove any leading "," that would make it invalid JSON.
+        "".join(vscode_settings_content.split()).replace(",}", "}").replace(",]", "]")
     )
-    vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
 
+    vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
+    logger.debug(f"Vscode settings: {vscode_settings}")
     # Avoid the popup and do users a favour by disabling telemetry.
     vscode_settings.setdefault("redhat.telemetry.enabled", False)
 
+    # TODO: Should probably overwrite the schemas entry if we're passed the --regen-schemas flag,
+    # since otherwise we might accumulate schemas for configs that aren't there anymore.
     yaml_schemas_setting: dict[str, str | list[str]] = vscode_settings.setdefault(
         "yaml.schemas", {}
     )
