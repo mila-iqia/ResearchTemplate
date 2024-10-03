@@ -125,8 +125,8 @@ class JaxCallback(flax.struct.PyTreeNode):
 
 
 class JaxTrainer(flax.struct.PyTreeNode):
-    """A simplified version of the [lightning.pytorch.trainer.Trainer][] with a fully jitted
-    training loop.
+    """A simplified version of the `[lightning.Trainer][lightning.pytorch.trainer.Trainer]` with a
+    fully jitted training loop.
 
     ## Assumptions:
 
