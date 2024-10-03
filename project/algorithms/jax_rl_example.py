@@ -162,12 +162,12 @@ class EvalMetrics(flax.struct.PyTreeNode):
     cumulative_reward: jax.Array
 
 
-class PPOLearner(
+class JaxRLExample(
     flax.struct.PyTreeNode,
     JaxModule[PPOState[_EnvState], TrajectoryWithLastObs, EvalMetrics],
     Generic[_EnvState, _EnvParams],
 ):
-    """PPO algorithm based on `rejax.PPO`.
+    """Example of an RL algorithm written in Jax: PPO, based on `rejax.PPO`.
 
     Differences w.r.t. rejax.PPO:
     - The state / hparams are split into different, fully-typed structs:

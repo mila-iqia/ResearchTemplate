@@ -4,7 +4,7 @@ import dataclasses
 import functools
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Generic, ParamSpec, Protocol, runtime_checkable
+from typing import Any, ParamSpec, Protocol, runtime_checkable
 
 import chex
 import flax.core
@@ -64,20 +64,33 @@ _MetricsT = TypeVar(
 
 @runtime_checkable
 class JaxModule(Protocol[Ts, _B, _MetricsT]):
-    def get_batch(self, ts: Ts, batch_idx: int) -> tuple[Ts, _B]: ...
+    """A protocol for algorithms that can be trained by the [JaxTrainer][]."""
+
+    def init_train_state(self, rng: chex.PRNGKey) -> Ts:
+        """Create the initial training state."""
+        raise NotImplementedError
+
+    def get_batch(self, ts: Ts, batch_idx: int) -> tuple[Ts, _B]:
+        """Produces a batch of data."""
+        raise NotImplementedError
+
     def training_step(
         self, batch_idx: int, ts: Ts, batch: _B
-    ) -> tuple[Ts, flax.struct.PyTreeNode]: ...
-    def eval_callback(self, ts: Ts) -> _MetricsT: ...
-    def init_train_state(self, rng: chex.PRNGKey) -> Ts: ...
+    ) -> tuple[Ts, flax.struct.PyTreeNode]:
+        """Update the training state using a batch of data."""
+        raise NotImplementedError
+
+    def eval_callback(self, ts: Ts) -> _MetricsT:
+        """Perform evaluation and return metrics."""
+        raise NotImplementedError
 
 
-class JaxCallback(Generic[Ts, _B], flax.struct.PyTreeNode):
-    def setup(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], stage: str, ts: Ts): ...
-    def on_fit_start(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
-    def on_fit_end(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
-    def on_train_start(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
-    def on_train_end(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
+class JaxCallback(flax.struct.PyTreeNode):
+    def setup(self, trainer: JaxTrainer, module: JaxModule[Ts], stage: str, ts: Ts): ...
+    def on_fit_start(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def on_fit_end(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def on_train_start(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def on_train_end(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
     def on_train_batch_start(
         self,
         trainer: JaxTrainer,
@@ -95,17 +108,73 @@ class JaxCallback(Generic[Ts, _B], flax.struct.PyTreeNode):
         batch_index: int,
         ts: Ts,
     ) -> None: ...
-    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
-    def on_train_epoch_end(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
-    def on_validation_epoch_start(
-        self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts
-    ): ...
-    def on_validation_epoch_end(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], ts: Ts): ...
-    def teardown(self, trainer: JaxTrainer, module: JaxModule[Ts, _B], stage: str, ts: Ts): ...
+    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def on_train_epoch_end(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def on_validation_epoch_start(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def on_validation_epoch_end(self, trainer: JaxTrainer, module: JaxModule[Ts], ts: Ts): ...
+    def teardown(self, trainer: JaxTrainer, module: JaxModule[Ts], stage: str, ts: Ts): ...
 
 
 class JaxTrainer(flax.struct.PyTreeNode):
-    """Somewhat similar to a `lightning.Trainer`."""
+    """Jax Trainer with roughly the same signature as a `lightning.Trainer`.
+
+    This is a simplified version of the [lightning.pytorch.trainer.Trainer][lightning.Trainer]
+    class which has a fully jitted training loop.
+
+    ## Assumptions:
+
+    - The algo object must match the [JaxModule][] protocol, and so should implement the following
+      methods:
+
+    Regular pytorch-lightning callbacks can also be used with this Trainer.
+
+
+
+
+
+    This is the training loop, which is fully jitted:
+
+    ```python
+    ts = algo.init_train_state(rng)
+
+    setup("fit")
+    on_fit_start()
+    on_train_start()
+
+    eval_metrics = []
+    for epoch in range(self.max_epochs):
+        on_train_epoch_start()
+
+        for step in range(self.training_steps_per_epoch):
+
+            batch = algo.get_batch(ts, step)
+
+            on_train_batch_start()
+
+            ts, metrics = algo.training_step(step, ts, batch)
+
+            on_train_batch_end()
+
+        on_train_epoch_end()
+
+        # Evaluation "loop"
+        on_validation_epoch_start()
+        epoch_eval_metrics = self.eval_epoch(ts, epoch, algo)
+        on_validation_epoch_start()
+
+        eval_metrics.append(epoch_eval_metrics)
+
+    return ts, eval_metrics
+    ```
+
+    ## Caveats
+
+    - Some lightning callbacks can be used with this trainer and work well, but not all of them.
+    - Passing some (any?) callbacks prevents you from using `jax.vmap` on the `fit` method, which
+      would otherwise be very useful.
+        - If you want to use [jax.vmap][] on the `fit` method, just remove the callbacks on the
+          Trainer for now.
+    """
 
     # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
     max_epochs: int = flax.struct.field(pytree_node=False)

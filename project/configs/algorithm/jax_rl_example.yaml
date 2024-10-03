@@ -1,8 +1,10 @@
-# defaults:
-# - override /trainer@_global_.trainer: jax
-# - override /datamodule@_global_.datamodule: null
-# - override /network@_global_.network: null
-_target_: project.algorithms.jax_rl_example.PPOLearner.create
+# Config for the Jax RL Example (PPO).
+# To run this, use the following command:
+# ```
+# python project/main.py algorithm=jax_rl_example trainer=jax
+# ```
+
+_target_: project.algorithms.jax_rl_example.JaxRLExample.create
 env:
   _target_: gymnax.environments.classic_control.pendulum.Pendulum
 env_params:

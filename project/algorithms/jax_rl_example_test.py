@@ -38,8 +38,8 @@ from project.utils.env_vars import REPO_ROOTDIR
 
 from .jax_rl_example import (
     EvalMetrics,
+    JaxRLExample,
     PPOHParams,
-    PPOLearner,
     PPOState,
     Trajectory,
     TrajectoryWithLastObs,
@@ -53,15 +53,16 @@ logger = getLogger(__name__)
 ## Pytorch-Lightning wrapper around this learner:
 
 
-class JaxRlExample(lightning.LightningModule):
-    """Example of a RL algorithm written in Jax, in this case, PPO.
+class PPOLightningModule(lightning.LightningModule):
+    """Uses the same code as [JaxRLExample][], but the training loop is run with pytorch-lightning.
 
-    This is an un-folded version of `rejax.PPO`.
+    This is currently only meant to be used to compare the difference fully-jitted training loop
+    and lightning.
     """
 
     def __init__(
         self,
-        learner: PPOLearner,
+        learner: JaxRLExample,
         ts: PPOState,
     ):
         # https://github.com/keraJLi/rejax/blob/a1428ad3d661e31985c5c19460cec70bc95aef6e/configs/gymnax/pendulum.yaml#L1
@@ -221,7 +222,7 @@ class JaxRlExample(lightning.LightningModule):
 class RenderEpisodesCallback(JaxCallback):
     on_every_epoch: int = False
 
-    def on_fit_start(self, trainer: JaxTrainer, module: PPOLearner, ts: PPOState):
+    def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
         if not self.on_every_epoch:
             return
         log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
@@ -230,7 +231,7 @@ class RenderEpisodesCallback(JaxCallback):
         module.visualize(ts=ts, gif_path=gif_path)
         jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
 
-    def on_train_epoch_start(self, trainer: JaxTrainer, module: PPOLearner, ts: PPOState):
+    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
         if not self.on_every_epoch:
             return
         log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
@@ -304,7 +305,7 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         self,
         name: str,
         value: Any,
-        module: PPOLearner,
+        module: JaxRLExample,
         trainer: lightning.Trainer | JaxTrainer,
         **kwargs,
     ):
@@ -350,11 +351,11 @@ def main():
         env = env_id()  # type: ignore
         env_params = env.default_params
 
-    algo = PPOLearner(
+    algo = JaxRLExample(
         env=env,
         env_params=env_params,
-        actor=PPOLearner.create_actor(env, env_params),
-        critic=PPOLearner.create_critic(),
+        actor=JaxRLExample.create_actor(env, env_params),
+        critic=JaxRLExample.create_critic(),
         hp=PPOHParams(
             num_envs=100,
             num_steps=100,
@@ -386,7 +387,7 @@ def main():
 
 
 def train_pure_jax(
-    algo: PPOLearner, rng: chex.PRNGKey, n_agents: int | None = None, backend: str | None = None
+    algo: JaxRLExample, rng: chex.PRNGKey, n_agents: int | None = None, backend: str | None = None
 ):
     print("Pure Jax (ours)")
     import jax._src.deprecations
@@ -468,7 +469,7 @@ def train_pure_jax(
 
 
 def train_lightning(
-    algo: PPOLearner,
+    algo: JaxRLExample,
     rng: chex.PRNGKey,
     accelerator: str = "auto",
     devices: int | list[int] | str = "auto",
@@ -476,7 +477,7 @@ def train_lightning(
     # Fit with pytorch-lightning.
     print("Lightning")
 
-    module = JaxRlExample(
+    module = PPOLightningModule(
         learner=algo,
         ts=algo.init_train_state(rng),
     )
