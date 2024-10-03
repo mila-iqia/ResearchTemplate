@@ -64,7 +64,8 @@ _MetricsT = TypeVar(
 
 @runtime_checkable
 class JaxModule(Protocol[Ts, _B, _MetricsT]):
-    """A protocol for algorithms that can be trained by the [JaxTrainer][]."""
+    """A protocol for algorithms that can be trained by the
+    [project.algorithms.jax_trainer.JaxTrainer][JaxTrainer]."""
 
     def init_train_state(self, rng: chex.PRNGKey) -> Ts:
         """Create the initial training state."""
@@ -121,16 +122,13 @@ class JaxTrainer(flax.struct.PyTreeNode):
     This is a simplified version of the [lightning.pytorch.trainer.Trainer][lightning.Trainer]
     class which has a fully jitted training loop.
 
+
     ## Assumptions:
 
-    - The algo object must match the [JaxModule][] protocol, and so should implement the following
-      methods:
+    - The algo object must match the [project.algorithms.jax_trainer.JaxModule][JaxModule] protocol (in
+      other words, it should implement its methods).
 
-    Regular pytorch-lightning callbacks can also be used with this Trainer.
-
-
-
-
+    ## Training loop
 
     This is the training loop, which is fully jitted:
 
@@ -170,10 +168,10 @@ class JaxTrainer(flax.struct.PyTreeNode):
     ## Caveats
 
     - Some lightning callbacks can be used with this trainer and work well, but not all of them.
-    - Passing some (any?) callbacks prevents you from using `jax.vmap` on the `fit` method, which
-      would otherwise be very useful.
-        - If you want to use [jax.vmap][] on the `fit` method, just remove the callbacks on the
-          Trainer for now.
+    - You can either use Regular pytorch-lightning callbacks, or use `jax.vmap` on the `fit` method,
+      but not both.
+      - If you want to use [jax.vmap][] on the `fit` method, just remove the callbacks on the
+        Trainer for now.
     """
 
     # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)

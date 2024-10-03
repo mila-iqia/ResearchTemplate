@@ -54,7 +54,8 @@ logger = getLogger(__name__)
 
 
 class PPOLightningModule(lightning.LightningModule):
-    """Uses the same code as [JaxRLExample][], but the training loop is run with pytorch-lightning.
+    """Uses the same code as [project.algorithms.jax_rl_example.JaxRLExample][], but the training
+    loop is run with pytorch-lightning.
 
     This is currently only meant to be used to compare the difference fully-jitted training loop
     and lightning.
