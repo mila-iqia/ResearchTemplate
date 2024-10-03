@@ -492,7 +492,6 @@ def test_train_ours(
 def test_rejax(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
-    backend: str | None,
     original_datadir: Path,
     file_regression: FileRegressionFixture,
     tmp_path: Path,
@@ -509,7 +508,6 @@ def test_rejax(
         env=algo.env,
         env_params=algo.env_params,
         hp=hp,
-        backend=backend,
         rng=rng,
     )
 
