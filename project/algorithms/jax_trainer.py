@@ -299,7 +299,6 @@ class JaxTrainer(flax.struct.PyTreeNode):
         return train_state, evaluations
 
     @jit
-    # @functools.partial(jit, static_argnames=["epoch"])
     def epoch_loop(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
         # todo: Some lightning callbacks try to get the "trainer.current_epoch".
         # FIXME: Hacky: Present a trainer with a different value of `self.current_epoch` to
@@ -315,7 +314,6 @@ class JaxTrainer(flax.struct.PyTreeNode):
         return ts, eval_metrics
 
     @jit
-    # @functools.partial(jit, static_argnames=["epoch"])
     def training_epoch(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
         # Run a few training iterations
         self._callback_hook("on_train_epoch_start", self, algo, ts=ts)
@@ -332,7 +330,6 @@ class JaxTrainer(flax.struct.PyTreeNode):
         return ts
 
     @jit
-    # @functools.partial(jit, static_argnames="epoch")
     def eval_epoch(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
         self._callback_hook("on_validation_epoch_start", self, algo, ts=ts)
 

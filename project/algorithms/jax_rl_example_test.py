@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import functools
 import operator
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from logging import getLogger
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ import gymnax.environments.spaces
 import gymnax.experimental.rollout
 import jax
 import jax.experimental
+import jax.experimental.compute_on
 import jax.numpy as jnp
 import lightning
 import lightning.pytorch
@@ -24,27 +26,32 @@ import lightning.pytorch.loggers
 import lightning.pytorch.trainer
 import lightning.pytorch.trainer.states
 import numpy as np
+import pytest
 import rejax
 import rejax.evaluate
 import torch
 import torch_jax_interop
 from gymnax.environments.environment import Environment
+from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
+from lightning.pytorch.loggers import CSVLogger
+from pytest_regressions.file_regression import FileRegressionFixture
+from tensor_regression import TensorRegressionFixture
 from torch.utils.data import DataLoader
 from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.algorithms.jax_trainer import JaxCallback, JaxTrainer, hparams_to_dict
-from project.utils.env_vars import REPO_ROOTDIR
 
 from .jax_rl_example import (
     EvalMetrics,
     JaxRLExample,
     PPOHParams,
     PPOState,
+    TEnvParams,
+    TEnvState,
     Trajectory,
     TrajectoryWithLastObs,
     _actor,
-    _EnvParams,
     make_actor,
     render_episode,
 )
@@ -159,18 +166,18 @@ class PPOLightningModule(lightning.LightningModule):
     def validation_step(self, batch: int, batch_index: int):
         # self.learner.eval_callback()
         # return  # skip the rest for now while we compare the performance?
-        eval_metrics = self.learner.eval_callback(ts=self.train_state)
+        eval_metrics = self.learner.eval_callback(ts=self.ts)
         episode_lengths = eval_metrics.episode_length
         cumulative_rewards = eval_metrics.cumulative_reward
         self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
         self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
 
     def on_train_epoch_start(self) -> None:
-        if not isinstance(self.env, gymnax.environments.environment.Environment):
+        if not isinstance(self.learner.env, gymnax.environments.environment.Environment):
             return
         assert self.trainer.log_dir is not None
         gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
-        self.learner.visualize(ts=self.train_state, gif_path=gif_path)
+        self.learner.visualize(ts=self.ts, gif_path=gif_path)
         return  # skip the rest for now while we compare the performance
         actor = make_actor(ts=self.train_state, hp=self.hp)
         render_episode(
@@ -326,12 +333,15 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         # )
 
 
-def main():
-    env_id = "Pendulum-v1"
-    env_id = gymnax.environments.classic_control.pendulum.Pendulum
+@pytest.fixture(params=["Pendulum-v1"])
+def env_id(request: pytest.FixtureRequest) -> str:
     # env_id = "halfcheetah"
     # env_id = "humanoid"
+    return request.param
 
+
+@pytest.fixture()
+def env_and_params(env_id: str) -> tuple[Environment[gymnax.EnvState, TEnvParams], TEnvParams]:
     from brax.envs import _envs as brax_envs
     from rejax.compat.brax2gymnax import create_brax
 
@@ -351,8 +361,15 @@ def main():
     else:
         env = env_id()  # type: ignore
         env_params = env.default_params
+    return env, env_params  # type: ignore
 
-    algo = JaxRLExample(
+
+@pytest.fixture
+def algo(
+    env_and_params: tuple[Environment[TEnvState, TEnvParams], TEnvParams],
+) -> JaxRLExample[TEnvState, TEnvParams]:
+    env, env_params = env_and_params
+    algo = JaxRLExample[TEnvState, TEnvParams](
         env=env,
         env_params=env_params,
         actor=JaxRLExample.create_actor(env, env_params),
@@ -375,105 +392,275 @@ def main():
             debug=False,
         ),
     )
+    return algo
+
+
+@pytest.fixture(autouse=True, scope="session")
+def debug_jit_warnings():
+    # Temporarily make this particular warning into an error to help future-proof our jax code.
+    import jax._src.deprecations
+
+    val_before = jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated
+    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
+    yield
+    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = val_before
+
+
+@pytest.fixture
+def rng(request: pytest.FixtureRequest) -> chex.PRNGKey:
+    seed = getattr(request, "param", 123)
+    return jax.random.key(seed)
+
     # train_pure_jax(algo, backend="cpu")
     # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend="cpu")
     # train_lightning(algo, accelerator="cpu")
-    rng = jax.random.key(123)
-
-    train_pure_jax(algo, rng=rng, backend=None, n_agents=None)
-    # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend=None, rng=rng)
-    # train_lightning(algo, accelerator="cuda", devices=1)
-
-    return
 
 
-def train_pure_jax(
-    algo: JaxRLExample, rng: chex.PRNGKey, n_agents: int | None = None, backend: str | None = None
-):
-    print("Pure Jax (ours)")
-    import jax._src.deprecations
+@pytest.fixture
+def max_epochs(algo: JaxRLExample) -> int:
+    # This is the usual value: (75)
+    # return 3  # shorter for tests?
+    return np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
 
-    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
-    # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
-    max_epochs: int = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
 
+@pytest.fixture
+def trainer(algo: JaxRLExample, max_epochs: int, tmp_path: Path):
     iteration_steps = algo.hp.num_envs * algo.hp.num_steps
     num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
     training_steps_per_epoch: int = num_iterations
 
-    from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
-    from lightning.pytorch.loggers import CSVLogger
-
-    # TODO: The progress bar doesn't work anymore!
-    trainer = JaxTrainer(
+    return JaxTrainer(
         max_epochs=max_epochs,
         training_steps_per_epoch=training_steps_per_epoch,
-        logger=CSVLogger(save_dir="logs/jax_rl_debug", name=None, flush_logs_every_n_steps=1),
-        default_root_dir=REPO_ROOTDIR / "logs",
+        # todo: make sure that this also works with the wandb logger!
+        logger=CSVLogger(save_dir=tmp_path, name=None, flush_logs_every_n_steps=1),
+        default_root_dir=tmp_path,
         callbacks=(
             # RlThroughputCallback(),  # Can't use this callback with `vmap`!
             # RenderEpisodesCallback(on_every_epoch=False),
             RichProgressBar(),
         ),
     )
-    train_fn = functools.partial(trainer.fit)
 
-    if n_agents:
-        train_fn = jax.vmap(train_fn)
-        rng = jax.random.split(rng, n_agents)
 
-    with jax.disable_jit(algo.hp.debug):
-        if not algo.hp.debug:
-            print("Compiling...")
-            start = time.perf_counter()
-            train_fn = jax.jit(train_fn, backend=backend).lower(algo, rng).compile()
-            print(f"Finished compiling in {time.perf_counter() - start} seconds.")
+@pytest.fixture
+def lightning_trainer(max_epochs: int, tmp_path: Path):
+    return lightning.Trainer(
+        max_epochs=max_epochs,
+        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        accelerator="auto",
+        devices="auto",
+        default_root_dir=tmp_path,
+        # reload_dataloaders_every_n_epochs=1,  # todo: use this if we end up making a generator in train_dataloader
+        barebones=True,
+    )
 
-        print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
-        start = time.perf_counter()
-        train_state, evaluations = train_fn(algo, rng)
-        jax.block_until_ready((train_state, evaluations))
-    print(f"Finished training in {time.perf_counter() - start} seconds.")
+
+def _add_gitignore_if_needed(original_datadir: Path):
+    if not (gitignore_file := (original_datadir / ".gitignore")).exists():
+        gitignore_file.parent.mkdir(exist_ok=True, parents=True)
+        gitignore_file.write_text("*.gif\n")
+
+
+def test_train_ours(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
+    trainer: JaxTrainer,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    # ndarrays_regression: NDArraysRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    _add_gitignore_if_needed(original_datadir)
+    train_fn = trainer.fit
+
+    train_state, evaluations = train_pure_jax(
+        algo, rng=rng, figures_dir=original_datadir, train_fn=train_fn
+    )
+
+    # ndarrays_regression.check(dataclasses.asdict(evals))
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
+    _gif_path = tmp_path / "ours.gif"
+
+    algo.visualize(ts=train_state, gif_path=_gif_path)
+    file_regression.check(_gif_path.read_bytes(), binary=True, extension=".gif")
+
+
+def test_rejax(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    backend: str | None,
+    original_datadir: Path,
+    file_regression: FileRegressionFixture,
+    tmp_path: Path,
+    max_epochs: int,
+    tensor_regression: TensorRegressionFixture,
+):
+    """Train `rejax.PPO` with the same parameters."""
+    _add_gitignore_if_needed(original_datadir)
+
+    # Make `rejax` use the same number of epochs as us.
+    hp = algo.hp.replace(total_timesteps=max_epochs * algo.hp.eval_freq)
+
+    _algo, ts, evaluations = train_rejax(
+        env=algo.env,
+        env_params=algo.env_params,
+        hp=hp,
+        backend=backend,
+        rng=rng,
+    )
+
+    actor_ts = ts.actor_ts.replace(apply_fn=algo.actor.apply)
+    actor = functools.partial(
+        _actor,
+        actor_ts=actor_ts,
+        rms_state=ts.rms_state,
+        normalize_observations=_algo.normalize_observations,
+    )
+    gif_path = tmp_path / "rejax.gif"
+    render_episode(
+        actor=actor,
+        env=_algo.env,
+        env_params=_algo.env_params,
+        gif_path=gif_path,
+    )
+
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
+
+    file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
+
+
+# Sort-of slow. (~30 secs to run).
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "with_callbacks",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                raises=Exception, reason="Ordered IO effects not supported in vmap.", strict=True
+            ),
+        ),
+        False,
+    ],
+)
+@pytest.mark.parametrize("n_agents", [2, 100])
+def test_ours_with_vmap(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
+    n_agents: int,
+    trainer: JaxTrainer,
+    with_callbacks: bool,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    _add_gitignore_if_needed(original_datadir)
+
+    if not with_callbacks:
+        trainer = trainer.replace(callbacks=())
+
+    train_fn = jax.vmap(trainer.fit, in_axes=(None, 0))
+    rngs = jax.random.split(rng, n_agents)
+
+    train_state, evaluations = train_pure_jax(
+        algo, rng=rngs, figures_dir=original_datadir, train_fn=train_fn, n_agents=n_agents
+    )
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
     assert isinstance(train_state, PPOState)
     assert isinstance(evaluations, EvalMetrics)
 
-    if n_agents is None:
-        algo.visualize(ts=train_state, gif_path=Path("pure_jax.gif"))
-    else:
-        # Visualize the first agent
-        first_agent_ts: PPOState = jax.tree.map(operator.itemgetter(0), train_state)
-        algo.visualize(ts=first_agent_ts, gif_path=Path("pure_jax_first.gif"))
-        last_evals = evaluations.cumulative_reward[:, -1]
-        best_agent = jnp.argmax(last_evals)
-        print(f"Best agent is #{best_agent}, with rng: {rng.at[best_agent]}")
+    figures_dir = tmp_path
+    # Visualize the first agent
+    first_agent_ts: PPOState = jax.tree.map(operator.itemgetter(0), train_state)
+    algo.visualize(ts=first_agent_ts, gif_path=tmp_path / "pure_jax_first.gif")
 
-        best_agent_ts: PPOState = jax.tree.map(operator.itemgetter(best_agent), train_state)
-        algo.visualize(ts=best_agent_ts, gif_path=Path("pure_jax_best.gif"))
+    last_evals = evaluations.cumulative_reward[:, -1]
+    best_agent = jnp.argmax(last_evals)
+    print(f"Best agent is #{best_agent}, with rng: {rng.at[best_agent]}")
 
-        algo.visualize(
-            ts=first_agent_ts.replace(
-                actor_ts=train_state.actor_ts.replace(
-                    params=jax.tree.map(
-                        lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
-                        train_state.actor_ts.params,
-                    )
-                ),
-                critic_ts=train_state.critic_ts.replace(
-                    params=jax.tree.map(
-                        lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
-                        train_state.critic_ts.params,
-                    )
-                ),
+    best_agent_ts: PPOState = jax.tree.map(operator.itemgetter(best_agent), train_state)
+
+    _gif_path = tmp_path / "best.gif"
+    algo.visualize(ts=best_agent_ts, gif_path=_gif_path)
+    file_regression.check(
+        _gif_path.read_bytes(),
+        binary=True,
+        extension=".gif",
+    )
+
+    algo.visualize(
+        ts=first_agent_ts.replace(
+            actor_ts=train_state.actor_ts.replace(
+                params=jax.tree.map(
+                    lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
+                    train_state.actor_ts.params,
+                )
             ),
-            gif_path=Path("pure_jax_avg.gif"),
-        )
+            critic_ts=train_state.critic_ts.replace(
+                params=jax.tree.map(
+                    lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
+                    train_state.critic_ts.params,
+                )
+            ),
+        ),
+        gif_path=figures_dir / "pure_jax_avg.gif",
+    )
+
+
+# todo: takes quite a while to run, actually!
+@pytest.mark.slow
+def test_lightning(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    lightning_trainer: lightning.Trainer,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    # todo: save a gif and some metrics?
+    train_state, evaluations = train_lightning(
+        algo,
+        rng=rng,
+        trainer=lightning_trainer,
+    )
+    gif_path = tmp_path / "lightning.gif"
+    algo.visualize(train_state, gif_path=gif_path)
+    file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
+    assert len(evaluations) == 1
+    tensor_regression.check(evaluations[0])
+
+
+def train_pure_jax(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    figures_dir: Path,
+    train_fn: Callable[[JaxRLExample, chex.PRNGKey], tuple[PPOState, EvalMetrics]],
+    n_agents: int | None = None,
+):
+    print("Pure Jax (ours)")
+    # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
+
+    print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
+    start = time.perf_counter()
+    train_state, evaluations = train_fn(algo, rng)
+    jax.block_until_ready((train_state, evaluations))
+    print(f"Finished training in {time.perf_counter() - start} seconds.")
+    return train_state, evaluations
 
 
 def train_lightning(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
-    accelerator: str = "auto",
-    devices: int | list[int] | str = "auto",
+    trainer: lightning.Trainer,
 ):
     # Fit with pytorch-lightning.
     print("Lightning")
@@ -483,31 +670,20 @@ def train_lightning(
         ts=algo.init_train_state(rng),
     )
 
-    from project.utils.env_vars import REPO_ROOTDIR
-
-    num_evals = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
-    trainer = lightning.Trainer(
-        max_epochs=num_evals,
-        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
-        accelerator=accelerator,
-        devices=devices,
-        default_root_dir=REPO_ROOTDIR / "logs",
-        # reload_dataloaders_every_n_epochs=1,  # todo: use this if we end up making a generator in train_dataloader
-        barebones=True,
-    )
     start = time.perf_counter()
     trainer.fit(module)
     print(f"Trained in {time.perf_counter() - start:.1f} seconds.")
-    train_state = module.train_state
-    module.visualize(train_state, gif_path=Path("lightning.gif"))
+
+    evaluation = trainer.validate(module)
+
+    return module.ts, evaluation
 
 
 def train_rejax(
-    env: Environment[gymnax.EnvState, _EnvParams],
-    env_params: _EnvParams,
+    env: Environment[gymnax.EnvState, TEnvParams],
+    env_params: TEnvParams,
     hp: PPOHParams,
     rng: chex.PRNGKey,
-    backend: str | None = None,
 ):
     print("Rejax")
     algo = rejax.PPO.create(
@@ -530,27 +706,13 @@ def train_rejax(
     )
     print("Compiling...")
     start = time.perf_counter()
-    train_fn = jax.jit(algo.train, backend=backend).lower(rng).compile()
+    train_fn = jax.jit(algo.train).lower(rng).compile()
     print(f"Compiled in {time.perf_counter() - start} seconds.")
     print("Training...")
     start = time.perf_counter()
     ts, eval = train_fn(rng)
     jax.block_until_ready(ts)
     print(f"Finished training in {time.perf_counter() - start} seconds.")
-
-    actor_ts = ts.actor_ts.replace(apply_fn=algo.actor.apply)
-    actor = functools.partial(
-        _actor,
-        actor_ts=actor_ts,
-        rms_state=ts.rms_state,
-        normalize_observations=algo.normalize_observations,
-    )
-    render_episode(actor=actor, env=env, env_params=env_params, gif_path=Path("rejax.gif"))
+    return algo, ts, eval
 
     # print(ts)
-
-
-if __name__ == "__main__":
-    # train_rejax()
-    main()
-    exit()

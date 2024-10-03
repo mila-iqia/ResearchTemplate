@@ -36,8 +36,8 @@ from project.algorithms.jax_trainer import JaxModule
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
-_EnvParams = TypeVar("_EnvParams", bound=gymnax.EnvParams, default=gymnax.EnvParams)
-_EnvState = TypeVar("_EnvState", bound=gymnax.EnvState, default=gymnax.EnvState)
+TEnvParams = TypeVar("TEnvParams", bound=gymnax.EnvParams, default=gymnax.EnvParams)
+TEnvState = TypeVar("TEnvState", bound=gymnax.EnvState, default=gymnax.EnvState)
 
 
 class Trajectory(flax.struct.PyTreeNode):
@@ -61,20 +61,20 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     targets: chex.Array
 
 
-class TrajectoryCollectionState(Generic[_EnvState], flax.struct.PyTreeNode):
+class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
     last_obs: jax.Array
-    env_state: _EnvState
+    env_state: TEnvState
     rms_state: RMSState
     last_done: jax.Array
     global_step: int
     rng: chex.PRNGKey
 
 
-class PPOState(Generic[_EnvState], flax.struct.PyTreeNode):
+class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
     actor_ts: TrainState
     critic_ts: TrainState
     rng: chex.PRNGKey
-    data_collection_state: TrajectoryCollectionState[_EnvState]
+    data_collection_state: TrajectoryCollectionState[TEnvState]
 
 
 class PPOHParams(flax.struct.PyTreeNode):
@@ -164,8 +164,8 @@ class EvalMetrics(flax.struct.PyTreeNode):
 
 class JaxRLExample(
     flax.struct.PyTreeNode,
-    JaxModule[PPOState[_EnvState], TrajectoryWithLastObs, EvalMetrics],
-    Generic[_EnvState, _EnvParams],
+    JaxModule[PPOState[TEnvState], TrajectoryWithLastObs, EvalMetrics],
+    Generic[TEnvState, TEnvParams],
 ):
     """Example of an RL algorithm written in Jax: PPO, based on `rejax.PPO`.
 
@@ -182,8 +182,8 @@ class JaxRLExample(
     The logic is exactly the same: The losses / updates are computed in the exact same way.
     """
 
-    env: Environment[_EnvState, _EnvParams] = flax.struct.field(pytree_node=False)
-    env_params: _EnvParams
+    env: Environment[TEnvState, TEnvParams] = flax.struct.field(pytree_node=False)
+    env_params: TEnvParams
     actor: flax.linen.Module = flax.struct.field(pytree_node=False)
     critic: flax.linen.Module = flax.struct.field(pytree_node=False)
     hp: PPOHParams = flax.struct.field(pytree_node=True)
@@ -194,8 +194,8 @@ class JaxRLExample(
     def create(
         cls,
         env_id: str | None = None,
-        env: Environment[_EnvState, _EnvParams] | None = None,
-        env_params: _EnvParams | None = None,
+        env: Environment[TEnvState, TEnvParams] | None = None,
+        env_params: TEnvParams | None = None,
         hp: PPOHParams | None = None,
     ):
         from brax.envs import _envs as brax_envs
@@ -232,8 +232,8 @@ class JaxRLExample(
     @classmethod
     def create_networks(
         cls,
-        env: Environment[gymnax.EnvState, _EnvParams],
-        env_params: _EnvParams,
+        env: Environment[gymnax.EnvState, TEnvParams],
+        env_params: TEnvParams,
         config: _NetworkConfig,
     ):
         # Equivalent to:
@@ -243,11 +243,14 @@ class JaxRLExample(
             "critic": cls.create_actor(env, env_params, **config["agent_kwargs"]),
         }
 
+    _TEnvParams = TypeVar("_TEnvParams", bound=gymnax.EnvParams, covariant=True)
+    _TEnvState = TypeVar("_TEnvState", bound=gymnax.EnvState, covariant=True)
+
     @classmethod
     def create_actor(
         cls,
-        env: Environment[Any, _EnvParams],
-        env_params: _EnvParams,
+        env: Environment[_TEnvState, _TEnvParams],
+        env_params: _TEnvParams,
         activation: str | Callable[[jax.Array], jax.Array] = "swish",
         hidden_layer_sizes: Sequence[int] = (64, 64),
         **actor_kwargs,
@@ -289,7 +292,7 @@ class JaxRLExample(
             hidden_layer_sizes=hidden_layer_sizes, activation=activation_fn, **critic_kwargs
         )
 
-    def init_train_state(self, rng: chex.PRNGKey) -> PPOState[_EnvState]:
+    def init_train_state(self, rng: chex.PRNGKey) -> PPOState[TEnvState]:
         rng, networks_rng, env_rng = jax.random.split(rng, 3)
 
         rng_actor, rng_critic = jax.random.split(networks_rng, 2)
@@ -329,9 +332,9 @@ class JaxRLExample(
     def train(
         self,
         rng: jax.Array,
-        train_state: PPOState[_EnvState] | None = None,
+        train_state: PPOState[TEnvState] | None = None,
         skip_initial_evaluation: bool = False,
-    ) -> tuple[PPOState[_EnvState], EvalMetrics]:
+    ) -> tuple[PPOState[TEnvState], EvalMetrics]:
         """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
 
         Unfolded version of `rejax.PPO.train`.
@@ -368,8 +371,8 @@ class JaxRLExample(
 
     @jit
     def training_epoch(
-        self, ts: PPOState[_EnvState], epoch: int
-    ) -> tuple[PPOState[_EnvState], EvalMetrics]:
+        self, ts: PPOState[TEnvState], epoch: int
+    ) -> tuple[PPOState[TEnvState], EvalMetrics]:
         # Run a few training iterations
         iteration_steps = self.hp.num_envs * self.hp.num_steps
         num_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
@@ -384,7 +387,7 @@ class JaxRLExample(
         return ts, self.eval_callback(ts)
 
     @jit
-    def fused_training_step(self, iteration: int, ts: PPOState[_EnvState]):
+    def fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
         """Fused training step in jax (joined data collection + training).
 
         *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
@@ -407,7 +410,7 @@ class JaxRLExample(
         return self.training_step(iteration, ts, trajectories)
 
     @jit
-    def training_step(self, batch_idx: int, ts: PPOState[_EnvState], batch: TrajectoryWithLastObs):
+    def training_step(self, batch_idx: int, ts: PPOState[TEnvState], batch: TrajectoryWithLastObs):
         """Training step in pure jax."""
         trajectories = batch
 
@@ -425,7 +428,7 @@ class JaxRLExample(
 
     @jit
     def ppo_update_epoch(
-        self, ts: PPOState[_EnvState], epoch_index: int, trajectories: TrajectoryWithLastObs
+        self, ts: PPOState[TEnvState], epoch_index: int, trajectories: TrajectoryWithLastObs
     ):
         minibatch_rng = jax.random.fold_in(ts.rng, epoch_index)
 
@@ -454,7 +457,7 @@ class JaxRLExample(
         return jax.lax.scan(self.ppo_update, ts, minibatches, length=self.hp.num_minibatches)
 
     @jit
-    def ppo_update(self, ts: PPOState[_EnvState], batch: AdvantageMinibatch):
+    def ppo_update(self, ts: PPOState[TEnvState], batch: AdvantageMinibatch):
         actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
             ts.actor_ts.params,
             actor=self.actor,
@@ -479,7 +482,7 @@ class JaxRLExample(
         return ts.replace(actor_ts=actor_ts, critic_ts=critic_ts), (actor_loss, critic_loss)
 
     def eval_callback(
-        self, ts: PPOState[_EnvState], rng: chex.PRNGKey | None = None
+        self, ts: PPOState[TEnvState], rng: chex.PRNGKey | None = None
     ) -> EvalMetrics:
         if rng is None:
             rng = ts.rng
@@ -491,8 +494,8 @@ class JaxRLExample(
         return EvalMetrics(episode_length=ep_lengths, cumulative_reward=cum_rewards)
 
     def get_batch(
-        self, ts: PPOState[_EnvState], batch_idx: int
-    ) -> tuple[PPOState[_EnvState], TrajectoryWithLastObs]:
+        self, ts: PPOState[TEnvState], batch_idx: int
+    ) -> tuple[PPOState[TEnvState], TrajectoryWithLastObs]:
         data_collection_state, trajectories = self.collect_trajectories(
             ts.data_collection_state,
             actor_params=ts.actor_ts.params,
@@ -504,7 +507,7 @@ class JaxRLExample(
     @jit
     def collect_trajectories(
         self,
-        collection_state: TrajectoryCollectionState[_EnvState],
+        collection_state: TrajectoryCollectionState[TEnvState],
         actor_params: FrozenVariableDict,
         critic_params: FrozenVariableDict,
     ):
@@ -536,7 +539,7 @@ class JaxRLExample(
     @jit
     def env_step(
         self,
-        collection_state: TrajectoryCollectionState[_EnvState],
+        collection_state: TrajectoryCollectionState[TEnvState],
         step_index: jax.Array,
         actor_params: FrozenVariableDict,
         critic_params: FrozenVariableDict,
@@ -605,7 +608,7 @@ class JaxRLExample(
 
 
 def has_discrete_actions(
-    env: Environment[gymnax.EnvState, _EnvParams], env_params: _EnvParams
+    env: Environment[gymnax.EnvState, TEnvParams], env_params: TEnvParams
 ) -> bool:
     return isinstance(env.action_space(env_params), gymnax.environments.spaces.Discrete)
 
@@ -768,8 +771,8 @@ def make_actor(
 
 def render_episode(
     actor: Callable[[jax.Array, chex.PRNGKey], jax.Array],
-    env: Environment[Any, _EnvParams],
-    env_params: _EnvParams,
+    env: Environment[Any, TEnvParams],
+    env_params: TEnvParams,
     gif_path: Path,
     rng: chex.PRNGKey = jax.random.key(123),
     num_steps: int = 200,
@@ -795,6 +798,9 @@ def render_episode(
     # gif_path = Path(log_dir) / f"epoch_{current_epoch}.gif"
     logger.info(f"Saving gif to {gif_path}")
     # print(f"Saving gif to {gif_path}")
+    # Disable the "ffmpeg moviewriter not available, using Pillow" print to stderr that happens in
+    # there.
+    gif_path.parent.mkdir(exist_ok=True, parents=True)
     with contextlib.redirect_stderr(None):
         vis.animate(str(gif_path))
     plt.close(vis.fig)
