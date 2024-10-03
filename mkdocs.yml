@@ -64,6 +64,7 @@ plugins:
   - awesome-pages
   - macros: #https://mkdocs-macros-plugin.readthedocs.io/en/latest/#declaration-of-the-macros-plugin
       module_name: docs/macros
+  - custom_autoref_plugin
   - autorefs
   - gen-files:
       # https://oprypin.github.io/mkdocs-gen-files/#usage
