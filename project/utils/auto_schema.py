@@ -493,13 +493,17 @@ def _add_schemas_to_vscode_settings(
     vscode_settings_content = vscode_settings_file.read_text()
     # Remove any trailing commas from the content:
     vscode_settings_content = (
-        vscode_settings_content.strip().removesuffix("}").rstrip().rstrip(",") + "}"
+        # Remove any leading "," that would make it invalid JSON.
+        "".join(vscode_settings_content.split()).replace(",}", "}").replace(",]", "]")
     )
-    vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
 
+    vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
+    logger.debug(f"Vscode settings: {vscode_settings}")
     # Avoid the popup and do users a favour by disabling telemetry.
     vscode_settings.setdefault("redhat.telemetry.enabled", False)
 
+    # TODO: Should probably overwrite the schemas entry if we're passed the --regen-schemas flag,
+    # since otherwise we might accumulate schemas for configs that aren't there anymore.
     yaml_schemas_setting: dict[str, str | list[str]] = vscode_settings.setdefault(
         "yaml.schemas", {}
     )
