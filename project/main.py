@@ -82,9 +82,6 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
 
     if datamodule is None:
-        experiment.trainer.fit(experiment.algorithm)
-    # from project.algorithms.jax_trainer import JaxModule, JaxTrainer
-    if datamodule is None:
         # todo: missing `rng` argument.
         from project.algorithms.jax_trainer import JaxTrainer
 
