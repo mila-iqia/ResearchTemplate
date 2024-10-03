@@ -56,16 +56,24 @@ def jit(
 
 
 Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
+"""Type Variable for the training state."""
+
 _B = TypeVar("_B", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
+"""Type Variable for the batches produced (and consumed) by the algorithm."""
+
 _MetricsT = TypeVar(
     "_MetricsT", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode, covariant=True
 )
+"""Type Variable for the metrics produced by the algorithm."""
 
 
 @runtime_checkable
 class JaxModule(Protocol[Ts, _B, _MetricsT]):
-    """A protocol for algorithms that can be trained by the
-    [project.algorithms.jax_trainer.JaxTrainer][JaxTrainer]."""
+    """A protocol for algorithms that can be trained by the `JaxTrainer`.
+
+    The [JaxRLExample][project.algorithms.jax_rl_example.JaxRLExample] class is an example of a
+    class that follows this structure and can be trained with a [JaxTrainer][project.algorithms.jax_trainer.JaxTrainer].
+    """
 
     def init_train_state(self, rng: chex.PRNGKey) -> Ts:
         """Create the initial training state."""
@@ -78,7 +86,7 @@ class JaxModule(Protocol[Ts, _B, _MetricsT]):
     def training_step(
         self, batch_idx: int, ts: Ts, batch: _B
     ) -> tuple[Ts, flax.struct.PyTreeNode]:
-        """Update the training state using a batch of data."""
+        """Update the training state using a "batch" of data."""
         raise NotImplementedError
 
     def eval_callback(self, ts: Ts) -> _MetricsT:
@@ -117,15 +125,12 @@ class JaxCallback(flax.struct.PyTreeNode):
 
 
 class JaxTrainer(flax.struct.PyTreeNode):
-    """Jax Trainer with roughly the same signature as a `lightning.Trainer`.
-
-    This is a simplified version of the [lightning.pytorch.trainer.Trainer][lightning.Trainer]
-    class which has a fully jitted training loop.
-
+    """A simplified version of the [lightning.pytorch.trainer.Trainer][] with a fully jitted
+    training loop.
 
     ## Assumptions:
 
-    - The algo object must match the [project.algorithms.jax_trainer.JaxModule][JaxModule] protocol (in
+    - The algo object must match the [JaxModule][project.algorithms.jax_trainer.JaxModule] protocol (in
       other words, it should implement its methods).
 
     ## Training loop
@@ -199,9 +204,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
     # path to output directory, created dynamically by hydra
     # path generation pattern is specified in `configs/hydra/default.yaml`
     # use it to store all files generated during the run, like checkpoints and metrics
-    default_root_dir: str | Path | None = flax.struct.field(
-        pytree_node=False, default=""
-    )  # ${hydra:runtime.output_dir}
+    default_root_dir: str | Path | None = flax.struct.field(pytree_node=False, default="")
 
     # State variables:
     # TODO: Figure out how to efficiently present these even when jit is turned off (currently
