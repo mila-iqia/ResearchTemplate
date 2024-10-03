@@ -418,17 +418,17 @@ def add_schemas_to_all_hydra_configs(
 
     if not add_headers:
         try:
-            logger.debug(
-                "Found the `code` executable, will add schema paths to the vscode settings."
-            )
             _install_yaml_vscode_extension()
-            _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
+        except OSError:
+            pass
+
+        try:
+           _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
         except Exception as exc:
             logger.error(
                 f"Unable to write schemas in the vscode settings file. "
                 f"Falling back to adding a header to config files. (exc={exc})"
             )
-
             if add_headers is not None:
                 # Unable to do it. Don't try to add headers, just return.
                 return
