@@ -1,0 +1,41 @@
+# Action based on https://github.com/AndreasAugustin/actions-template-sync
+name: Update repository with changes from the template
+on:
+  # cronjob trigger
+  schedule:
+  - cron: "0 0 1 * *" # on the first of every month
+  # manual trigger
+  workflow_dispatch:
+
+# https://0xdc.me/blog/github-templates-and-repository-sync/
+env:
+  SOURCE_BRANCH: master
+  SOURCE_REPOSITORY: mila-iqia/ResearchTemplate
+
+jobs:
+  repo-sync:
+    runs-on: ubuntu-latest
+    # https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # To use this repository's private action, you must check out the repository
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+        if: github.repository != env.SOURCE_REPOSITORY
+        # https://github.com/actions/checkout#usage
+        # uncomment if you use submodules within the repository
+        # with:
+        #   submodules: true
+
+      - name: actions-template-sync
+        uses: AndreasAugustin/actions-template-sync@v2
+        if: github.repository != env.SOURCE_REPOSITORY
+        with:
+          source_repo_path: mila-iqia/ResearchTemplate
+          upstream_branch: master # defaults to main
+          pr_labels: template_sync # defaults to template_sync
+          pr_title: "Add new features from the template repository"
+          pr_body: "This is an automated PR to update the repository with changes from the template."
