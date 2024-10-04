@@ -2,21 +2,14 @@
 considered refs when possible.
 """
 
-# TODOs / plan:
-# - [ ] Replace `this` with [this][] in the markdown file.
-# - Also fix refs like `[lightning.Trainer][]` so that they become
-#      [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer]
-
 import functools
-
-# from mkdocs_autorefs.references import *
 import re
 
 import lightning
-import torch  # noqa
+import torch
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import (
-    BasePlugin,  # noqa
+    BasePlugin,
     get_plugin_logger,
 )
 from mkdocs.structure.files import Files
@@ -48,10 +41,6 @@ class CustomAutoRefPlugin(BasePlugin):
         def best_display_str(thing) -> str:
             return thing.__module__.split(".")[0] + "." + thing.__qualname__
 
-        def _ref_with_name(thing, name: str) -> str:
-            full_path = thing.__module__ + "." + thing.__qualname__
-            return f"[{name}][{full_path}]"
-
         known_things = [
             lightning.Trainer,
             lightning.LightningModule,
@@ -60,10 +49,6 @@ class CustomAutoRefPlugin(BasePlugin):
         ]
         known_thing_names = [t.__name__ for t in known_things]
         use_translations = True
-
-        # for k, v in translations.items():
-        #     markdown = markdown.replace(k, v)
-        # messes up the refs!
 
         new_markdown = []
         for line_index, line in enumerate(markdown.splitlines(keepends=True)):
