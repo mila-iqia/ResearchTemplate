@@ -504,9 +504,7 @@ def test_rejax(
         gif_path=gif_path,
     )
 
-    tensor_regression.check(
-        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
-    )
+    tensor_regression.check(jax.tree.map(torch_jax_interop.jax_to_torch, evaluations))
 
     file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
 
