@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import functools
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, ParamSpec, TypedDict
+from typing import Any, Generic, TypedDict
 
 import chex
 import flax.core
@@ -23,7 +23,6 @@ from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment
 from gymnax.visualize.visualizer import Visualizer
-from jax._src.sharding_impls import UNSPECIFIED, Device
 from matplotlib import pyplot as plt
 from rejax.algos.mixins import RMSState
 from rejax.evaluate import evaluate
@@ -32,6 +31,7 @@ from typing_extensions import TypeVar
 from xtils.jitpp import Static
 
 from project.algorithms.jax_trainer import JaxCallback, JaxModule, JaxTrainer
+from project.utils.typing_utils.jax_typing_utils import jit
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -103,44 +103,10 @@ class PPOHParams(flax.struct.PyTreeNode):
     vf_coef: chex.Scalar = flax.struct.field(pytree_node=True, default=0.5)
     ent_coef: chex.Scalar = flax.struct.field(pytree_node=True, default=0.01)
 
+    # IDEA: Split up the RNGs for different parts?
     # rng: chex.PRNGKey = flax.struct.field(pytree_node=True, default=jax.random.key(0))
     # networks_rng: chex.PRNGKey = flax.struct.field(pytree_node=True, default=jax.random.key(1))
     # env_rng: chex.PRNGKey = flax.struct.field(pytree_node=True, default=jax.random.key(2))
-
-
-P = ParamSpec("P")
-Out = TypeVar("Out", covariant=True)
-
-
-def jit(
-    fn: Callable[P, Out],
-    in_shardings=UNSPECIFIED,
-    out_shardings=UNSPECIFIED,
-    static_argnums: int | Sequence[int] | None = None,
-    static_argnames: str | Iterable[str] | None = None,
-    donate_argnums: int | Sequence[int] | None = None,
-    donate_argnames: str | Iterable[str] | None = None,
-    keep_unused: bool = False,
-    device: Device | None = None,
-    backend: str | None = None,
-    inline: bool = False,
-    abstracted_axes: Any | None = None,
-) -> Callable[P, Out]:
-    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-    return jax.jit(
-        fn,
-        in_shardings=in_shardings,
-        out_shardings=out_shardings,
-        static_argnums=static_argnums,
-        static_argnames=static_argnames,
-        donate_argnums=donate_argnums,
-        donate_argnames=donate_argnames,
-        keep_unused=keep_unused,
-        device=device,
-        backend=backend,
-        inline=inline,
-        abstracted_axes=abstracted_axes,
-    )
 
 
 class _AgentKwargs(TypedDict):
@@ -522,7 +488,11 @@ class JaxRLExample(
     def visualize(self, ts: PPOState, gif_path: str | Path):
         actor = make_actor(ts=ts, hp=self.hp)
         render_episode(
-            actor=actor, env=self.env, env_params=self.env_params, gif_path=Path(gif_path)
+            actor=actor,
+            env=self.env,
+            env_params=self.env_params,
+            gif_path=Path(gif_path),
+            rng=ts.rng,
         )
 
     ## These here aren't currently used. They are here to mirror rejax.PPO where the training loop
@@ -780,7 +750,7 @@ def render_episode(
     env: Environment[Any, TEnvParams],
     env_params: TEnvParams,
     gif_path: Path,
-    rng: chex.PRNGKey = jax.random.key(123),
+    rng: chex.PRNGKey,
     num_steps: int = 200,
 ):
     state_seq, reward_seq = [], []
