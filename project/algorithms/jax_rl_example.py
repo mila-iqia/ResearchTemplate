@@ -31,7 +31,7 @@ from rejax.networks import DiscretePolicy, GaussianPolicy, VNetwork
 from typing_extensions import TypeVar
 from xtils.jitpp import Static
 
-from project.algorithms.jax_trainer import JaxModule
+from project.algorithms.jax_trainer import JaxCallback, JaxModule, JaxTrainer
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -804,3 +804,25 @@ def render_episode(
     with contextlib.redirect_stderr(None):
         vis.animate(str(gif_path))
     plt.close(vis.fig)
+
+
+class RenderEpisodesCallback(JaxCallback):
+    on_every_epoch: int = False
+
+    def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
+        if not self.on_every_epoch:
+            return
+        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        assert log_dir is not None
+        gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
+        module.visualize(ts=ts, gif_path=gif_path)
+        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
+
+    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
+        if not self.on_every_epoch:
+            return
+        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        assert log_dir is not None
+        gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
+        module.visualize(ts=ts, gif_path=gif_path)
+        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)

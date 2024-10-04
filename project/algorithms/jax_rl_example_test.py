@@ -40,7 +40,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.algorithms.jax_trainer import JaxCallback, JaxTrainer, hparams_to_dict
+from project.algorithms.jax_trainer import JaxTrainer, hparams_to_dict
 
 from .jax_rl_example import (
     EvalMetrics,
@@ -225,28 +225,6 @@ class PPOLightningModule(lightning.LightningModule):
 
         jax_self_device = torch_jax_interop.to_jax.torch_to_jax_device(torch_self_device)
         return jax.tree.map(functools.partial(jax.device_put, device=jax_self_device), batch)
-
-
-class RenderEpisodesCallback(JaxCallback):
-    on_every_epoch: int = False
-
-    def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
-        if not self.on_every_epoch:
-            return
-        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
-        assert log_dir is not None
-        gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
-        module.visualize(ts=ts, gif_path=gif_path)
-        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
-
-    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
-        if not self.on_every_epoch:
-            return
-        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
-        assert log_dir is not None
-        gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
-        module.visualize(ts=ts, gif_path=gif_path)
-        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
 
 
 class RlThroughputCallback(MeasureSamplesPerSecondCallback):

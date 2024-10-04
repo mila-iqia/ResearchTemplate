@@ -186,14 +186,11 @@ class JaxTrainer(flax.struct.PyTreeNode):
     # num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
     training_steps_per_epoch: int
 
-    # training_step_fn: Callable[[TrainState, int], tuple[TrainState, Any]]
-    callbacks: tuple[lightning.Callback | JaxCallback, ...] = flax.struct.field(
-        pytree_node=False, default_factory=tuple
-    )
+    # TODO: Getting some errors with the schema generation for lightning.Callback and
+    # lightning.pytorch.loggers.logger.Logger here.
+    callbacks: Sequence = dataclasses.field(metadata={"pytree_node": False}, default_factory=tuple)
 
-    logger: lightning.pytorch.loggers.Logger | None = flax.struct.field(
-        pytree_node=False, default=None
-    )
+    logger: Any | None = flax.struct.field(pytree_node=False, default=None)
 
     # accelerator: str = flax.struct.field(pytree_node=False, default="auto")
     # strategy: str = flax.struct.field(pytree_node=False, default="auto")
