@@ -114,8 +114,8 @@ class PPOLightningModule(lightning.LightningModule):
 
         duration = time.perf_counter() - start
         logger.debug(f"Training step took {duration:.1f} seconds.")
-        actor_losses = train_metrics["actor_losses"]
-        critic_losses = train_metrics["critic_losses"]
+        actor_losses = train_metrics.actor_losses
+        critic_losses = train_metrics.critic_losses
         self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
         self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
 
