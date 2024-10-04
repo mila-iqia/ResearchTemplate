@@ -82,6 +82,7 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["project", "docs"]
 norecursedirs = [".venv"]
+# Required to use torch deterministic mode.
 env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
 addopts = [
     # todo: look into using https://github.com/scientific-python/pytest-doctestplus

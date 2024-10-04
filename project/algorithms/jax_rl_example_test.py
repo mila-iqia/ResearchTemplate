@@ -524,8 +524,14 @@ def test_rejax(
         env=_algo.env,
         env_params=_algo.env_params,
         gif_path=gif_path,
+        rng=ts.rng,
     )
-
+    evaluations = dataclasses.asdict(
+        EvalMetrics(
+            episode_length=evaluations[0],
+            cumulative_reward=evaluations[1],
+        )
+    )
     tensor_regression.check(jax.tree.map(torch_jax_interop.jax_to_torch, evaluations))
 
     file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")

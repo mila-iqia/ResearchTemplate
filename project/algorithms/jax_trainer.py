@@ -324,7 +324,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
                     jax.tree.map(lambda v: v.mean(), metrics), batch_index
                 ),
                 (),
-                metrics,
+                dataclasses.asdict(metrics) if dataclasses.is_dataclass(metrics) else metrics,
                 batch_idx,
             )
 
