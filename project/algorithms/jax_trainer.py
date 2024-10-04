@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, ParamSpec, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import chex
 import flax.core
@@ -17,43 +17,9 @@ import lightning
 import lightning.pytorch.callbacks
 import lightning.pytorch.loggers
 import torch  # noqa
-from jax._src.sharding_impls import UNSPECIFIED, Device
 from typing_extensions import TypeVar
 
-P = ParamSpec("P")
-Out = TypeVar("Out", covariant=True)
-
-
-def jit(
-    fn: Callable[P, Out],
-    in_shardings=UNSPECIFIED,
-    out_shardings=UNSPECIFIED,
-    static_argnums: int | Sequence[int] | None = None,
-    static_argnames: str | Iterable[str] | None = None,
-    donate_argnums: int | Sequence[int] | None = None,
-    donate_argnames: str | Iterable[str] | None = None,
-    keep_unused: bool = False,
-    device: Device | None = None,
-    backend: str | None = None,
-    inline: bool = False,
-    abstracted_axes: Any | None = None,
-) -> Callable[P, Out]:
-    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-    return jax.jit(
-        fn,
-        in_shardings=in_shardings,
-        out_shardings=out_shardings,
-        static_argnums=static_argnums,
-        static_argnames=static_argnames,
-        donate_argnums=donate_argnums,
-        donate_argnames=donate_argnames,
-        keep_unused=keep_unused,
-        device=device,
-        backend=backend,
-        inline=inline,
-        abstracted_axes=abstracted_axes,
-    )
-
+from project.utils.typing_utils.jax_typing_utils import jit
 
 Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
 """Type Variable for the training state."""
@@ -295,7 +261,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         return train_state, evaluations
 
-    @jit
+    # @jit
     def epoch_loop(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
         # todo: Some lightning callbacks try to get the "trainer.current_epoch".
         # FIXME: Hacky: Present a trainer with a different value of `self.current_epoch` to
@@ -310,7 +276,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
         eval_metrics = self.eval_epoch(ts=ts, epoch=epoch, algo=algo)
         return ts, eval_metrics
 
-    @jit
+    # @jit
     def training_epoch(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
         # Run a few training iterations
         self._callback_hook("on_train_epoch_start", self, algo, ts=ts)
@@ -326,7 +292,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
         self._callback_hook("on_train_epoch_end", self, algo, ts=ts)
         return ts
 
-    @jit
+    # @jit
     def eval_epoch(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
         self._callback_hook("on_validation_epoch_start", self, algo, ts=ts)
 
@@ -337,7 +303,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         return eval_metrics
 
-    @jit
+    # @jit
     def training_step(self, batch_idx: int, ts: Ts, algo: JaxModule[Ts, _B, _MetricsT]):
         """Training step in pure jax (joined data collection + training).
 

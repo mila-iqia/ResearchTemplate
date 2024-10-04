@@ -1,8 +1,7 @@
 import dataclasses
 import logging
 import os
-from collections.abc import Callable
-from typing import Concatenate, Literal, ParamSpec, TypeVar
+from typing import Literal
 
 import chex
 import flax.linen
@@ -192,30 +191,6 @@ def to_channels_last(x: jax.Array) -> jax.Array:
         return x.transpose(1, 2, 0)
     assert x.ndim == 4
     return x.transpose(0, 2, 3, 1)
-
-
-P = ParamSpec("P")
-Out = TypeVar("Out")
-
-
-def jit(
-    fn: Callable[P, Out],
-) -> Callable[P, Out]:
-    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-    return jax.jit(fn)  # type: ignore
-
-
-In = TypeVar("In")
-Aux = TypeVar("Aux")
-
-
-def value_and_grad(
-    fn: Callable[Concatenate[In, P], tuple[Out, Aux]],
-    argnums: Literal[0] = 0,
-    has_aux: Literal[True] = True,
-) -> Callable[Concatenate[In, P], tuple[tuple[Out, Aux], In]]:
-    """Small type hint fix for jax's `value_and_grad` (preserves the signature of the callable)."""
-    return jax.value_and_grad(fn, argnums=argnums, has_aux=has_aux)  # type: ignore
 
 
 def main():

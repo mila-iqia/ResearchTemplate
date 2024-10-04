@@ -328,7 +328,7 @@ class JaxRLExample(
             data_collection_state=collection_state,
         )
 
-    @jit
+    # @jit
     def training_step(self, batch_idx: int, ts: PPOState[TEnvState], batch: TrajectoryWithLastObs):
         """Training step in pure jax."""
         trajectories = batch
@@ -345,7 +345,7 @@ class JaxRLExample(
 
         return ts, TrainStepMetrics(actor_losses=actor_losses, critic_losses=critic_losses)
 
-    @jit
+    # @jit
     def ppo_update_epoch(
         self, ts: PPOState[TEnvState], epoch_index: int, trajectories: TrajectoryWithLastObs
     ):
@@ -375,7 +375,7 @@ class JaxRLExample(
         )
         return jax.lax.scan(self.ppo_update, ts, minibatches, length=self.hp.num_minibatches)
 
-    @jit
+    # @jit
     def ppo_update(self, ts: PPOState[TEnvState], batch: AdvantageMinibatch):
         actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
             ts.actor_ts.params,
@@ -423,7 +423,7 @@ class JaxRLExample(
         ts = ts.replace(data_collection_state=data_collection_state)
         return ts, trajectories
 
-    @jit
+    # @jit
     def collect_trajectories(
         self,
         collection_state: TrajectoryCollectionState[TEnvState],
@@ -455,7 +455,7 @@ class JaxRLExample(
         )
         return collection_state, trajectories_with_last
 
-    @jit
+    # @jit
     def env_step(
         self,
         collection_state: TrajectoryCollectionState[TEnvState],
@@ -537,6 +537,9 @@ class JaxRLExample(
     ) -> tuple[PPOState[TEnvState], EvalMetrics]:
         """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
 
+        This doesn't get used when using the `JaxTrainer`, since this is the equivalent of the
+        `JaxTrainer.fit` method.
+
         Unfolded version of `rejax.PPO.train`.
 
         Training loop in pure jax (a lot faster than when using pytorch-lightning).
@@ -569,7 +572,7 @@ class JaxRLExample(
 
         return ts, evaluation
 
-    @jit
+    # @jit
     def training_epoch(
         self, ts: PPOState[TEnvState], epoch: int
     ) -> tuple[PPOState[TEnvState], EvalMetrics]:
@@ -586,7 +589,7 @@ class JaxRLExample(
         # Run evaluation
         return ts, self.eval_callback(ts)
 
-    @jit
+    # @jit
     def fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
         """Fused training step in jax (joined data collection + training).
 
@@ -661,7 +664,7 @@ def _shuffle_and_split(x: jax.Array, permutation: jax.Array, num_minibatches: St
     return x.reshape(num_minibatches, -1, *x.shape[1:])
 
 
-@jit
+# @jit
 def calculate_gae(
     trajectories: TrajectoryWithLastObs,
     last_val: jax.Array,
@@ -678,7 +681,7 @@ def calculate_gae(
     return advantages, advantages + trajectories.trajectories.value
 
 
-@jit
+# @jit
 def get_advantages(
     advantage_and_next_value: tuple[jax.Array, jax.Array],
     transition: TrajectoryWithLastObs,
