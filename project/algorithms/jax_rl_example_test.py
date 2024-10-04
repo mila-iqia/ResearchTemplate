@@ -444,6 +444,28 @@ def test_train_ours(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
     original_datadir: Path,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    # ndarrays_regression: NDArraysRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    _add_gitignore_if_needed(original_datadir)
+    train_state, evaluations = algo.train(rng=rng)
+
+    # ndarrays_regression.check(dataclasses.asdict(evals))
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
+    _gif_path = tmp_path / "ours.gif"
+
+    algo.visualize(ts=train_state, gif_path=_gif_path)
+    file_regression.check(_gif_path.read_bytes(), binary=True, extension=".gif")
+
+
+def test_train_ours_with_trainer(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
     trainer: JaxTrainer,
     tmp_path: Path,
     file_regression: FileRegressionFixture,

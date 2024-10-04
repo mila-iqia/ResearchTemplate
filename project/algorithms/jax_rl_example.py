@@ -152,7 +152,7 @@ class _NetworkConfig(TypedDict):
     agent_kwargs: _AgentKwargs
 
 
-class TrainStepMetrics(TypedDict):
+class TrainStepMetrics(flax.struct.PyTreeNode):
     actor_losses: jax.Array
     critic_losses: jax.Array
 
@@ -327,87 +327,6 @@ class JaxRLExample(
             rng=rng,
             data_collection_state=collection_state,
         )
-
-    @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
-    def train(
-        self,
-        rng: jax.Array,
-        train_state: PPOState[TEnvState] | None = None,
-        skip_initial_evaluation: bool = False,
-    ) -> tuple[PPOState[TEnvState], EvalMetrics]:
-        """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
-
-        Unfolded version of `rejax.PPO.train`.
-
-        Training loop in pure jax (a lot faster than when using pytorch-lightning).
-        """
-        if train_state is None and rng is None:
-            raise ValueError("Either train_state or rng must be provided")
-
-        ts = train_state if train_state is not None else self.init_train_state(rng)
-
-        initial_evaluation: EvalMetrics | None = None
-        if not skip_initial_evaluation:
-            initial_evaluation = self.eval_callback(ts)
-
-        num_evals = np.ceil(self.hp.total_timesteps / self.hp.eval_freq).astype(int)
-        ts, evaluation = jax.lax.scan(
-            self.training_epoch,
-            init=ts,
-            xs=None,
-            length=num_evals,
-        )
-
-        if not skip_initial_evaluation:
-            assert initial_evaluation is not None
-            evaluation = jax.tree.map(
-                lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
-                initial_evaluation,
-                evaluation,
-            )
-            assert isinstance(evaluation, EvalMetrics)
-
-        return ts, evaluation
-
-    @jit
-    def training_epoch(
-        self, ts: PPOState[TEnvState], epoch: int
-    ) -> tuple[PPOState[TEnvState], EvalMetrics]:
-        # Run a few training iterations
-        iteration_steps = self.hp.num_envs * self.hp.num_steps
-        num_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
-        ts = jax.lax.fori_loop(
-            0,
-            num_iterations,
-            # drop metrics for now
-            lambda i, train_state_i: self.fused_training_step(i, train_state_i)[0],
-            ts,
-        )
-        # Run evaluation
-        return ts, self.eval_callback(ts)
-
-    @jit
-    def fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
-        """Fused training step in jax (joined data collection + training).
-
-        *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
-        """
-
-        data_collection_state, trajectories = self.collect_trajectories(
-            # env=self.env,
-            # env_params=self.env_params,
-            # actor=self.actor,
-            # critic=self.critic,
-            collection_state=ts.data_collection_state,
-            actor_params=ts.actor_ts.params,
-            critic_params=ts.critic_ts.params,
-            # num_envs=self.hp.num_envs,
-            # num_steps=self.hp.num_steps,
-            # discrete=discrete,
-            # normalize_observations=self.hp.normalize_observations,
-        )
-        ts = ts.replace(data_collection_state=data_collection_state)
-        return self.training_step(iteration, ts, trajectories)
 
     @jit
     def training_step(self, batch_idx: int, ts: PPOState[TEnvState], batch: TrajectoryWithLastObs):
@@ -605,6 +524,90 @@ class JaxRLExample(
         render_episode(
             actor=actor, env=self.env, env_params=self.env_params, gif_path=Path(gif_path)
         )
+
+    ## These here aren't currently used. They are here to mirror rejax.PPO where the training loop
+    # is in the algorithm.
+
+    @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
+    def train(
+        self,
+        rng: jax.Array,
+        train_state: PPOState[TEnvState] | None = None,
+        skip_initial_evaluation: bool = False,
+    ) -> tuple[PPOState[TEnvState], EvalMetrics]:
+        """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
+
+        Unfolded version of `rejax.PPO.train`.
+
+        Training loop in pure jax (a lot faster than when using pytorch-lightning).
+        """
+        if train_state is None and rng is None:
+            raise ValueError("Either train_state or rng must be provided")
+
+        ts = train_state if train_state is not None else self.init_train_state(rng)
+
+        initial_evaluation: EvalMetrics | None = None
+        if not skip_initial_evaluation:
+            initial_evaluation = self.eval_callback(ts)
+
+        num_evals = np.ceil(self.hp.total_timesteps / self.hp.eval_freq).astype(int)
+        ts, evaluation = jax.lax.scan(
+            self.training_epoch,
+            init=ts,
+            xs=None,
+            length=num_evals,
+        )
+
+        if not skip_initial_evaluation:
+            assert initial_evaluation is not None
+            evaluation = jax.tree.map(
+                lambda i, ev: jnp.concatenate((jnp.expand_dims(i, 0), ev)),
+                initial_evaluation,
+                evaluation,
+            )
+            assert isinstance(evaluation, EvalMetrics)
+
+        return ts, evaluation
+
+    @jit
+    def training_epoch(
+        self, ts: PPOState[TEnvState], epoch: int
+    ) -> tuple[PPOState[TEnvState], EvalMetrics]:
+        # Run a few training iterations
+        iteration_steps = self.hp.num_envs * self.hp.num_steps
+        num_iterations = np.ceil(self.hp.eval_freq / iteration_steps).astype(int)
+        ts = jax.lax.fori_loop(
+            0,
+            num_iterations,
+            # drop metrics for now
+            lambda i, train_state_i: self.fused_training_step(i, train_state_i)[0],
+            ts,
+        )
+        # Run evaluation
+        return ts, self.eval_callback(ts)
+
+    @jit
+    def fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
+        """Fused training step in jax (joined data collection + training).
+
+        *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
+        """
+
+        data_collection_state, trajectories = self.collect_trajectories(
+            # env=self.env,
+            # env_params=self.env_params,
+            # actor=self.actor,
+            # critic=self.critic,
+            collection_state=ts.data_collection_state,
+            actor_params=ts.actor_ts.params,
+            critic_params=ts.critic_ts.params,
+            # num_envs=self.hp.num_envs,
+            # num_steps=self.hp.num_steps,
+            # discrete=discrete,
+            # normalize_observations=self.hp.normalize_observations,
+        )
+        ts = ts.replace(data_collection_state=data_collection_state)
+        return self.training_step(iteration, ts, trajectories)
 
 
 def has_discrete_actions(
