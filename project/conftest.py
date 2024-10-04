@@ -336,6 +336,8 @@ def accelerator(request: pytest.FixtureRequest):
     By default, if cuda is available, returns "cuda". If the tests are run with -vvv, then also
     runs CPU.
     """
+    # TODO: Shouldn't we get this from the experiment config instead?
+
     default_accelerator = "gpu" if torch.cuda.is_available() else "cpu"
     accelerator: str = getattr(request, "param", default_accelerator)
 
@@ -376,7 +378,15 @@ def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
 
 @pytest.fixture(scope="session")
 def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int | Literal["auto"]:
-    """Fixture that creates the 'devices' argument for the Trainer config."""
+    """Fixture that creates the 'devices' argument for the Trainer config.
+
+    Splits up the GPUs between pytest-xdist workers when using distributed testing.
+    This isn't currently used in the CI.
+
+    TODO: Design dilemna here: Should we be parametrizing the `devices` command-line override and
+    force experiments to run with this value during tests? Or should we be changing things based on
+    this value in the config?
+    """
     # When using pytest-xdist to distribute tests, each worker will use different devices.
 
     devices = getattr(request, "param", None)
