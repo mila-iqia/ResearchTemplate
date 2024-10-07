@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
-import functools
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any, Concatenate, Literal, ParamSpec
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Any, Concatenate, Literal, ParamSpec, overload
 
-import flax.core
-import flax.linen
-import flax.struct
 import jax
 import jax.experimental
-import torch  # noqa
 from jax._src.sharding_impls import UNSPECIFIED, Device, UnspecifiedValue
 from typing_extensions import TypeVar
 
@@ -18,7 +13,7 @@ P = ParamSpec("P")
 Out = TypeVar("Out", covariant=True)
 
 
-@functools.wraps(jax.jit)
+# @functools.wraps(jax.jit)
 def jit(
     fn: Callable[P, Out],
     in_shardings: UnspecifiedValue = UNSPECIFIED,
@@ -56,7 +51,7 @@ In = TypeVar("In")
 Aux = TypeVar("Aux")
 
 
-@functools.wraps(jax.value_and_grad)
+# @functools.wraps(jax.value_and_grad)
 def value_and_grad(
     fn: Callable[Concatenate[In, P], tuple[Out, Aux]],
     argnums: Literal[0] = 0,
@@ -66,18 +61,81 @@ def value_and_grad(
     return jax.value_and_grad(fn, argnums=argnums, has_aux=has_aux)  # type: ignore
 
 
-@functools.wraps(flax.struct.field)
+_T = TypeVar("_T")
+
+
+# @functools.wraps(flax.struct.field)
+@overload  # `default` and `default_factory` are optional and mutually exclusive.
 def field(
-    pytree_node=True,
-    _field_fn: Callable[P, dataclasses.Field] = dataclasses.field,
-    *args: P.args,
-    **kwargs: P.kwargs,
+    *,
+    default: _T,
+    init: bool = True,
+    repr: bool = True,
+    hash: bool | None = None,
+    compare: bool = True,
+    metadata: Mapping[Any, Any] | None = None,
+    kw_only: bool = ...,
+    pytree_node: bool = True,
+) -> _T: ...
+@overload
+def field(
+    *,
+    default_factory: Callable[[], _T],
+    init: bool = True,
+    repr: bool = True,
+    hash: bool | None = None,
+    compare: bool = True,
+    metadata: Mapping[Any, Any] | None = None,
+    kw_only: bool = ...,
+    pytree_node: bool = True,
+) -> _T: ...
+@overload
+def field(
+    *,
+    init: bool = True,
+    repr: bool = True,
+    hash: bool | None = None,
+    compare: bool = True,
+    metadata: Mapping[Any, Any] | None = None,
+    kw_only: bool = ...,
+    pytree_node: bool = True,
+) -> Any: ...
+
+
+def field(
+    *,
+    default=dataclasses.MISSING,
+    default_factory=dataclasses.MISSING,
+    init=True,
+    repr=True,
+    hash=None,
+    compare=True,
+    metadata: Mapping[Any, Any] | None = None,
+    kw_only=dataclasses.MISSING,
+    pytree_node: bool | None = None,
 ):
-    # Typing fix for `flax.struct.field` so that it doesn't drop the signature of the
-    # `dataclasses.field` function that it calls.
-    metadata = kwargs.get("metadata")
-    assert metadata is None or isinstance(metadata, dict)
+    """Small Typing fix for `flax.struct.field`.
+
+    - Add type annotations so it doesn't drop the signature of the `dataclasses.field` function.
+    - Make the `pytree_node` has a default value of `False` for ints and bools, and `True` for
+      everything else.
+    """
+    if pytree_node is None and isinstance(default, int):  # note: also includes `bool`.
+        pytree_node = False
+    if pytree_node is None:
+        pytree_node = True
     if metadata is None:
         metadata = {}
+    else:
+        metadata = dict(metadata)
     metadata.setdefault("pytree_node", pytree_node)
-    return _field_fn(*args, **kwargs)
+    return dataclasses.field(
+        default=default,
+        default_factory=default_factory,
+        init=init,
+        repr=repr,
+        hash=hash,
+        compare=compare,
+        metadata=metadata,
+        kw_only=kw_only,
+    )  # type: ignore

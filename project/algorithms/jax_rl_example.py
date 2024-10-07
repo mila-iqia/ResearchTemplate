@@ -31,7 +31,7 @@ from typing_extensions import TypeVar
 from xtils.jitpp import Static
 
 from project.algorithms.jax_trainer import JaxCallback, JaxModule, JaxTrainer
-from project.utils.typing_utils.jax_typing_utils import jit
+from project.utils.typing_utils.jax_typing_utils import field, jit
 
 logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -83,25 +83,25 @@ class PPOHParams(flax.struct.PyTreeNode):
     These are taken from `rejax.PPO` algorithm class.
     """
 
-    num_epochs: int = flax.struct.field(pytree_node=False, default=8)
-    num_envs: int = flax.struct.field(pytree_node=False, default=64)  # overwrite default
-    num_steps: int = flax.struct.field(pytree_node=False, default=64)
-    num_minibatches: int = flax.struct.field(pytree_node=False, default=16)
+    num_epochs: int = field(default=8)
+    num_envs: int = field(default=64)  # overwrite default
+    num_steps: int = field(default=64)
+    num_minibatches: int = field(default=16)
 
-    eval_freq: int = flax.struct.field(pytree_node=False, default=4_096)
+    eval_freq: int = field(default=4_096)
 
-    normalize_observations: bool = flax.struct.field(pytree_node=False, default=False)
-    total_timesteps: int = flax.struct.field(pytree_node=False, default=131_072)
-    debug: bool = flax.struct.field(pytree_node=False, default=False)
+    normalize_observations: bool = field(default=False)
+    total_timesteps: int = field(default=131_072)
+    debug: bool = field(default=False)
 
-    learning_rate: chex.Scalar = flax.struct.field(pytree_node=True, default=0.0003)
-    gamma: chex.Scalar = flax.struct.field(pytree_node=True, default=0.99)
-    max_grad_norm: chex.Scalar = flax.struct.field(pytree_node=True, default=jnp.inf)
+    learning_rate: chex.Scalar = 0.0003
+    gamma: chex.Scalar = 0.99
+    max_grad_norm: chex.Scalar = jnp.inf
 
-    gae_lambda: chex.Scalar = flax.struct.field(pytree_node=True, default=0.95)
-    clip_eps: chex.Scalar = flax.struct.field(pytree_node=True, default=0.2)
-    vf_coef: chex.Scalar = flax.struct.field(pytree_node=True, default=0.5)
-    ent_coef: chex.Scalar = flax.struct.field(pytree_node=True, default=0.01)
+    gae_lambda: chex.Scalar = 0.95
+    clip_eps: chex.Scalar = 0.2
+    vf_coef: chex.Scalar = 0.5
+    ent_coef: chex.Scalar = 0.01
 
     # IDEA: Split up the RNGs for different parts?
     # rng: chex.PRNGKey = flax.struct.field(pytree_node=True, default=jax.random.key(0))
@@ -152,9 +152,7 @@ class JaxRLExample(
     env_params: TEnvParams
     actor: flax.linen.Module = flax.struct.field(pytree_node=False)
     critic: flax.linen.Module = flax.struct.field(pytree_node=False)
-    hp: PPOHParams = flax.struct.field(pytree_node=True)
-
-    HParams = PPOHParams
+    hp: PPOHParams
 
     @classmethod
     def create(
@@ -192,7 +190,7 @@ class JaxRLExample(
             env_params=env_params,
             actor=cls.create_actor(env, env_params),
             critic=cls.create_critic(),
-            hp=hp or cls.HParams(),
+            hp=hp or PPOHParams(),
         )
 
     @classmethod
