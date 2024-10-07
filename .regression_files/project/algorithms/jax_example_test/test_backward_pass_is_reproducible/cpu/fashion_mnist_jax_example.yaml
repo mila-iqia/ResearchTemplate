@@ -21,7 +21,7 @@ batch.1:
   sum: 583
 grads.network.params.0:
   device: cpu
-  hash: -5923980255127172323
+  hash: 8231252346581806825
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -30,7 +30,7 @@ grads.network.params.0:
   sum: 0.1
 grads.network.params.1:
   device: cpu
-  hash: -5605187094659025452
+  hash: 5354175734126824829
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -42,7 +42,7 @@ grads.network.params.1:
   sum: 1.7
 grads.network.params.2:
   device: cpu
-  hash: -2348247001624386602
+  hash: 8065734317709090965
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -51,7 +51,7 @@ grads.network.params.2:
   sum: 0.1
 grads.network.params.3:
   device: cpu
-  hash: 9132115680649592186
+  hash: -2130246238917952982
   max: 0.1
   mean: 0.0
   min: -0.1
@@ -63,7 +63,7 @@ grads.network.params.3:
   sum: 20.8
 grads.network.params.4:
   device: cpu
-  hash: 1763581120412358099
+  hash: 4287552802492792780
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -72,7 +72,7 @@ grads.network.params.4:
   sum: 0.3
 grads.network.params.5:
   device: cpu
-  hash: -1590788047904406598
+  hash: -6664278089303105525
   max: 0.1
   mean: 0.0
   min: -0.1
@@ -82,7 +82,7 @@ grads.network.params.5:
   sum: 246.9
 grads.network.params.6:
   device: cpu
-  hash: 7371700233315649509
+  hash: 6263521406059560421
   max: 0.1
   mean: -0.0
   min: -0.1
@@ -91,7 +91,7 @@ grads.network.params.6:
   sum: -0.0
 grads.network.params.7:
   device: cpu
-  hash: -7416990206391373897
+  hash: 7298775329166133295
   max: 0.1
   mean: -0.0
   min: -0.1
@@ -101,7 +101,7 @@ grads.network.params.7:
   sum: -0.0
 outputs.logits:
   device: cpu
-  hash: 488772550736717802
+  hash: 897638130415677807
   max: 1.0
   mean: -0.0
   min: -1.0
@@ -111,7 +111,7 @@ outputs.logits:
   sum: -14.1
 outputs.loss:
   device: cpu
-  hash: -8122096995950959677
+  hash: -2042294407881912829
   max: 2.4
   mean: 2.4
   min: 2.4

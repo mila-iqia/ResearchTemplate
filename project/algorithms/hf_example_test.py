@@ -34,7 +34,14 @@ class RecordTrainingLossCb(lightning.Callback):
         self.losses.append(loss.detach())
 
 
-# @pytest.mark.parametrize("devices", [1], indirect=True)
+def total_vram_gb() -> float:
+    """Returns the total VRAM in GB."""
+    if not torch.cuda.is_available():
+        return 0.0
+    return torch.cuda.get_device_properties(0).total_memory / 1024**3
+
+
+@pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
 @run_for_all_configs_of_type("algorithm", HFExample)
 @run_for_all_configs_of_type("datamodule", HFDataModule)
 @run_for_all_configs_of_type("algorithm/network", PreTrainedModel)

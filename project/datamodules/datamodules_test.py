@@ -91,10 +91,12 @@ def test_first_batch(
         if "infos" in batch:
             # todo: fix this, unsupported because of `object` dtype.
             batch.pop("infos")
-        tensor_regression.check(batch)
+        tensor_regression.check(batch, include_gpu_name_in_stats=False)
     else:
         assert is_sequence_of(batch, Tensor)
-        tensor_regression.check({f"{i}": batch_i for i, batch_i in enumerate(batch)})
+        tensor_regression.check(
+            {f"{i}": batch_i for i, batch_i in enumerate(batch)}, include_gpu_name_in_stats=False
+        )
 
     n_rows = 4
     n_cols = 4

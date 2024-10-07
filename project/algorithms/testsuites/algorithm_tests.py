@@ -149,6 +149,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             algorithm.state_dict(),
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_forward_pass_is_reproducible(
@@ -168,6 +169,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_backward_pass_is_reproducible(
@@ -218,6 +220,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def __init_subclass__(cls) -> None:

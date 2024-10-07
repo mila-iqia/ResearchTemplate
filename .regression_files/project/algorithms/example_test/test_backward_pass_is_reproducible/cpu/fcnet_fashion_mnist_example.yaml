@@ -21,7 +21,7 @@ batch.1:
   sum: 583
 grads.network.0.1.bias:
   device: cpu
-  hash: 1788148548417089401
+  hash: 3942007117466211271
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -30,36 +30,36 @@ grads.network.0.1.bias:
   sum: 0.0
 grads.network.0.1.weight:
   device: cpu
-  hash: -467234964092814136
+  hash: 6353824480883025810
   max: 0.0
   mean: 0.0
   min: -0.0
   shape:
   - 128
   - 784
-  sum: 29.3
+  sum: 33.9
 grads.network.1.0.bias:
   device: cpu
-  hash: -2065954532064963219
+  hash: 2500179497315479196
   max: 0.0
   mean: 0.0
   min: -0.0
   shape:
   - 128
-  sum: 0.0
+  sum: 0.1
 grads.network.1.0.weight:
   device: cpu
-  hash: -3212588436407397364
+  hash: 537522960447057566
   max: 0.0
   mean: 0.0
   min: -0.0
   shape:
   - 128
   - 128
-  sum: 1.5
+  sum: 2.4
 grads.network.2.0.bias:
   device: cpu
-  hash: -2959875328798165865
+  hash: -4028746190747504844
   max: 0.0
   mean: -0.0
   min: -0.0
@@ -68,8 +68,8 @@ grads.network.2.0.bias:
   sum: -0.0
 grads.network.2.0.weight:
   device: cpu
-  hash: -3164346798587756158
-  max: 0.1
+  hash: -894284547114345813
+  max: 0.0
   mean: -0.0
   min: -0.1
   shape:
@@ -78,17 +78,17 @@ grads.network.2.0.weight:
   sum: -0.0
 outputs.logits:
   device: cpu
-  hash: -1490443455385623300
-  max: 1.0
+  hash: -2986334254639619392
+  max: 0.8
   mean: -0.0
-  min: -0.7
+  min: -1.0
   shape:
   - 128
   - 10
-  sum: -16.5
+  sum: -29.9
 outputs.loss:
   device: cpu
-  hash: 3533240959424139075
+  hash: -5559397678655548157
   max: 2.3
   mean: 2.3
   min: 2.3

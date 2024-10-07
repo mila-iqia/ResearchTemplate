@@ -1,4 +1,3 @@
-GPU: NVIDIA TITAN RTX
 network.params.0:
   device: cuda:0
   hash: -4218701300434786233
