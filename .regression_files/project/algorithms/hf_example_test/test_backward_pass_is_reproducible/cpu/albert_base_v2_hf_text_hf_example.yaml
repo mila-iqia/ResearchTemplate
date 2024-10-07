@@ -39,16 +39,16 @@ batch.token_type_ids:
   sum: 0
 grads.network.albert.embeddings.LayerNorm.bias:
   device: cpu
-  hash: 3164521306086379693
+  hash: -5920310354634101490
   max: 0.0
-  mean: 0.0
+  mean: -0.0
   min: -0.0
   shape:
   - 128
-  sum: 0.0
+  sum: -0.0
 grads.network.albert.embeddings.LayerNorm.weight:
   device: cpu
-  hash: -3047870419539418388
+  hash: 1495199703706422543
   max: 0.0
   mean: -0.0
   min: -0.0
@@ -57,18 +57,18 @@ grads.network.albert.embeddings.LayerNorm.weight:
   sum: -0.0
 grads.network.albert.embeddings.position_embeddings.weight:
   device: cpu
-  hash: 7939539947078227736
-  max: 0.1
-  mean: 0.0
-  min: -0.4
+  hash: 8312579073978250016
+  max: 0.7
+  mean: -0.0
+  min: -1.1
   shape:
   - 512
   - 128
-  sum: 0.0
+  sum: -0.0
 grads.network.albert.embeddings.token_type_embeddings.weight:
   device: cpu
-  hash: 6751923864738017149
-  max: 0.3
+  hash: 5648598979644007236
+  max: 0.6
   mean: -0.0
   min: -1.1
   shape:
@@ -77,44 +77,44 @@ grads.network.albert.embeddings.token_type_embeddings.weight:
   sum: -0.0
 grads.network.albert.embeddings.word_embeddings.weight:
   device: cpu
-  hash: -1777301467538679946
-  max: 0.1
-  mean: -0.0
-  min: -0.3
+  hash: 2530531288551604645
+  max: 1.5
+  mean: 0.0
+  min: -0.6
   shape:
   - 30000
   - 128
-  sum: -0.0
+  sum: 0.0
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.bias:
   device: cpu
-  hash: -4684811361816166914
-  max: 0.0
+  hash: -1782613338419147020
+  max: 0.1
   mean: -0.0
-  min: -0.0
+  min: -0.1
   shape:
   - 768
-  sum: -0.2
+  sum: -0.3
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.weight:
   device: cpu
-  hash: -6061191073772350209
-  max: 0.0
-  mean: -0.0
-  min: -0.4
+  hash: -41391884229616695
+  max: 0.1
+  mean: 0.0
+  min: -0.6
   shape:
   - 768
-  sum: -0.2
+  sum: 0.1
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.bias:
   device: cpu
-  hash: 6318202235747969647
-  max: 0.0
+  hash: -138945345552048577
+  max: 0.1
   mean: 0.0
-  min: -0.0
+  min: -0.1
   shape:
   - 768
   sum: 0.0
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.weight:
   device: cpu
-  hash: 4145456475111198041
+  hash: -4394483000722222828
   max: 0.1
   mean: -0.0
   min: -0.1
@@ -124,158 +124,158 @@ grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.den
   sum: -0.0
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.bias:
   device: cpu
-  hash: -6221368371389734728
-  max: 0.0
-  mean: 0.0
-  min: -0.0
-  shape:
-  - 768
-  sum: 0.0
-grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weight:
-  device: cpu
-  hash: 4144683943878703418
-  max: 0.3
-  mean: 0.0
-  min: -0.2
-  shape:
-  - 768
-  - 768
-  sum: 1.4
-grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.bias:
-  device: cpu
-  hash: 2432157498219240006
+  hash: -102184048410365625
   max: 0.0
   mean: -0.0
   min: -0.0
   shape:
   - 768
   sum: -0.0
+grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weight:
+  device: cpu
+  hash: -1739967336605920848
+  max: 0.7
+  mean: 0.0
+  min: -0.4
+  shape:
+  - 768
+  - 768
+  sum: 2.5
+grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.bias:
+  device: cpu
+  hash: -6616697550866251608
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 768
+  sum: 0.0
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.weight:
   device: cpu
-  hash: 4433245348302878655
-  max: 0.0
+  hash: 2633268435127448452
+  max: 0.1
   mean: 0.0
-  min: -0.0
+  min: -0.1
   shape:
   - 768
   - 768
-  sum: 0.3
+  sum: 0.4
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.bias:
   device: cpu
-  hash: 6891807040192409690
-  max: 0.0
-  mean: 0.0
-  min: -0.0
+  hash: -8183954254464469665
+  max: 0.1
+  mean: -0.0
+  min: -0.1
   shape:
   - 768
-  sum: 0.2
+  sum: -0.3
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.weight:
   device: cpu
-  hash: 4688042221227771356
-  max: 0.2
+  hash: -7578977790955420463
+  max: 0.5
   mean: -0.0
-  min: -0.2
+  min: -0.3
   shape:
   - 768
   - 768
-  sum: -2.3
+  sum: -3.6
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.bias:
   device: cpu
-  hash: -8480442192452236723
+  hash: 978027301421189184
   max: 0.0
   mean: -0.0
-  min: -0.0
+  min: -0.1
   shape:
   - 3072
   sum: -0.1
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
   device: cpu
-  hash: 9016235337638268231
+  hash: -1887359160625339601
+  max: 0.3
+  mean: -0.0
+  min: -0.2
+  shape:
+  - 3072
+  - 768
+  sum: -1.4
+grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
+  device: cpu
+  hash: 3951323850735401156
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 768
+  sum: 0.0
+grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
+  device: cpu
+  hash: 7713917013293806707
+  max: 0.6
+  mean: -0.0
+  min: -0.5
+  shape:
+  - 768
+  - 3072
+  sum: -0.0
+grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.bias:
+  device: cpu
+  hash: -4984127495978023183
   max: 0.1
   mean: -0.0
   min: -0.1
   shape:
-  - 3072
   - 768
   sum: -0.1
-grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
-  device: cpu
-  hash: -6006479742268296542
-  max: 0.0
-  mean: -0.0
-  min: -0.0
-  shape:
-  - 768
-  sum: -0.0
-grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
-  device: cpu
-  hash: -7853704051842147315
-  max: 0.3
-  mean: 0.0
-  min: -0.3
-  shape:
-  - 768
-  - 3072
-  sum: 0.0
-grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.bias:
-  device: cpu
-  hash: 428697447090851765
-  max: 0.1
-  mean: 0.0
-  min: -0.0
-  shape:
-  - 768
-  sum: 0.0
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.weight:
   device: cpu
-  hash: -7686688936261628980
-  max: 0.0
+  hash: 7694067277738610739
+  max: 0.1
   mean: -0.0
-  min: -0.3
+  min: -0.4
   shape:
   - 768
-  sum: -0.3
+  sum: -0.5
 grads.network.albert.encoder.embedding_hidden_mapping_in.bias:
   device: cpu
-  hash: 8535927910160623736
+  hash: -2076057465744782901
   max: 0.0
   mean: -0.0
   min: -0.0
   shape:
   - 768
-  sum: -0.0
+  sum: -0.1
 grads.network.albert.encoder.embedding_hidden_mapping_in.weight:
   device: cpu
-  hash: 157036485863524700
-  max: 0.0
-  mean: -0.0
-  min: -0.0
+  hash: -6118293898610612575
+  max: 0.1
+  mean: 0.0
+  min: -0.1
   shape:
   - 768
   - 128
-  sum: -0.1
+  sum: 0.2
 grads.network.albert.pooler.bias:
   device: cpu
-  hash: -346762580853883270
+  hash: -4263797609054554573
   max: 0.0
   mean: 0.0
   min: -0.0
   shape:
   - 768
-  sum: 0.1
+  sum: 0.0
 grads.network.albert.pooler.weight:
   device: cpu
-  hash: -5827894865876388484
+  hash: 5060410091089164025
   max: 0.1
   mean: -0.0
   min: -0.1
   shape:
   - 768
   - 768
-  sum: -1.2
+  sum: -0.6
 grads.network.classifier.bias:
   device: cpu
-  hash: -4672899744815637452
+  hash: -9223332094692037178
   max: 0.2
   mean: 0.0
   min: -0.2
@@ -284,7 +284,7 @@ grads.network.classifier.bias:
   sum: 0.0
 grads.network.classifier.weight:
   device: cpu
-  hash: -8843256516227728937
+  hash: 8951598922282221134
   max: 0.2
   mean: -0.0
   min: -0.2
@@ -303,7 +303,7 @@ outputs.labels:
   sum: 23
 outputs.loss:
   device: cpu
-  hash: 1287410195914297480
+  hash: 8272900287826686472
   max: 0.7
   mean: 0.7
   min: 0.7
@@ -311,10 +311,10 @@ outputs.loss:
   sum: 0.7
 outputs.preds:
   device: cpu
-  hash: -1328589377773520981
+  hash: -6012386395022832702
   max: 1
-  mean: 0.9
+  mean: 0.5
   min: 0
   shape:
   - 32
-  sum: 28
+  sum: 15

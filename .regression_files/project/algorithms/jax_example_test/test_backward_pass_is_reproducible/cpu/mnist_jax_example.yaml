@@ -1,48 +1,48 @@
 batch.0:
   device: cpu
-  hash: -1373365636602041987
-  max: 2.1
-  mean: -0.0
-  min: -2.0
+  hash: 8611995894311838429
+  max: 2.8
+  mean: 0.0
+  min: -0.4
   shape:
   - 128
-  - 3
-  - 32
-  - 32
-  sum: -2429.8
+  - 1
+  - 28
+  - 28
+  sum: 1437.2
 batch.1:
   device: cpu
-  hash: 3692171093056153318
+  hash: 1596942422053415325
   max: 9
-  mean: 4.6
+  mean: 4.2
   min: 0
   shape:
   - 128
-  sum: 583
+  sum: 543
 grads.network.params.0:
   device: cpu
-  hash: -326527885044061789
+  hash: 7575290774389811924
   max: 0.0
   mean: 0.0
   min: -0.0
   shape:
   - 32
-  sum: 0.0
+  sum: 0.1
 grads.network.params.1:
   device: cpu
-  hash: 4910460631065758284
+  hash: -4656566980701687435
   max: 0.0
-  mean: 0.0
+  mean: -0.0
   min: -0.0
   shape:
   - 3
   - 3
-  - 3
+  - 1
   - 32
-  sum: 0.4
+  sum: -0.0
 grads.network.params.2:
   device: cpu
-  hash: -8431369191126809322
+  hash: 3912407143735383970
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -51,7 +51,7 @@ grads.network.params.2:
   sum: 0.1
 grads.network.params.3:
   device: cpu
-  hash: 326952515514834605
+  hash: -5040874721525974440
   max: 0.0
   mean: 0.0
   min: -0.0
@@ -60,58 +60,58 @@ grads.network.params.3:
   - 3
   - 32
   - 64
-  sum: 8.5
+  sum: 6.7
 grads.network.params.4:
   device: cpu
-  hash: 4424535170565525984
+  hash: 8522857410142794365
   max: 0.0
   mean: 0.0
   min: -0.0
   shape:
   - 256
-  sum: 0.0
+  sum: 0.1
 grads.network.params.5:
   device: cpu
-  hash: 1125612823170486867
-  max: 0.0
+  hash: 6992879603858286766
+  max: 0.1
   mean: 0.0
   min: -0.0
   shape:
-  - 4096
+  - 3136
   - 256
-  sum: 34.8
+  sum: 25.1
 grads.network.params.6:
   device: cpu
-  hash: -5171372466478708838
-  max: 0.0
+  hash: 4850223503671429999
+  max: 0.1
   mean: -0.0
-  min: -0.0
+  min: -0.1
   shape:
   - 10
   sum: -0.0
 grads.network.params.7:
   device: cpu
-  hash: 4187485617716200396
-  max: 0.0
+  hash: -1040674857568026146
+  max: 0.1
   mean: -0.0
-  min: -0.0
+  min: -0.1
   shape:
   - 256
   - 10
   sum: -0.0
 outputs.logits:
   device: cpu
-  hash: 2812606213846053943
-  max: 1.0
-  mean: 0.1
-  min: -0.8
+  hash: 8769296209420333745
+  max: 0.8
+  mean: -0.0
+  min: -1.1
   shape:
   - 128
   - 10
-  sum: 151.9
+  sum: -35.4
 outputs.loss:
   device: cpu
-  hash: 1603013683729666243
+  hash: 1192226774200846339
   max: 2.3
   mean: 2.3
   min: 2.3
@@ -119,10 +119,10 @@ outputs.loss:
   sum: 2.3
 outputs.y:
   device: cpu
-  hash: 3692171093056153318
+  hash: 1596942422053415325
   max: 9
-  mean: 4.6
+  mean: 4.2
   min: 0
   shape:
   - 128
-  sum: 583
+  sum: 543
