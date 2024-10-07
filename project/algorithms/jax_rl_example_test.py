@@ -57,8 +57,312 @@ from .jax_rl_example import (
 )
 
 logger = getLogger(__name__)
+
+@pytest.fixture(params=["Pendulum-v1"])
+def env_id(request: pytest.FixtureRequest) -> str:
+    # env_id = "halfcheetah"
+    # env_id = "humanoid"
+    return request.param
+
+
+@pytest.fixture()
+def env_and_params(env_id: str) -> tuple[Environment[gymnax.EnvState, TEnvParams], TEnvParams]:
+    from brax.envs import _envs as brax_envs
+    from rejax.compat.brax2gymnax import create_brax
+
+    env: Environment[gymnax.EnvState, gymnax.EnvParams]
+    env_params: gymnax.EnvParams
+    if env_id in brax_envs:
+        env, env_params = create_brax(  # type: ignore
+            env_id,
+            episode_length=1000,
+            action_repeat=1,
+            auto_reset=True,
+            batch_size=None,
+            backend="generalized",
+        )
+    elif isinstance(env_id, str):
+        env, env_params = gymnax.make(env_id=env_id)  # type: ignore
+    else:
+        env = env_id()  # type: ignore
+        env_params = env.default_params
+    return env, env_params  # type: ignore
+
+
+@pytest.fixture
+def algo(
+    env_and_params: tuple[Environment[TEnvState, TEnvParams], TEnvParams],
+) -> JaxRLExample[TEnvState, TEnvParams]:
+    env, env_params = env_and_params
+    algo = JaxRLExample[TEnvState, TEnvParams](
+        env=env,
+        env_params=env_params,
+        actor=JaxRLExample.create_actor(env, env_params),
+        critic=JaxRLExample.create_critic(),
+        hp=PPOHParams(
+            num_envs=100,
+            num_steps=100,
+            num_epochs=10,
+            num_minibatches=10,
+            learning_rate=0.001,
+            max_grad_norm=10,
+            total_timesteps=150_000,
+            eval_freq=2000,
+            gamma=0.995,
+            gae_lambda=0.95,
+            clip_eps=0.2,
+            ent_coef=0.0,
+            vf_coef=0.5,
+            normalize_observations=True,
+            debug=False,
+        ),
+    )
+    return algo
+
+
+@pytest.fixture(autouse=True, scope="session")
+def debug_jit_warnings():
+    # Temporarily make this particular warning into an error to help future-proof our jax code.
+    import jax._src.deprecations
+
+    val_before = jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated
+    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
+    yield
+    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = val_before
+
+
+@pytest.fixture
+def rng(request: pytest.FixtureRequest) -> chex.PRNGKey:
+    seed = getattr(request, "param", 123)
+    return jax.random.key(seed)
+
+    # train_pure_jax(algo, backend="cpu")
+    # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend="cpu")
+    # train_lightning(algo, accelerator="cpu")
+
+
+@pytest.fixture
+def max_epochs(algo: JaxRLExample, request: pytest.FixtureRequest) -> int:
+    # This is the usual value: (75)
+    # return 3  # shorter for tests?
+    default_max_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
+    return getattr(request, "param", default_max_epochs)
+
+
+@pytest.fixture
+def trainer(algo: JaxRLExample, max_epochs: int, tmp_path: Path):
+    iteration_steps = algo.hp.num_envs * algo.hp.num_steps
+    num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
+    training_steps_per_epoch: int = num_iterations
+
+    return JaxTrainer(
+        max_epochs=max_epochs,
+        training_steps_per_epoch=training_steps_per_epoch,
+        # todo: make sure that this also works with the wandb logger!
+        logger=CSVLogger(save_dir=tmp_path, name=None, flush_logs_every_n_steps=1),
+        default_root_dir=tmp_path,
+        callbacks=(
+            # RlThroughputCallback(),  # Can't use this callback with `vmap`!
+            # RenderEpisodesCallback(on_every_epoch=False),
+            RichProgressBar(),
+        ),
+    )
+
+
+def _add_gitignore_if_needed(original_datadir: Path):
+    if not (gitignore_file := (original_datadir / ".gitignore")).exists():
+        gitignore_file.parent.mkdir(exist_ok=True, parents=True)
+        gitignore_file.write_text("*.gif\n")
+
+@pytest.mark.slow
+@pytest.mark.timeout(35)
+def test_train_ours(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    """Test our tweaked version of `rejax.PPO` algorithm using the `JaxRLExample.train` method."""
+    _add_gitignore_if_needed(original_datadir)
+    train_state, evaluations = algo.train(rng=rng)
+
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
+    _gif_path = tmp_path / "ours.gif"
+
+    algo.visualize(ts=train_state, gif_path=_gif_path)
+    file_regression.check(_gif_path.read_bytes(), binary=True, extension=".gif")
+
+
+@pytest.mark.slow
+@pytest.mark.timeout(35)
+def test_train_ours_with_trainer(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
+    trainer: JaxTrainer,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    # ndarrays_regression: NDArraysRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    """Test our tweaked version of `rejax.PPO` algorithm using a `JaxTrainer`."""
+
+    _add_gitignore_if_needed(original_datadir)
+    train_fn = trainer.fit
+
+    train_state, evaluations = train_pure_jax(
+        algo, rng=rng, figures_dir=original_datadir, train_fn=train_fn
+    )
+
+    # ndarrays_regression.check(dataclasses.asdict(evals))
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
+    _gif_path = tmp_path / "ours.gif"
+
+    algo.visualize(ts=train_state, gif_path=_gif_path)
+    file_regression.check(_gif_path.read_bytes(), binary=True, extension=".gif")
+
+
+@pytest.mark.slow
+@pytest.mark.timeout(35)
+def test_rejax(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
+    file_regression: FileRegressionFixture,
+    tmp_path: Path,
+    max_epochs: int,
+    tensor_regression: TensorRegressionFixture,
+):
+    """Train `rejax.PPO` with the same parameters."""
+    _add_gitignore_if_needed(original_datadir)
+
+    # Make `rejax` use the same number of epochs as us.
+    hp = algo.hp.replace(total_timesteps=max_epochs * algo.hp.eval_freq)
+
+    _algo, ts, evaluations = train_rejax(
+        env=algo.env,
+        env_params=algo.env_params,
+        hp=hp,
+        rng=rng,
+    )
+
+    actor_ts = ts.actor_ts.replace(apply_fn=algo.actor.apply)
+    actor = functools.partial(
+        _actor,
+        actor_ts=actor_ts,
+        rms_state=ts.rms_state,
+        normalize_observations=_algo.normalize_observations,
+    )
+    gif_path = tmp_path / "rejax.gif"
+    render_episode(
+        actor=actor,
+        env=_algo.env,
+        env_params=_algo.env_params,
+        gif_path=gif_path,
+        rng=ts.rng,
+    )
+    evaluations = dataclasses.asdict(
+        EvalMetrics(
+            episode_length=evaluations[0],
+            cumulative_reward=evaluations[1],
+        )
+    )
+    tensor_regression.check(jax.tree.map(torch_jax_interop.jax_to_torch, evaluations))
+
+    file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
+
+
+# Sort-of slow.
+@pytest.mark.slow
+@pytest.mark.timeout(70)
+@pytest.mark.parametrize(
+    "with_callbacks",
+    [
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                raises=Exception, reason="Ordered IO effects not supported in vmap.", strict=True
+            ),
+        ),
+        False,
+    ],
+)
+@pytest.mark.parametrize("n_agents", [2, 5])
+def test_ours_with_vmap(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    original_datadir: Path,
+    n_agents: int,
+    trainer: JaxTrainer,
+    with_callbacks: bool,
+    tmp_path: Path,
+    file_regression: FileRegressionFixture,
+    tensor_regression: TensorRegressionFixture,
+):
+    _add_gitignore_if_needed(original_datadir)
+
+    if not with_callbacks:
+        trainer = trainer.replace(callbacks=())
+
+    train_fn = jax.vmap(trainer.fit, in_axes=(None, 0))
+    rngs = jax.random.split(rng, n_agents)
+
+    train_state, evaluations = train_pure_jax(
+        algo, rng=rngs, figures_dir=original_datadir, train_fn=train_fn, n_agents=n_agents
+    )
+    tensor_regression.check(
+        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
+    )
+    assert isinstance(train_state, PPOState)
+    assert isinstance(evaluations, EvalMetrics)
+
+    figures_dir = tmp_path
+    # Visualize the first agent
+    first_agent_ts: PPOState = jax.tree.map(operator.itemgetter(0), train_state)
+    algo.visualize(ts=first_agent_ts, gif_path=tmp_path / "pure_jax_first.gif")
+
+    last_evals = evaluations.cumulative_reward[:, -1]
+    best_agent = jnp.argmax(last_evals)
+    print(f"Best agent is #{best_agent}, with rng: {rng.at[best_agent]}")
+
+    best_agent_ts: PPOState = jax.tree.map(operator.itemgetter(best_agent), train_state)
+
+    _gif_path = tmp_path / "best.gif"
+    algo.visualize(ts=best_agent_ts, gif_path=_gif_path)
+    file_regression.check(
+        _gif_path.read_bytes(),
+        binary=True,
+        extension=".gif",
+    )
+
+    algo.visualize(
+        ts=first_agent_ts.replace(
+            actor_ts=train_state.actor_ts.replace(
+                params=jax.tree.map(
+                    lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
+                    train_state.actor_ts.params,
+                )
+            ),
+            critic_ts=train_state.critic_ts.replace(
+                params=jax.tree.map(
+                    lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
+                    train_state.critic_ts.params,
+                )
+            ),
+        ),
+        gif_path=figures_dir / "pure_jax_avg.gif",
+    )
+
 ## Pytorch-Lightning wrapper around this learner:
 
+# Don't allow tests to run for more than 5 seconds.
+# pytestmark = pytest.mark.timeout(5)
 
 class PPOLightningModule(lightning.LightningModule):
     """Uses the same code as [project.algorithms.jax_rl_example.JaxRLExample][], but the training
@@ -311,300 +615,6 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         # )
 
 
-@pytest.fixture(params=["Pendulum-v1"])
-def env_id(request: pytest.FixtureRequest) -> str:
-    # env_id = "halfcheetah"
-    # env_id = "humanoid"
-    return request.param
-
-
-@pytest.fixture()
-def env_and_params(env_id: str) -> tuple[Environment[gymnax.EnvState, TEnvParams], TEnvParams]:
-    from brax.envs import _envs as brax_envs
-    from rejax.compat.brax2gymnax import create_brax
-
-    env: Environment[gymnax.EnvState, gymnax.EnvParams]
-    env_params: gymnax.EnvParams
-    if env_id in brax_envs:
-        env, env_params = create_brax(  # type: ignore
-            env_id,
-            episode_length=1000,
-            action_repeat=1,
-            auto_reset=True,
-            batch_size=None,
-            backend="generalized",
-        )
-    elif isinstance(env_id, str):
-        env, env_params = gymnax.make(env_id=env_id)  # type: ignore
-    else:
-        env = env_id()  # type: ignore
-        env_params = env.default_params
-    return env, env_params  # type: ignore
-
-
-@pytest.fixture
-def algo(
-    env_and_params: tuple[Environment[TEnvState, TEnvParams], TEnvParams],
-) -> JaxRLExample[TEnvState, TEnvParams]:
-    env, env_params = env_and_params
-    algo = JaxRLExample[TEnvState, TEnvParams](
-        env=env,
-        env_params=env_params,
-        actor=JaxRLExample.create_actor(env, env_params),
-        critic=JaxRLExample.create_critic(),
-        hp=PPOHParams(
-            num_envs=100,
-            num_steps=100,
-            num_epochs=10,
-            num_minibatches=10,
-            learning_rate=0.001,
-            max_grad_norm=10,
-            total_timesteps=150_000,
-            eval_freq=2000,
-            gamma=0.995,
-            gae_lambda=0.95,
-            clip_eps=0.2,
-            ent_coef=0.0,
-            vf_coef=0.5,
-            normalize_observations=True,
-            debug=False,
-        ),
-    )
-    return algo
-
-
-@pytest.fixture(autouse=True, scope="session")
-def debug_jit_warnings():
-    # Temporarily make this particular warning into an error to help future-proof our jax code.
-    import jax._src.deprecations
-
-    val_before = jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated
-    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
-    yield
-    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = val_before
-
-
-@pytest.fixture
-def rng(request: pytest.FixtureRequest) -> chex.PRNGKey:
-    seed = getattr(request, "param", 123)
-    return jax.random.key(seed)
-
-    # train_pure_jax(algo, backend="cpu")
-    # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend="cpu")
-    # train_lightning(algo, accelerator="cpu")
-
-
-@pytest.fixture
-def max_epochs(algo: JaxRLExample, request: pytest.FixtureRequest) -> int:
-    # This is the usual value: (75)
-    # return 3  # shorter for tests?
-    default_max_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
-    return getattr(request, "param", default_max_epochs)
-
-
-@pytest.fixture
-def trainer(algo: JaxRLExample, max_epochs: int, tmp_path: Path):
-    iteration_steps = algo.hp.num_envs * algo.hp.num_steps
-    num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
-    training_steps_per_epoch: int = num_iterations
-
-    return JaxTrainer(
-        max_epochs=max_epochs,
-        training_steps_per_epoch=training_steps_per_epoch,
-        # todo: make sure that this also works with the wandb logger!
-        logger=CSVLogger(save_dir=tmp_path, name=None, flush_logs_every_n_steps=1),
-        default_root_dir=tmp_path,
-        callbacks=(
-            # RlThroughputCallback(),  # Can't use this callback with `vmap`!
-            # RenderEpisodesCallback(on_every_epoch=False),
-            RichProgressBar(),
-        ),
-    )
-
-
-def _add_gitignore_if_needed(original_datadir: Path):
-    if not (gitignore_file := (original_datadir / ".gitignore")).exists():
-        gitignore_file.parent.mkdir(exist_ok=True, parents=True)
-        gitignore_file.write_text("*.gif\n")
-
-
-def test_train_ours(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    original_datadir: Path,
-    tmp_path: Path,
-    file_regression: FileRegressionFixture,
-    # ndarrays_regression: NDArraysRegressionFixture,
-    tensor_regression: TensorRegressionFixture,
-):
-    _add_gitignore_if_needed(original_datadir)
-    train_state, evaluations = algo.train(rng=rng)
-
-    # ndarrays_regression.check(dataclasses.asdict(evals))
-    tensor_regression.check(
-        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
-    )
-    _gif_path = tmp_path / "ours.gif"
-
-    algo.visualize(ts=train_state, gif_path=_gif_path)
-    file_regression.check(_gif_path.read_bytes(), binary=True, extension=".gif")
-
-
-def test_train_ours_with_trainer(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    original_datadir: Path,
-    trainer: JaxTrainer,
-    tmp_path: Path,
-    file_regression: FileRegressionFixture,
-    # ndarrays_regression: NDArraysRegressionFixture,
-    tensor_regression: TensorRegressionFixture,
-):
-    _add_gitignore_if_needed(original_datadir)
-    train_fn = trainer.fit
-
-    train_state, evaluations = train_pure_jax(
-        algo, rng=rng, figures_dir=original_datadir, train_fn=train_fn
-    )
-
-    # ndarrays_regression.check(dataclasses.asdict(evals))
-    tensor_regression.check(
-        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
-    )
-    _gif_path = tmp_path / "ours.gif"
-
-    algo.visualize(ts=train_state, gif_path=_gif_path)
-    file_regression.check(_gif_path.read_bytes(), binary=True, extension=".gif")
-
-
-def test_rejax(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    original_datadir: Path,
-    file_regression: FileRegressionFixture,
-    tmp_path: Path,
-    max_epochs: int,
-    tensor_regression: TensorRegressionFixture,
-):
-    """Train `rejax.PPO` with the same parameters."""
-    _add_gitignore_if_needed(original_datadir)
-
-    # Make `rejax` use the same number of epochs as us.
-    hp = algo.hp.replace(total_timesteps=max_epochs * algo.hp.eval_freq)
-
-    _algo, ts, evaluations = train_rejax(
-        env=algo.env,
-        env_params=algo.env_params,
-        hp=hp,
-        rng=rng,
-    )
-
-    actor_ts = ts.actor_ts.replace(apply_fn=algo.actor.apply)
-    actor = functools.partial(
-        _actor,
-        actor_ts=actor_ts,
-        rms_state=ts.rms_state,
-        normalize_observations=_algo.normalize_observations,
-    )
-    gif_path = tmp_path / "rejax.gif"
-    render_episode(
-        actor=actor,
-        env=_algo.env,
-        env_params=_algo.env_params,
-        gif_path=gif_path,
-        rng=ts.rng,
-    )
-    evaluations = dataclasses.asdict(
-        EvalMetrics(
-            episode_length=evaluations[0],
-            cumulative_reward=evaluations[1],
-        )
-    )
-    tensor_regression.check(jax.tree.map(torch_jax_interop.jax_to_torch, evaluations))
-
-    file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
-
-
-# Sort-of slow.
-@pytest.mark.parametrize(
-    "with_callbacks",
-    [
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                raises=Exception, reason="Ordered IO effects not supported in vmap.", strict=True
-            ),
-        ),
-        False,
-    ],
-)
-@pytest.mark.parametrize("n_agents", [2, 5])
-def test_ours_with_vmap(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    original_datadir: Path,
-    n_agents: int,
-    trainer: JaxTrainer,
-    with_callbacks: bool,
-    tmp_path: Path,
-    file_regression: FileRegressionFixture,
-    tensor_regression: TensorRegressionFixture,
-):
-    _add_gitignore_if_needed(original_datadir)
-
-    if not with_callbacks:
-        trainer = trainer.replace(callbacks=())
-
-    train_fn = jax.vmap(trainer.fit, in_axes=(None, 0))
-    rngs = jax.random.split(rng, n_agents)
-
-    train_state, evaluations = train_pure_jax(
-        algo, rng=rngs, figures_dir=original_datadir, train_fn=train_fn, n_agents=n_agents
-    )
-    tensor_regression.check(
-        jax.tree.map(torch_jax_interop.jax_to_torch, dataclasses.asdict(evaluations))
-    )
-    assert isinstance(train_state, PPOState)
-    assert isinstance(evaluations, EvalMetrics)
-
-    figures_dir = tmp_path
-    # Visualize the first agent
-    first_agent_ts: PPOState = jax.tree.map(operator.itemgetter(0), train_state)
-    algo.visualize(ts=first_agent_ts, gif_path=tmp_path / "pure_jax_first.gif")
-
-    last_evals = evaluations.cumulative_reward[:, -1]
-    best_agent = jnp.argmax(last_evals)
-    print(f"Best agent is #{best_agent}, with rng: {rng.at[best_agent]}")
-
-    best_agent_ts: PPOState = jax.tree.map(operator.itemgetter(best_agent), train_state)
-
-    _gif_path = tmp_path / "best.gif"
-    algo.visualize(ts=best_agent_ts, gif_path=_gif_path)
-    file_regression.check(
-        _gif_path.read_bytes(),
-        binary=True,
-        extension=".gif",
-    )
-
-    algo.visualize(
-        ts=first_agent_ts.replace(
-            actor_ts=train_state.actor_ts.replace(
-                params=jax.tree.map(
-                    lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
-                    train_state.actor_ts.params,
-                )
-            ),
-            critic_ts=train_state.critic_ts.replace(
-                params=jax.tree.map(
-                    lambda x: jnp.mean(x, axis=0) if x.ndim > 0 else x,
-                    train_state.critic_ts.params,
-                )
-            ),
-        ),
-        gif_path=figures_dir / "pure_jax_avg.gif",
-    )
-
-
 @pytest.fixture
 def lightning_trainer(max_epochs: int, tmp_path: Path):
     return lightning.Trainer(
@@ -619,6 +629,8 @@ def lightning_trainer(max_epochs: int, tmp_path: Path):
 
 
 # reducing the max_epochs from 75 down to 3 because it's just wayyy too slow otherwise.
+@pytest.mark.slow
+@pytest.mark.timeout(80)
 @pytest.mark.parametrize("max_epochs", [3], indirect=True)
 def test_lightning(
     algo: JaxRLExample,
