@@ -92,7 +92,7 @@ from project.experiment import (
     setup_logging,
 )
 from project.main import PROJECT_NAME
-from project.utils.env_vars import REPO_ROOTDIR, SCRATCH
+from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
@@ -126,13 +126,11 @@ def original_datadir(original_datadir: Path):
     relative_portion = original_datadir.relative_to(REPO_ROOTDIR)
     datadir = REPO_ROOTDIR / ".regression_files"
 
-    use_scratch: bool = False  # todo: enable again later?
-
-    if SCRATCH and not datadir.exists() and use_scratch:
-        # puts a symlink .regression_files in the repo root that points to the same dir in $SCRATCH
-        actual_dir = SCRATCH / datadir.relative_to(REPO_ROOTDIR)
-        actual_dir.mkdir(parents=True, exist_ok=True)
-        datadir.symlink_to(actual_dir)
+    # if SCRATCH and not datadir.exists():
+    #     # puts a symlink .regression_files in the repo root that points to the same dir in $SCRATCH
+    #     actual_dir = SCRATCH / datadir.relative_to(REPO_ROOTDIR)
+    #     actual_dir.mkdir(parents=True, exist_ok=True)
+    #     datadir.symlink_to(actual_dir)
 
     return datadir / relative_portion
 

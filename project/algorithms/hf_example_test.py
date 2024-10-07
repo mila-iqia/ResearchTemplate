@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import lightning
@@ -45,7 +46,7 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
         datamodule: HFDataModule,
         accelerator: str,
         devices: int | list[int],
-        training_batch: dict[str, Tensor],
+        tmp_path: Path,
         num_steps: int = 3,
     ):
         """Test that the loss decreases on a single batch."""
@@ -56,6 +57,7 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
             devices=devices,
             enable_checkpointing=False,
             deterministic=True,
+            default_root_dir=tmp_path,
             overfit_batches=1,
             limit_train_batches=1,
             max_epochs=num_steps,

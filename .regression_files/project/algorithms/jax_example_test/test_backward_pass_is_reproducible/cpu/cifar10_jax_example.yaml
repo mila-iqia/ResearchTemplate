@@ -1,0 +1,128 @@
+batch.0:
+  device: cpu
+  hash: -1373365636602041987
+  max: 2.1
+  mean: -0.0
+  min: -2.0
+  shape:
+  - 128
+  - 3
+  - 32
+  - 32
+  sum: -2429.8
+batch.1:
+  device: cpu
+  hash: 3692171093056153318
+  max: 9
+  mean: 4.6
+  min: 0
+  shape:
+  - 128
+  sum: 583
+grads.network.params.0:
+  device: cpu
+  hash: -8787720335871173701
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 32
+  sum: 0.0
+grads.network.params.1:
+  device: cpu
+  hash: 3990192910452736780
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 3
+  - 3
+  - 3
+  - 32
+  sum: 0.4
+grads.network.params.2:
+  device: cpu
+  hash: -3556107838450196005
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 64
+  sum: 0.1
+grads.network.params.3:
+  device: cpu
+  hash: -81353556570760400
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 3
+  - 3
+  - 32
+  - 64
+  sum: 8.5
+grads.network.params.4:
+  device: cpu
+  hash: 1803647372304995568
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 256
+  sum: 0.0
+grads.network.params.5:
+  device: cpu
+  hash: 8144877767226434497
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 4096
+  - 256
+  sum: 34.8
+grads.network.params.6:
+  device: cpu
+  hash: -5195226011847732676
+  max: 0.0
+  mean: -0.0
+  min: -0.0
+  shape:
+  - 10
+  sum: -0.0
+grads.network.params.7:
+  device: cpu
+  hash: -5220642217037132959
+  max: 0.0
+  mean: -0.0
+  min: -0.0
+  shape:
+  - 256
+  - 10
+  sum: -0.0
+outputs.logits:
+  device: cpu
+  hash: 7290015411165007734
+  max: 1.0
+  mean: 0.1
+  min: -0.8
+  shape:
+  - 128
+  - 10
+  sum: 151.9
+outputs.loss:
+  device: cpu
+  hash: -78431521355012477
+  max: 2.3
+  mean: 2.3
+  min: 2.3
+  shape: []
+  sum: 2.3
+outputs.y:
+  device: cpu
+  hash: 3692171093056153318
+  max: 9
+  mean: 4.6
+  min: 0
+  shape:
+  - 128
+  sum: 583

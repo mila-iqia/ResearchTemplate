@@ -1,0 +1,57 @@
+network.0.1.bias:
+  device: cpu
+  hash: 7456212545494294890
+  max: 0.0
+  mean: -0.0
+  min: -0.0
+  shape:
+  - 128
+  sum: -0.1
+network.0.1.weight:
+  device: cpu
+  hash: -5211235095013185726
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 128
+  - 784
+  sum: 7.1
+network.1.0.bias:
+  device: cpu
+  hash: -7959245339965174533
+  max: 0.1
+  mean: -0.0
+  min: -0.1
+  shape:
+  - 128
+  sum: -1.3
+network.1.0.weight:
+  device: cpu
+  hash: -3825944026249393384
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 128
+  - 128
+  sum: 2.4
+network.2.0.bias:
+  device: cpu
+  hash: 4466127747833901070
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 10
+  sum: 0.1
+network.2.0.weight:
+  device: cpu
+  hash: 1541264580231078515
+  max: 0.1
+  mean: -0.0
+  min: -0.1
+  shape:
+  - 10
+  - 128
+  sum: -2.0
