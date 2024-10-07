@@ -40,7 +40,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.algorithms.jax_trainer import JaxTrainer, hparams_to_dict
+from project.trainers.jax_trainer import JaxTrainer, hparams_to_dict
 
 from .jax_rl_example import (
     EvalMetrics,

@@ -30,7 +30,7 @@ from rejax.networks import DiscretePolicy, GaussianPolicy, VNetwork
 from typing_extensions import TypeVar
 from xtils.jitpp import Static
 
-from project.algorithms.jax_trainer import JaxCallback, JaxModule, JaxTrainer
+from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer
 from project.utils.typing_utils.jax_typing_utils import field, jit
 
 logger = get_logger(__name__)

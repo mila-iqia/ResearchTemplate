@@ -1,6 +1,6 @@
 defaults:
   - callbacks: rich_progress_bar.yaml
-_target_: project.algorithms.jax_trainer.JaxTrainer
+_target_: project.trainers.jax_trainer.JaxTrainer
 max_epochs: 75
 training_steps_per_epoch: 1
 

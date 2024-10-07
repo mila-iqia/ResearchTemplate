@@ -83,7 +83,7 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
 
     if datamodule is None:
         # todo: missing `rng` argument.
-        from project.algorithms.jax_trainer import JaxTrainer
+        from project.trainers.jax_trainer import JaxTrainer
 
         if isinstance(experiment.trainer, JaxTrainer):
             import jax.random

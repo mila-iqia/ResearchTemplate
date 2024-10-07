@@ -16,7 +16,7 @@ import jax.numpy as jnp
 import lightning
 import lightning.pytorch.callbacks
 import lightning.pytorch.loggers
-import torch  # noqa
+from hydra.core.hydra_config import HydraConfig
 from typing_extensions import TypeVar
 
 from project.utils.typing_utils.jax_typing_utils import jit
@@ -91,8 +91,7 @@ class JaxCallback(flax.struct.PyTreeNode):
 
 
 class JaxTrainer(flax.struct.PyTreeNode):
-    """A simplified version of the `[lightning.Trainer][lightning.pytorch.trainer.Trainer]` with a
-    fully jitted training loop.
+    """A simplified version of the `lightning.Trainer` with a fully jitted training loop.
 
     ## Assumptions:
 
@@ -143,17 +142,21 @@ class JaxTrainer(flax.struct.PyTreeNode):
       but not both.
       - If you want to use [jax.vmap][] on the `fit` method, just remove the callbacks on the
         Trainer for now.
+
+    ## TODOs / ideas
+
+    - Add a checkpoint callback with orbax-checkpoint?
     """
 
-    # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
     max_epochs: int = flax.struct.field(pytree_node=False)
 
-    # iteration_steps = algo.hp.num_envs * algo.hp.num_steps
-    # num_iterations = np.ceil(algo.hp.eval_freq / iteration_steps).astype(int)
-    training_steps_per_epoch: int
+    training_steps_per_epoch: int = flax.struct.field(pytree_node=False)
+
+    limit_val_batches: int = 0
+    limit_test_batches: int = 0
 
     # TODO: Getting some errors with the schema generation for lightning.Callback and
-    # lightning.pytorch.loggers.logger.Logger here.
+    # lightning.pytorch.loggers.logger.Logger here if we keep the type annotation.
     callbacks: Sequence = dataclasses.field(metadata={"pytree_node": False}, default_factory=tuple)
 
     logger: Any | None = flax.struct.field(pytree_node=False, default=None)
@@ -162,22 +165,20 @@ class JaxTrainer(flax.struct.PyTreeNode):
     # strategy: str = flax.struct.field(pytree_node=False, default="auto")
     # devices: int | str = flax.struct.field(pytree_node=False, default="auto")
 
-    # min_epochs: int
-
     # path to output directory, created dynamically by hydra
     # path generation pattern is specified in `configs/hydra/default.yaml`
     # use it to store all files generated during the run, like checkpoints and metrics
-    default_root_dir: str | Path | None = flax.struct.field(pytree_node=False, default="")
+
+    default_root_dir: str | Path | None = flax.struct.field(
+        pytree_node=False,
+        default_factory=lambda: HydraConfig.get().runtime.output_dir,
+    )
 
     # State variables:
-    # TODO: Figure out how to efficiently present these even when jit is turned off (currently
-    # replacing self entirely).
+    # TODO: figure out how to cleanly store / update these.
     current_epoch: int = flax.struct.field(pytree_node=True, default=0)
     global_step: int = flax.struct.field(pytree_node=True, default=0)
 
-    # TODO: Add a checkpoint callback with orbax-checkpoint?
-    limit_val_batches: int = 0
-    limit_test_batches: int = 0
     logged_metrics: dict = flax.struct.field(pytree_node=True, default_factory=dict)
     callback_metrics: dict = flax.struct.field(pytree_node=True, default_factory=dict)
     # todo: get the metrics from the callbacks?
