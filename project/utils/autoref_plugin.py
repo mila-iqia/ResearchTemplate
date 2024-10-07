@@ -21,28 +21,36 @@ from project.utils.hydra_config_utils import import_object
 # Same as in the mkdocs_autorefs plugin.
 logger = get_plugin_logger(__name__)
 
+known_things = [
+    lightning.Trainer,
+    lightning.LightningModule,
+    lightning.LightningDataModule,
+    torch.nn.Module,
+]
+"""
+IDEA: IF we see `Trainer`, and we know that that's the `lightning.Trainer`, then we
+create the proper ref.
+
+TODO: Ideally this would contain every object / class that we know of in this project.
+"""
+
 
 class CustomAutoRefPlugin(BasePlugin):
+    """Small mkdocs plugin that converts backticks to refs when possible."""
+
     def on_page_markdown(
         self, markdown: str, /, *, page: Page, config: MkDocsConfig, files: Files
     ) -> str | None:
         # Find all instances where backticks are used and try to convert them to refs.
 
         # Examples:
-        # - `package.foo.bar` -> [package.foo.bar][]
+        # - `package.foo.bar` -> [package.foo.bar][] (only if `package.foo.bar` is importable)
         # - `baz` -> [baz][]
 
         def _full_path(thing) -> str:
             return thing.__module__ + "." + thing.__qualname__
 
-        known_things = [
-            lightning.Trainer,
-            lightning.LightningModule,
-            lightning.LightningDataModule,
-            torch.nn.Module,
-        ]
         known_thing_names = [t.__name__ for t in known_things]
-        # use_translations = True
 
         new_markdown = []
         for line_index, line in enumerate(markdown.splitlines(keepends=True)):
@@ -55,11 +63,6 @@ class CustomAutoRefPlugin(BasePlugin):
 
             for match in matches:
                 thing_name = match
-                # if not use_translations:
-                #     # Do something dumber
-                #     line = line.replace(f"`{thing_name}`", f"[{thing_name}][]")
-                #     continue
-                # line = line.replace(f"`{thing_name}`",)
                 if "." not in thing_name and thing_name in known_thing_names:
                     thing = known_things[known_thing_names.index(thing_name)]
                 else:

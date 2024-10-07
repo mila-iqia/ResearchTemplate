@@ -16,14 +16,22 @@ from .autoref_plugin import CustomAutoRefPlugin
         ),
         ("`torch.Tensor`", "[torch.Tensor][torch.Tensor]"),
         (
-            "a proper full ref: [lightning.Trainer][lightning.pytorch.core.trainer.trainer.Trainer]",
-            "a proper full ref: [lightning.Trainer][lightning.pytorch.core.trainer.trainer.Trainer]",
+            "a proper full ref: "
+            + (
+                _lightning_trainer_ref
+                := "[lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer]"
+            ),
+            # Keep the ref as-is.
+            f"a proper full ref: {_lightning_trainer_ref}",
         ),
         ("`foo.bar`", "`foo.bar`"),
         (
             "`jax.Array`",
+            # not sure if this will make a proper link in mkdocs though.
             "[jax.Array][jax.Array]",
-        ),  # not sure if this will make a proper link in mkdocs though.
+        ),
+        ("`Trainer`", "[Trainer][lightning.pytorch.trainer.trainer.Trainer]"),
+        # since `Trainer` is in the `known_things` list, we add the proper ref.
     ],
 )
 def test_autoref_plugin(input: str, expected: str):
