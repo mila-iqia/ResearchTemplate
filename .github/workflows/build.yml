@@ -164,7 +164,7 @@ jobs:
         run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
 
       - name: Test with pytest (only slow tests)
-        run: pdm run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+        run: rye run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
 
       - name: Store coverage report as an artifact
         uses: actions/upload-artifact@v4
