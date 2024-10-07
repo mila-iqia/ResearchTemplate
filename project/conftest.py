@@ -60,6 +60,7 @@ algorithm & network & datamodule -- is used by --> some_other_test
 
 from __future__ import annotations
 
+import operator
 import os
 import sys
 import typing
@@ -70,6 +71,7 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Literal
 
+import jax
 import lightning.pytorch as pl
 import pytest
 import torch
@@ -98,7 +100,7 @@ from project.utils.testutils import (
     default_marks_for_config_combinations,
     default_marks_for_config_name,
 )
-from project.utils.typing_utils import is_mapping_of, is_sequence_of
+from project.utils.typing_utils import is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
@@ -301,16 +303,19 @@ def train_dataloader(datamodule: DataModule) -> DataLoader:
 def training_batch(
     train_dataloader: DataLoader, device: torch.device
 ) -> tuple[Tensor, ...] | dict[str, Tensor]:
-    # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
+    # Get a batch of data from the dataloader.
+
+    # The batch of data will always be the same because the dataloaders are passed a Generator
+    # object in their constructor.
+    assert isinstance(train_dataloader, DataLoader)
     dataloader_iterator = iter(train_dataloader)
-    batch = next(dataloader_iterator)
-    if is_sequence_of(batch, Tensor):
-        batch = tuple(t.to(device=device) for t in batch)
-        return batch
-    else:
-        assert is_mapping_of(batch, str, torch.Tensor)
-        batch = {k: v.to(device=device) for k, v in batch.items()}
-        return batch
+
+    with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
+        # TODO: This ugliness is because torchvision transforms use the global pytorch RNG!
+        torch.random.manual_seed(42)
+        batch = next(dataloader_iterator)
+
+    return jax.tree.map(operator.methodcaller("to", device=device), batch)
 
 
 # @pytest.fixture(scope="module")
