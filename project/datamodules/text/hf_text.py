@@ -87,9 +87,8 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         eval_batch_size: int = 32,
         num_workers: int = 1,
         pin_memory: bool = False,
-        dataset_fraction: float
-        | None = None,  # use for debugging; NOT STABLE, may cause memory allocation issues
-        **kwargs,
+        # use for debugging; NOT STABLE, may cause memory allocation issues
+        dataset_fraction: float | None = None,
     ):
         super().__init__()
         self.tokenizer = tokenizer
