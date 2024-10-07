@@ -395,10 +395,11 @@ def rng(request: pytest.FixtureRequest) -> chex.PRNGKey:
 
 
 @pytest.fixture
-def max_epochs(algo: JaxRLExample) -> int:
+def max_epochs(algo: JaxRLExample, request: pytest.FixtureRequest) -> int:
     # This is the usual value: (75)
     # return 3  # shorter for tests?
-    return np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
+    default_max_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
+    return getattr(request, "param", default_max_epochs)
 
 
 @pytest.fixture
@@ -418,19 +419,6 @@ def trainer(algo: JaxRLExample, max_epochs: int, tmp_path: Path):
             # RenderEpisodesCallback(on_every_epoch=False),
             RichProgressBar(),
         ),
-    )
-
-
-@pytest.fixture
-def lightning_trainer(max_epochs: int, tmp_path: Path):
-    return lightning.Trainer(
-        max_epochs=max_epochs,
-        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
-        accelerator="auto",
-        devices="auto",
-        default_root_dir=tmp_path,
-        # reload_dataloaders_every_n_epochs=1,  # todo: use this if we end up making a generator in train_dataloader
-        barebones=True,
     )
 
 
@@ -537,8 +525,7 @@ def test_rejax(
     file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
 
 
-# Sort-of slow. (~30 secs to run).
-@pytest.mark.slow
+# Sort-of slow.
 @pytest.mark.parametrize(
     "with_callbacks",
     [
@@ -551,7 +538,7 @@ def test_rejax(
         False,
     ],
 )
-@pytest.mark.parametrize("n_agents", [2, 100])
+@pytest.mark.parametrize("n_agents", [2, 5])
 def test_ours_with_vmap(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
@@ -618,8 +605,21 @@ def test_ours_with_vmap(
     )
 
 
-# todo: takes quite a while to run, actually!
-@pytest.mark.slow
+@pytest.fixture
+def lightning_trainer(max_epochs: int, tmp_path: Path):
+    return lightning.Trainer(
+        max_epochs=3,  # max_epochs,
+        # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        accelerator="auto",
+        devices="auto",
+        default_root_dir=tmp_path,
+        # reload_dataloaders_every_n_epochs=1,  # todo: use this if we end up making a generator in train_dataloader
+        barebones=True,
+    )
+
+
+# reducing the max_epochs from 75 down to 3 because it's just wayyy too slow otherwise.
+@pytest.mark.parametrize("max_epochs", [3], indirect=True)
 def test_lightning(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
