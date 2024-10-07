@@ -31,15 +31,9 @@ class CustomAutoRefPlugin(BasePlugin):
         # Examples:
         # - `package.foo.bar` -> [package.foo.bar][]
         # - `baz` -> [baz][]
-        from lightning import Trainer
-
-        thing = Trainer
 
         def _full_path(thing) -> str:
             return thing.__module__ + "." + thing.__qualname__
-
-        def best_display_str(thing) -> str:
-            return thing.__module__.split(".")[0] + "." + thing.__qualname__
 
         known_things = [
             lightning.Trainer,
@@ -48,7 +42,7 @@ class CustomAutoRefPlugin(BasePlugin):
             torch.nn.Module,
         ]
         known_thing_names = [t.__name__ for t in known_things]
-        use_translations = True
+        # use_translations = True
 
         new_markdown = []
         for line_index, line in enumerate(markdown.splitlines(keepends=True)):
@@ -61,10 +55,10 @@ class CustomAutoRefPlugin(BasePlugin):
 
             for match in matches:
                 thing_name = match
-                if not use_translations:
-                    # Do something dumber
-                    line = line.replace(f"`{thing_name}`", f"[{thing_name}][]")
-                    continue
+                # if not use_translations:
+                #     # Do something dumber
+                #     line = line.replace(f"`{thing_name}`", f"[{thing_name}][]")
+                #     continue
                 # line = line.replace(f"`{thing_name}`",)
                 if "." not in thing_name and thing_name in known_thing_names:
                     thing = known_things[known_thing_names.index(thing_name)]
@@ -72,7 +66,7 @@ class CustomAutoRefPlugin(BasePlugin):
                     thing = _try_import_thing(thing_name)
 
                 if thing is None:
-                    logger.debug(f"Unable to import {thing_name}")
+                    logger.debug(f"Unable to import {thing_name}, leaving it as-is.")
                     continue
 
                 new_ref = f"[{thing_name}][{_full_path(thing)}]"
