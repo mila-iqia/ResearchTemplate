@@ -37,8 +37,8 @@ _MetricsT = TypeVar(
 class JaxModule(Protocol[Ts, _B, _MetricsT]):
     """A protocol for algorithms that can be trained by the `JaxTrainer`.
 
-    The [JaxRLExample][project.algorithms.jax_rl_example.JaxRLExample] class is an example of a
-    class that follows this structure and can be trained with a [JaxTrainer][project.algorithms.jax_trainer.JaxTrainer].
+    The `JaxRLExample` is an example that follows this structure and can be trained with a
+    `JaxTrainer`.
     """
 
     def init_train_state(self, rng: chex.PRNGKey) -> Ts:
@@ -95,8 +95,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
     ## Assumptions:
 
-    - The algo object must match the [JaxModule][project.algorithms.jax_trainer.JaxModule] protocol (in
-      other words, it should implement its methods).
+    - The algo object must match the `JaxModule` protocol (in other words, it should implement its
+      methods).
 
     ## Training loop
 
