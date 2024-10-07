@@ -41,6 +41,7 @@ from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.trainers.jax_trainer import JaxTrainer, hparams_to_dict
+from project.utils.testutils import run_for_all_configs_of_type
 
 from .jax_rl_example import (
     EvalMetrics,
@@ -55,8 +56,10 @@ from .jax_rl_example import (
     make_actor,
     render_episode,
 )
+from .testsuites.algorithm_tests import LearningAlgorithmTests
 
 logger = getLogger(__name__)
+
 
 @pytest.fixture(params=["Pendulum-v1"])
 def env_id(request: pytest.FixtureRequest) -> str:
@@ -173,6 +176,7 @@ def _add_gitignore_if_needed(original_datadir: Path):
     if not (gitignore_file := (original_datadir / ".gitignore")).exists():
         gitignore_file.parent.mkdir(exist_ok=True, parents=True)
         gitignore_file.write_text("*.gif\n")
+
 
 @pytest.mark.slow
 @pytest.mark.timeout(35)
@@ -359,10 +363,12 @@ def test_ours_with_vmap(
         gif_path=figures_dir / "pure_jax_avg.gif",
     )
 
+
 ## Pytorch-Lightning wrapper around this learner:
 
 # Don't allow tests to run for more than 5 seconds.
 # pytestmark = pytest.mark.timeout(5)
+
 
 class PPOLightningModule(lightning.LightningModule):
     """Uses the same code as [project.algorithms.jax_rl_example.JaxRLExample][], but the training
@@ -613,6 +619,13 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         #     value,
         #     **kwargs,
         # )
+
+
+# TODO: potentially just use the Lightning adapter for unit tests for now?
+@pytest.mark.skip(reason="TODO: ests assume a LightningModule atm (.state_dict()), etc.")
+@run_for_all_configs_of_type("algorithm", JaxRLExample)
+class TestJaxRLExample(LearningAlgorithmTests[JaxRLExample]):  # type: ignore
+    pass
 
 
 @pytest.fixture

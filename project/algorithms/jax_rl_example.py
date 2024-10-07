@@ -161,7 +161,7 @@ class JaxRLExample(
         env: Environment[TEnvState, TEnvParams] | None = None,
         env_params: TEnvParams | None = None,
         hp: PPOHParams | None = None,
-    ):
+    ) -> JaxRLExample[TEnvState, TEnvParams]:
         from brax.envs import _envs as brax_envs
         from rejax.compat.brax2gymnax import create_brax
 
