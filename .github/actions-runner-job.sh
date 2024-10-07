@@ -56,7 +56,7 @@ TOKEN=`curl -L \
 # Create the runner and configure it programmatically with the token we just got from the GitHub API.
 cluster=$SLURM_CLUSTER_NAME
 ./config.sh --url https://github.com/mila-iqia/ResearchTemplate --token $TOKEN \
-    --unattended --replace --name $cluster --labels $cluster $SLURM_JOB_ID --ephemeral
+    --unattended --replace --name $SLURMD_NODENAME --labels $cluster $SLURM_JOB_ID --ephemeral
 
 # Launch the actions runner.
 ./run.sh

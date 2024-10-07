@@ -1,0 +1,13 @@
+wandb:
+  _target_: lightning.pytorch.loggers.wandb.WandbLogger
+  project: "ResearchTemplate"
+  name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
+  save_dir: "${hydra:runtime.output_dir}"
+  offline: False # set True to store all logs only locally
+  id: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID} # pass correct id to resume experiment!
+  # entity: ""  # set to name of your wandb team
+  log_model: False
+  prefix: ""
+  job_type: "train"
+  group: ${oc.env:SLURM_JOB_ID}
+  tags: ["${name}"]
