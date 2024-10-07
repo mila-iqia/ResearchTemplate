@@ -123,7 +123,10 @@ def original_datadir(original_datadir: Path):
     """
     relative_portion = original_datadir.relative_to(REPO_ROOTDIR)
     datadir = REPO_ROOTDIR / ".regression_files"
-    if SCRATCH and not datadir.exists():
+
+    use_scratch: bool = False  # todo: enable again later?
+
+    if SCRATCH and not datadir.exists() and use_scratch:
         # puts a symlink .regression_files in the repo root that points to the same dir in $SCRATCH
         actual_dir = SCRATCH / datadir.relative_to(REPO_ROOTDIR)
         actual_dir.mkdir(parents=True, exist_ok=True)
