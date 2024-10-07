@@ -44,6 +44,7 @@ repos:
     rev: v1.7.5
     hooks:
       - id: docformatter
+        language: python
         args: [--in-place, --wrap-summaries=99, --wrap-descriptions=99]
         require_serial: true
 
