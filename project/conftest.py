@@ -74,6 +74,9 @@ import jax
 import lightning.pytorch as pl
 import pytest
 import torch
+from _pytest.outcomes import Skipped, XFailed
+from _pytest.python import Function
+from _pytest.runner import CallInfo
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
@@ -528,28 +531,32 @@ def make_torch_deterministic():
 _test_failed_incremental: dict[str, dict[tuple[int, ...], str]] = {}
 
 
-def pytest_runtest_makereport(item, call):
-    """Used to setup the `pytest.mark.incremental` mark, as described in [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)."""
+def pytest_runtest_makereport(item: Function, call: CallInfo):
+    """Used to setup the `pytest.mark.incremental` mark, as described in the pytest docs.
 
-    if "incremental" in item.keywords:
-        # incremental marker is used
-        if call.excinfo is not None:
-            # the test has failed
-            # retrieve the class name of the test
-            cls_name = str(item.cls)
-            # retrieve the index of the test (if parametrize is used in combination with incremental)
-            parametrize_index = (
-                tuple(item.callspec.indices.values()) if hasattr(item, "callspec") else ()
-            )
-            # retrieve the name of the test function
-            test_name = item.originalname or item.name
-            # store in _test_failed_incremental the original name of the failed test
-            _test_failed_incremental.setdefault(cls_name, {}).setdefault(
-                parametrize_index, test_name
-            )
+    See [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)
+    """
+    if "incremental" not in item.keywords:
+        return
+    # incremental marker is used
+    # NOTE: Modified this part to also take into account the type of exception:
+    # - If the test raised a Skipped or XFailed, then we don't consider it as a "failure" and let
+    #   the following tests run.
+    if call.excinfo is not None and not call.excinfo.errisinstance((Skipped, XFailed)):  # type: ignore
+        # the test has failed
+        # retrieve the class name of the test
+        cls_name = str(item.cls)
+        # retrieve the index of the test (if parametrize is used in combination with incremental)
+        parametrize_index = (
+            tuple(item.callspec.indices.values()) if hasattr(item, "callspec") else ()
+        )
+        # retrieve the name of the test function
+        test_name = item.originalname or item.name
+        # store in _test_failed_incremental the original name of the failed test
+        _test_failed_incremental.setdefault(cls_name, {}).setdefault(parametrize_index, test_name)
 
 
-def pytest_runtest_setup(item):
+def pytest_runtest_setup(item: Function):
     """Used to setup the `pytest.mark.incremental` mark, as described in [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)."""
     if "incremental" in item.keywords:
         # retrieve the class name of the test
