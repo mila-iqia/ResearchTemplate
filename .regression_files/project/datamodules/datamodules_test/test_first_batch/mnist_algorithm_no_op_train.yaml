@@ -1,20 +1,20 @@
 '0':
   device: cpu
   hash: 8611995894311838429
-  max: 2.8
-  mean: 0.0
-  min: -0.4
+  max: '2.821e+00'
+  mean: '1.432e-02'
+  min: '-4.242e-01'
   shape:
   - 128
   - 1
   - 28
   - 28
-  sum: 1437.2
+  sum: '1.437e+03'
 '1':
   device: cpu
   hash: 1596942422053415325
   max: 9
-  mean: 4.2
+  mean: '4.242e+00'
   min: 0
   shape:
   - 128

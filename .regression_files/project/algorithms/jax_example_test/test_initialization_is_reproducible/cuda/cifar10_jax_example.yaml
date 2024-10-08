@@ -1,80 +1,80 @@
 network.params.0:
   device: cuda:0
   hash: -4218701300434786233
-  max: 0.0
-  mean: 0.0
-  min: 0.0
+  max: '0.e+00'
+  mean: '0.e+00'
+  min: '0.e+00'
   shape:
   - 32
-  sum: 0.0
+  sum: '0.e+00'
 network.params.1:
   device: cuda:0
   hash: -7849036641170510712
-  max: 0.4
-  mean: -0.0
-  min: -0.4
+  max: '4.299e-01'
+  mean: '-8.263e-03'
+  min: '-4.351e-01'
   shape:
   - 3
   - 3
   - 3
   - 32
-  sum: -7.1
+  sum: '-7.139e+00'
 network.params.2:
   device: cuda:0
   hash: -5258163774450544391
-  max: 0.0
-  mean: 0.0
-  min: 0.0
+  max: '0.e+00'
+  mean: '0.e+00'
+  min: '0.e+00'
   shape:
   - 64
-  sum: 0.0
+  sum: '0.e+00'
 network.params.3:
   device: cuda:0
   hash: -1432036051605170042
-  max: 0.1
-  mean: 0.0
-  min: -0.1
+  max: '1.337e-01'
+  mean: '4.516e-04'
+  min: '-1.34e-01'
   shape:
   - 3
   - 3
   - 32
   - 64
-  sum: 8.3
+  sum: '8.325e+00'
 network.params.4:
   device: cuda:0
   hash: 3505480816438514598
-  max: 0.0
-  mean: 0.0
-  min: 0.0
+  max: '0.e+00'
+  mean: '0.e+00'
+  min: '0.e+00'
   shape:
   - 256
-  sum: 0.0
+  sum: '0.e+00'
 network.params.5:
   device: cuda:0
   hash: 4590062368456401869
-  max: 0.0
-  mean: 0.0
-  min: -0.0
+  max: '3.553e-02'
+  mean: '1.659e-05'
+  min: '-3.553e-02'
   shape:
   - 4096
   - 256
-  sum: 17.4
+  sum: '1.739e+01'
 network.params.6:
   device: cuda:0
   hash: -7222447081605638768
-  max: 0.0
-  mean: 0.0
-  min: 0.0
+  max: '0.e+00'
+  mean: '0.e+00'
+  min: '0.e+00'
   shape:
   - 10
-  sum: 0.0
+  sum: '0.e+00'
 network.params.7:
   device: cuda:0
   hash: -6734713663960465238
-  max: 0.1
-  mean: 0.0
-  min: -0.1
+  max: '1.421e-01'
+  mean: '7.197e-04'
+  min: '-1.416e-01'
   shape:
   - 256
   - 10
-  sum: 1.8
+  sum: '1.842e+00'

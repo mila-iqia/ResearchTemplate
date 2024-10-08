@@ -1,22 +1,22 @@
 input:
   device: cuda:0
   hash: 8611995894311838429
-  max: 2.8
-  mean: 0.0
-  min: -0.4
+  max: '2.821e+00'
+  mean: '1.432e-02'
+  min: '-4.242e-01'
   shape:
   - 128
   - 1
   - 28
   - 28
-  sum: 1437.1
+  sum: '1.437e+03'
 out:
   device: cuda:0
-  hash: 5793032426394881211
-  max: 0.8
-  mean: -0.0
-  min: -1.1
+  hash: 8769296209420333745
+  max: '8.092e-01'
+  mean: '-2.764e-02'
+  min: '-1.135e+00'
   shape:
   - 128
   - 10
-  sum: -35.4
+  sum: '-3.538e+01'

@@ -1,57 +1,57 @@
 network.0.1.bias:
   device: cpu
   hash: -967699739612277764
-  max: 0.0
-  mean: -0.0
-  min: -0.0
+  max: '1.770e-02'
+  mean: '-1.236e-04'
+  min: '-1.797e-02'
   shape:
   - 128
-  sum: -0.0
+  sum: '-1.581e-02'
 network.0.1.weight:
   device: cpu
   hash: 2502715691734091587
-  max: 0.0
-  mean: -0.0
-  min: -0.0
+  max: '1.804e-02'
+  mean: '-8.050e-06'
+  min: '-1.804e-02'
   shape:
   - 128
   - 3072
-  sum: -3.2
+  sum: '-3.166e+00'
 network.1.0.bias:
   device: cpu
   hash: 1739423449968587966
-  max: 0.1
-  mean: -0.0
-  min: -0.1
+  max: '8.806e-02'
+  mean: '-3.074e-03'
+  min: '-8.612e-02'
   shape:
   - 128
-  sum: -0.4
+  sum: '-3.935e-01'
 network.1.0.weight:
   device: cpu
   hash: -3253804079206992724
-  max: 0.1
-  mean: 0.0
-  min: -0.1
+  max: '8.836e-02'
+  mean: '5.354e-04'
+  min: '-8.837e-02'
   shape:
   - 128
   - 128
-  sum: 8.8
+  sum: '8.773e+00'
 network.2.0.bias:
   device: cpu
   hash: 2361582798452503900
-  max: 0.1
-  mean: 0.0
-  min: -0.0
+  max: '8.265e-02'
+  mean: '2.135e-02'
+  min: '-2.476e-02'
   shape:
   - 10
-  sum: 0.2
+  sum: '2.135e-01'
 network.2.0.weight:
   device: cpu
   hash: -6081429016470611086
-  max: 0.1
-  mean: -0.0
-  min: -0.1
+  max: '8.824e-02'
+  mean: '-6.046e-04'
+  min: '-8.823e-02'
   shape:
   - 10
   - 128
-  sum: -0.8
+  sum: '-7.739e-01'

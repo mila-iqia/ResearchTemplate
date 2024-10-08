@@ -1,9 +1,8 @@
-GPU: NVIDIA TITAN RTX
 input.attention_mask:
   device: cuda:0
   hash: -5248677368460617222
   max: 1
-  mean: 0.1
+  mean: '8.374e-02'
   min: 0
   shape:
   - 32
@@ -13,7 +12,7 @@ input.input_ids:
   device: cuda:0
   hash: -8391087330217722819
   max: 26101
-  mean: 159.7
+  mean: '1.597e+02'
   min: 0
   shape:
   - 32
@@ -23,7 +22,7 @@ input.labels:
   device: cuda:0
   hash: -3945588999998408889
   max: 1
-  mean: 0.7
+  mean: '7.188e-01'
   min: 0
   shape:
   - 32
@@ -32,7 +31,7 @@ input.token_type_ids:
   device: cuda:0
   hash: -8123354182314851848
   max: 0
-  mean: 0.0
+  mean: '0.e+00'
   min: 0
   shape:
   - 32
@@ -41,18 +40,18 @@ input.token_type_ids:
 out.logits:
   device: cuda:0
   hash: 9083796125477910220
-  max: 0.0
-  mean: -0.2
-  min: -0.5
+  max: '4.019e-02'
+  mean: '-1.58e-01'
+  min: '-4.991e-01'
   shape:
   - 32
   - 2
-  sum: -10.1
+  sum: '-1.011e+01'
 out.loss:
   device: cuda:0
   hash: 8272900287826686472
-  max: 0.7
-  mean: 0.7
-  min: 0.7
+  max: '7.185e-01'
+  mean: '7.185e-01'
+  min: '7.185e-01'
   shape: []
-  sum: 0.7
+  sum: '7.185e-01'

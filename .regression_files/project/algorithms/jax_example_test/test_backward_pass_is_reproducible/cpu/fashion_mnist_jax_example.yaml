@@ -1,127 +1,127 @@
 batch.0:
   device: cpu
   hash: 9223185275738543696
-  max: 2.8
-  mean: 0.5
-  min: -0.4
+  max: '2.821e+00'
+  mean: '4.822e-01'
+  min: '-4.242e-01'
   shape:
   - 128
   - 1
   - 28
   - 28
-  sum: 48391.2
+  sum: '4.839e+04'
 batch.1:
   device: cpu
   hash: -4023601292826392021
   max: 9
-  mean: 4.6
+  mean: '4.555e+00'
   min: 0
   shape:
   - 128
   sum: 583
 grads.network.params.0:
   device: cpu
-  hash: 8231252346581806825
-  max: 0.0
-  mean: 0.0
-  min: -0.0
+  hash: -3204435551537234850
+  max: '1.949e-02'
+  mean: '4.526e-03'
+  min: '-1.615e-02'
   shape:
   - 32
-  sum: 0.1
+  sum: '1.448e-01'
 grads.network.params.1:
   device: cpu
-  hash: 5354175734126824829
-  max: 0.0
-  mean: 0.0
-  min: -0.0
+  hash: -3436299112645523274
+  max: '4.36e-02'
+  mean: '5.924e-03'
+  min: '-3.013e-02'
   shape:
   - 3
   - 3
   - 1
   - 32
-  sum: 1.7
+  sum: '1.706e+00'
 grads.network.params.2:
   device: cpu
-  hash: 8065734317709090965
-  max: 0.0
-  mean: 0.0
-  min: -0.0
+  hash: -3123662987788778154
+  max: '2.734e-02'
+  mean: '1.847e-03'
+  min: '-1.76e-02'
   shape:
   - 64
-  sum: 0.1
+  sum: '1.182e-01'
 grads.network.params.3:
   device: cpu
-  hash: -2130246238917952982
-  max: 0.1
-  mean: 0.0
-  min: -0.1
+  hash: -3396765980254242668
+  max: '6.099e-02'
+  mean: '1.127e-03'
+  min: '-5.833e-02'
   shape:
   - 3
   - 3
   - 32
   - 64
-  sum: 20.8
+  sum: '2.077e+01'
 grads.network.params.4:
   device: cpu
-  hash: 4287552802492792780
-  max: 0.0
-  mean: 0.0
-  min: -0.0
+  hash: -2561594443334225663
+  max: '2.451e-02'
+  mean: '1.065e-03'
+  min: '-1.999e-02'
   shape:
   - 256
-  sum: 0.3
+  sum: '2.727e-01'
 grads.network.params.5:
   device: cpu
-  hash: -6664278089303105525
-  max: 0.1
-  mean: 0.0
-  min: -0.1
+  hash: -6994581078026241696
+  max: '7.691e-02'
+  mean: '3.075e-04'
+  min: '-6.106e-02'
   shape:
   - 3136
   - 256
-  sum: 246.9
+  sum: '2.469e+02'
 grads.network.params.6:
   device: cpu
-  hash: 6263521406059560421
-  max: 0.1
-  mean: -0.0
-  min: -0.1
+  hash: 7371700233315649509
+  max: '5.898e-02'
+  mean: '-1.863e-09'
+  min: '-7.022e-02'
   shape:
   - 10
-  sum: -0.0
+  sum: '-1.863e-08'
 grads.network.params.7:
   device: cpu
-  hash: 7298775329166133295
-  max: 0.1
-  mean: -0.0
-  min: -0.1
+  hash: -7416990206391373897
+  max: '1.382e-01'
+  mean: '-5.821e-11'
+  min: '-1.376e-01'
   shape:
   - 256
   - 10
-  sum: -0.0
+  sum: '-1.490e-07'
 outputs.logits:
   device: cpu
-  hash: 897638130415677807
-  max: 1.0
-  mean: -0.0
-  min: -1.0
+  hash: 488772550736717802
+  max: '1.032e+00'
+  mean: '-1.1e-02'
+  min: '-9.602e-01'
   shape:
   - 128
   - 10
-  sum: -14.1
+  sum: '-1.408e+01'
 outputs.loss:
   device: cpu
-  hash: -2042294407881912829
-  max: 2.4
-  mean: 2.4
-  min: 2.4
+  hash: -8122096995950959677
+  max: '2.385e+00'
+  mean: '2.385e+00'
+  min: '2.385e+00'
   shape: []
-  sum: 2.4
+  sum: '2.385e+00'
 outputs.y:
   device: cpu
   hash: -4023601292826392021
   max: 9
-  mean: 4.6
+  mean: '4.555e+00'
   min: 0
   shape:
   - 128
