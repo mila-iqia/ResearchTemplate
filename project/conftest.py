@@ -72,7 +72,6 @@ from typing import Literal
 
 import jax
 import lightning.pytorch as pl
-import numpy as np
 import pytest
 import tensor_regression.stats
 import torch
@@ -117,19 +116,6 @@ logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
-
-# TODO: This hash thing used in regression tests seems to be broken for jax arrays.
-
-
-def fixed_hash_fn(v: jax.Array | np.ndarray | torch.Tensor) -> int:
-    if isinstance(v, torch.Tensor):
-        v = v.detach().cpu().numpy()
-    if isinstance(v, jax.Array | np.ndarray):
-        return hash(tuple(v.flatten().tolist()))
-    raise NotImplementedError(f"Don't know how to hash value {v} of type {type(v)}.")
-
-
-tensor_regression.stats._hash = fixed_hash_fn
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -668,4 +654,32 @@ def pytest_configure(config: pytest.Config):
     config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
     config.addinivalue_line(
         "markers", "very_fast: mark test as very fast to run (including test setup)."
+    )
+
+
+# import numpy as np
+# def fixed_hash_fn(v: jax.Array | np.ndarray | torch.Tensor) -> int:
+#     if isinstance(v, torch.Tensor):
+#         return hash(tuple(v.detach().cpu().contiguous().numpy().flatten().tolist()))
+#     if isinstance(v, jax.Array | np.ndarray):
+#         return hash(tuple(v.flatten().tolist()))
+#     raise NotImplementedError(f"Don't know how to hash value {v} of type {type(v)}.")
+
+# tensor_regression.stats._hash = fixed_hash_fn
+
+
+def _patched_simple_attributes(v, precision: int | None):
+    stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
+    stats.pop("hash", None)
+    return stats
+
+
+@pytest.fixture(autouse=True)
+def dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
+    """Temporarily remove the hash of tensors from the regression files."""
+
+    monkeypatch.setattr(
+        tensor_regression.fixture,
+        tensor_regression.fixture.get_simple_attributes.__name__,  # type: ignore
+        _patched_simple_attributes,
     )
