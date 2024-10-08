@@ -55,7 +55,6 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
         algorithm: HFExample,
         datamodule: HFDataModule,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
         num_steps: int = 3,
     ):
         """Test that the loss decreases on a single batch."""

@@ -64,7 +64,6 @@ import operator
 import os
 import sys
 import typing
-import warnings
 from collections import defaultdict
 from contextlib import contextmanager
 from logging import getLogger as get_logger
@@ -105,7 +104,6 @@ from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
-    from _pytest.python import Function
 
     Param = str | tuple[str, ...] | ParameterSet
 
@@ -175,6 +173,7 @@ def command_line_arguments(
     datamodule_config: str | None,
     algorithm_network_config: str | None,
     overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
     experiment.
@@ -314,92 +313,6 @@ def training_batch(
         batch = next(dataloader_iterator)
 
     return jax.tree.map(operator.methodcaller("to", device=device), batch)
-
-
-# @pytest.fixture(scope="module")
-# def experiment(experiment_config: Config) -> Experiment:
-#     """Instantiates all the components of an experiment and returns them."""
-#     experiment = setup_experiment(experiment_config)
-#     return experiment
-
-
-def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
-    # NOTE: One can select multiple marks like so: `pytest -m "fast or very_fast"`
-    cutoff_time: float | None = config.getoption("--shorter-than", default=None)  # type: ignore
-
-    if cutoff_time is not None:
-        if config.getoption("--slow"):
-            raise RuntimeError(
-                "Can't use both --shorter-than (a cutoff time) and --slow (also run slow tests) since slow tests have no cutoff time!"
-            )
-
-    # This -m flag could also be something more complicated like 'fast and not slow', but
-    # keeping it simple for now.
-    only_running_slow_tests = "slow" in config.getoption("-m", default="")  # type: ignore
-    add_timeout_to_unmarked_tests = False  # todo: Add option for this?
-
-    very_fast_time = DEFAULT_TIMEOUT / 10
-    very_fast_timeout_mark = pytest.mark.timeout(very_fast_time, func_only=False)
-
-    fast_time = DEFAULT_TIMEOUT
-    # NOTE: The setup time doesn't seem to be properly included in the timeout.
-    fast_timeout = pytest.mark.timeout(fast_time, func_only=True)
-
-    indices_to_remove: list[int] = []
-    for _node_index, node in enumerate(items):
-        # timeout value of the test. None for unknown length.
-        test_timeout: float | None = None
-        if node.get_closest_marker("very_fast"):
-            test_timeout = very_fast_time
-            node.add_marker(very_fast_timeout_mark)
-        elif node.get_closest_marker("fast"):
-            test_timeout = fast_time
-            node.add_marker(fast_timeout)
-        elif timeout_marker := node.get_closest_marker("timeout"):
-            test_timeout = timeout_marker.args[0]
-            assert isinstance(test_timeout, int | float)
-        elif node.get_closest_marker("slow"):
-            # pytest-skip-slow already handles this.
-            test_timeout = None
-            running_slow_tests = config.getoption("--slow")
-            if not running_slow_tests:
-                indices_to_remove.append(_node_index)
-                continue
-        elif add_timeout_to_unmarked_tests:
-            logger.debug(
-                f"Test {node.name} doesn't have a `fast`, `very_fast`, `slow` or `timeout` mark. "
-                "Assuming it's fast to run (after test setup)."
-            )
-            node.add_marker(fast_timeout)
-            test_timeout = fast_time
-
-        if cutoff_time is not None:
-            assert cutoff_time > 0
-            if test_timeout is not None:
-                assert test_timeout > 0
-                if test_timeout > cutoff_time:
-                    node.add_marker(
-                        pytest.mark.skip(f"Test takes longer than {cutoff_time}s to run.")
-                    )
-                    # Note: could also remove indices so we don't have thousands of skipped tests..
-                    indices_to_remove.append(_node_index)
-                    continue
-        elif only_running_slow_tests:
-            # IDEA: If we do pytest -m slow --slow, we'd also want to include tests that have a
-            # long(er) timeout than ...?
-            pass
-
-    if indices_to_remove:
-        removed = len(indices_to_remove)
-        total = len(items)
-        warnings.warn(
-            RuntimeWarning(
-                f"De-selecting {removed/total:.0%} of tests ({removed}/{total}) because of their length."
-            )
-        )
-
-    for index in sorted(indices_to_remove, reverse=True):
-        items.pop(index)
 
 
 @pytest.fixture(autouse=True)
@@ -719,16 +632,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         marker = args_to_be_parametrized_markers[arg_name][-1]
         indirect = marker.kwargs.get("indirect", False)
         metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)
-
-
-def pytest_addoption(parser: pytest.Parser):
-    parser.addoption(
-        "--shorter-than",
-        action="store",
-        type=float,
-        default=None,
-        help="Skip tests that take longer than this.",
-    )
 
 
 def pytest_ignore_collect(path: str):

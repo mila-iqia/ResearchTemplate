@@ -70,11 +70,7 @@ jobs:
         run: rye pin ${{ matrix.python-version }}
       - name: Install dependencies
         run: rye sync --no-lock
-      - name: Test with pytest (very fast)
-        env:
-          JAX_PLATFORMS: cpu
-        run: rye run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append --skip-if-files-missing
-      - name: Test with pytest (fast)
+      - name: Test with pytest
         env:
           JAX_PLATFORMS: cpu
         run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
