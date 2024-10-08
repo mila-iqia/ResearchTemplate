@@ -62,9 +62,9 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["project", "docs"]
 norecursedirs = [".venv"]
-# todo: look into using https://github.com/scientific-python/pytest-doctestplus
 env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
 addopts = [
+    # todo: look into using https://github.com/scientific-python/pytest-doctestplus
     "--doctest-modules",
     "--stats-rounding-precision=3",
     # "--slow",

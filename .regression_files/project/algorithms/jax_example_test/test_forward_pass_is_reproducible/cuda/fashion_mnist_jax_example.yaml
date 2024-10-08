@@ -1,6 +1,5 @@
 input:
   device: cuda:0
-  hash: 9223185275738543696
   max: '2.821e+00'
   mean: '4.822e-01'
   min: '-4.242e-01'
@@ -12,7 +11,6 @@ input:
   sum: '4.839e+04'
 out:
   device: cuda:0
-  hash: 488772550736717802
   max: '1.032e+00'
   mean: '-1.1e-02'
   min: '-9.602e-01'

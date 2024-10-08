@@ -1,6 +1,5 @@
 network.albert.embeddings.LayerNorm.bias:
   device: cpu
-  hash: 3536794853149431135
   max: '2.53e+00'
   mean: '-3.477e-02'
   min: '-1.398e+00'
@@ -9,7 +8,6 @@ network.albert.embeddings.LayerNorm.bias:
   sum: '-4.451e+00'
 network.albert.embeddings.LayerNorm.weight:
   device: cpu
-  hash: 8473515197054842058
   max: '3.675e+00'
   mean: '3.264e+00'
   min: '1.297e+00'
@@ -18,7 +16,6 @@ network.albert.embeddings.LayerNorm.weight:
   sum: '4.178e+02'
 network.albert.embeddings.position_embeddings.weight:
   device: cpu
-  hash: -2472269142761384405
   max: '2.774e-01'
   mean: '1.058e-04'
   min: '-2.344e-01'
@@ -28,7 +25,6 @@ network.albert.embeddings.position_embeddings.weight:
   sum: '6.933e+00'
 network.albert.embeddings.token_type_embeddings.weight:
   device: cpu
-  hash: 9080347636824362700
   max: '4.431e-02'
   mean: '1.339e-04'
   min: '-8.033e-02'
@@ -38,7 +34,6 @@ network.albert.embeddings.token_type_embeddings.weight:
   sum: '3.429e-02'
 network.albert.embeddings.word_embeddings.weight:
   device: cpu
-  hash: -9223202123192828322
   max: '2.003e-01'
   mean: '-5.478e-03'
   min: '-1.946e-01'
@@ -48,7 +43,6 @@ network.albert.embeddings.word_embeddings.weight:
   sum: '-2.104e+04'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.bias:
   device: cpu
-  hash: 3808960376118880662
   max: '2.411e+00'
   mean: '-6.698e-03'
   min: '-3.421e+00'
@@ -57,7 +51,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm
   sum: '-5.144e+00'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.weight:
   device: cpu
-  hash: 3986934823769216342
   max: '2.478e+00'
   mean: '5.703e-01'
   min: '3.535e-01'
@@ -66,7 +59,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm
   sum: '4.38e+02'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.bias:
   device: cpu
-  hash: 8995791136489374428
   max: '5.149e+00'
   mean: '-3.476e-03'
   min: '-8.748e+00'
@@ -75,7 +67,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.bia
   sum: '-2.669e+00'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.weight:
   device: cpu
-  hash: -6985426134772694251
   max: '7.227e-01'
   mean: '1.840e-06'
   min: '-5.057e-01'
@@ -85,7 +76,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.wei
   sum: '1.085e+00'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.bias:
   device: cpu
-  hash: -9004109640635541966
   max: '1.643e+00'
   mean: '1.291e-02'
   min: '-1.689e+00'
@@ -94,7 +84,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.bias:
   sum: '9.916e+00'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weight:
   device: cpu
-  hash: 4727836905425143535
   max: '2.669e-01'
   mean: '1.060e-04'
   min: '-3.136e-01'
@@ -104,7 +93,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weigh
   sum: '6.253e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.bias:
   device: cpu
-  hash: -6897791756924658064
   max: '4.806e+00'
   mean: '6.103e-02'
   min: '-4.117e+00'
@@ -113,7 +101,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.bia
   sum: '4.687e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.weight:
   device: cpu
-  hash: 7526472410662672685
   max: '3.613e-01'
   mean: '-2.149e-05'
   min: '-2.743e-01'
@@ -123,7 +110,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.wei
   sum: '-1.268e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.bias:
   device: cpu
-  hash: -7193266555981251295
   max: '5.064e-01'
   mean: '8.661e-04'
   min: '-6.153e-01'
@@ -132,7 +118,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.bia
   sum: '6.652e-01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.weight:
   device: cpu
-  hash: -9215590876435676281
   max: '2.998e-01'
   mean: '-9.619e-05'
   min: '-2.962e-01'
@@ -142,7 +127,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.wei
   sum: '-5.674e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.bias:
   device: cpu
-  hash: -5745168859479369233
   max: '5.147e-01'
   mean: '-5.56e-01'
   min: '-9.e+00'
@@ -151,7 +135,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.bias:
   sum: '-1.708e+03'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
   device: cpu
-  hash: 6657455832685449068
   max: '1.932e+00'
   mean: '-1.609e-05'
   min: '-1.779e+00'
@@ -161,7 +144,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
   sum: '-3.796e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
   device: cpu
-  hash: -6104529365654482460
   max: '1.906e+00'
   mean: '-1.445e-02'
   min: '-1.471e+01'
@@ -170,7 +152,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
   sum: '-1.11e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
   device: cpu
-  hash: -6766221411195213637
   max: '1.226e+00'
   mean: '-1.576e-05'
   min: '-2.475e+00'
@@ -180,7 +161,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
   sum: '-3.717e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.bias:
   device: cpu
-  hash: 950033276851098739
   max: '4.331e+00'
   mean: '-4.060e-02'
   min: '-7.592e-01'
@@ -189,7 +169,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_no
   sum: '-3.118e+01'
 network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.weight:
   device: cpu
-  hash: -3709489083189298708
   max: '3.067e+00'
   mean: '1.35e+00'
   min: '2.373e-01'
@@ -198,7 +177,6 @@ network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_no
   sum: '1.037e+03'
 network.albert.encoder.embedding_hidden_mapping_in.bias:
   device: cpu
-  hash: 5337606369005850821
   max: '2.250e+00'
   mean: '-2.328e-02'
   min: '-2.484e+00'
@@ -207,7 +185,6 @@ network.albert.encoder.embedding_hidden_mapping_in.bias:
   sum: '-1.788e+01'
 network.albert.encoder.embedding_hidden_mapping_in.weight:
   device: cpu
-  hash: 8763035641362126606
   max: '2.709e-01'
   mean: '3.868e-04'
   min: '-2.624e-01'
@@ -217,7 +194,6 @@ network.albert.encoder.embedding_hidden_mapping_in.weight:
   sum: '3.802e+01'
 network.albert.pooler.bias:
   device: cpu
-  hash: 3729273174019914985
   max: '1.409e+00'
   mean: '5.837e-03'
   min: '-1.279e+00'
@@ -226,7 +202,6 @@ network.albert.pooler.bias:
   sum: '4.483e+00'
 network.albert.pooler.weight:
   device: cpu
-  hash: 4741636359478821589
   max: '2.83e-01'
   mean: '-2.292e-05'
   min: '-2.817e-01'
@@ -236,7 +211,6 @@ network.albert.pooler.weight:
   sum: '-1.352e+01'
 network.classifier.bias:
   device: cpu
-  hash: -8458139203682520985
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -245,7 +219,6 @@ network.classifier.bias:
   sum: '0.e+00'
 network.classifier.weight:
   device: cpu
-  hash: -3548483996225295861
   max: '6.891e-02'
   mean: '8.459e-05'
   min: '-6.203e-02'

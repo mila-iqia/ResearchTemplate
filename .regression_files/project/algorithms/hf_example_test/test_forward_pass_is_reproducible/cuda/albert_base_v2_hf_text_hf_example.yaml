@@ -1,6 +1,5 @@
 input.attention_mask:
   device: cuda:0
-  hash: -5248677368460617222
   max: 1
   mean: '8.374e-02'
   min: 0
@@ -10,7 +9,6 @@ input.attention_mask:
   sum: 343
 input.input_ids:
   device: cuda:0
-  hash: -8391087330217722819
   max: 26101
   mean: '1.597e+02'
   min: 0
@@ -20,7 +18,6 @@ input.input_ids:
   sum: 654306
 input.labels:
   device: cuda:0
-  hash: -3945588999998408889
   max: 1
   mean: '7.188e-01'
   min: 0
@@ -29,7 +26,6 @@ input.labels:
   sum: 23
 input.token_type_ids:
   device: cuda:0
-  hash: -8123354182314851848
   max: 0
   mean: '0.e+00'
   min: 0
@@ -39,7 +35,6 @@ input.token_type_ids:
   sum: 0
 out.logits:
   device: cuda:0
-  hash: 9083796125477910220
   max: '4.019e-02'
   mean: '-1.58e-01'
   min: '-4.991e-01'
@@ -49,7 +44,6 @@ out.logits:
   sum: '-1.011e+01'
 out.loss:
   device: cuda:0
-  hash: 8272900287826686472
   max: '7.185e-01'
   mean: '7.185e-01'
   min: '7.185e-01'

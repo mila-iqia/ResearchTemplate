@@ -1,6 +1,5 @@
 batch.0:
   device: cpu
-  hash: 9223185275738543696
   max: '2.821e+00'
   mean: '4.822e-01'
   min: '-4.242e-01'
@@ -12,7 +11,6 @@ batch.0:
   sum: '4.839e+04'
 batch.1:
   device: cpu
-  hash: -4023601292826392021
   max: 9
   mean: '4.555e+00'
   min: 0
@@ -21,7 +19,6 @@ batch.1:
   sum: 583
 grads.network.params.0:
   device: cpu
-  hash: -4406339168278147918
   max: '1.949e-02'
   mean: '4.526e-03'
   min: '-1.615e-02'
@@ -30,7 +27,6 @@ grads.network.params.0:
   sum: '1.448e-01'
 grads.network.params.1:
   device: cpu
-  hash: -7462043948171136751
   max: '4.36e-02'
   mean: '5.924e-03'
   min: '-3.013e-02'
@@ -42,7 +38,6 @@ grads.network.params.1:
   sum: '1.706e+00'
 grads.network.params.2:
   device: cpu
-  hash: -2558788634307605892
   max: '2.734e-02'
   mean: '1.847e-03'
   min: '-1.76e-02'
@@ -51,7 +46,6 @@ grads.network.params.2:
   sum: '1.182e-01'
 grads.network.params.3:
   device: cpu
-  hash: -8269787908686463549
   max: '6.099e-02'
   mean: '1.127e-03'
   min: '-5.833e-02'
@@ -63,7 +57,6 @@ grads.network.params.3:
   sum: '2.077e+01'
 grads.network.params.4:
   device: cpu
-  hash: 1763581120412358099
   max: '2.451e-02'
   mean: '1.065e-03'
   min: '-1.999e-02'
@@ -72,7 +65,6 @@ grads.network.params.4:
   sum: '2.727e-01'
 grads.network.params.5:
   device: cpu
-  hash: -8687644403239332755
   max: '7.691e-02'
   mean: '3.075e-04'
   min: '-6.106e-02'
@@ -82,7 +74,6 @@ grads.network.params.5:
   sum: '2.469e+02'
 grads.network.params.6:
   device: cpu
-  hash: 7371700233315649509
   max: '5.898e-02'
   mean: '-1.863e-09'
   min: '-7.022e-02'
@@ -91,7 +82,6 @@ grads.network.params.6:
   sum: '-1.863e-08'
 grads.network.params.7:
   device: cpu
-  hash: -7416990206391373897
   max: '1.382e-01'
   mean: '-5.821e-11'
   min: '-1.376e-01'
@@ -101,7 +91,6 @@ grads.network.params.7:
   sum: '-1.490e-07'
 outputs.logits:
   device: cpu
-  hash: 488772550736717802
   max: '1.032e+00'
   mean: '-1.1e-02'
   min: '-9.602e-01'
@@ -111,7 +100,6 @@ outputs.logits:
   sum: '-1.408e+01'
 outputs.loss:
   device: cpu
-  hash: -8122096995950959677
   max: '2.385e+00'
   mean: '2.385e+00'
   min: '2.385e+00'
@@ -119,7 +107,6 @@ outputs.loss:
   sum: '2.385e+00'
 outputs.y:
   device: cpu
-  hash: -4023601292826392021
   max: 9
   mean: '4.555e+00'
   min: 0

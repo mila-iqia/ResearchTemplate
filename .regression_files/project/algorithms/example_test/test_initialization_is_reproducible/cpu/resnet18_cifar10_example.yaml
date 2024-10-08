@@ -1,6 +1,5 @@
 network.bn1.bias:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -9,7 +8,6 @@ network.bn1.bias:
   sum: '0.e+00'
 network.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -17,7 +15,6 @@ network.bn1.num_batches_tracked:
   sum: 0
 network.bn1.running_mean:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -26,7 +23,6 @@ network.bn1.running_mean:
   sum: '0.e+00'
 network.bn1.running_var:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -35,7 +31,6 @@ network.bn1.running_var:
   sum: '6.4e+01'
 network.bn1.weight:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -44,7 +39,6 @@ network.bn1.weight:
   sum: '6.4e+01'
 network.conv1.weight:
   device: cpu
-  hash: 7591784647861800203
   max: '1.098e-01'
   mean: '1.139e-04'
   min: '-8.341e-02'
@@ -56,7 +50,6 @@ network.conv1.weight:
   sum: '1.072e+00'
 network.fc.bias:
   device: cpu
-  hash: -6836172182505974110
   max: '3.715e-02'
   mean: '-1.094e-02'
   min: '-3.341e-02'
@@ -65,7 +58,6 @@ network.fc.bias:
   sum: '-1.094e-01'
 network.fc.weight:
   device: cpu
-  hash: 7328685919961203207
   max: '4.418e-02'
   mean: '-4.792e-04'
   min: '-4.418e-02'
@@ -75,7 +67,6 @@ network.fc.weight:
   sum: '-2.454e+00'
 network.layer1.0.bn1.bias:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -84,7 +75,6 @@ network.layer1.0.bn1.bias:
   sum: '0.e+00'
 network.layer1.0.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -92,7 +82,6 @@ network.layer1.0.bn1.num_batches_tracked:
   sum: 0
 network.layer1.0.bn1.running_mean:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -101,7 +90,6 @@ network.layer1.0.bn1.running_mean:
   sum: '0.e+00'
 network.layer1.0.bn1.running_var:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -110,7 +98,6 @@ network.layer1.0.bn1.running_var:
   sum: '6.4e+01'
 network.layer1.0.bn1.weight:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -119,7 +106,6 @@ network.layer1.0.bn1.weight:
   sum: '6.4e+01'
 network.layer1.0.bn2.bias:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -128,7 +114,6 @@ network.layer1.0.bn2.bias:
   sum: '0.e+00'
 network.layer1.0.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -136,7 +121,6 @@ network.layer1.0.bn2.num_batches_tracked:
   sum: 0
 network.layer1.0.bn2.running_mean:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -145,7 +129,6 @@ network.layer1.0.bn2.running_mean:
   sum: '0.e+00'
 network.layer1.0.bn2.running_var:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -154,7 +137,6 @@ network.layer1.0.bn2.running_var:
   sum: '6.4e+01'
 network.layer1.0.bn2.weight:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -163,7 +145,6 @@ network.layer1.0.bn2.weight:
   sum: '6.4e+01'
 network.layer1.0.conv1.weight:
   device: cpu
-  hash: 6178341108884805269
   max: '2.499e-01'
   mean: '2.448e-04'
   min: '-2.519e-01'
@@ -175,7 +156,6 @@ network.layer1.0.conv1.weight:
   sum: '9.024e+00'
 network.layer1.0.conv2.weight:
   device: cpu
-  hash: -595477068317927112
   max: '2.35e-01'
   mean: '-2.816e-04'
   min: '-2.581e-01'
@@ -187,7 +167,6 @@ network.layer1.0.conv2.weight:
   sum: '-1.038e+01'
 network.layer1.1.bn1.bias:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -196,7 +175,6 @@ network.layer1.1.bn1.bias:
   sum: '0.e+00'
 network.layer1.1.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -204,7 +182,6 @@ network.layer1.1.bn1.num_batches_tracked:
   sum: 0
 network.layer1.1.bn1.running_mean:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -213,7 +190,6 @@ network.layer1.1.bn1.running_mean:
   sum: '0.e+00'
 network.layer1.1.bn1.running_var:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -222,7 +198,6 @@ network.layer1.1.bn1.running_var:
   sum: '6.4e+01'
 network.layer1.1.bn1.weight:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -231,7 +206,6 @@ network.layer1.1.bn1.weight:
   sum: '6.4e+01'
 network.layer1.1.bn2.bias:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -240,7 +214,6 @@ network.layer1.1.bn2.bias:
   sum: '0.e+00'
 network.layer1.1.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -248,7 +221,6 @@ network.layer1.1.bn2.num_batches_tracked:
   sum: 0
 network.layer1.1.bn2.running_mean:
   device: cpu
-  hash: -5258163774450544391
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -257,7 +229,6 @@ network.layer1.1.bn2.running_mean:
   sum: '0.e+00'
 network.layer1.1.bn2.running_var:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -266,7 +237,6 @@ network.layer1.1.bn2.running_var:
   sum: '6.4e+01'
 network.layer1.1.bn2.weight:
   device: cpu
-  hash: 3365237965395210859
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -275,7 +245,6 @@ network.layer1.1.bn2.weight:
   sum: '6.4e+01'
 network.layer1.1.conv1.weight:
   device: cpu
-  hash: -6083769533290956334
   max: '2.130e-01'
   mean: '-9.64e-05'
   min: '-2.213e-01'
@@ -287,7 +256,6 @@ network.layer1.1.conv1.weight:
   sum: '-3.554e+00'
 network.layer1.1.conv2.weight:
   device: cpu
-  hash: 1584249414598801744
   max: '2.414e-01'
   mean: '1.006e-04'
   min: '-2.212e-01'
@@ -299,7 +267,6 @@ network.layer1.1.conv2.weight:
   sum: '3.709e+00'
 network.layer2.0.bn1.bias:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -308,7 +275,6 @@ network.layer2.0.bn1.bias:
   sum: '0.e+00'
 network.layer2.0.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -316,7 +282,6 @@ network.layer2.0.bn1.num_batches_tracked:
   sum: 0
 network.layer2.0.bn1.running_mean:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -325,7 +290,6 @@ network.layer2.0.bn1.running_mean:
   sum: '0.e+00'
 network.layer2.0.bn1.running_var:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -334,7 +298,6 @@ network.layer2.0.bn1.running_var:
   sum: '1.28e+02'
 network.layer2.0.bn1.weight:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -343,7 +306,6 @@ network.layer2.0.bn1.weight:
   sum: '1.28e+02'
 network.layer2.0.bn2.bias:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -352,7 +314,6 @@ network.layer2.0.bn2.bias:
   sum: '0.e+00'
 network.layer2.0.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -360,7 +321,6 @@ network.layer2.0.bn2.num_batches_tracked:
   sum: 0
 network.layer2.0.bn2.running_mean:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -369,7 +329,6 @@ network.layer2.0.bn2.running_mean:
   sum: '0.e+00'
 network.layer2.0.bn2.running_var:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -378,7 +337,6 @@ network.layer2.0.bn2.running_var:
   sum: '1.28e+02'
 network.layer2.0.bn2.weight:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -387,7 +345,6 @@ network.layer2.0.bn2.weight:
   sum: '1.28e+02'
 network.layer2.0.conv1.weight:
   device: cpu
-  hash: 9133674163772941320
   max: '1.781e-01'
   mean: '-2.81e-04'
   min: '-1.729e-01'
@@ -399,7 +356,6 @@ network.layer2.0.conv1.weight:
   sum: '-2.072e+01'
 network.layer2.0.conv2.weight:
   device: cpu
-  hash: -8794777136981367164
   max: '1.949e-01'
   mean: '-2.364e-04'
   min: '-1.890e-01'
@@ -411,7 +367,6 @@ network.layer2.0.conv2.weight:
   sum: '-3.485e+01'
 network.layer2.0.downsample.0.weight:
   device: cpu
-  hash: 413058985789809386
   max: '5.532e-01'
   mean: '2.595e-04'
   min: '-4.129e-01'
@@ -423,7 +378,6 @@ network.layer2.0.downsample.0.weight:
   sum: '2.126e+00'
 network.layer2.0.downsample.1.bias:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -432,7 +386,6 @@ network.layer2.0.downsample.1.bias:
   sum: '0.e+00'
 network.layer2.0.downsample.1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -440,7 +393,6 @@ network.layer2.0.downsample.1.num_batches_tracked:
   sum: 0
 network.layer2.0.downsample.1.running_mean:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -449,7 +401,6 @@ network.layer2.0.downsample.1.running_mean:
   sum: '0.e+00'
 network.layer2.0.downsample.1.running_var:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -458,7 +409,6 @@ network.layer2.0.downsample.1.running_var:
   sum: '1.28e+02'
 network.layer2.0.downsample.1.weight:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -467,7 +417,6 @@ network.layer2.0.downsample.1.weight:
   sum: '1.28e+02'
 network.layer2.1.bn1.bias:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -476,7 +425,6 @@ network.layer2.1.bn1.bias:
   sum: '0.e+00'
 network.layer2.1.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -484,7 +432,6 @@ network.layer2.1.bn1.num_batches_tracked:
   sum: 0
 network.layer2.1.bn1.running_mean:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -493,7 +440,6 @@ network.layer2.1.bn1.running_mean:
   sum: '0.e+00'
 network.layer2.1.bn1.running_var:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -502,7 +448,6 @@ network.layer2.1.bn1.running_var:
   sum: '1.28e+02'
 network.layer2.1.bn1.weight:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -511,7 +456,6 @@ network.layer2.1.bn1.weight:
   sum: '1.28e+02'
 network.layer2.1.bn2.bias:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -520,7 +464,6 @@ network.layer2.1.bn2.bias:
   sum: '0.e+00'
 network.layer2.1.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -528,7 +471,6 @@ network.layer2.1.bn2.num_batches_tracked:
   sum: 0
 network.layer2.1.bn2.running_mean:
   device: cpu
-  hash: -1635896773963443042
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -537,7 +479,6 @@ network.layer2.1.bn2.running_mean:
   sum: '0.e+00'
 network.layer2.1.bn2.running_var:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -546,7 +487,6 @@ network.layer2.1.bn2.running_var:
   sum: '1.28e+02'
 network.layer2.1.bn2.weight:
   device: cpu
-  hash: 6287136276657058105
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -555,7 +495,6 @@ network.layer2.1.bn2.weight:
   sum: '1.28e+02'
 network.layer2.1.conv1.weight:
   device: cpu
-  hash: -3854086623820669939
   max: '1.921e-01'
   mean: '3.336e-05'
   min: '-1.785e-01'
@@ -567,7 +506,6 @@ network.layer2.1.conv1.weight:
   sum: '4.92e+00'
 network.layer2.1.conv2.weight:
   device: cpu
-  hash: -4130087470221364070
   max: '1.825e-01'
   mean: '-3.207e-05'
   min: '-1.989e-01'
@@ -579,7 +517,6 @@ network.layer2.1.conv2.weight:
   sum: '-4.729e+00'
 network.layer3.0.bn1.bias:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -588,7 +525,6 @@ network.layer3.0.bn1.bias:
   sum: '0.e+00'
 network.layer3.0.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -596,7 +532,6 @@ network.layer3.0.bn1.num_batches_tracked:
   sum: 0
 network.layer3.0.bn1.running_mean:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -605,7 +540,6 @@ network.layer3.0.bn1.running_mean:
   sum: '0.e+00'
 network.layer3.0.bn1.running_var:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -614,7 +548,6 @@ network.layer3.0.bn1.running_var:
   sum: '2.56e+02'
 network.layer3.0.bn1.weight:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -623,7 +556,6 @@ network.layer3.0.bn1.weight:
   sum: '2.56e+02'
 network.layer3.0.bn2.bias:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -632,7 +564,6 @@ network.layer3.0.bn2.bias:
   sum: '0.e+00'
 network.layer3.0.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -640,7 +571,6 @@ network.layer3.0.bn2.num_batches_tracked:
   sum: 0
 network.layer3.0.bn2.running_mean:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -649,7 +579,6 @@ network.layer3.0.bn2.running_mean:
   sum: '0.e+00'
 network.layer3.0.bn2.running_var:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -658,7 +587,6 @@ network.layer3.0.bn2.running_var:
   sum: '2.56e+02'
 network.layer3.0.bn2.weight:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -667,7 +595,6 @@ network.layer3.0.bn2.weight:
   sum: '2.56e+02'
 network.layer3.0.conv1.weight:
   device: cpu
-  hash: -8636623731896952418
   max: '1.418e-01'
   mean: '4.759e-05'
   min: '-1.425e-01'
@@ -679,7 +606,6 @@ network.layer3.0.conv1.weight:
   sum: '1.403e+01'
 network.layer3.0.conv2.weight:
   device: cpu
-  hash: 5815316685732512347
   max: '1.464e-01'
   mean: '3.416e-05'
   min: '-1.367e-01'
@@ -691,7 +617,6 @@ network.layer3.0.conv2.weight:
   sum: '2.015e+01'
 network.layer3.0.downsample.0.weight:
   device: cpu
-  hash: 831388038210124394
   max: '3.724e-01'
   mean: '-3.193e-04'
   min: '-4.37e-01'
@@ -703,7 +628,6 @@ network.layer3.0.downsample.0.weight:
   sum: '-1.046e+01'
 network.layer3.0.downsample.1.bias:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -712,7 +636,6 @@ network.layer3.0.downsample.1.bias:
   sum: '0.e+00'
 network.layer3.0.downsample.1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -720,7 +643,6 @@ network.layer3.0.downsample.1.num_batches_tracked:
   sum: 0
 network.layer3.0.downsample.1.running_mean:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -729,7 +651,6 @@ network.layer3.0.downsample.1.running_mean:
   sum: '0.e+00'
 network.layer3.0.downsample.1.running_var:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -738,7 +659,6 @@ network.layer3.0.downsample.1.running_var:
   sum: '2.56e+02'
 network.layer3.0.downsample.1.weight:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -747,7 +667,6 @@ network.layer3.0.downsample.1.weight:
   sum: '2.56e+02'
 network.layer3.1.bn1.bias:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -756,7 +675,6 @@ network.layer3.1.bn1.bias:
   sum: '0.e+00'
 network.layer3.1.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -764,7 +682,6 @@ network.layer3.1.bn1.num_batches_tracked:
   sum: 0
 network.layer3.1.bn1.running_mean:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -773,7 +690,6 @@ network.layer3.1.bn1.running_mean:
   sum: '0.e+00'
 network.layer3.1.bn1.running_var:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -782,7 +698,6 @@ network.layer3.1.bn1.running_var:
   sum: '2.56e+02'
 network.layer3.1.bn1.weight:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -791,7 +706,6 @@ network.layer3.1.bn1.weight:
   sum: '2.56e+02'
 network.layer3.1.bn2.bias:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -800,7 +714,6 @@ network.layer3.1.bn2.bias:
   sum: '0.e+00'
 network.layer3.1.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -808,7 +721,6 @@ network.layer3.1.bn2.num_batches_tracked:
   sum: 0
 network.layer3.1.bn2.running_mean:
   device: cpu
-  hash: 3505480816438514598
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -817,7 +729,6 @@ network.layer3.1.bn2.running_mean:
   sum: '0.e+00'
 network.layer3.1.bn2.running_var:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -826,7 +737,6 @@ network.layer3.1.bn2.running_var:
   sum: '2.56e+02'
 network.layer3.1.bn2.weight:
   device: cpu
-  hash: -6876904910641568386
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -835,7 +745,6 @@ network.layer3.1.bn2.weight:
   sum: '2.56e+02'
 network.layer3.1.conv1.weight:
   device: cpu
-  hash: 2747791031599886323
   max: '1.478e-01'
   mean: '-4.980e-05'
   min: '-1.411e-01'
@@ -847,7 +756,6 @@ network.layer3.1.conv1.weight:
   sum: '-2.938e+01'
 network.layer3.1.conv2.weight:
   device: cpu
-  hash: -8806858003832687399
   max: '1.369e-01'
   mean: '-3.677e-05'
   min: '-1.348e-01'
@@ -859,7 +767,6 @@ network.layer3.1.conv2.weight:
   sum: '-2.169e+01'
 network.layer4.0.bn1.bias:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -868,7 +775,6 @@ network.layer4.0.bn1.bias:
   sum: '0.e+00'
 network.layer4.0.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -876,7 +782,6 @@ network.layer4.0.bn1.num_batches_tracked:
   sum: 0
 network.layer4.0.bn1.running_mean:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -885,7 +790,6 @@ network.layer4.0.bn1.running_mean:
   sum: '0.e+00'
 network.layer4.0.bn1.running_var:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -894,7 +798,6 @@ network.layer4.0.bn1.running_var:
   sum: '5.12e+02'
 network.layer4.0.bn1.weight:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -903,7 +806,6 @@ network.layer4.0.bn1.weight:
   sum: '5.12e+02'
 network.layer4.0.bn2.bias:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -912,7 +814,6 @@ network.layer4.0.bn2.bias:
   sum: '0.e+00'
 network.layer4.0.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -920,7 +821,6 @@ network.layer4.0.bn2.num_batches_tracked:
   sum: 0
 network.layer4.0.bn2.running_mean:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -929,7 +829,6 @@ network.layer4.0.bn2.running_mean:
   sum: '0.e+00'
 network.layer4.0.bn2.running_var:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -938,7 +837,6 @@ network.layer4.0.bn2.running_var:
   sum: '5.12e+02'
 network.layer4.0.bn2.weight:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -947,7 +845,6 @@ network.layer4.0.bn2.weight:
   sum: '5.12e+02'
 network.layer4.0.conv1.weight:
   device: cpu
-  hash: -8979525755526430827
   max: '9.989e-02'
   mean: '-7.283e-06'
   min: '-1.006e-01'
@@ -959,7 +856,6 @@ network.layer4.0.conv1.weight:
   sum: '-8.591e+00'
 network.layer4.0.conv2.weight:
   device: cpu
-  hash: 1192725014729689500
   max: '1.023e-01'
   mean: '2.838e-06'
   min: '-1.135e-01'
@@ -971,7 +867,6 @@ network.layer4.0.conv2.weight:
   sum: '6.696e+00'
 network.layer4.0.downsample.0.weight:
   device: cpu
-  hash: -3090966363304657184
   max: '2.664e-01'
   mean: '1.458e-04'
   min: '-2.861e-01'
@@ -983,7 +878,6 @@ network.layer4.0.downsample.0.weight:
   sum: '1.911e+01'
 network.layer4.0.downsample.1.bias:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -992,7 +886,6 @@ network.layer4.0.downsample.1.bias:
   sum: '0.e+00'
 network.layer4.0.downsample.1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -1000,7 +893,6 @@ network.layer4.0.downsample.1.num_batches_tracked:
   sum: 0
 network.layer4.0.downsample.1.running_mean:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -1009,7 +901,6 @@ network.layer4.0.downsample.1.running_mean:
   sum: '0.e+00'
 network.layer4.0.downsample.1.running_var:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -1018,7 +909,6 @@ network.layer4.0.downsample.1.running_var:
   sum: '5.12e+02'
 network.layer4.0.downsample.1.weight:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -1027,7 +917,6 @@ network.layer4.0.downsample.1.weight:
   sum: '5.12e+02'
 network.layer4.1.bn1.bias:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -1036,7 +925,6 @@ network.layer4.1.bn1.bias:
   sum: '0.e+00'
 network.layer4.1.bn1.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -1044,7 +932,6 @@ network.layer4.1.bn1.num_batches_tracked:
   sum: 0
 network.layer4.1.bn1.running_mean:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -1053,7 +940,6 @@ network.layer4.1.bn1.running_mean:
   sum: '0.e+00'
 network.layer4.1.bn1.running_var:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -1062,7 +948,6 @@ network.layer4.1.bn1.running_var:
   sum: '5.12e+02'
 network.layer4.1.bn1.weight:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -1071,7 +956,6 @@ network.layer4.1.bn1.weight:
   sum: '5.12e+02'
 network.layer4.1.bn2.bias:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -1080,7 +964,6 @@ network.layer4.1.bn2.bias:
   sum: '0.e+00'
 network.layer4.1.bn2.num_batches_tracked:
   device: cpu
-  hash: -8753497827991233192
   max: 0
   mean: '0.e+00'
   min: 0
@@ -1088,7 +971,6 @@ network.layer4.1.bn2.num_batches_tracked:
   sum: 0
 network.layer4.1.bn2.running_mean:
   device: cpu
-  hash: -8803861103172710891
   max: '0.e+00'
   mean: '0.e+00'
   min: '0.e+00'
@@ -1097,7 +979,6 @@ network.layer4.1.bn2.running_mean:
   sum: '0.e+00'
 network.layer4.1.bn2.running_var:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -1106,7 +987,6 @@ network.layer4.1.bn2.running_var:
   sum: '5.12e+02'
 network.layer4.1.bn2.weight:
   device: cpu
-  hash: 6106638844112739035
   max: '1.e+00'
   mean: '1.e+00'
   min: '1.e+00'
@@ -1115,7 +995,6 @@ network.layer4.1.bn2.weight:
   sum: '5.12e+02'
 network.layer4.1.conv1.weight:
   device: cpu
-  hash: 437673323544325185
   max: '1.172e-01'
   mean: '-1.526e-05'
   min: '-1.015e-01'
@@ -1127,7 +1006,6 @@ network.layer4.1.conv1.weight:
   sum: '-3.601e+01'
 network.layer4.1.conv2.weight:
   device: cpu
-  hash: -6000330235331504078
   max: '9.908e-02'
   mean: '8.558e-06'
   min: '-1.071e-01'

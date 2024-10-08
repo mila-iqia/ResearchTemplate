@@ -1,6 +1,5 @@
 attention_mask:
   device: cpu
-  hash: 6461221245016278812
   max: 1
   mean: '9.277e-02'
   min: 0
@@ -10,7 +9,6 @@ attention_mask:
   sum: 380
 input_ids:
   device: cpu
-  hash: 2762755912062154665
   max: 29043
   mean: '1.362e+02'
   min: 0
@@ -20,7 +18,6 @@ input_ids:
   sum: 557879
 labels:
   device: cpu
-  hash: -1000318673853516668
   max: 1
   mean: '7.5e-01'
   min: 0
@@ -29,7 +26,6 @@ labels:
   sum: 24
 token_type_ids:
   device: cpu
-  hash: -8123354182314851848
   max: 0
   mean: '0.e+00'
   min: 0
