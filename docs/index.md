@@ -10,7 +10,7 @@
 
 This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
 
-For more context, see [this  introduction to the project.](intro.md).
+For more context, see [this  introduction to the project.](getting_started/intro.md).
 
 <div class="grid cards" markdown>
 
@@ -18,10 +18,10 @@ For more context, see [this  introduction to the project.](intro.md).
 
     ---
 
-    [Get started quickly](install.md) with [a single installation script](#) and get up
+    [Get started quickly](getting_started/install.md) with [a single installation script](#) and get up
     and running in minutes
 
-    [:octicons-arrow-right-24: Getting started](install.md)
+    [:octicons-arrow-right-24: Getting started](getting_started/install.md)
 
 - :test_tube:{ .lg .middle } __Well-tested, robust codebase__
 
