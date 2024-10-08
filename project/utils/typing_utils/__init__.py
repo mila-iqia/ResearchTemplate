@@ -6,7 +6,7 @@ from typing import Any, NewType, TypeAlias, TypeGuard
 from torch import Tensor
 from typing_extensions import TypeVar, TypeVarTuple, Unpack
 
-from .protocols import Dataclass, DataModule, Module
+from .protocols import DataModule, Module
 
 # These are used to show which dim is which.
 C = NewType("C", int)
