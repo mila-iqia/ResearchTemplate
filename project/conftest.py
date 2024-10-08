@@ -72,7 +72,9 @@ from typing import Literal
 
 import jax
 import lightning.pytorch as pl
+import numpy as np
 import pytest
+import tensor_regression.stats
 import torch
 from _pytest.outcomes import Skipped, XFailed
 from _pytest.python import Function
@@ -115,6 +117,19 @@ logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
+
+# TODO: This hash thing used in regression tests seems to be broken for jax arrays.
+
+
+def fixed_hash_fn(v: jax.Array | np.ndarray | torch.Tensor) -> int:
+    if isinstance(v, torch.Tensor):
+        v = v.detach().cpu().numpy()
+    if isinstance(v, jax.Array | np.ndarray):
+        return hash(tuple(v.flatten().tolist()))
+    raise NotImplementedError(f"Don't know how to hash value {v} of type {type(v)}.")
+
+
+tensor_regression.stats._hash = fixed_hash_fn
 
 
 @pytest.fixture(scope="function", autouse=True)
