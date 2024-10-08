@@ -1,6 +1,7 @@
 * [Home](index.md)
-  * [Intro](intro.md)
-  * [Getting Started](install.md)
+  * Getting Started
+    * [Installation instructions](getting_started/install.md)
+    * [Intro](getting_started/intro.md)
   * Features
     * [Magic Config Schemas](features/auto_schema.md)
     * features/*.md

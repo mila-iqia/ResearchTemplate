@@ -1,5 +1,7 @@
 # Using Jax with PyTorch-Lightning
 
+> 🔥 NOTE: This is a feature that is entirely unique to this template! 🔥
+
 You can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.
 
 **How does this work?**
