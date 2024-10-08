@@ -155,7 +155,9 @@ jobs:
       - name: Set up the repo using the setup script
         run: scripts/mila_setup.sh
       - name: Install dependencies
-        run: rye sync --no-lock
+        run: rye sync --all-features --no-lock
+      - name: Show installed packages
+        run: rye list
       - name: Test with pytest
         run: rye run pytest -v --cov=project --cov-report=xml --cov-append
 
