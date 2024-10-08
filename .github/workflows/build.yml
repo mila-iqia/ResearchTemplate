@@ -94,7 +94,7 @@ jobs:
         uses: eifinger/setup-rye@v4
         id: setup-rye
         with:
-          enable-cache: false
+          enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache-prefix: ${{ matrix.python-version }}
       - name: Pin python-version ${{ matrix.python-version }}
