@@ -2,7 +2,6 @@ from typing import Any, Literal
 
 import torch
 from lightning import Callback, LightningModule
-from torch import nn
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.utils.typing_utils.protocols import DataModule
@@ -11,10 +10,9 @@ from project.utils.typing_utils.protocols import DataModule
 class NoOp(LightningModule):
     """No-op algorithm that does no learning and is used to benchmark the dataloading speed."""
 
-    def __init__(self, datamodule: DataModule, network: nn.Module):
+    def __init__(self, datamodule: DataModule):
         super().__init__()
         self.datamodule = datamodule
-        self.network = network
         # Set this so PyTorch-Lightning doesn't try to train the model using our 'loss'
         self.automatic_optimization = False
 

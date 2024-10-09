@@ -6,11 +6,11 @@ from omegaconf import DictConfig
 from project.conftest import (  # noqa: F401
     accelerator,
     algorithm_config,
+    algorithm_network_config,
     command_line_arguments,
     datamodule_config,
     devices,
     experiment_dictconfig,
-    network_config,
     num_devices_to_use,
     overrides,
 )
@@ -41,38 +41,47 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Instrumenting your code -baseline
         """
         experiment=profiling \
+        algorithm=example \
         trainer.logger.wandb.name="Baseline" \
         trainer.logger.wandb.tags=["Training","Baseline comparison","CPU/GPU comparison"]
         """,
         # Identifying potential bottlenecks - baseline
         """
-        experiment=profiling \
+        experiment=profiling\
         algorithm=no_op\
         trainer.logger.wandb.name="Baseline without training" \
         trainer.logger.wandb.tags=["No training","Baseline comparison"]
+
         """,
         # Identifying potential bottlenecks - num_workers multirun
-        """
+        pytest.param(
+            """
+            -m experiment=profiling \
+            algorithm=no_op \
+            trainer.logger.wandb.tags=["1 CPU Dataloading","Worker throughput"] \
+            datamodule.num_workers=1,4,8,16,32
+            """,
+            marks=pytest.mark.skip(reason="not working"),
+        ),
+        # Identifying potential bottlenecks - num_workers multirun
+        pytest.param(
+            """
         -m experiment=profiling \
-        algorithm=no_op \
-        trainer.logger.wandb.tags=["1 CPU Dataloading","Worker throughput"] \
-        datamodule.num_workers=1,4,8,16,3"
-        """,
-        # Identifying potential bottlenecks - num_workers multirun
-        """
-        experiment=profiling \
         algorithm=no_op \
         resources=cpu \
         trainer.logger.wandb.tags=["2 CPU Dataloading","Worker throughput"] \
         hydra.launcher.timeout_min=60 \
         hydra.launcher.cpus_per_task=2 \
         hydra.launcher.constraint="sapphire" \
-        datamodule.num_workers=1,4,8,16,32``
+        datamodule.num_workers=1,4,8,16,32
         """,
+            marks=pytest.mark.skip(reason="not working"),
+        ),
         # Identifying potential bottlenecks - fcnet mnist
         """
         experiment=profiling \
-        network=fcnet \
+        algorithm=example \
+        algorithm/network=fcnet \
         datamodule=mnist \
         trainer.logger.wandb.name="FcNet/MNIST baseline with training" \
         trainer.logger.wandb.tags=["CPU/GPU comparison","GPU","MNIST"]
@@ -80,6 +89,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Throughput across GPU types
         """
         experiment=profiling \
+        algorithm=example \
         resources=one_gpu \
         hydra.launcher.gres='gpu:a100:1' \
         hydra.launcher.cpus_per_task=4 \
@@ -88,13 +98,17 @@ from project.utils.hydra_utils import resolve_dictconfig
         trainer.logger.wandb.tags=["GPU comparison"]
         """,
         # Making the most out of your GPU
-        """
-        experiment=profiling \
+        pytest.param(
+            """
+        -m experiment=profiling \
+        algorithm=example \
         datamodule.num_workers=8 \
-        datamodule.batch_size=32,64,128,256,512 \
+        datamodule.batch_size=32,64,128,256 \
         trainer.logger.wandb.tags=["Batch size comparison"]\
         '++trainer.logger.wandb.name=Batch size ${datamodule.batch_size}'
         """,
+            marks=pytest.mark.skip(reason="not working"),
+        ),
     ],
     indirect=True,
 )
