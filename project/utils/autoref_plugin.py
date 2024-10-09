@@ -34,10 +34,16 @@ default_reference_sources = [
 Additionally, if there were modules in here, then any of their public members can also be
 referenced.
 """
+from mkdocstrings.plugin import MkdocstringsPlugin  # noqa
+from mkdocstrings_handlers.python.handler import PythonHandler  # noqa
 
 
 class CustomAutoRefPlugin(BasePlugin):
     """Small mkdocs plugin that converts backticks to refs when possible."""
+
+    def __init__(self):
+        super().__init__()
+        self.default_reference_sources = sum(map(_expand, default_reference_sources), [])
 
     def on_page_markdown(
         self, markdown: str, /, *, page: Page, config: MkDocsConfig, files: Files
@@ -48,12 +54,33 @@ class CustomAutoRefPlugin(BasePlugin):
         # - `package.foo.bar` -> [package.foo.bar][] (only if `package.foo.bar` is importable)
         # - `baz` -> [baz][]
 
-        # List of packages to import things from (in addition to the global )
-        referenced_packages: list[str] = page.meta.get("additional_python_references", [])
-        additional_objects: list[object] = _get_referencable_objects_from_doc_page_header(
-            referenced_packages
-        )
-        if referenced_packages:
+        # TODO: The idea here is to also make all the members of a module referentiable with
+        # backticks in the same module. The problem is that the "reference" page we create with
+        # mkdocstrings only contains a simple `::: project.path.to.module` and doesn't have any
+        # text, so we can't just replace the `backticks` with refs, since mkdocstrings hasn't yet
+        # processed the module into a page with the reference docs. This seems to be happening
+        # in a markdown extension (the `MkdocstringsExtension`).
+
+        # file = page.file.abs_src_path
+        # if file and "reference/project" in file:
+        #     relative_path = file[file.index("reference/") :].removeprefix("reference/")
+        #     module_path = relative_path.replace("/", ".").replace(".md", "")
+        #     if module_path.endswith(".index"):
+        #         module_path = module_path.removesuffix(".index")
+        #     logger.error(
+        #         f"file {relative_path} is the reference page for the python module {module_path}"
+        #     )
+        #     if "algorithms/example" in file:
+        #         assert False, markdown
+        #     additional_objects = _expand(module_path)
+        if referenced_packages := page.meta.get("additional_python_references", []):
+            additional_objects: list[object] = _get_referencable_objects_from_doc_page_header(
+                referenced_packages
+            )
+        else:
+            additional_objects = []
+
+        if additional_objects:
             additional_objects = [
                 obj
                 for obj in additional_objects
@@ -63,23 +90,28 @@ class CustomAutoRefPlugin(BasePlugin):
                     or inspect.ismodule(obj)
                     or inspect.ismethod(obj)
                 )
-                and (hasattr(obj, "__name__") or hasattr(obj, "__qualname__"))
+                # and (hasattr(obj, "__name__") or hasattr(obj, "__qualname__"))
             ]
 
-        known_objects_for_this_module = (
-            sum(map(_expand, default_reference_sources), []) + additional_objects
-        )
+        known_objects_for_this_module = self.default_reference_sources + additional_objects
         known_object_names = [t.__name__ for t in known_objects_for_this_module]
 
         new_markdown = []
+        # TODO: This changes things inside code blocks, which is not desired!
+        in_code_block = False
+
         for line_index, line in enumerate(markdown.splitlines(keepends=True)):
             # Can't convert `this` to `[this][]` in headers, otherwise they break.
             if line.lstrip().startswith("#"):
                 new_markdown.append(line)
                 continue
+            if "```" in line:
+                in_code_block = not in_code_block
+            if in_code_block:
+                new_markdown.append(line)
+                continue
 
             matches = re.findall(r"`([^`]+)`", line)
-
             for match in matches:
                 thing_name = match
                 if thing_name in known_object_names:
@@ -92,7 +124,7 @@ class CustomAutoRefPlugin(BasePlugin):
                     logger.debug(f"Unable to import {thing_name}, leaving it as-is.")
                     continue
 
-                new_ref = f"[{thing_name}][{_full_path(thing)}]"
+                new_ref = f"[`{thing_name}`][{_full_path(thing)}]"
                 logger.info(
                     f"Replacing `{thing_name}` with {new_ref} in {page.file.abs_src_path}:{line_index}"
                 )
@@ -133,7 +165,9 @@ def _get_referencable_objects_from_doc_page_header(doc_page_references: list[str
 
 
 def _full_path(thing) -> str:
-    return thing.__module__ + "." + thing.__qualname__
+    if inspect.ismodule(thing):
+        return thing.__name__
+    return thing.__module__ + "." + getattr(thing, "__qualname__", thing.__name__)
 
 
 @functools.cache
