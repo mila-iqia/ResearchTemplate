@@ -37,10 +37,14 @@ logger = get_logger(__name__)
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 TEnvParams = TypeVar("TEnvParams", bound=gymnax.EnvParams, default=gymnax.EnvParams)
+"""Type variable for the env params (`gymnax.EnvParams`)."""
+
 TEnvState = TypeVar("TEnvState", bound=gymnax.EnvState, default=gymnax.EnvState)
 
 
 class Trajectory(flax.struct.PyTreeNode):
+    """A sequence of interactions between an agent and an environment."""
+
     obs: jax.Array
     action: jax.Array
     log_prob: jax.Array
@@ -50,18 +54,24 @@ class Trajectory(flax.struct.PyTreeNode):
 
 
 class TrajectoryWithLastObs(flax.struct.PyTreeNode):
+    """Trajectory with the last observation and whether the last step is the end of an episode."""
+
     trajectories: Trajectory
     last_done: jax.Array
     last_obs: jax.Array
 
 
 class AdvantageMinibatch(flax.struct.PyTreeNode):
+    """Annotated trajectories with advantages and targets for the critic."""
+
     trajectories: Trajectory
     advantages: chex.Array
     targets: chex.Array
 
 
 class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
+    """Struct containing the state related to the collection of data from the environment."""
+
     last_obs: jax.Array
     env_state: TEnvState
     rms_state: RMSState
@@ -71,6 +81,8 @@ class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
 
 
 class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
+    """Contains all the state of the `JaxRLExample` algorithm."""
+
     actor_ts: TrainState
     critic_ts: TrainState
     rng: chex.PRNGKey
@@ -135,7 +147,8 @@ class JaxRLExample(
 ):
     """Example of an RL algorithm written in Jax: PPO, based on `rejax.PPO`.
 
-    Differences w.r.t. rejax.PPO:
+    ## Differences w.r.t. rejax.PPO:
+
     - The state / hparams are split into different, fully-typed structs:
         - The algorithm state is in a typed `PPOState` struct (vs an untyped,
             dynamically-generated struct in rejax).
