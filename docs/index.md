@@ -10,7 +10,7 @@
 
 This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
 
-For more context, see [this  introduction to the project.](intro.md).
+For more context, see [this  introduction to the project.](getting_started/intro.md).
 
 <div class="grid cards" markdown>
 
@@ -18,10 +18,10 @@ For more context, see [this  introduction to the project.](intro.md).
 
     ---
 
-    [Get started quickly](install.md) with [a single installation script](#) and get up
+    [Get started quickly](getting_started/install.md) with [a single installation script](#) and get up
     and running in minutes
 
-    [:octicons-arrow-right-24: Getting started](install.md)
+    [:octicons-arrow-right-24: Getting started](getting_started/install.md)
 
 - :test_tube:{ .lg .middle } __Well-tested, robust codebase__
 
@@ -49,7 +49,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
     1. The source code for the example is available [here](https://github.com/mila-iqia/ResearchTemplate/blob/master/project/algorithms/example.py)
 
-    [:octicons-arrow-right-24: Check out the examples here](examples/examples.md)
+    [:octicons-arrow-right-24: Check out the examples here](examples/index.md)
 
 <!--
 -   :material-scale-balance:{ .lg .middle } __Open Source, MIT__
@@ -80,7 +80,7 @@ To see all available options:
 python project/main.py --help
 ```
 
-For a detailed list of examples, see the [examples page](examples/examples.md).
+For a detailed list of examples, see the [examples page](examples/index.md).
 
 <!-- * `mkdocs new [dir-name]` - Create a new project.
 * `mkdocs serve` - Start the live-reloading docs server.
