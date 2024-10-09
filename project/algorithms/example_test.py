@@ -1,6 +1,6 @@
 """Example showing how the test suite can be used to add tests for a new algorithm."""
 
-import torch.nn
+import torch
 from transformers import PreTrainedModel
 
 from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
@@ -14,7 +14,7 @@ from .example import ExampleAlgorithm
 
 @run_for_all_configs_of_type("algorithm", ExampleAlgorithm)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
-@run_for_all_configs_of_type("network", torch.nn.Module, excluding=PreTrainedModel)
+@run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)
 class TestExampleAlgo(LearningAlgorithmTests[ExampleAlgorithm]):
     """Tests for the `ExampleAlgorithm`.
 

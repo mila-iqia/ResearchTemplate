@@ -7,10 +7,7 @@ import torch
 from lightning import LightningDataModule
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.trainer.states import RunningStage
-from tensor_regression.fixture import (
-    TensorRegressionFixture,
-    get_test_source_and_temp_file_paths,
-)
+from tensor_regression.fixture import TensorRegressionFixture, get_test_source_and_temp_file_paths
 from torch import Tensor
 
 from project.datamodules.image_classification.image_classification import (
@@ -39,6 +36,7 @@ from project.utils.typing_utils import is_sequence_of
         ),
     ],
 )
+@pytest.mark.parametrize("overrides", ["algorithm=no_op"], indirect=True)
 @run_for_all_datamodules()
 def test_first_batch(
     datamodule: LightningDataModule,
@@ -49,6 +47,11 @@ def test_first_batch(
     datadir: Path,
 ):
     # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
+
+    # TODO: This causes hanging issues when tests fail, since dataloader workers aren't cleaned up.
+    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
+        datamodule.num_workers = 0  # type: ignore
+
     datamodule.prepare_data()
     if stage == RunningStage.TRAINING:
         datamodule.setup("fit")
@@ -64,8 +67,8 @@ def test_first_batch(
         datamodule.setup("predict")
         dataloader = datamodule.predict_dataloader()
 
-    batch = next(iter(dataloader))
-
+    iterator = iter(dataloader)
+    batch = next(iterator)
     from torchvision.tv_tensors import Image
 
     if isinstance(datamodule, ImageClassificationDataModule):
@@ -88,10 +91,12 @@ def test_first_batch(
         if "infos" in batch:
             # todo: fix this, unsupported because of `object` dtype.
             batch.pop("infos")
-        tensor_regression.check(batch)
+        tensor_regression.check(batch, include_gpu_name_in_stats=False)
     else:
         assert is_sequence_of(batch, Tensor)
-        tensor_regression.check({f"{i}": batch_i for i, batch_i in enumerate(batch)})
+        tensor_regression.check(
+            {f"{i}": batch_i for i, batch_i in enumerate(batch)}, include_gpu_name_in_stats=False
+        )
 
     n_rows = 4
     n_cols = 4
@@ -149,6 +154,11 @@ def test_first_batch(
         "*.png",
         "",
     ]
+    original_datadir.mkdir(exist_ok=True, parents=True)
+    if not gitignore_file.exists():
+        gitignore_file.write_text("\n".join(lines_to_add))
+        return
+
     lines = gitignore_file.read_text().splitlines()
     if not any(line.strip() == "*.png" for line in lines):
         with gitignore_file.open("a") as f:

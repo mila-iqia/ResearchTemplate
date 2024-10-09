@@ -1,0 +1,35 @@
+attention_mask:
+  device: cpu
+  max: 1
+  mean: '1.021e-01'
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 418
+input_ids:
+  device: cpu
+  max: 29043
+  mean: '1.648e+02'
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 675172
+labels:
+  device: cpu
+  max: -1
+  mean: '-1.e+00'
+  min: -1
+  shape:
+  - 32
+  sum: -32
+token_type_ids:
+  device: cpu
+  max: 0
+  mean: '0.e+00'
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 0

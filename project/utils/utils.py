@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import typing
 from collections.abc import Sequence
 from logging import getLogger as get_logger
@@ -10,6 +9,7 @@ from typing import TypeVar
 import rich
 import rich.syntax
 import rich.tree
+import torch
 from lightning import LightningDataModule, Trainer
 from omegaconf import DictConfig, OmegaConf
 from torchvision import transforms
@@ -19,18 +19,6 @@ from project.utils.typing_utils.protocols import (
 )
 
 logger = get_logger(__name__)
-
-
-# todo: doesn't work? keeps logging each time!
-@functools.cache
-def log_once(message: str, level: int) -> None:
-    """Logs a message once. The message is logged at the specified level.
-
-    Args:
-        message: The message to log.
-        level: The logging level to use.
-    """
-    logger.log(level=level, msg=message, stacklevel=2)
 
 
 def get_log_dir(trainer: Trainer | None) -> Path:
@@ -113,7 +101,6 @@ def print_config(
     config: DictConfig,
     print_order: Sequence[str] = (
         "algorithm",
-        "network",
         "datamodule",
         "trainer",
     ),
@@ -135,13 +122,19 @@ def print_config(
     queue = []
 
     for f in print_order:
-        queue.append(f) if f in config else logger.info(f"Field '{f}' not found in config")
+        if f in config:
+            queue.append(f)
+        else:
+            logger.info(f"Field '{f}' not found in config")
 
     for f in config:
         if f not in queue:
             queue.append(f)
 
     for f in queue:
+        if f not in config:
+            logger.info(f"Field '{f}' not found in config")
+            continue
         branch = tree.add(f, style=style, guide_style=style)
 
         config_group = config[f]
@@ -156,3 +149,10 @@ def print_config(
 
     # with open("config_tree.log", "w") as file:
     #     rich.print(tree, file=file)
+
+
+def default_device() -> torch.device:
+    """Returns the default device (GPU if available, else CPU)."""
+    return torch.device(
+        f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
+    )

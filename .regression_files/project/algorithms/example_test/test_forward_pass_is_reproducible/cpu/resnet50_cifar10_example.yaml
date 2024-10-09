@@ -1,0 +1,22 @@
+input:
+  device: cpu
+  hash: -1373365636602041987
+  max: 2.1
+  mean: -0.0
+  min: -2.0
+  shape:
+  - 128
+  - 3
+  - 32
+  - 32
+  sum: -2429.8
+out:
+  device: cpu
+  hash: -9209917346416037156
+  max: 6.0
+  mean: 0.3
+  min: -5.2
+  shape:
+  - 128
+  - 10
+  sum: 322.7

@@ -1,9 +1,9 @@
 # @package _global_
 
 defaults:
-  - override /network: albert-base-v2
   - override /datamodule: hf_text
   - override /algorithm: hf_example
+  - override /algorithm/network: albert-base-v2
   - override /trainer/callbacks: none
 
 trainer:

@@ -1,5 +1,7 @@
-site_name: Research Project Template (wip)
-site_description: A project template and directory structure for Python data science projects. (Work-in-Progress)
+site_name: Research Project Template
+site_description: Template for a ML Research project.
+# TODO: Need to make sure that the repo URL and site URL are updated correctly in downstream
+# projects, otherwise they will either get a 403 error, or change the docs of the template!
 site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
@@ -40,6 +42,9 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
   - pymdownx.magiclink
   - attr_list
   - md_in_html
@@ -57,6 +62,9 @@ markdown_extensions:
 plugins:
   - search
   - awesome-pages
+  - macros: #https://mkdocs-macros-plugin.readthedocs.io/en/latest/#declaration-of-the-macros-plugin
+      module_name: docs/macros
+  - custom_autoref_plugin
   - autorefs
   - gen-files:
       # https://oprypin.github.io/mkdocs-gen-files/#usage
@@ -74,6 +82,9 @@ plugins:
             - https://lightning.ai/docs/pytorch/stable/objects.inv
             - https://docs.pytest.org/en/stable/objects.inv
             - https://flax.readthedocs.io/en/latest/objects.inv
+            - https://docs.python.org/3/objects.inv
+            - https://pytorch.org/docs/stable/objects.inv
+            - https://jax.readthedocs.io/en/latest/objects.inv
           options:
             docstring_style: google
             members_order: source

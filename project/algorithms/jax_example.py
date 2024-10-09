@@ -152,20 +152,10 @@ class JaxExample(LightningModule):
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes),
         ]
 
-    @property
-    def device(self) -> torch.device:
-        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
-        if self._device.type == "cpu":
-            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
-        device = self._device
-        # make this more explicit to always include the index
-        if device.type == "cuda" and device.index is None:
-            return torch.device("cuda", index=torch.cuda.current_device())
-        return device
-
 
 # Register a handler function to "convert" `torch.nn.Parameter`s to jax Arrays: they can be viewed
 # as jax Arrays by just viewing their data as a jax array.
+# TODO: move this to the torch_jax_interop package?
 @torch_to_jax.register(torch.nn.Parameter)
 def _parameter_to_jax_array(value: torch.nn.Parameter) -> jax.Array:
     return torch_to_jax(value.data)

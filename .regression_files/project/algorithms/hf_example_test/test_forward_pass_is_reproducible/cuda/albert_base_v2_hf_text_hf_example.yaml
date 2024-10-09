@@ -1,0 +1,51 @@
+input.attention_mask:
+  device: cuda:0
+  max: 1
+  mean: '8.374e-02'
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 343
+input.input_ids:
+  device: cuda:0
+  max: 26101
+  mean: '1.597e+02'
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 654306
+input.labels:
+  device: cuda:0
+  max: 1
+  mean: '7.188e-01'
+  min: 0
+  shape:
+  - 32
+  sum: 23
+input.token_type_ids:
+  device: cuda:0
+  max: 0
+  mean: '0.e+00'
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 0
+out.logits:
+  device: cuda:0
+  max: '4.019e-02'
+  mean: '-1.58e-01'
+  min: '-4.991e-01'
+  shape:
+  - 32
+  - 2
+  sum: '-1.011e+01'
+out.loss:
+  device: cuda:0
+  max: '7.185e-01'
+  mean: '7.185e-01'
+  min: '7.185e-01'
+  shape: []
+  sum: '7.185e-01'

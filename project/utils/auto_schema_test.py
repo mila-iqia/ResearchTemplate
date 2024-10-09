@@ -2,7 +2,6 @@ import json
 import subprocess
 from pathlib import Path
 
-import hydra.errors
 import pytest
 import yaml
 from pytest_regressions.file_regression import FileRegressionFixture
@@ -34,13 +33,12 @@ class Bar(Foo):
 
 
 _this_file = Path(__file__)
-test_files = list((_this_file.parent / _this_file.name).with_suffix("").rglob("*.yaml"))
+_config_dir = (_this_file.parent / _this_file.name).with_suffix("")
+test_files = list(_config_dir.rglob("*.yaml"))
 
 
 @pytest.mark.parametrize("config_file", test_files, ids=[f.name for f in test_files])
-def test_make_schema(
-    config_file: Path, file_regression: FileRegressionFixture, original_datadir: Path
-):
+def test_make_schema(config_file: Path, file_regression: FileRegressionFixture):
     """Test that creates a schema for a config file and saves it next to it.
 
     (in the test folder).
@@ -49,7 +47,7 @@ def test_make_schema(
 
     config = yaml.load(config_file.read_text(), yaml.FullLoader)
     schema = create_schema_for_config(
-        config=config, config_file=config_file, configs_dir=original_datadir
+        config=config, config_file=config_file, configs_dir=_config_dir
     )
 
     add_schema_header(config_file, schema_path=schema_file)
@@ -64,11 +62,6 @@ def test_can_run_via_cli():
     main(["."])  # assuming we're at the project root directory.
 
 
-@pytest.mark.xfail(
-    raises=hydra.errors.MissingConfigException,
-    reason="TODO: Missing hydra/sweeper/orion config since it isn't installed atm.",
-    strict=True,
-)
 def test_run_via_cli_without_errors():
     """Checks that the command completes without errors."""
     # Run programmatically instead of with a subproc4ess so we can get nice coverage stats.
@@ -82,11 +75,6 @@ def test_run_via_rye_script():
     subprocess.check_call(["rye", "run", "auto_schema"], text=True)
 
 
-@pytest.mark.xfail(
-    raises=subprocess.CalledProcessError,
-    reason="TODO: Missing hydra/sweeper/orion config since it isn't installed atm.",
-    strict=True,
-)
 def test_run_via_rye_script_without_errors():
     """Actually run the command on the repo, via the `[tool.rye.scripts]` entry in
     pyproject.toml."""

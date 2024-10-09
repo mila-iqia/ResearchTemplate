@@ -2,152 +2,29 @@
 
 from __future__ import annotations
 
-import dataclasses
 import functools
 import importlib
 import inspect
 import typing
 from collections import ChainMap
 from collections.abc import Callable, Mapping, MutableMapping
-from dataclasses import MISSING, field, fields, is_dataclass
+from dataclasses import fields, is_dataclass
 from logging import getLogger as get_logger
 from typing import (
     Any,
-    Literal,
     TypeVar,
 )
 
+import hydra.utils
 import hydra_zen.structured_configs._utils
+import omegaconf
 from hydra_zen import instantiate
-from hydra_zen.structured_configs._utils import safe_name
-from hydra_zen.typing._implementations import Partial as _Partial
 from omegaconf import DictConfig, OmegaConf
 
 if typing.TYPE_CHECKING:
     from project.configs.config import Config
 
 logger = get_logger(__name__)
-
-
-T = TypeVar("T")
-
-
-def patched_safe_name(obj: Any, repr_allowed: bool = True):
-    """Patches a bug in Hydra-zen where the _target_ of inner classes is incorrect:
-    https://github.com/mit-ll-responsible-ai/hydra-zen/issues/705
-    """
-
-    if not hasattr(obj, "__qualname__"):
-        return safe_name(obj, repr_allowed=repr_allowed)
-
-    name = safe_name(obj, repr_allowed=repr_allowed)
-    qualname = obj.__qualname__
-    assert isinstance(qualname, str)
-
-    if name != qualname and qualname.endswith("." + name):
-        logger.debug(f"Using patched fn: returning {qualname} for target {obj}")
-        return qualname
-
-    return name
-
-
-hydra_zen.structured_configs._utils.safe_name = patched_safe_name
-
-
-def interpolate_config_attribute(*attributes: str, default: Any | Literal[MISSING] = MISSING):
-    """Use this in a config to to get an attribute from another config after it is instantiated.
-
-    Multiple attributes can be specified, which will lead to trying each of them in order until the
-    attribute is found. If none are found, then an error will be raised.
-
-    For example, if we only know the number of classes in the datamodule after it is instantiated,
-    we can set this in the network config so it is created with the right number of output dims.
-
-    ```yaml
-    _target_: torchvision.models.resnet50
-    num_classes: ${instance_attr:datamodule.num_classes}
-    ```
-
-    This is equivalent to:
-
-    >>> import hydra_zen
-    >>> import torchvision.models
-    >>> resnet50_config = hydra_zen.builds(
-    ...     torchvision.models.resnet50,
-    ...     num_classes=interpolate_config_attribute("datamodule.num_classes"),
-    ...     populate_full_signature=True,
-    ... )
-    >>> print(hydra_zen.to_yaml(resnet50_config))  # doctest: +NORMALIZE_WHITESPACE
-    _target_: torchvision.models.resnet.resnet50
-    weights: null
-    progress: true
-    num_classes: ${instance_attr:datamodule.num_classes}
-    """
-    if default is MISSING:
-        return "${instance_attr:" + ",".join(attributes) + "}"
-    return "${instance_attr:" + ",".join(attributes) + ":" + str(default) + "}"
-
-
-def interpolated_field(
-    interpolation: str,
-    default: T | Literal[MISSING] = MISSING,
-    default_factory: Callable[[], T] | Literal[MISSING] = MISSING,
-    instance_attr: bool = False,
-) -> T:
-    """Field with a default value computed with a OmegaConf-style interpolation when appropriate.
-
-    When the dataclass is created by Hydra / OmegaConf, the interpolation is used.
-    Otherwise, behaves as usual (either using default or calling the default_factory).
-
-    Parameters
-    ----------
-    interpolation: The string interpolation to use to get the default value.
-    default: The default value to use when not in a hydra/OmegaConf context.
-    default_factory: The default value to use when not in a hydra/OmegaConf context.
-    instance_attr: Whether to use the `instance_attr` custom resolver to run the interpolation \
-        with respect to instantiated objects instead of their configs.
-        Passing `interpolation='${instance_attr:some_config.some_attr}'` has the same effect.
-
-    This last parameter is important, since in order to retrieve the instance attribute, we need to
-    instantiate the objects, which could be expensive. These instantiated objects are reused at
-    least, but still, be mindful when using this parameter.
-    """
-    assert "${" in interpolation and "}" in interpolation
-
-    if instance_attr:
-        if not interpolation.startswith("${instance_attr:"):
-            interpolation = interpolation.removeprefix("${")
-            interpolation = "${instance_attr:" + interpolation
-
-    if default is MISSING and default_factory is MISSING:
-        raise RuntimeError(
-            "Interpolated fields currently still require a default value or default factory for "
-            "when they are used outside the Hydra/OmegaConf context."
-        )
-    return field(
-        default_factory=functools.partial(
-            _default_factory,
-            interpolation=interpolation,
-            default=default,
-            default_factory=default_factory,
-        )
-    )
-
-
-# @dataclass(init=False)
-class Partial(functools.partial[T], _Partial[T]):
-    def __getattr__(self, name: str):
-        if name in self.keywords:
-            return self.keywords[name]
-        raise AttributeError(name)
-
-
-def add_attributes(fn: functools.partial[T]) -> Partial[T]:
-    """Adds a __getattr__ to the partial that returns the value in `v.keywords`."""
-    if isinstance(fn, Partial):
-        return fn
-    assert isinstance(fn, functools.partial)
-    return Partial(fn.func, *fn.args, **fn.keywords)
 
 
 def get_full_name(object_type: type) -> str:
@@ -224,6 +101,18 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
     register_instance_attr_resolver(instantiated_objects_cache)
     # Convert the "raw" DictConfig (which uses the `Config` class to define it's structure)
     # into an actual `Config` object:
+
+    # TODO: Seems to only be necessary now that the datamodule group is optional?
+    # Need to manually nudge OmegaConf so that it instantiates the datamodule first.
+    if dict_config["datamodule"]:
+        with omegaconf.open_dict(dict_config):
+            v = dict_config._get_flag("allow_objects")
+            dict_config._set_flag("allow_objects", True)
+            instantiated_objects_cache["datamodule"] = dict_config["datamodule"] = (
+                hydra.utils.instantiate(dict_config["datamodule"])
+            )
+            dict_config._set_flag("allow_objects", v)
+
     config = OmegaConf.to_object(dict_config)
     from project.configs.config import Config
 
@@ -276,7 +165,7 @@ def instance_attr(
     """
     if not attributes:
         raise RuntimeError("Need to pass one or more attributes to this resolver.")
-    assert being_called_in_hydra_context()
+    assert _being_called_in_hydra_context()
     logger.debug(f"Custom resolver is being called to get the value of {attributes}.")
 
     current_frame = inspect.currentframe()
@@ -408,7 +297,7 @@ def instance_attr(
     )
 
 
-def being_called_in_hydra_context() -> bool:
+def _being_called_in_hydra_context() -> bool:
     """Returns `True` if this function is being called indirectly by Hydra/OmegaConf.
 
     Can be used in a field default factory to change the default value based on whether the config
@@ -439,18 +328,6 @@ def _being_called_by(*functions: Callable) -> bool:
     ):
         return True
     return False
-
-
-def _default_factory(
-    interpolation: str,
-    default: T | Literal[dataclasses.MISSING] = dataclasses.MISSING,
-    default_factory: Callable[[], T] | Literal[dataclasses.MISSING] = dataclasses.MISSING,
-) -> T:
-    if being_called_in_hydra_context():
-        return interpolation  # type: ignore
-    if default_factory is not dataclasses.MISSING:
-        return default_factory()
-    return default  # type: ignore
 
 
 Target = TypeVar("Target")

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import os
 import warnings
 from logging import getLogger as get_logger
@@ -22,9 +21,6 @@ from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
 
-if os.environ.get("CUDA_VISIBLE_DEVICES", "").startswith("MIG-"):
-    # NOTE: Perhaps unsetting it would also work, but this works atm.
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 logger = get_logger(__name__)
 
 PROJECT_NAME = Path(__file__).parent.name
@@ -44,28 +40,26 @@ def main(dict_config: DictConfig) -> dict:
     from project.utils.auto_schema import add_schemas_to_all_hydra_configs
 
     # Note: running this should take ~5 seconds the first time and <1s after that.
-    add_schemas_to_all_hydra_configs(
-        config_files=None,
-        repo_root=REPO_ROOTDIR,
-        configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
-        regen_schemas=False,
-        stop_on_error=False,
-        quiet=True,
-        add_headers=False,
-    )
+    try:
+        add_schemas_to_all_hydra_configs(
+            config_files=None,
+            repo_root=REPO_ROOTDIR,
+            configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
+            regen_schemas=False,
+            stop_on_error=False,
+            quiet=True,
+            add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
+        )
+    except Exception:
+        logger.error("Unable to add schemas to all hydra configs.")
 
     config: Config = resolve_dictconfig(dict_config)
 
     experiment: Experiment = setup_experiment(config)
-
     if wandb.run:
-        wandb.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
-        wandb.config.update(
+        wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
+        wandb.run.config.update(
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
-        )
-        wandb.config.update(
-            dataclasses.asdict(config),
-            allow_val_change=True,
         )
 
     metric_name, objective, _metrics = run(experiment)
@@ -75,17 +69,26 @@ def main(dict_config: DictConfig) -> dict:
 
 
 def run(experiment: Experiment) -> tuple[str, float | None, dict]:
+    """Run the experiment: training followed by evaluation.
+
+    Returns the metrics of the evaluation.
+    """
+
     # Train the model using the dataloaders of the datamodule:
     # The Algorithm gets to "wrap" the datamodule if it wants. This might be useful in the
     # case of RL, where we need to set the actor to use in the environment, as well as
     # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
     # TODO: Add ckpt_path argument to resume a training run.
     datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
-    assert isinstance(datamodule, LightningDataModule)
-    experiment.trainer.fit(
-        experiment.algorithm,
-        datamodule=datamodule,
-    )
+
+    if datamodule is None:
+        experiment.trainer.fit(experiment.algorithm)
+    else:
+        assert isinstance(datamodule, LightningDataModule)
+        experiment.trainer.fit(
+            experiment.algorithm,
+            datamodule=datamodule,
+        )
 
     metric_name, error, metrics = evaluation(experiment)
     if wandb.run:

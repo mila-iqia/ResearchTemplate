@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - run: pip install pre-commit
+      - run: pip install 'pre-commit<4.0.0'
       - run: pre-commit --version
       - run: pre-commit install
       - run: pre-commit run --all-files
@@ -70,11 +70,7 @@ jobs:
         run: rye pin ${{ matrix.python-version }}
       - name: Install dependencies
         run: rye sync --no-lock
-      - name: Test with pytest (very fast)
-        env:
-          JAX_PLATFORMS: cpu
-        run: rye run pytest -v --shorter-than=1.0 --cov=project --cov-report=xml --cov-append --skip-if-files-missing
-      - name: Test with pytest (fast)
+      - name: Test with pytest
         env:
           JAX_PLATFORMS: cpu
         run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
@@ -108,10 +104,10 @@ jobs:
         run: rye sync --no-lock
 
       - name: Test with pytest
-        run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
-      # TODO: this is taking too long to run, and is failing consistently. Need to debug this before making it part of the CI again.
-      # - name: Test with pytest (only slow tests)
-      #   run: pdm run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+        run: rye run pytest -v --cov=project --cov-report=xml --cov-append
+
+      - name: Test with pytest (only slow tests)
+        run: rye run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
 
       - name: Store coverage report as an artifact
         uses: actions/upload-artifact@v4
@@ -159,13 +155,17 @@ jobs:
       - name: Set up the repo using the setup script
         run: scripts/mila_setup.sh
       - name: Install dependencies
-        run: rye sync --no-lock
+        run: rye sync --all-features --no-lock
+      - name: Show installed packages
+        run: rye list
       - name: Test with pytest
-        run: rye run pytest -v --cov=project --cov-report=xml --cov-append --skip-if-files-missing
+        run: rye run pytest -v --cov=project --cov-report=xml --cov-append
 
-      # TODO: Re-enable this later
+      # TODO: Disabling full regression tests on the cluster for now, because the worker is often
+      # interrupted and we want to avoid using the unkillable partition to not interrupt other's
+      # work. The full regression tests are still run on the local_integration_tests job.
       # - name: Test with pytest (only slow tests)
-      #   run: pdm run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+      #   run: rye run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
 
       - name: Store coverage report as an artifact
         uses: actions/upload-artifact@v4

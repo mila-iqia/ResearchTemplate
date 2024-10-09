@@ -1,0 +1,57 @@
+input.attention_mask:
+  device: cpu
+  hash: -5248677368460617222
+  max: 1
+  mean: 0.1
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 343
+input.input_ids:
+  device: cpu
+  hash: -8391087330217722819
+  max: 26101
+  mean: 159.7
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 654306
+input.labels:
+  device: cpu
+  hash: -3945588999998408889
+  max: 1
+  mean: 0.7
+  min: 0
+  shape:
+  - 32
+  sum: 23
+input.token_type_ids:
+  device: cpu
+  hash: -8123354182314851848
+  max: 0
+  mean: 0.0
+  min: 0
+  shape:
+  - 32
+  - 128
+  sum: 0
+out.logits:
+  device: cpu
+  hash: -3045239871714879068
+  max: 0.6
+  mean: 0.4
+  min: 0.1
+  shape:
+  - 32
+  - 2
+  sum: 26.8
+out.loss:
+  device: cpu
+  hash: 1287410195914297480
+  max: 0.7
+  mean: 0.7
+  min: 0.7
+  shape: []
+  sum: 0.7

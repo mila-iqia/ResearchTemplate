@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 from evaluate import load as load_metric
 from lightning import LightningModule
-from torch.optim import AdamW
+from torch.optim.adamw import AdamW
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
@@ -46,6 +46,9 @@ class HFExample(LightningModule):
             self.task_name,
             experiment_id=datetime.now().strftime("%d-%m-%Y_%H-%M-%S"),
         )
+
+        # Small fix for the `device` property in LightningModule, which is CPU by default.
+        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
 
     def forward(
         self,

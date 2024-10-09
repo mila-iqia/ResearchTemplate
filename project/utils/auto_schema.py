@@ -20,7 +20,6 @@ import inspect
 import json
 import logging
 import os.path
-import shutil
 import subprocess
 import sys
 import typing
@@ -250,6 +249,7 @@ def main(argv: list[str] | None = None):
     parser.add_argument(
         "--add-headers",
         action=argparse.BooleanOptionalAction,
+        default=None,
         help=(
             "Always add headers to the yaml config files, instead of the default "
             "behaviour which is to first try to add an entry in the vscode "
@@ -272,7 +272,6 @@ def main(argv: list[str] | None = None):
     quiet: bool = args.quiet
     verbose: int = args.verbose
     add_headers: bool = args.add_headers
-
     if quiet:
         logger.setLevel(logging.NOTSET)
     elif verbose:
@@ -413,27 +412,31 @@ def add_schemas_to_all_hydra_configs(
     # Option 1: Add a vscode setting that associates the schema file with the yaml files. (less intrusive perhaps).
     # Option 2: Add a header to the yaml files that points to the schema file.
 
-    # We will use option 1 if a `code` executable is found.
-    set_schemas_in_vscode_settings_file = bool(shutil.which("code"))
+    # If add_headers is None, try option 1, then fallback to option 2.
+    # If add_headers is False, only use option 1
+    # If add_headers is True, only use option 2
 
-    if add_headers:
-        set_schemas_in_vscode_settings_file = False
-
-    if set_schemas_in_vscode_settings_file:
+    if not add_headers:
         try:
-            logger.debug(
-                "Found the `code` executable, will add schema paths to the vscode settings."
-            )
             _install_yaml_vscode_extension()
-            _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
-            return
+        except OSError:
+            pass
+
+        try:
+           _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
         except Exception as exc:
             logger.error(
                 f"Unable to write schemas in the vscode settings file. "
                 f"Falling back to adding a header to config files. (exc={exc})"
             )
+            if add_headers is not None:
+                # Unable to do it. Don't try to add headers, just return.
+                return
+        else:
+            # Success. Return.
+            return
 
-    logger.debug("A headers to config files to point to the schemas to use.")
+    logger.debug("Adding headers to config files to point to the schemas to use.")
     for config_file, schema_file in config_file_to_schema_file.items():
         add_schema_header(config_file, schema_path=schema_file)
 
@@ -490,13 +493,17 @@ def _add_schemas_to_vscode_settings(
     vscode_settings_content = vscode_settings_file.read_text()
     # Remove any trailing commas from the content:
     vscode_settings_content = (
-        vscode_settings_content.strip().removesuffix("}").rstrip().rstrip(",") + "}"
+        # Remove any leading "," that would make it invalid JSON.
+        "".join(vscode_settings_content.split()).replace(",}", "}").replace(",]", "]")
     )
-    vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
 
+    vscode_settings: dict[str, Any] = json.loads(vscode_settings_content)
+    logger.debug(f"Vscode settings: {vscode_settings}")
     # Avoid the popup and do users a favour by disabling telemetry.
     vscode_settings.setdefault("redhat.telemetry.enabled", False)
 
+    # TODO: Should probably overwrite the schemas entry if we're passed the --regen-schemas flag,
+    # since otherwise we might accumulate schemas for configs that aren't there anymore.
     yaml_schemas_setting: dict[str, str | list[str]] = vscode_settings.setdefault(
         "yaml.schemas", {}
     )
@@ -540,6 +547,18 @@ def _get_schema_file_path(config_file: Path, schemas_dir: Path):
     return schema_file
 
 
+def _all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
+    """Iterator that yields all the nested config entries that have a _target_."""
+    entries = {}
+    if "_target_" in config:
+        entries[()] = config
+    for key, value in config.items():
+        if isinstance(value, dict):
+            for subkey, subvalue in _all_subentries_with_target(value).items():
+                entries[(key, *subkey)] = subvalue
+    return entries
+
+
 def create_schema_for_config(
     config: dict | DictConfig, config_file: Path, configs_dir: Path | None
 ) -> Schema | ObjectSchema:
@@ -550,6 +569,12 @@ def create_schema_for_config(
     - Only the top-level config (`config`) can have a `defaults: list[str]` key.
         - Should ideally load the defaults and merge this schema on top of them.
     """
+
+    _config_dict = (
+        OmegaConf.to_container(config, resolve=False) if isinstance(config, DictConfig) else config
+    )
+    assert isinstance(_config_dict, dict)
+
     schema = copy.deepcopy(HYDRA_CONFIG_SCHEMA)
     pretty_path = config_file.relative_to(configs_dir) if configs_dir else config_file
     schema["title"] = f"Auto-generated schema for {pretty_path}"
@@ -566,99 +591,49 @@ def create_schema_for_config(
                 configs_dir=configs_dir,
             )
 
-    if target_name := config.get("_target_"):
-        # There's a '_target_' key at the top level in the config file.
-        target = hydra.utils.get_object(target_name)
-        schema["description"] = f"Based on the signature of {target}."
-        if "properties" not in schema:
-            schema["properties"] = {}
-        assert "properties" in schema and isinstance(schema["properties"], dict)
-        schema["properties"]["_target_"] = PropertySchema(
-            type="string",
-            title="Target",
-            const=target_name,
-            # pattern=r"", # todo: Use a pattern to match python module import strings.
-            description=(
-                f"Target to instantiate, in this case: `{target_name}`\n"
-                # f"* Source: <file://{relative_to_cwd(inspect.getfile(target))}>\n"
-                # f"* Config file: <file://{config_file}>\n"
-                f"See the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n"
-            ),
-        )
-
-        nested_value_schema_from_target_signature = _get_schema_from_target(config)
-        # logger.debug(f"Schema from signature of {target}: {schema_from_target_signature}")
-
-        schema = _merge_dicts(
-            nested_value_schema_from_target_signature,  # type: ignore
-            schema,  # type: ignore
-            conflict_handler=overwrite,
-        )
-
-        return schema
-
     # Config file that contains entries that may or may not have a _target_.
-    schema["additionalProperties"] = True
+    schema["additionalProperties"] = "_target_" not in config
 
-    def all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
-        """Iterator that yields all the nested config entries that have a _target_."""
-        entries = {}
-        for key, value in config.items():
-            if isinstance(value, dict) and "_target_" in value.keys():
-                entries[(key,)] = value
-            elif isinstance(value, dict):
-                for subkey, subvalue in all_subentries_with_target(value).items():
-                    entries[(key, *subkey)] = subvalue
-        return entries
+    for keys, value in _all_subentries_with_target(_config_dict).items():
+        is_top_level: bool = not keys
 
-    _config_dict = (
-        OmegaConf.to_container(config, resolve=False) if isinstance(config, DictConfig) else config
-    )
-    assert isinstance(_config_dict, dict)
-    for keys, value in all_subentries_with_target(_config_dict).items():
-        # Go over all the values in the config. If any of them have a `_target_`, then we can
-        # add a schema at that entry.
-        assert "_target_" in value
-        target = hydra.utils.get_object(value["_target_"])
+        logger.debug(f"Handling key {'.'.join(keys)} in config at path {config_file}")
 
-        # try:
-        nested_value_schema_from_target_signature = _get_schema_from_target(value)
-        # except omegaconf.errors.InterpolationToMissingValueError:
-        #     logger.warning(
-        #         f"Unable to get the schema for {value['_target_']} at key {'.'.join(keys)} "
-        #         f"in file {config_file}."
-        #     )
-        #     continue
+        nested_value_schema = _get_schema_from_target(value)
 
-        if "$defs" in nested_value_schema_from_target_signature:
+        if "$defs" in nested_value_schema:
             # note: can't have a $defs key in the schema.
             schema.setdefault("$defs", {}).update(  # type: ignore
-                nested_value_schema_from_target_signature.pop("$defs")
+                nested_value_schema.pop("$defs")
             )
+            assert "properties" in nested_value_schema
 
-        logger.debug(
-            f"Getting schema from target {value['_target_']} at key {'.'.join(keys)} in "
-            f"{config_file}."
-        )
-
-        assert "properties" in nested_value_schema_from_target_signature
+        if is_top_level:
+            schema = _merge_dicts(schema, nested_value_schema, conflict_handler=overwrite)
+            continue
 
         parent_keys, last_key = keys[:-1], keys[-1]
         where_to_set: Schema | ObjectSchema = schema
         for key in parent_keys:
-            where_to_set = where_to_set.setdefault("properties", {}).setdefault(key, {})  # type: ignore
+            where_to_set = where_to_set.setdefault("properties", {}).setdefault(
+                key, {"type": "object"}
+            )  # type: ignore
+            if "_target_" not in where_to_set:
+                where_to_set["additionalProperties"] = True
+
+        logger.debug(f"Using schema from nested value at keys {keys}: {nested_value_schema}")
 
         if "properties" not in where_to_set:
-            where_to_set["properties"] = {last_key: nested_value_schema_from_target_signature}  # type: ignore
+            where_to_set["properties"] = {last_key: nested_value_schema}  # type: ignore
         elif last_key not in where_to_set["properties"]:
             assert isinstance(last_key, str)
-            where_to_set["properties"][last_key] = nested_value_schema_from_target_signature  # type: ignore
+            where_to_set["properties"][last_key] = nested_value_schema  # type: ignore
         else:
             where_to_set["properties"] = _merge_dicts(  # type: ignore
                 where_to_set["properties"],
-                nested_value_schema_from_target_signature,  # type: ignore
+                {last_key: nested_value_schema},  # type: ignore
+                conflict_handler=overwrite,
             )
-            raise NotImplementedError("todo: use merge_dicts here")
 
     return schema
 
@@ -953,24 +928,16 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
                 by_alias=False,
             )
             json_schema = typing.cast(Schema, json_schema)
-
-            # if "$defs" in json_schema:
-            #     for key, class_schema in list(json_schema["$defs"].items()):
-            #         logger.debug(f"Before resolving {key}: {json_schema}")
-            #         json_schema["$defs"].pop(key)
-            #         class_schema["title"] = key
-            #         expanded = json.dumps(json_schema).replace(
-            #             json.dumps({"$ref": f"#/$defs/{key}"}), json.dumps(class_schema)
-            #         )
-            #         logger.debug(f"Expanded: {expanded}")
-            #         json_schema = json.loads(expanded)
-            #         logger.debug(f"After resolving {key}: {json_schema}")
-            #     assert False, json_schema
         assert "properties" in json_schema
     except pydantic.PydanticSchemaGenerationError as e:
         raise NotImplementedError(f"Unable to get the schema with pydantic: {e}")
 
     assert "properties" in json_schema
+
+    # Add a description
+    json_schema["description"] = f"Based on the signature of {target}.\n" + json_schema.get(
+        "description", ""
+    )
 
     docs_to_search: list[dp.Docstring] = []
 
@@ -1003,6 +970,25 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
 
     if config.get("_partial_"):
         json_schema["required"] = []
+    # Add some info on the target.
+    if "_target_" not in json_schema["properties"]:
+        json_schema["properties"]["_target_"] = {}
+    else:
+        assert isinstance(json_schema["properties"]["_target_"], dict)
+    json_schema["properties"]["_target_"].update(
+        PropertySchema(
+            type="string",
+            title="Target",
+            const=config["_target_"],
+            # pattern=r"", # todo: Use a pattern to match python module import strings.
+            description=(
+                f"Target to instantiate, in this case: `{target}`\n"
+                # f"* Source: <file://{relative_to_cwd(inspect.getfile(target))}>\n"
+                # f"* Config file: <file://{config_file}>\n"
+                f"See the Hydra docs for '_target_': https://hydra.cc/docs/advanced/instantiate_objects/overview/\n"
+            ),
+        )
+    )
 
     # if the target takes **kwargs, then we don't restrict additional properties.
     json_schema["additionalProperties"] = inspect.getfullargspec(target).varkw is not None

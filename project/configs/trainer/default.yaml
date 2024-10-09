@@ -1,5 +1,7 @@
+defaults:
+  - callbacks: default.yaml
+  - logger: null # use trainer/logger=wandb to enable wandb logging.
 _target_: lightning.Trainer
-logger: null
 accelerator: auto
 strategy: auto
 devices: 1

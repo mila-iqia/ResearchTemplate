@@ -1,0 +1,115 @@
+batch.0:
+  device: cpu
+  max: '2.821e+00'
+  mean: '1.432e-02'
+  min: '-4.242e-01'
+  shape:
+  - 128
+  - 1
+  - 28
+  - 28
+  sum: '1.437e+03'
+batch.1:
+  device: cpu
+  max: 9
+  mean: '4.242e+00'
+  min: 0
+  shape:
+  - 128
+  sum: 543
+grads.network.params.0:
+  device: cpu
+  max: '1.65e-02'
+  mean: '2.109e-03'
+  min: '-8.628e-03'
+  shape:
+  - 32
+  sum: '6.748e-02'
+grads.network.params.1:
+  device: cpu
+  max: '1.893e-02'
+  mean: '-1.55e-05'
+  min: '-1.627e-02'
+  shape:
+  - 3
+  - 3
+  - 1
+  - 32
+  sum: '-4.463e-03'
+grads.network.params.2:
+  device: cpu
+  max: '2.053e-02'
+  mean: '1.196e-03'
+  min: '-1.783e-02'
+  shape:
+  - 64
+  sum: '7.653e-02'
+grads.network.params.3:
+  device: cpu
+  max: '2.25e-02'
+  mean: '3.613e-04'
+  min: '-2.352e-02'
+  shape:
+  - 3
+  - 3
+  - 32
+  - 64
+  sum: '6.659e+00'
+grads.network.params.4:
+  device: cpu
+  max: '2.231e-02'
+  mean: '2.332e-04'
+  min: '-2.018e-02'
+  shape:
+  - 256
+  sum: '5.970e-02'
+grads.network.params.5:
+  device: cpu
+  max: '5.356e-02'
+  mean: '3.131e-05'
+  min: '-4.563e-02'
+  shape:
+  - 3136
+  - 256
+  sum: '2.514e+01'
+grads.network.params.6:
+  device: cpu
+  max: '6.484e-02'
+  mean: '-1.397e-09'
+  min: '-8.046e-02'
+  shape:
+  - 10
+  sum: '-1.397e-08'
+grads.network.params.7:
+  device: cpu
+  max: '7.496e-02'
+  mean: '-3.376e-10'
+  min: '-8.565e-02'
+  shape:
+  - 256
+  - 10
+  sum: '-8.643e-07'
+outputs.logits:
+  device: cpu
+  max: '8.092e-01'
+  mean: '-2.764e-02'
+  min: '-1.135e+00'
+  shape:
+  - 128
+  - 10
+  sum: '-3.538e+01'
+outputs.loss:
+  device: cpu
+  max: '2.303e+00'
+  mean: '2.303e+00'
+  min: '2.303e+00'
+  shape: []
+  sum: '2.303e+00'
+outputs.y:
+  device: cpu
+  max: 9
+  mean: '4.242e+00'
+  min: 0
+  shape:
+  - 128
+  sum: 543

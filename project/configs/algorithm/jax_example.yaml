@@ -1,10 +1,12 @@
-# This config show how you can customize use a config file to configure the example algorithm.
+# Config for the JaxExample algorithm
+defaults:
+  - network: jax_cnn
 
 _target_: project.algorithms.jax_example.JaxExample
-# NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
-# that will accept the datamodule and network and return the algo.
+# NOTE: Why _partial_ here? Because the config doesn't create the algo directly.
+# The datamodule is instantiated first and then passed to the algorithm.
 _partial_: true
 hp:
-  lr: 1e-3
+  lr: 0.001
   seed: 123
   debug: False

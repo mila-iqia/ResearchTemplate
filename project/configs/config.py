@@ -15,16 +15,9 @@ LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
 @dataclass
 class Config:
-    """All the options required for a run. This dataclass acts as a schema for the Hydra configs.
+    """The options required for a run. This dataclass acts as a structure for the Hydra configs.
 
     For more info, see https://hydra.cc/docs/tutorials/structured_config/schema/
-    """
-
-    datamodule: Any
-    """Configuration for the datamodule (dataset + transforms + dataloader creation).
-
-    This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
-    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
     """
 
     algorithm: Any
@@ -37,8 +30,12 @@ class Config:
     For more info, see the [instantiate_algorithm][project.experiment.instantiate_algorithm] function.
     """
 
-    network: Any
-    """The network to use."""
+    datamodule: Any | None = None
+    """Configuration for the datamodule (dataset + transforms + dataloader creation).
+
+    This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
+    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
+    """
 
     trainer: dict = field(default_factory=dict)
     """Keyword arguments for the Trainer constructor."""

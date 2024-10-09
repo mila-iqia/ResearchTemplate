@@ -4,6 +4,7 @@ defaults:
 trainer:
   accelerator: gpu
   devices: 1
+
 hydra:
   mode: MULTIRUN
   launcher:

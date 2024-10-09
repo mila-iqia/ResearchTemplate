@@ -11,7 +11,7 @@ an instantiated object instead of a config.
 
 from __future__ import annotations
 
-import dataclasses
+import copy
 import functools
 import logging
 import os
@@ -20,22 +20,17 @@ from dataclasses import dataclass
 from logging import getLogger as get_logger
 from typing import Any
 
+import hydra
+import hydra.utils
 import hydra_zen
 import rich.console
 import rich.logging
 import rich.traceback
-import torch
+from hydra_zen.typing import Builds
 from lightning import Callback, LightningModule, Trainer, seed_everything
-from omegaconf import DictConfig
-from torch import nn
 
 from project.configs.config import Config
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
-from project.utils.hydra_utils import get_outer_class
-from project.utils.typing_utils import Dataclass
-from project.utils.typing_utils.protocols import DataModule, Module
+from project.utils.typing_utils.protocols import DataModule
 from project.utils.utils import validate_datamodule
 
 logger = get_logger(__name__)
@@ -60,8 +55,7 @@ class Experiment:
     """
 
     algorithm: LightningModule
-    network: nn.Module
-    datamodule: DataModule
+    datamodule: DataModule | None
     trainer: Trainer
 
 
@@ -85,14 +79,12 @@ def setup_experiment(experiment_config: Config) -> Experiment:
 
     datamodule = instantiate_datamodule(experiment_config.datamodule)
 
-    network = instantiate_network(experiment_config, datamodule=datamodule)
-
-    algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule, network=network)
+    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
 
     return Experiment(
         trainer=trainer,
         algorithm=algorithm,
-        network=network,
+        # network=network,
         datamodule=datamodule,
     )
 
@@ -140,43 +132,42 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
     # instantiate all the callbacks
     callback_configs = experiment_config.trainer.pop("callbacks", {})
     callback_configs = {k: v for k, v in callback_configs.items() if v is not None}
-    callbacks: dict[str, Callback] | None = hydra_zen.instantiate(callback_configs)
-    # Create the loggers, if any.
-    loggers: dict[str, Any] | None = instantiate(experiment_config.trainer.pop("logger", {}))
-    # Create the Trainer.
-    assert isinstance(experiment_config.trainer, dict)
-    if experiment_config.debug:
-        logger.info("Setting the max_epochs to 1, since the 'debug' flag was passed.")
-        experiment_config.trainer["max_epochs"] = 1
-    if "_target_" not in experiment_config.trainer:
-        experiment_config.trainer["_target_"] = Trainer
-
-    trainer = instantiate(
-        experiment_config.trainer,
-        callbacks=list(callbacks.values()) if callbacks else None,
-        logger=list(loggers.values()) if loggers else None,
+    callbacks: dict[str, Callback] | None = hydra.utils.instantiate(
+        callback_configs, _convert_="object"
     )
-    assert isinstance(trainer, Trainer)
+    # Create the loggers, if any.
+    loggers: dict[str, Any] | None = hydra.utils.instantiate(
+        experiment_config.trainer.pop("logger", {})
+    )
+
+    # Create the Trainer.
+
+    # BUG: `hydra.utils.instantiate` doesn't work with override **kwargs when some of them are
+    # dataclasses (e.g. a callback).
+    # trainer = hydra.utils.instantiate(
+    #     config,
+    #     callbacks=list(callbacks.values()) if callbacks else None,
+    #     logger=list(loggers.values()) if loggers else None,
+    # )
+    assert isinstance(experiment_config.trainer, dict)
+    config = copy.deepcopy(experiment_config.trainer)
+    target = hydra.utils.get_object(config.pop("_target_"))
+    _callbacks = list(callbacks.values()) if callbacks else None
+    _loggers = list(loggers.values()) if loggers else None
+
+    trainer = target(**config, callbacks=_callbacks, logger=_loggers)
     return trainer
 
 
-def instantiate_datamodule(datamodule_config: DictConfig | Dataclass | DataModule) -> DataModule:
+def instantiate_datamodule(
+    datamodule_config: Builds[type[DataModule]] | DataModule | None,
+) -> DataModule | None:
     """Instantiate the datamodule from the configuration dict.
 
     Any interpolations in the config will have already been resolved by the time we get here.
     """
-
-    # if hasattr(experiment_config.algorithm, "batch_size"):
-    #     # The algorithm has the batch size as a hyper-parameter.
-    #     algo_batch_size = getattr(experiment_config.algorithm, "batch_size")
-    #     assert isinstance(algo_batch_size, int)
-    #     logger.info(
-    #         f"Overwriting `batch_size` from datamodule config with the value on the Algorithm "
-    #         f"hyper-parameters: {algo_batch_size}"
-    #     )
-    #     datamodule_overrides["batch_size"] = algo_batch_size
-
-    datamodule: DataModule
+    if not datamodule_config:
+        return None
     if isinstance(datamodule_config, DataModule):
         logger.info(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
@@ -186,39 +177,14 @@ def instantiate_datamodule(datamodule_config: DictConfig | Dataclass | DataModul
     else:
         logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
         datamodule = instantiate(datamodule_config)
-        assert isinstance(datamodule, DataModule)
+        # assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)
     return datamodule
 
 
-def get_experiment_device(experiment_config: Config | DictConfig) -> torch.device:
-    if experiment_config.trainer.get("accelerator", "cpu") == "gpu":
-        return torch.device("cuda", torch.cuda.current_device())
-    return torch.device("cpu")
-
-
-def instantiate_network(experiment_config: Config, datamodule: DataModule) -> nn.Module:
-    """Creates the network given the configs."""
-    # todo: Should we wrap flax.linen.Modules into torch modules automatically for torch-based algos?
-    device = get_experiment_device(experiment_config)
-
-    network_config = experiment_config.network
-    if isinstance(network_config, nn.Module):
-        logger.warning(
-            RuntimeWarning(
-                f"The network config is a nn.Module. Consider using a _target_ or _partial_"
-                f"in a config instead, so the config stays lightweight. (network={network_config})"
-            )
-        )
-        return network_config.to(device=device)
-
-    with device:
-        return hydra_zen.instantiate(network_config)
-
-
 def instantiate_algorithm(
-    experiment_config: Config, datamodule: DataModule, network: nn.Module
+    algorithm_config: Config, datamodule: DataModule | None
 ) -> LightningModule:
     """Function used to instantiate the algorithm.
 
@@ -228,8 +194,10 @@ def instantiate_algorithm(
 
     The instantiated datamodule and network will be passed to the algorithm's constructor.
     """
+    # TODO: The algorithm is now always instantiated on the CPU, whereas it used to be instantiated
+    # directly on the default device (GPU).
     # Create the algorithm
-    algo_config = experiment_config.algorithm
+    algo_config = algorithm_config
 
     if isinstance(algo_config, LightningModule):
         logger.info(
@@ -238,79 +206,29 @@ def instantiate_algorithm(
         )
         return algo_config
 
-    if isinstance(algo_config, dict | DictConfig):
-        if "_target_" not in algo_config:
-            raise NotImplementedError(
-                "The algorithm config, if a dict, should have a _target_ set to an Algorithm class."
-            )
-        if algo_config.get("_partial_", False):
-            algo_partial_fn: functools.partial[LightningModule] = instantiate(algo_config)
-            algorithm = algo_partial_fn(datamodule=datamodule, network=network)
+    if datamodule:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
+    else:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config)
+
+    if isinstance(algo_or_algo_partial, functools.partial):
+        if datamodule:
+            algorithm = algo_or_algo_partial(datamodule=datamodule)
         else:
-            algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
+            algorithm = algo_or_algo_partial()
+    else:
+        # logger.warning(
+        #     f"Your algorithm config {algo_config} doesn't have '_partial_: true' set, which is "
+        #     f"not recommended (since we can't pass the datamodule to the constructor)."
+        # )
+        algorithm = algo_or_algo_partial
 
-        if not isinstance(algorithm, LightningModule):
-            raise NotImplementedError(
-                f"The algorithm config didn't create a LightningModule instance:\n"
-                f"{algo_config=}\n"
-                f"{algorithm=}"
+    if not isinstance(algorithm, LightningModule):
+        logger.warning(
+            UserWarning(
+                f"Your algorithm ({algorithm}) is not a LightningModule. Beware that this isn't "
+                f"explicitly supported at the moment."
             )
-        return algorithm
-
-    if hasattr(algo_config, "_target_"):
-        # A dataclass of some sort, with a _target_ attribute.
-        if hydra_zen.is_partial_builds(algo_config):
-            logger.info(f"Instantiating partial for algorithm {hydra_zen.get_target(algo_config)}")
-            algo_partial = instantiate(algo_config)
-            assert isinstance(algo_partial, functools.partial)
-            algorithm = algo_partial(network=network, datamodule=datamodule)
-        else:
-            algorithm = instantiate(algo_config, datamodule=datamodule, network=network)
-        assert isinstance(algorithm, LightningModule), algorithm
-        return algorithm
-
-    if not dataclasses.is_dataclass(algo_config):
-        if issubclass(algo_class := get_outer_class(type(algo_config)), LightningModule):
-            return algo_class(datamodule=datamodule, network=network, hp=algo_config)
-
-        raise NotImplementedError(
-            f"For now the algorithm config can either have a _target_ set to an Algorithm class, "
-            f"or configure an inner dataclass of a LightningModule (for example a "
-            f"'MyAlgorithm.HParams'-like dataclass). Got:\n{algo_config=}"
         )
 
-    algorithm_type: type[LightningModule] = get_outer_class(type(algo_config))
-    assert isinstance(
-        algo_config,
-        algorithm_type.HParams,  # type: ignore
-    ), "HParams type should match model type"
-
-    algorithm = algorithm_type(
-        datamodule=datamodule,
-        network=network,
-        hp=algo_config,
-    )
     return algorithm
-
-
-def instantiate_network_from_hparams(network_hparams: Dataclass, datamodule: DataModule) -> Module:
-    """TODO: Refactor this if possible. Shouldn't be as complicated as it currently is.
-
-    Perhaps we could register handler functions for each pair of datamodule and network type, a bit
-    like a multiple dispatch?
-    """
-    network_type = get_outer_class(type(network_hparams))
-    assert issubclass(network_type, nn.Module)
-    assert isinstance(
-        network_hparams,
-        network_type.HParams,  # type: ignore
-    ), "HParams type should match net type"
-    if isinstance(datamodule, ImageClassificationDataModule):
-        # if issubclass(network_type, ImageClassifierNetwork):
-        return network_type(
-            in_channels=datamodule.dims[0],
-            n_classes=datamodule.num_classes,  # type: ignore
-            hparams=network_hparams,
-        )
-
-    raise NotImplementedError(datamodule, network_hparams)

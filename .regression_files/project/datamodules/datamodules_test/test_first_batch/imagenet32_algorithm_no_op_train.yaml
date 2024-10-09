@@ -1,0 +1,19 @@
+'0':
+  device: cpu
+  max: '2.640e+00'
+  mean: '3.701e-03'
+  min: '-2.118e+00'
+  shape:
+  - 64
+  - 3
+  - 32
+  - 32
+  sum: '7.277e+02'
+'1':
+  device: cpu
+  max: 993
+  mean: '4.871e+02'
+  min: 1
+  shape:
+  - 64
+  sum: 31176

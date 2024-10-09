@@ -7,23 +7,32 @@ python project/main.py algorithm=example
 ```
 """
 
-import dataclasses
-import functools
+from collections.abc import Sequence
 from logging import getLogger
-from typing import Any, Literal
+from typing import Literal, TypeVar
 
 import torch
+from hydra_zen.typing import Builds, PartialBuilds
 from lightning import LightningModule
-from omegaconf import DictConfig
+from lightning.pytorch.callbacks.callback import Callback
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 
+from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import instantiate
 
 logger = getLogger(__name__)
+
+
+# NOTE: These are just type hints. Don't worry about it. It's just to make the code more readable.
+T = TypeVar("T")
+# Config that returns the object of type T when instantiated.
+_Config = Builds[type[T]]
+# Config that returns a function that creates the object of type T when instantiated.
+_PartialConfig = PartialBuilds[type[T]]
 
 
 class ExampleAlgorithm(LightningModule):
@@ -32,36 +41,52 @@ class ExampleAlgorithm(LightningModule):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: torch.nn.Module,
-        optimizer_config: Any = AdamConfig(lr=3e-4),
+        network: _Config[torch.nn.Module],
+        optimizer: _PartialConfig[Optimizer] = AdamConfig(lr=3e-4),
+        init_seed: int = 42,
     ):
         """Create a new instance of the algorithm.
 
-        Parameters
-        ----------
-        datamodule: Object used to load train/val/test data. See the lightning docs for the \
-            `LightningDataModule` class more info.
-        network: The network to train.
-        optimizer_config: Configuration options for the Optimizer.
+        Parameters:
+            datamodule: Object used to load train/val/test data.
+                See the lightning docs for [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule]
+                for more info.
+            network: The config of the network to instantiate and train.
+            optimizer: The config for the Optimizer. Instantiating this will return a function \
+                (a [functools.partial][]) that will create the Optimizer given the hyper-parameters.
+            init_seed: The seed to use when initializing the weights of the network.
         """
         super().__init__()
         self.datamodule = datamodule
-        self.network = network
-        self.optimizer_config = optimizer_config
-        assert dataclasses.is_dataclass(optimizer_config) or isinstance(
-            optimizer_config, dict | DictConfig
-        ), optimizer_config
+        self.network_config = network
+        self.optimizer_config = optimizer
+        self.init_seed = init_seed
 
+        # Save hyper-parameters.
+        self.save_hyperparameters(
+            {
+                "network_config": self.network_config,
+                "optimizer_config": self.optimizer_config,
+                "init_seed": init_seed,
+            }
+        )
+
+        # Small fix for the `device` property in LightningModule, which is CPU by default.
+        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
-        # Do a forward pass to initialize any lazy weights. This is necessary for distributed
-        # training and to infer shapes.
-        _ = self.network(self.example_input_array)
 
-        # Save hyper-parameters.
-        self.save_hyperparameters(ignore=["datamodule", "network"])
+        with torch.random.fork_rng():
+            # deterministic weight initialization
+            torch.manual_seed(self.init_seed)
+            self.network = instantiate(self.network_config)
+
+            if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
+                # Do a forward pass to initialize any lazy weights. This is necessary for
+                # distributed training and to infer shapes.
+                _ = self.network(self.example_input_array)
 
     def forward(self, input: Tensor) -> Tensor:
         logits = self.network(input)
@@ -91,22 +116,14 @@ class ExampleAlgorithm(LightningModule):
         return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self):
-        optimizer_partial: functools.partial[Optimizer]
-        # todo: why are there two cases here? CLI vs programmatically? Why are they different?
-        if isinstance(self.optimizer_config, functools.partial):
-            optimizer_partial = self.optimizer_config
-        else:
-            optimizer_partial = instantiate(self.optimizer_config)
+        # Instantiate the optimizer config into a functools.partial object.
+        optimizer_partial = instantiate(self.optimizer_config)
+        # Call the functools.partial object, passing the parameters as an argument.
         optimizer = optimizer_partial(self.parameters())
+        # This then returns the optimizer.
         return optimizer
 
-    @property
-    def device(self) -> torch.device:
-        """Small fixup for the `device` property in LightningModule, which is CPU by default."""
-        if self._device.type == "cpu":
-            self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
-        device = self._device
-        # make this more explicit to always include the index
-        if device.type == "cuda" and device.index is None:
-            return torch.device("cuda", index=torch.cuda.current_device())
-        return device
+    def configure_callbacks(self) -> Sequence[Callback] | Callback:
+        return [
+            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+        ]

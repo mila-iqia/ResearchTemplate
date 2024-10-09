@@ -9,8 +9,9 @@ from abc import ABC
 from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, TypeVar, get_args
+from typing import Any, Generic, Literal, TypeVar, get_args
 
+import jax
 import lightning
 import pytest
 import torch
@@ -19,7 +20,7 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.testutils import ParametrizedFixture, seeded_rng
+from project.utils.testutils import ParametrizedFixture
 from project.utils.typing_utils import PyTree, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
@@ -53,15 +54,17 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         self,
         experiment_config: Config,
         datamodule: DataModule,
-        network: torch.nn.Module,
         seed: int,
     ):
         """Checks that the weights initialization is consistent given the a random seed."""
-        with seeded_rng(seed):
-            algorithm_1 = instantiate_algorithm(experiment_config, datamodule, network)
 
-        with seeded_rng(seed):
-            algorithm_2 = instantiate_algorithm(experiment_config, datamodule, network)
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
+            algorithm_1 = instantiate_algorithm(experiment_config.algorithm, datamodule)
+
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
+            algorithm_2 = instantiate_algorithm(experiment_config.algorithm, datamodule)
 
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
 
@@ -71,10 +74,13 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Checks that the forward pass output is consistent given the a random seed and a given
         input."""
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             out1 = forward_pass(algorithm, forward_pass_input)
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             out2 = forward_pass(algorithm, forward_pass_input)
+
         torch.testing.assert_close(out1, out2)
 
     # @pytest.mark.timeout(10)
@@ -84,7 +90,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
-        devices: int | list[int],
+        devices: int | list[int] | Literal["auto"],
         tmp_path: Path,
     ):
         """Check that the backward pass is reproducible given the same input, weights, and random
@@ -93,7 +99,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         algorithm_1 = copy.deepcopy(algorithm)
         algorithm_2 = copy.deepcopy(algorithm)
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm_1,
@@ -108,7 +115,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         gradients_1 = gradients_callback.grads
         training_step_outputs_1 = gradients_callback.outputs
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm_2,
@@ -118,7 +126,6 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
                 callbacks=[gradients_callback],
                 tmp_path=tmp_path / "run2",
             )
-
         batch_2 = gradients_callback.batch
         gradients_2 = gradients_callback.grads
         training_step_outputs_2 = gradients_callback.outputs
@@ -131,19 +138,18 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         self,
         experiment_config: Config,
         datamodule: DataModule,
-        network: torch.nn.Module,
         seed: int,
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
-        with seeded_rng(seed):
-            algorithm = instantiate_algorithm(
-                experiment_config, datamodule=datamodule, network=network
-            )
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
+            algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
         tensor_regression.check(
             algorithm.state_dict(),
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_forward_pass_is_reproducible(
@@ -154,13 +160,16 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the forward pass is reproducible given the same input and random seed."""
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             out = forward_pass(algorithm, forward_pass_input)
+
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_backward_pass_is_reproducible(
@@ -176,7 +185,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Check that the backward pass is reproducible given the same weights, inputs and random
         seed."""
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm,
@@ -210,6 +220,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def __init_subclass__(cls) -> None:
@@ -234,7 +245,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         # that have the ImageNet datamodule as their target (or a subclass of ImageNetDataModule).
 
     @pytest.fixture(scope="session")
-    def forward_pass_input(self, training_batch: PyTree[torch.Tensor]):
+    def forward_pass_input(self, training_batch: PyTree[torch.Tensor], device: torch.device):
         """Extracts the model input from a batch of data coming from the dataloader.
 
         Overwrite this if your batches are not tuples of tensors (i.e. if your algorithm isn't a
@@ -242,7 +253,15 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """
         # By default, assume that the batch is a tuple of tensors.
         batch = training_batch
-        if isinstance(batch, torch.Tensor):
+
+        def to_device(v):
+            if hasattr(v, "to"):
+                return v.to(device)
+            return v
+
+        batch = jax.tree.map(to_device, batch)
+
+        if isinstance(batch, torch.Tensor | dict):
             return batch
         if not is_sequence_of(batch, torch.Tensor):
             raise NotImplementedError(
@@ -253,14 +272,14 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             )
         assert len(batch) >= 1
         input = batch[0]
-        return input
+        return input.to(device)
 
     def do_one_step_of_training(
         self,
         algorithm: AlgorithmType,
         datamodule: LightningDataModule,
         accelerator: str,
-        devices: int | list[int],
+        devices: int | list[int] | Literal["auto"],
         callbacks: list[lightning.Callback],
         tmp_path: Path,
     ):

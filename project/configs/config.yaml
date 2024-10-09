@@ -1,12 +1,9 @@
 defaults:
   - base_config
   - _self_
-  - datamodule: cifar10
-  - algorithm: example
-  - network: resnet18
+  - optional algorithm: ???
+  - optional datamodule: null
   - trainer: default.yaml
-  - trainer/callbacks: default.yaml
-  - trainer/logger: null # use logger=wandb to enable wandb logging.
   - hydra: default.yaml
 
   # Allows launching LOTS of runs in parallel on a cluster thanks to the submitit launcher.
