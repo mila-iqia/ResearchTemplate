@@ -32,6 +32,8 @@ _MetricsT = TypeVar(
 )
 """Type Variable for the metrics produced by the algorithm."""
 
+__all__ = ["JaxModule", "JaxCallback", "JaxTrainer"]
+
 
 @runtime_checkable
 class JaxModule(Protocol[Ts, _B, _MetricsT]):

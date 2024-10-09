@@ -53,12 +53,89 @@ from .jax_rl_example import (
     Trajectory,
     TrajectoryWithLastObs,
     _actor,
-    make_actor,
     render_episode,
 )
 from .testsuites.algorithm_tests import LearningAlgorithmTests
 
 logger = getLogger(__name__)
+
+
+def train_ours(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    train_fn: Callable[[JaxRLExample, chex.PRNGKey], tuple[PPOState, EvalMetrics]],
+    n_agents: int | None = None,
+):
+    print("Pure Jax (ours)")
+    # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
+
+    print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
+    start = time.perf_counter()
+    train_state, evaluations = train_fn(algo, rng)
+    jax.block_until_ready((train_state, evaluations))
+    print(f"Finished training in {time.perf_counter() - start} seconds.")
+    return train_state, evaluations
+
+
+def train_rejax(
+    env: Environment[gymnax.EnvState, TEnvParams],
+    env_params: TEnvParams,
+    hp: PPOHParams,
+    rng: chex.PRNGKey,
+):
+    print("Rejax")
+    algo = rejax.PPO.create(
+        env=env,
+        env_params=env_params,
+        num_envs=hp.num_envs,  # =100,
+        num_steps=hp.num_steps,  # =100,
+        num_epochs=hp.num_epochs,  # =10,
+        num_minibatches=hp.num_minibatches,  # =10,
+        learning_rate=hp.learning_rate,  # =0.001,
+        max_grad_norm=hp.max_grad_norm,  # =10,
+        total_timesteps=hp.total_timesteps,  # =150_000,
+        eval_freq=hp.eval_freq,  # =2000,
+        gamma=hp.gamma,  # =0.995,
+        gae_lambda=hp.gae_lambda,  # =0.95,
+        clip_eps=hp.clip_eps,  # =0.2,
+        ent_coef=hp.ent_coef,  # =0.0,
+        vf_coef=hp.vf_coef,  # =0.5,
+        normalize_observations=hp.normalize_observations,  # =True,
+    )
+    print("Compiling...")
+    start = time.perf_counter()
+    train_fn = jax.jit(algo.train).lower(rng).compile()
+    print(f"Compiled in {time.perf_counter() - start} seconds.")
+    print("Training...")
+    start = time.perf_counter()
+    ts, eval = train_fn(rng)
+    jax.block_until_ready(ts)
+    print(f"Finished training in {time.perf_counter() - start} seconds.")
+    return algo, ts, eval
+
+    # print(ts)
+
+
+def train_lightning(
+    algo: JaxRLExample,
+    rng: chex.PRNGKey,
+    trainer: lightning.Trainer,
+):
+    # Fit with pytorch-lightning.
+    print("Lightning")
+
+    module = PPOLightningModule(
+        learner=algo,
+        ts=algo.init_train_state(rng),
+    )
+
+    start = time.perf_counter()
+    trainer.fit(module)
+    print(f"Trained in {time.perf_counter() - start:.1f} seconds.")
+
+    evaluation = trainer.validate(module)
+
+    return module.ts, evaluation
 
 
 @pytest.fixture(params=["Pendulum-v1"])
@@ -148,7 +225,7 @@ def rng(request: pytest.FixtureRequest) -> chex.PRNGKey:
 def max_epochs(algo: JaxRLExample, request: pytest.FixtureRequest) -> int:
     # This is the usual value: (75)
     # return 3  # shorter for tests?
-    default_max_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
+    default_max_epochs = int(np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int))
     return getattr(request, "param", default_max_epochs)
 
 
@@ -179,7 +256,7 @@ def _add_gitignore_if_needed(original_datadir: Path):
 
 
 @pytest.mark.slow
-@pytest.mark.timeout(35)
+# @pytest.mark.timeout(35)
 def test_train_ours(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
@@ -188,7 +265,7 @@ def test_train_ours(
     file_regression: FileRegressionFixture,
     tensor_regression: TensorRegressionFixture,
 ):
-    """Test our tweaked version of `rejax.PPO` algorithm using the `JaxRLExample.train` method."""
+    """Test our tweaked version of `rejax.PPO` using the `JaxRLExample.train` method."""
     _add_gitignore_if_needed(original_datadir)
     train_state, evaluations = algo.train(rng=rng)
 
@@ -202,15 +279,14 @@ def test_train_ours(
 
 
 @pytest.mark.slow
-@pytest.mark.timeout(35)
-def test_train_ours_with_trainer(
+# @pytest.mark.timeout(35)
+def test_train_ours_with_jax_trainer(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
     original_datadir: Path,
     trainer: JaxTrainer,
     tmp_path: Path,
     file_regression: FileRegressionFixture,
-    # ndarrays_regression: NDArraysRegressionFixture,
     tensor_regression: TensorRegressionFixture,
 ):
     """Test our tweaked version of `rejax.PPO` algorithm using a `JaxTrainer`."""
@@ -218,9 +294,7 @@ def test_train_ours_with_trainer(
     _add_gitignore_if_needed(original_datadir)
     train_fn = trainer.fit
 
-    train_state, evaluations = train_pure_jax(
-        algo, rng=rng, figures_dir=original_datadir, train_fn=train_fn
-    )
+    train_state, evaluations = train_ours(algo, rng=rng, train_fn=train_fn)
 
     # ndarrays_regression.check(dataclasses.asdict(evals))
     tensor_regression.check(
@@ -233,7 +307,6 @@ def test_train_ours_with_trainer(
 
 
 @pytest.mark.slow
-@pytest.mark.timeout(35)
 def test_rejax(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
@@ -284,7 +357,7 @@ def test_rejax(
 
 # Sort-of slow.
 @pytest.mark.slow
-@pytest.mark.timeout(70)
+# @pytest.mark.timeout(70)
 @pytest.mark.parametrize(
     "with_callbacks",
     [
@@ -317,7 +390,7 @@ def test_ours_with_vmap(
     train_fn = jax.vmap(trainer.fit, in_axes=(None, 0))
     rngs = jax.random.split(rng, n_agents)
 
-    train_state, evaluations = train_pure_jax(
+    train_state, evaluations = train_ours(
         algo, rng=rngs, figures_dir=original_datadir, train_fn=train_fn, n_agents=n_agents
     )
     tensor_regression.check(
@@ -482,33 +555,12 @@ class PPOLightningModule(lightning.LightningModule):
         self.log("val/episode_lengths", episode_lengths.mean().item(), batch_size=1)
         self.log("val/rewards", cumulative_rewards.mean().item(), batch_size=1)
 
-    def on_train_epoch_start(self) -> None:
-        if not isinstance(self.learner.env, gymnax.environments.environment.Environment):
-            return
-        assert self.trainer.log_dir is not None
-        gif_path = Path(self.trainer.log_dir) / f"epoch_{self.current_epoch}.gif"
-        self.learner.visualize(ts=self.ts, gif_path=gif_path)
-        return  # skip the rest for now while we compare the performance
-        actor = make_actor(ts=self.train_state, hp=self.hp)
-        render_episode(
-            actor=actor,
-            env=self.env,
-            env_params=self.env_params,
-            gif_path=gif_path,
-            num_steps=200,
-        )
-        return super().on_train_epoch_end()
-
     @override
     def configure_optimizers(self) -> Any:
         # todo: Note, this one isn't used atm!
         from torch.optim.adam import Adam
 
         return Adam(self.parameters(), lr=1e-3)
-
-    @override
-    def configure_callbacks(self) -> list[lightning.Callback]:
-        return [RlThroughputCallback()]
 
     @override
     def transfer_batch_to_device(
@@ -631,20 +683,29 @@ class TestJaxRLExample(LearningAlgorithmTests[JaxRLExample]):  # type: ignore
 @pytest.fixture
 def lightning_trainer(max_epochs: int, tmp_path: Path):
     return lightning.Trainer(
-        max_epochs=3,  # max_epochs,
+        max_epochs=max_epochs,
         # logger=CSVLogger(save_dir="logs/jax_rl_debug"),
+        logger=False,
         accelerator="auto",
-        devices="auto",
+        devices=1 if torch.cuda.is_available() else "auto",
         default_root_dir=tmp_path,
+        # barebones=True,
         # reload_dataloaders_every_n_epochs=1,  # todo: use this if we end up making a generator in train_dataloader
-        barebones=True,
+        enable_checkpointing=False,
+        enable_model_summary=True,
+        num_sanity_val_steps=0,
+        check_val_every_n_epoch=1,
+        limit_val_batches=0,
+        fast_dev_run=False,
+        detect_anomaly=False,
+        profiler=None,
     )
 
 
-# reducing the max_epochs from 75 down to 3 because it's just wayyy too slow otherwise.
+# reducing the max_epochs from 75 down to 10 because it's just wayyy too slow.
 @pytest.mark.slow
-@pytest.mark.timeout(80)
-@pytest.mark.parametrize("max_epochs", [3], indirect=True)
+# @pytest.mark.timeout(80)
+@pytest.mark.parametrize("max_epochs", [15], indirect=True)
 def test_lightning(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
@@ -664,82 +725,3 @@ def test_lightning(
     file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
     assert len(evaluations) == 1
     tensor_regression.check(evaluations[0])
-
-
-def train_pure_jax(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    figures_dir: Path,
-    train_fn: Callable[[JaxRLExample, chex.PRNGKey], tuple[PPOState, EvalMetrics]],
-    n_agents: int | None = None,
-):
-    print("Pure Jax (ours)")
-    # num_epochs = np.ceil(algo.hp.total_timesteps / algo.hp.eval_freq).astype(int)
-
-    print("Training" + (f" {n_agents} agents in parallel" if n_agents else "") + "...")
-    start = time.perf_counter()
-    train_state, evaluations = train_fn(algo, rng)
-    jax.block_until_ready((train_state, evaluations))
-    print(f"Finished training in {time.perf_counter() - start} seconds.")
-    return train_state, evaluations
-
-
-def train_lightning(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    trainer: lightning.Trainer,
-):
-    # Fit with pytorch-lightning.
-    print("Lightning")
-
-    module = PPOLightningModule(
-        learner=algo,
-        ts=algo.init_train_state(rng),
-    )
-
-    start = time.perf_counter()
-    trainer.fit(module)
-    print(f"Trained in {time.perf_counter() - start:.1f} seconds.")
-
-    evaluation = trainer.validate(module)
-
-    return module.ts, evaluation
-
-
-def train_rejax(
-    env: Environment[gymnax.EnvState, TEnvParams],
-    env_params: TEnvParams,
-    hp: PPOHParams,
-    rng: chex.PRNGKey,
-):
-    print("Rejax")
-    algo = rejax.PPO.create(
-        env=env,
-        env_params=env_params,
-        num_envs=hp.num_envs,  # =100,
-        num_steps=hp.num_steps,  # =100,
-        num_epochs=hp.num_epochs,  # =10,
-        num_minibatches=hp.num_minibatches,  # =10,
-        learning_rate=hp.learning_rate,  # =0.001,
-        max_grad_norm=hp.max_grad_norm,  # =10,
-        total_timesteps=hp.total_timesteps,  # =150_000,
-        eval_freq=hp.eval_freq,  # =2000,
-        gamma=hp.gamma,  # =0.995,
-        gae_lambda=hp.gae_lambda,  # =0.95,
-        clip_eps=hp.clip_eps,  # =0.2,
-        ent_coef=hp.ent_coef,  # =0.0,
-        vf_coef=hp.vf_coef,  # =0.5,
-        normalize_observations=hp.normalize_observations,  # =True,
-    )
-    print("Compiling...")
-    start = time.perf_counter()
-    train_fn = jax.jit(algo.train).lower(rng).compile()
-    print(f"Compiled in {time.perf_counter() - start} seconds.")
-    print("Training...")
-    start = time.perf_counter()
-    ts, eval = train_fn(rng)
-    jax.block_until_ready(ts)
-    print(f"Finished training in {time.perf_counter() - start} seconds.")
-    return algo, ts, eval
-
-    # print(ts)
