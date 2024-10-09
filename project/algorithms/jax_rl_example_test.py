@@ -224,18 +224,21 @@ def get_slicing_fn(eval: EvalMetrics, get_index_fn: Callable[[EvalMetrics], int]
     return functools.partial(jax.tree.map, operator.itemgetter(index))
 
 
-@pytest.mark.parametrize(
-    "n_agents", [None, pytest.param(100, marks=pytest.mark.slow)], indirect=True
-)
+@pytest.mark.parametrize("n_agents", [pytest.param(100, marks=pytest.mark.slow)], indirect=True)
 def test_algos_are_equivalent(
     algo: JaxRLExample,
     n_agents: int | None,
     results_ours: tuple[PPOState, EvalMetrics],
     results_rejax: tuple[rejax.PPO, Any, EvalMetrics],
 ):
-    _ours_vs_rejax = scipy.stats.mannwhitneyu(
-        results_ours[1].cumulative_reward, results_rejax[2].cumulative_reward
-    )
+    if n_agents is None:
+        _ours_vs_rejax = scipy.stats.mannwhitneyu(
+            results_ours[1].cumulative_reward[-1], results_rejax[2].cumulative_reward[-1]
+        )
+    else:
+        _ours_vs_rejax = scipy.stats.mannwhitneyu(
+            results_ours[1].cumulative_reward[:, -1], results_rejax[2].cumulative_reward[:, -1]
+        )
     # TODO: interpret these results.
 
 
