@@ -3,7 +3,9 @@ considered refs when possible.
 """
 
 import functools
+import inspect
 import re
+import types
 
 import lightning
 import torch
@@ -21,17 +23,16 @@ from project.utils.hydra_config_utils import import_object
 # Same as in the mkdocs_autorefs plugin.
 logger = get_plugin_logger(__name__)
 
-known_things = [
+default_reference_sources = [
     lightning.Trainer,
     lightning.LightningModule,
     lightning.LightningDataModule,
     torch.nn.Module,
 ]
-"""
-IDEA: IF we see `Trainer`, and we know that that's the `lightning.Trainer`, then we
-create the proper ref.
+"""These are some "known objects" that can be referenced with backticks anywhere in the docs.
 
-TODO: Ideally this would contain every object / class that we know of in this project.
+Additionally, if there were modules in here, then any of their public members can also be
+referenced.
 """
 
 
@@ -47,10 +48,28 @@ class CustomAutoRefPlugin(BasePlugin):
         # - `package.foo.bar` -> [package.foo.bar][] (only if `package.foo.bar` is importable)
         # - `baz` -> [baz][]
 
-        def _full_path(thing) -> str:
-            return thing.__module__ + "." + thing.__qualname__
+        # List of packages to import things from (in addition to the global )
+        referenced_packages: list[str] = page.meta.get("additional_python_references", [])
+        additional_objects: list[object] = _get_referencable_objects_from_doc_page_header(
+            referenced_packages
+        )
+        if referenced_packages:
+            additional_objects = [
+                obj
+                for obj in additional_objects
+                if (
+                    inspect.isfunction(obj)
+                    or inspect.isclass(obj)
+                    or inspect.ismodule(obj)
+                    or inspect.ismethod(obj)
+                )
+                and (hasattr(obj, "__name__") or hasattr(obj, "__qualname__"))
+            ]
 
-        known_thing_names = [t.__name__ for t in known_things]
+        known_objects_for_this_module = (
+            sum(map(_expand, default_reference_sources), []) + additional_objects
+        )
+        known_object_names = [t.__name__ for t in known_objects_for_this_module]
 
         new_markdown = []
         for line_index, line in enumerate(markdown.splitlines(keepends=True)):
@@ -63,8 +82,9 @@ class CustomAutoRefPlugin(BasePlugin):
 
             for match in matches:
                 thing_name = match
-                if "." not in thing_name and thing_name in known_thing_names:
-                    thing = known_things[known_thing_names.index(thing_name)]
+                if thing_name in known_object_names:
+                    # References like `JaxTrainer` (which are in a module that we're aware of).
+                    thing = known_objects_for_this_module[known_object_names.index(thing_name)]
                 else:
                     thing = _try_import_thing(thing_name)
 
@@ -81,6 +101,39 @@ class CustomAutoRefPlugin(BasePlugin):
             new_markdown.append(line)
 
         return "".join(new_markdown)
+
+
+def _expand(obj: types.ModuleType | object) -> list[object]:
+    if not inspect.ismodule(obj):
+        # The ref is something else (a class, function, etc.)
+        return [obj]
+
+    # The ref is a package, so we import everything from it.
+    # equivalent of `from package import *`
+    if hasattr(obj, "__all__"):
+        return [getattr(obj, name) for name in obj.__all__]
+    else:
+        objects_in_global_scope = [v for k, v in vars(obj).items() if not k.startswith("_")]
+        # Don't consider any external modules that were imported in the global scope.
+        source_file = inspect.getsourcefile(obj)
+        # too obtuse, but whatever
+        return [
+            v
+            for v in objects_in_global_scope
+            if not (inspect.ismodule(v) and inspect.getsourcefile(v) != source_file)
+        ]
+
+
+def _get_referencable_objects_from_doc_page_header(doc_page_references: list[str]):
+    additional_objects: list[object] = []
+    for package in doc_page_references:
+        additional_ref_source = import_object(package)
+        additional_objects.extend(_expand(additional_ref_source))
+    return additional_objects
+
+
+def _full_path(thing) -> str:
+    return thing.__module__ + "." + thing.__qualname__
 
 
 @functools.cache
