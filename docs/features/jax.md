@@ -10,13 +10,9 @@ There are lots of good reasons why you might want to let Lightning handle the tr
 which are very well described [here](https://lightning.ai/docs/pytorch/stable/).
 
 ??? note "What about end-to-end training in Jax?"
-    This template doesn't include a way to do end-to-end, fully-jitted training in Jax, however, it _might_ be possible to do so in this way:
 
-    - add a new configuration in the `trainer` config group, with a `_target_` pointing to a
-        trainer-like object with a `fit`, `evaluate` and `test` method mimicking those of PyTorch-Lightning.
-    - add a new configuration in the `algorithm` config group pointing to a learning algorithm class that isn't a LightningModule.
+    See the [Jax RL Example (coming soon!)](https://github.com/mila-iqia/ResearchTemplate/pull/55)
 
-    If you want an example of how to do this, please make an issue (or like an existing issue) on GitHub.
 
 ## `JaxExample`: a LightningModule that uses Jax
 

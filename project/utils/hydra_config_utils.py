@@ -111,8 +111,15 @@ def import_object(target_path: str):
     assert not target_path.endswith(
         ".py"
     ), "expect a valid python path like 'module.submodule.object'"
+    if "." not in target_path:
+        return importlib.import_module(target_path)
 
     parts = target_path.split(".")
+    try:
+        return importlib.import_module(name=parts[-1], package=".".join(parts[:-1]))
+    except (ModuleNotFoundError, AttributeError):
+        pass
+
     for i in range(1, len(parts)):
         module_name = ".".join(parts[:i])
         obj_path = parts[i:]
