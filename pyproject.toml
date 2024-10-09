@@ -62,9 +62,14 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["project", "docs"]
 norecursedirs = [".venv"]
-# todo: look into using https://github.com/scientific-python/pytest-doctestplus
 env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
-addopts = ["--doctest-modules", "--stats-rounding-precision=1"]
+addopts = [
+    # todo: look into using https://github.com/scientific-python/pytest-doctestplus
+    "--doctest-modules",
+    "--stats-rounding-precision=3",
+    # "--slow",
+    # "--regen-all",
+]
 markers = [
     "incremental: incremental testing support",
     "parametrize_when_used: Parametrize a test only when the argument is used.",
@@ -89,7 +94,7 @@ dev-dependencies = [
     "ruff>=0.6.0",
     "pytest-benchmark>=4.0.0",
     "pytest-cov>=5.0.0",
-    "tensor-regression>=0.0.6",
+    "tensor-regression>=0.0.8",
     "pytest-testmon>=2.1.1",
     "pre-commit>=3.8.0",
     "mktestdocs>=0.2.2",

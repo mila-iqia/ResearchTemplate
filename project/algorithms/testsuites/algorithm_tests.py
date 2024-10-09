@@ -20,7 +20,6 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.seeding import seeded_rng
 from project.utils.testutils import ParametrizedFixture
 from project.utils.typing_utils import PyTree, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
@@ -58,10 +57,13 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         seed: int,
     ):
         """Checks that the weights initialization is consistent given the a random seed."""
-        with seeded_rng(seed):
+
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             algorithm_1 = instantiate_algorithm(experiment_config.algorithm, datamodule)
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             algorithm_2 = instantiate_algorithm(experiment_config.algorithm, datamodule)
 
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
@@ -72,11 +74,11 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Checks that the forward pass output is consistent given the a random seed and a given
         input."""
 
-        with torch.random.fork_rng():
-            torch.manual_seed(seed)
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             out1 = forward_pass(algorithm, forward_pass_input)
-        with torch.random.fork_rng():
-            torch.manual_seed(seed)
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             out2 = forward_pass(algorithm, forward_pass_input)
 
         torch.testing.assert_close(out1, out2)
@@ -97,8 +99,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         algorithm_1 = copy.deepcopy(algorithm)
         algorithm_2 = copy.deepcopy(algorithm)
 
-        with torch.random.fork_rng():
-            torch.manual_seed(seed)
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm_1,
@@ -113,8 +115,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         gradients_1 = gradients_callback.grads
         training_step_outputs_1 = gradients_callback.outputs
 
-        with torch.random.fork_rng():
-            torch.manual_seed(seed)
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm_2,
@@ -140,13 +142,14 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
-        with torch.random.fork_rng():
-            torch.manual_seed(seed)
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
         tensor_regression.check(
             algorithm.state_dict(),
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_forward_pass_is_reproducible(
@@ -157,13 +160,16 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the forward pass is reproducible given the same input and random seed."""
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             out = forward_pass(algorithm, forward_pass_input)
+
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def test_backward_pass_is_reproducible(
@@ -179,7 +185,8 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Check that the backward pass is reproducible given the same weights, inputs and random
         seed."""
 
-        with seeded_rng(seed):
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            torch.random.manual_seed(seed)
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm,
@@ -213,6 +220,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
             additional_label=next(algorithm.parameters()).device.type,
+            include_gpu_name_in_stats=False,
         )
 
     def __init_subclass__(cls) -> None:

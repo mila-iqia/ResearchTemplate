@@ -60,19 +60,24 @@ algorithm & network & datamodule -- is used by --> some_other_test
 
 from __future__ import annotations
 
+import operator
 import os
 import sys
 import typing
-import warnings
 from collections import defaultdict
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Literal
 
+import jax
 import lightning.pytorch as pl
 import pytest
+import tensor_regression.stats
 import torch
+from _pytest.outcomes import Skipped, XFailed
+from _pytest.python import Function
+from _pytest.runner import CallInfo
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
@@ -90,7 +95,7 @@ from project.experiment import (
     setup_logging,
 )
 from project.main import PROJECT_NAME
-from project.utils.env_vars import REPO_ROOTDIR, SCRATCH
+from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
@@ -98,12 +103,11 @@ from project.utils.testutils import (
     default_marks_for_config_combinations,
     default_marks_for_config_name,
 )
-from project.utils.typing_utils import is_mapping_of, is_sequence_of
+from project.utils.typing_utils import is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
-    from _pytest.python import Function
 
     Param = str | tuple[str, ...] | ParameterSet
 
@@ -124,13 +128,11 @@ def original_datadir(original_datadir: Path):
     relative_portion = original_datadir.relative_to(REPO_ROOTDIR)
     datadir = REPO_ROOTDIR / ".regression_files"
 
-    use_scratch: bool = False  # todo: enable again later?
-
-    if SCRATCH and not datadir.exists() and use_scratch:
-        # puts a symlink .regression_files in the repo root that points to the same dir in $SCRATCH
-        actual_dir = SCRATCH / datadir.relative_to(REPO_ROOTDIR)
-        actual_dir.mkdir(parents=True, exist_ok=True)
-        datadir.symlink_to(actual_dir)
+    # if SCRATCH and not datadir.exists():
+    #     # puts a symlink .regression_files in the repo root that points to the same dir in $SCRATCH
+    #     actual_dir = SCRATCH / datadir.relative_to(REPO_ROOTDIR)
+    #     actual_dir.mkdir(parents=True, exist_ok=True)
+    #     datadir.symlink_to(actual_dir)
 
     return datadir / relative_portion
 
@@ -175,6 +177,7 @@ def command_line_arguments(
     datamodule_config: str | None,
     algorithm_network_config: str | None,
     overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
     experiment.
@@ -301,102 +304,19 @@ def train_dataloader(datamodule: DataModule) -> DataLoader:
 def training_batch(
     train_dataloader: DataLoader, device: torch.device
 ) -> tuple[Tensor, ...] | dict[str, Tensor]:
-    # Get a batch of data from the datamodule so we can initialize any lazy weights in the Network.
+    # Get a batch of data from the dataloader.
+
+    # The batch of data will always be the same because the dataloaders are passed a Generator
+    # object in their constructor.
+    assert isinstance(train_dataloader, DataLoader)
     dataloader_iterator = iter(train_dataloader)
-    batch = next(dataloader_iterator)
-    if is_sequence_of(batch, Tensor):
-        batch = tuple(t.to(device=device) for t in batch)
-        return batch
-    else:
-        assert is_mapping_of(batch, str, torch.Tensor)
-        batch = {k: v.to(device=device) for k, v in batch.items()}
-        return batch
 
+    with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
+        # TODO: This ugliness is because torchvision transforms use the global pytorch RNG!
+        torch.random.manual_seed(42)
+        batch = next(dataloader_iterator)
 
-# @pytest.fixture(scope="module")
-# def experiment(experiment_config: Config) -> Experiment:
-#     """Instantiates all the components of an experiment and returns them."""
-#     experiment = setup_experiment(experiment_config)
-#     return experiment
-
-
-def pytest_collection_modifyitems(config: pytest.Config, items: list[Function]):
-    # NOTE: One can select multiple marks like so: `pytest -m "fast or very_fast"`
-    cutoff_time: float | None = config.getoption("--shorter-than", default=None)  # type: ignore
-
-    if cutoff_time is not None:
-        if config.getoption("--slow"):
-            raise RuntimeError(
-                "Can't use both --shorter-than (a cutoff time) and --slow (also run slow tests) since slow tests have no cutoff time!"
-            )
-
-    # This -m flag could also be something more complicated like 'fast and not slow', but
-    # keeping it simple for now.
-    only_running_slow_tests = "slow" in config.getoption("-m", default="")  # type: ignore
-    add_timeout_to_unmarked_tests = False  # todo: Add option for this?
-
-    very_fast_time = DEFAULT_TIMEOUT / 10
-    very_fast_timeout_mark = pytest.mark.timeout(very_fast_time, func_only=False)
-
-    fast_time = DEFAULT_TIMEOUT
-    # NOTE: The setup time doesn't seem to be properly included in the timeout.
-    fast_timeout = pytest.mark.timeout(fast_time, func_only=True)
-
-    indices_to_remove: list[int] = []
-    for _node_index, node in enumerate(items):
-        # timeout value of the test. None for unknown length.
-        test_timeout: float | None = None
-        if node.get_closest_marker("very_fast"):
-            test_timeout = very_fast_time
-            node.add_marker(very_fast_timeout_mark)
-        elif node.get_closest_marker("fast"):
-            test_timeout = fast_time
-            node.add_marker(fast_timeout)
-        elif timeout_marker := node.get_closest_marker("timeout"):
-            test_timeout = timeout_marker.args[0]
-            assert isinstance(test_timeout, int | float)
-        elif node.get_closest_marker("slow"):
-            # pytest-skip-slow already handles this.
-            test_timeout = None
-            running_slow_tests = config.getoption("--slow")
-            if not running_slow_tests:
-                indices_to_remove.append(_node_index)
-                continue
-        elif add_timeout_to_unmarked_tests:
-            logger.debug(
-                f"Test {node.name} doesn't have a `fast`, `very_fast`, `slow` or `timeout` mark. "
-                "Assuming it's fast to run (after test setup)."
-            )
-            node.add_marker(fast_timeout)
-            test_timeout = fast_time
-
-        if cutoff_time is not None:
-            assert cutoff_time > 0
-            if test_timeout is not None:
-                assert test_timeout > 0
-                if test_timeout > cutoff_time:
-                    node.add_marker(
-                        pytest.mark.skip(f"Test takes longer than {cutoff_time}s to run.")
-                    )
-                    # Note: could also remove indices so we don't have thousands of skipped tests..
-                    indices_to_remove.append(_node_index)
-                    continue
-        elif only_running_slow_tests:
-            # IDEA: If we do pytest -m slow --slow, we'd also want to include tests that have a
-            # long(er) timeout than ...?
-            pass
-
-    if indices_to_remove:
-        removed = len(indices_to_remove)
-        total = len(items)
-        warnings.warn(
-            RuntimeWarning(
-                f"De-selecting {removed/total:.0%} of tests ({removed}/{total}) because of their length."
-            )
-        )
-
-    for index in sorted(indices_to_remove, reverse=True):
-        items.pop(index)
+    return jax.tree.map(operator.methodcaller("to", device=device), batch)
 
 
 @pytest.fixture(autouse=True)
@@ -612,28 +532,32 @@ def make_torch_deterministic():
 _test_failed_incremental: dict[str, dict[tuple[int, ...], str]] = {}
 
 
-def pytest_runtest_makereport(item, call):
-    """Used to setup the `pytest.mark.incremental` mark, as described in [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)."""
+def pytest_runtest_makereport(item: Function, call: CallInfo):
+    """Used to setup the `pytest.mark.incremental` mark, as described in the pytest docs.
 
-    if "incremental" in item.keywords:
-        # incremental marker is used
-        if call.excinfo is not None:
-            # the test has failed
-            # retrieve the class name of the test
-            cls_name = str(item.cls)
-            # retrieve the index of the test (if parametrize is used in combination with incremental)
-            parametrize_index = (
-                tuple(item.callspec.indices.values()) if hasattr(item, "callspec") else ()
-            )
-            # retrieve the name of the test function
-            test_name = item.originalname or item.name
-            # store in _test_failed_incremental the original name of the failed test
-            _test_failed_incremental.setdefault(cls_name, {}).setdefault(
-                parametrize_index, test_name
-            )
+    See [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)
+    """
+    if "incremental" not in item.keywords:
+        return
+    # incremental marker is used
+    # NOTE: Modified this part to also take into account the type of exception:
+    # - If the test raised a Skipped or XFailed, then we don't consider it as a "failure" and let
+    #   the following tests run.
+    if call.excinfo is not None and not call.excinfo.errisinstance((Skipped, XFailed)):  # type: ignore
+        # the test has failed
+        # retrieve the class name of the test
+        cls_name = str(item.cls)
+        # retrieve the index of the test (if parametrize is used in combination with incremental)
+        parametrize_index = (
+            tuple(item.callspec.indices.values()) if hasattr(item, "callspec") else ()
+        )
+        # retrieve the name of the test function
+        test_name = item.originalname or item.name
+        # store in _test_failed_incremental the original name of the failed test
+        _test_failed_incremental.setdefault(cls_name, {}).setdefault(parametrize_index, test_name)
 
 
-def pytest_runtest_setup(item):
+def pytest_runtest_setup(item: Function):
     """Used to setup the `pytest.mark.incremental` mark, as described in [this page](https://docs.pytest.org/en/7.1.x/example/simple.html#incremental-testing-test-steps)."""
     if "incremental" in item.keywords:
         # retrieve the class name of the test
@@ -718,16 +642,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)
 
 
-def pytest_addoption(parser: pytest.Parser):
-    parser.addoption(
-        "--shorter-than",
-        action="store",
-        type=float,
-        default=None,
-        help="Skip tests that take longer than this.",
-    )
-
-
 def pytest_ignore_collect(path: str):
     p = Path(path)
     # fixme: Trying to fix doctest issues for project/configs/algorithm/lr_scheduler/__init__.py::project.configs.algorithm.lr_scheduler.StepLRConfig
@@ -740,4 +654,32 @@ def pytest_configure(config: pytest.Config):
     config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
     config.addinivalue_line(
         "markers", "very_fast: mark test as very fast to run (including test setup)."
+    )
+
+
+# import numpy as np
+# def fixed_hash_fn(v: jax.Array | np.ndarray | torch.Tensor) -> int:
+#     if isinstance(v, torch.Tensor):
+#         return hash(tuple(v.detach().cpu().contiguous().numpy().flatten().tolist()))
+#     if isinstance(v, jax.Array | np.ndarray):
+#         return hash(tuple(v.flatten().tolist()))
+#     raise NotImplementedError(f"Don't know how to hash value {v} of type {type(v)}.")
+
+# tensor_regression.stats._hash = fixed_hash_fn
+
+
+def _patched_simple_attributes(v, precision: int | None):
+    stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
+    stats.pop("hash", None)
+    return stats
+
+
+@pytest.fixture(autouse=True)
+def dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
+    """Temporarily remove the hash of tensors from the regression files."""
+
+    monkeypatch.setattr(
+        tensor_regression.fixture,
+        tensor_regression.fixture.get_simple_attributes.__name__,  # type: ignore
+        _patched_simple_attributes,
     )

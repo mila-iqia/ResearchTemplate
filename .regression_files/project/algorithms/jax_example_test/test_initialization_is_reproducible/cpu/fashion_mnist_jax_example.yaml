@@ -1,0 +1,80 @@
+network.params.0:
+  device: cpu
+  hash: -4218701300434786233
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 32
+  sum: 0.0
+network.params.1:
+  device: cpu
+  hash: -2168085942084572394
+  max: 0.7
+  mean: -0.0
+  min: -0.7
+  shape:
+  - 3
+  - 3
+  - 1
+  - 32
+  sum: -0.3
+network.params.2:
+  device: cpu
+  hash: -5258163774450544391
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 64
+  sum: 0.0
+network.params.3:
+  device: cpu
+  hash: -195626296360386472
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 3
+  - 3
+  - 32
+  - 64
+  sum: 8.3
+network.params.4:
+  device: cpu
+  hash: 3505480816438514598
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 256
+  sum: 0.0
+network.params.5:
+  device: cpu
+  hash: 8975080659470718874
+  max: 0.0
+  mean: 0.0
+  min: -0.0
+  shape:
+  - 3136
+  - 256
+  sum: 15.7
+network.params.6:
+  device: cpu
+  hash: -7222447081605638768
+  max: 0.0
+  mean: 0.0
+  min: 0.0
+  shape:
+  - 10
+  sum: 0.0
+network.params.7:
+  device: cpu
+  hash: -2983191316776450796
+  max: 0.1
+  mean: 0.0
+  min: -0.1
+  shape:
+  - 256
+  - 10
+  sum: 1.8

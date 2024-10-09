@@ -1,0 +1,228 @@
+network.albert.embeddings.LayerNorm.bias:
+  device: cpu
+  max: '2.53e+00'
+  mean: '-3.477e-02'
+  min: '-1.398e+00'
+  shape:
+  - 128
+  sum: '-4.451e+00'
+network.albert.embeddings.LayerNorm.weight:
+  device: cpu
+  max: '3.675e+00'
+  mean: '3.264e+00'
+  min: '1.297e+00'
+  shape:
+  - 128
+  sum: '4.178e+02'
+network.albert.embeddings.position_embeddings.weight:
+  device: cpu
+  max: '2.774e-01'
+  mean: '1.058e-04'
+  min: '-2.344e-01'
+  shape:
+  - 512
+  - 128
+  sum: '6.933e+00'
+network.albert.embeddings.token_type_embeddings.weight:
+  device: cpu
+  max: '4.431e-02'
+  mean: '1.339e-04'
+  min: '-8.033e-02'
+  shape:
+  - 2
+  - 128
+  sum: '3.429e-02'
+network.albert.embeddings.word_embeddings.weight:
+  device: cpu
+  max: '2.003e-01'
+  mean: '-5.478e-03'
+  min: '-1.946e-01'
+  shape:
+  - 30000
+  - 128
+  sum: '-2.104e+04'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.bias:
+  device: cpu
+  max: '2.411e+00'
+  mean: '-6.698e-03'
+  min: '-3.421e+00'
+  shape:
+  - 768
+  sum: '-5.144e+00'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.weight:
+  device: cpu
+  max: '2.478e+00'
+  mean: '5.703e-01'
+  min: '3.535e-01'
+  shape:
+  - 768
+  sum: '4.38e+02'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.bias:
+  device: cpu
+  max: '5.149e+00'
+  mean: '-3.476e-03'
+  min: '-8.748e+00'
+  shape:
+  - 768
+  sum: '-2.669e+00'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.weight:
+  device: cpu
+  max: '7.227e-01'
+  mean: '1.840e-06'
+  min: '-5.057e-01'
+  shape:
+  - 768
+  - 768
+  sum: '1.085e+00'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.bias:
+  device: cpu
+  max: '1.643e+00'
+  mean: '1.291e-02'
+  min: '-1.689e+00'
+  shape:
+  - 768
+  sum: '9.916e+00'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weight:
+  device: cpu
+  max: '2.669e-01'
+  mean: '1.060e-04'
+  min: '-3.136e-01'
+  shape:
+  - 768
+  - 768
+  sum: '6.253e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.bias:
+  device: cpu
+  max: '4.806e+00'
+  mean: '6.103e-02'
+  min: '-4.117e+00'
+  shape:
+  - 768
+  sum: '4.687e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.query.weight:
+  device: cpu
+  max: '3.613e-01'
+  mean: '-2.149e-05'
+  min: '-2.743e-01'
+  shape:
+  - 768
+  - 768
+  sum: '-1.268e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.bias:
+  device: cpu
+  max: '5.064e-01'
+  mean: '8.661e-04'
+  min: '-6.153e-01'
+  shape:
+  - 768
+  sum: '6.652e-01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.value.weight:
+  device: cpu
+  max: '2.998e-01'
+  mean: '-9.619e-05'
+  min: '-2.962e-01'
+  shape:
+  - 768
+  - 768
+  sum: '-5.674e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.bias:
+  device: cpu
+  max: '5.147e-01'
+  mean: '-5.56e-01'
+  min: '-9.e+00'
+  shape:
+  - 3072
+  sum: '-1.708e+03'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
+  device: cpu
+  max: '1.932e+00'
+  mean: '-1.609e-05'
+  min: '-1.779e+00'
+  shape:
+  - 3072
+  - 768
+  sum: '-3.796e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
+  device: cpu
+  max: '1.906e+00'
+  mean: '-1.445e-02'
+  min: '-1.471e+01'
+  shape:
+  - 768
+  sum: '-1.11e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
+  device: cpu
+  max: '1.226e+00'
+  mean: '-1.576e-05'
+  min: '-2.475e+00'
+  shape:
+  - 768
+  - 3072
+  sum: '-3.717e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.bias:
+  device: cpu
+  max: '4.331e+00'
+  mean: '-4.060e-02'
+  min: '-7.592e-01'
+  shape:
+  - 768
+  sum: '-3.118e+01'
+network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.weight:
+  device: cpu
+  max: '3.067e+00'
+  mean: '1.35e+00'
+  min: '2.373e-01'
+  shape:
+  - 768
+  sum: '1.037e+03'
+network.albert.encoder.embedding_hidden_mapping_in.bias:
+  device: cpu
+  max: '2.250e+00'
+  mean: '-2.328e-02'
+  min: '-2.484e+00'
+  shape:
+  - 768
+  sum: '-1.788e+01'
+network.albert.encoder.embedding_hidden_mapping_in.weight:
+  device: cpu
+  max: '2.709e-01'
+  mean: '3.868e-04'
+  min: '-2.624e-01'
+  shape:
+  - 768
+  - 128
+  sum: '3.802e+01'
+network.albert.pooler.bias:
+  device: cpu
+  max: '1.409e+00'
+  mean: '5.837e-03'
+  min: '-1.279e+00'
+  shape:
+  - 768
+  sum: '4.483e+00'
+network.albert.pooler.weight:
+  device: cpu
+  max: '2.83e-01'
+  mean: '-2.292e-05'
+  min: '-2.817e-01'
+  shape:
+  - 768
+  - 768
+  sum: '-1.352e+01'
+network.classifier.bias:
+  device: cpu
+  max: '0.e+00'
+  mean: '0.e+00'
+  min: '0.e+00'
+  shape:
+  - 2
+  sum: '0.e+00'
+network.classifier.weight:
+  device: cpu
+  max: '6.891e-02'
+  mean: '8.459e-05'
+  min: '-6.203e-02'
+  shape:
+  - 2
+  - 768
+  sum: '1.299e-01'

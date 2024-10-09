@@ -73,9 +73,9 @@ default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDec
     ],
     **{
         (resnet_config, mnist_dataset_config): [
-            pytest.mark.xfail(
+            pytest.mark.skip(
                 reason="ResNets don't work with MNIST datasets because the image resolution is too small.",
-                raises=RuntimeError,
+                # raises=RuntimeError,
             )
         ]
         for resnet_config, mnist_dataset_config in itertools.product(
