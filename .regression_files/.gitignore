@@ -1,0 +1,3 @@
+*.gif
+# Ignore tensor regression files.
+*.npz

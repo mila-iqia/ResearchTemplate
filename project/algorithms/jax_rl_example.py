@@ -496,14 +496,14 @@ class JaxRLExample(
             self.env.action_space(self.env_params), gymnax.environments.spaces.Discrete
         )
 
-    def visualize(self, ts: PPOState, gif_path: str | Path):
+    def visualize(self, ts: PPOState, gif_path: str | Path, eval_rng: chex.PRNGKey | None = None):
         actor = make_actor(ts=ts, hp=self.hp)
         render_episode(
             actor=actor,
             env=self.env,
             env_params=self.env_params,
             gif_path=Path(gif_path),
-            rng=ts.rng,
+            rng=eval_rng if eval_rng is not None else ts.rng,
         )
 
     ## These here aren't currently used. They are here to mirror rejax.PPO where the training loop
