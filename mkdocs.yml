@@ -6,6 +6,9 @@ site_url: https://mila-iqia.github.io/ResearchTemplate/
 repo_url: https://www.github.com/mila-iqia/ResearchTemplate
 # edit_uri: edit/master/docs
 
+extra_css:
+  - extra.css
+
 theme:
   name: material
   features:
