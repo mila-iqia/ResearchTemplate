@@ -63,7 +63,11 @@ from project.utils.hydra_utils import resolve_dictconfig
         hydra.launcher.constraint="sapphire" \
         datamodule.num_workers=1,4,8,16,32
         """,
-            marks=pytest.mark.skip(reason="not working"),
+            marks=pytest.mark.xfail(
+                reason="LexerNoViableAltException error caused by the -m flag",
+                raises=hydra.errors.OverrideParseException,
+                strict=True,
+            ),
         ),
         # Identifying potential bottlenecks - fcnet mnist
         """
