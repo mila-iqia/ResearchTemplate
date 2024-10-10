@@ -99,7 +99,11 @@ from project.utils.hydra_utils import resolve_dictconfig
         trainer.logger.wandb.tags=["Batch size comparison"]\
         '++trainer.logger.wandb.name=Batch size ${datamodule.batch_size}'
         """,
-            marks=pytest.mark.skip(reason="not working"),
+            marks=pytest.mark.xfail(
+                reason="LexerNoViableAltException error caused by the -m flag",
+                raises=hydra.errors.OverrideParseException,
+                strict=True,
+            ),
         ),
     ],
     indirect=True,
