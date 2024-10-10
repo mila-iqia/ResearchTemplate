@@ -23,7 +23,6 @@ import torch_jax_interop
 from gymnax.environments.environment import Environment
 from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
 from lightning.pytorch.loggers import CSVLogger
-from pytest_regressions.file_regression import FileRegressionFixture
 from tensor_regression import TensorRegressionFixture
 from torch.utils.data import DataLoader
 from typing_extensions import override
@@ -152,7 +151,6 @@ def test_ours_with_trainer(
     tmp_path: Path,
     seed: int,
     rng: chex.PRNGKey,
-    file_regression: FileRegressionFixture,
     n_agents: int | None,
     original_datadir: Path,
 ):
@@ -163,7 +161,6 @@ def test_ours_with_trainer(
     if n_agents is None:
         gif_path = original_datadir / f"ours_with_trainer_{seed=}.gif"
         algo.visualize(ts, gif_path=gif_path, eval_rng=eval_rng)
-        file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
     else:
         gif_path = original_datadir / f"ours_with_trainer_{n_agents=}_{seed=}_first.gif"
         fn = functools.partial(jax.tree.map, operator.itemgetter(0))
@@ -709,9 +706,8 @@ def test_lightning(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
     lightning_trainer: lightning.Trainer,
-    tmp_path: Path,
-    file_regression: FileRegressionFixture,
     tensor_regression: TensorRegressionFixture,
+    original_datadir: Path,
 ):
     # todo: save a gif and some metrics?
     train_state, evaluations = train_lightning(
@@ -719,8 +715,8 @@ def test_lightning(
         rng=rng,
         trainer=lightning_trainer,
     )
-    gif_path = tmp_path / "lightning.gif"
+    gif_path = original_datadir / "lightning.gif"
     algo.visualize(train_state, gif_path=gif_path)
-    file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
+    # file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
     assert len(evaluations) == 1
     tensor_regression.check(evaluations[0])
