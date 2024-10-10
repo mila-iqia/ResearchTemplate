@@ -391,6 +391,7 @@ def add_schemas_to_all_hydra_configs(
             hydra.errors.MissingConfigException,
             hydra.errors.ConfigCompositionException,
             omegaconf.errors.InterpolationResolutionError,
+            Exception,  # todo: remove this to harden the code.
         ) as exc:
             logger.warning(
                 f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
@@ -914,7 +915,7 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
             hydra_defaults=config.get("defaults", None),
             hydra_recursive=False,
             hydra_convert="all",
-            zen_dataclass={"cls_name": target.__qualname__},
+            zen_dataclass={"cls_name": target.__qualname__.replace(".", "_")},
             # zen_wrappers=pydantic_parser,  # unsure if this is how it works?
         )
 
@@ -948,7 +949,7 @@ def _get_schema_from_target(config: dict | DictConfig) -> ObjectSchema | Schema:
             if init_docstring := inspect.getdoc(target_or_base_class.__init__):
                 docs_to_search.append(dp.parse(init_docstring))
     else:
-        assert inspect.isfunction(target)
+        assert inspect.isfunction(target) or inspect.ismethod(target), target
         docstring = inspect.getdoc(target)
         if docstring:
             docs_to_search = [dp.parse(docstring)]
