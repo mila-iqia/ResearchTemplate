@@ -10,10 +10,10 @@ from pathlib import Path
 import hydra
 import omegaconf
 import rich
-import wandb
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 
+import wandb
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.experiment import Experiment, setup_experiment
