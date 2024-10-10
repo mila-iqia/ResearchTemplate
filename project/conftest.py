@@ -62,6 +62,7 @@ from __future__ import annotations
 
 import operator
 import os
+import shlex
 import sys
 import typing
 from collections import defaultdict
@@ -187,6 +188,11 @@ def command_line_arguments(
     function so that the respective components are created in the same way as they
     would be by Hydra in a regular run.
     """
+    if param := getattr(request, "param", None):
+        # If we manually overwrite the command-line arguments with indirect parametrization,
+        # then ignore the rest of the stuff here and just use the provided command-line args.
+        # Split the string into a list of command-line arguments if needed.
+        return shlex.split(param) if isinstance(param, str) else param
 
     combination = set([datamodule_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
