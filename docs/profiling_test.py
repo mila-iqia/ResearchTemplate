@@ -1,3 +1,4 @@
+import hydra.errors
 import shutil
 
 import pytest
