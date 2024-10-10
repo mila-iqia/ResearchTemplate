@@ -17,22 +17,6 @@ from project.conftest import (  # noqa: F401
 from project.experiment import setup_experiment
 from project.utils.hydra_utils import resolve_dictconfig
 
-## Direct parametrization would occur with the following code
-# @pytest.fixture
-# def datamodule(command_line_arguments: str) -> LightningDataModule:
-#     # uses hydra to get the datamodule from the command line arguments
-#     # Something like:
-#     # hydra.utils.instantiate(config=command_line_arguments)
-#     # with hydra.utils.setup
-#     ...
-
-
-# @pytest.mark.parametrize("foo", [1, 2, 3])
-# def test_something_about_datamodule(datamodule: LightningDataModule, foo: int):
-#     datamodule.prepare_data()
-#     datamodule.setup("fit")
-#     ...
-
 
 @pytest.mark.skipif(not shutil.which("sbatch"), reason="Needs to be run on a SLURM cluster")
 @pytest.mark.parametrize(
