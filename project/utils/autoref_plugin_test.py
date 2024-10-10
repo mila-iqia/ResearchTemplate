@@ -12,9 +12,9 @@ from .autoref_plugin import CustomAutoRefPlugin
         (_header := "## Some header with a ref `lightning.Trainer`", _header),
         (
             "a backtick ref: `lightning.Trainer`",
-            "a backtick ref: [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer]",
+            "a backtick ref: [`lightning.Trainer`][lightning.pytorch.trainer.trainer.Trainer]",
         ),
-        ("`torch.Tensor`", "[torch.Tensor][torch.Tensor]"),
+        ("`torch.Tensor`", "[`torch.Tensor`][torch.Tensor]"),
         (
             "a proper full ref: "
             + (
@@ -28,9 +28,9 @@ from .autoref_plugin import CustomAutoRefPlugin
         (
             "`jax.Array`",
             # not sure if this will make a proper link in mkdocs though.
-            "[jax.Array][jax.Array]",
+            "[`jax.Array`][jax.Array]",
         ),
-        ("`Trainer`", "[Trainer][lightning.pytorch.trainer.trainer.Trainer]"),
+        ("`Trainer`", "[`Trainer`][lightning.pytorch.trainer.trainer.Trainer]"),
         # since `Trainer` is in the `known_things` list, we add the proper ref.
     ],
 )
@@ -78,4 +78,4 @@ def test_ref_using_additional_python_references():
         config=mkdocs_config,
         files=Files([]),
     )
-    assert result == "[ExampleAlgorithm][project.algorithms.example.ExampleAlgorithm]"
+    assert result == "[`ExampleAlgorithm`][project.algorithms.example.ExampleAlgorithm]"
