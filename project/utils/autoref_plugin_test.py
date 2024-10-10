@@ -12,9 +12,9 @@ from .autoref_plugin import CustomAutoRefPlugin
         (_header := "## Some header with a ref `lightning.Trainer`", _header),
         (
             "a backtick ref: `lightning.Trainer`",
-            "a backtick ref: [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer]",
+            "a backtick ref: [`lightning.Trainer`][lightning.pytorch.trainer.trainer.Trainer]",
         ),
-        ("`torch.Tensor`", "[torch.Tensor][torch.Tensor]"),
+        ("`torch.Tensor`", "[`torch.Tensor`][torch.Tensor]"),
         (
             "a proper full ref: "
             + (
@@ -28,14 +28,14 @@ from .autoref_plugin import CustomAutoRefPlugin
         (
             "`jax.Array`",
             # not sure if this will make a proper link in mkdocs though.
-            "[jax.Array][jax.Array]",
+            "[`jax.Array`][jax.Array]",
         ),
-        ("`Trainer`", "[Trainer][lightning.pytorch.trainer.trainer.Trainer]"),
+        ("`Trainer`", "[`Trainer`][lightning.pytorch.trainer.trainer.Trainer]"),
         # since `Trainer` is in the `known_things` list, we add the proper ref.
     ],
 )
 def test_autoref_plugin(input: str, expected: str):
-    config = MkDocsConfig("mkdocs.yaml")
+    config: MkDocsConfig = MkDocsConfig("mkdocs.yaml")  # type: ignore (weird!)
     plugin = CustomAutoRefPlugin()
     result = plugin.on_page_markdown(
         input,
@@ -53,3 +53,29 @@ def test_autoref_plugin(input: str, expected: str):
         files=Files([]),
     )
     assert result == expected
+
+
+def test_ref_using_additional_python_references():
+    mkdocs_config: MkDocsConfig = MkDocsConfig("mkdocs.yaml")  # type: ignore (weird!)
+
+    plugin = CustomAutoRefPlugin()
+
+    page = Page(
+        title="Test",
+        file=File(
+            "test.md",
+            src_dir="bob",
+            dest_dir="bobo",
+            use_directory_urls=False,
+        ),
+        config=mkdocs_config,
+    )
+    page.meta = {"additional_python_references": ["project.algorithms.example"]}
+
+    result = plugin.on_page_markdown(
+        "`ExampleAlgorithm`",
+        page=page,
+        config=mkdocs_config,
+        files=Files([]),
+    )
+    assert result == "[`ExampleAlgorithm`][project.algorithms.example.ExampleAlgorithm]"
