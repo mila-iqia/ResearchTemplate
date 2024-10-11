@@ -61,6 +61,11 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
 
 plugins:
   - search
@@ -107,15 +112,10 @@ plugins:
       video_controls: True
       css_style:
         width: "100%"
+
+  # - pymdownx.details
 # todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
 #   - admonition
-#   - pymdownx.details
-#   - pymdownx.superfences
-#   - pymdownx.tabbed:
-#       alternate_style: true
-#       slugify: !!python/object/apply:pymdownx.slugs.slugify
-#         kwds:
-#           case: lower
 #   - tables
 #   - toc:
 #       toc_depth: 2

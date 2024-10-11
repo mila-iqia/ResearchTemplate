@@ -67,7 +67,7 @@ repos:
     rev: 0.7.17
     hooks:
       - id: mdformat
-        exclude: "SUMMARY.md|testing.md|jax.md|docs/examples/"
+        exclude: "docs/" # terrible, I know, but it's messing up everything with mkdocs fences!
         args: ["--number"]
         additional_dependencies:
           - mdformat-gfm

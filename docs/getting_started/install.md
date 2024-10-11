@@ -1,25 +1,25 @@
 # Installation instructions
 
-There are two ways to install this project
+## Creating a new project from the template
+
+To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate).
+
+
+## Setting up your development environment
+
 
 1. Using [uv](https://docs.astral.sh/uv/)
 2. Using a development container (recommended if you are able to install Docker on your machine)
 
-## Installation
 
-1. Clone the repository:
+=== "Locally (Linux / Mac)"
 
-    ```bash
-    git clone https://www.github.com/mila-iqia/ResearchTemplate
-    cd ResearchTemplate
-    ```
-
-2. Installing dependencies
+    1. Clone your new repo and navigate into it
 
     You can install the package using `pip install -e .`, but we recommend using [uv](https://docs.astral.sh/uv/)
     package manager. This makes it easier to switch python versions and to add or change the dependencies later on.
 
-    1. On your machine:
+    2. On your machine:
 
         ```console
         curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -27,15 +27,26 @@ There are two ways to install this project
         uv sync      # Creates a virtual environment and installs dependencies in it.
         ```
 
-    2. On the Mila cluster:
+=== "Locally (Windows)"
 
-        If you're on the `mila` cluster, you can run this setup script (on a *compute* node):
+    1. Install WSL following [this guide](https://learn.microsoft.com/en-us/windows/wsl/install)
+    2. Follow the installation instructions for Linux
+
+=== "On a SLURM cluster"
+
+    1. Clone your new repo and navigate into it
+
+        ```bash
+        git clone https://www.github.com/your-username/your-repo-name
+        cd your-repo-name
+        ```
+
+    2. Launch the setup script
+
+        If you're on the `mila` cluster, you can run the setup script on a *compute* node, just to be nice:
 
         ```console
-        # Get a compute node to run an interactive job:
-        salloc --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=1:00:00
-        # Run the installation script.
-        scripts/mila_setup.sh
+        srun --pty --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=00:10:00 scripts/mila_setup.sh
         ```
 
 ## Using a development container
