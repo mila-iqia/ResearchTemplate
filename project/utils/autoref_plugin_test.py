@@ -32,6 +32,7 @@ from .autoref_plugin import CustomAutoRefPlugin
         ),
         ("`Trainer`", "[`Trainer`][lightning.pytorch.trainer.trainer.Trainer]"),
         # since `Trainer` is in the `known_things` list, we add the proper ref.
+        ("`.devcontainer/devcontainer.json`", "`.devcontainer/devcontainer.json`")
     ],
 )
 def test_autoref_plugin(input: str, expected: str):
