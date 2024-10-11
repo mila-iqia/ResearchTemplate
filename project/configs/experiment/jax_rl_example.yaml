@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - override /algorithm: jax_rl_example
+  - override /trainer: jax
+  - override /trainer/callbacks: rich_progress_bar
+  - override /datamodule: null
+trainer:
+  max_epochs: 75
+  training_steps_per_epoch: 1
+  callbacks:
+    render_episodes:
+      _target_: project.algorithms.jax_rl_example.RenderEpisodesCallback
+      on_every_epoch: false
+    # progress_bar:
+    #   _target_: lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar

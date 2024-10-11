@@ -1,0 +1,16 @@
+defaults:
+  - callbacks: rich_progress_bar.yaml
+_target_: project.trainers.jax_trainer.JaxTrainer
+max_epochs: 75
+training_steps_per_epoch: 1
+
+# path to output directory, created dynamically by hydra
+# path generation pattern is specified in `configs/hydra/default.yaml`
+# use it to store all files generated during the run, like checkpoints and metrics
+default_root_dir: ${hydra:runtime.output_dir}
+# callbacks:
+#   render_episodes:
+#     _target_: project.algorithms.jax_rl_example.RenderEpisodesCallback
+#     on_every_epoch: false
+#   progress_bar:
+#     _target_: lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar

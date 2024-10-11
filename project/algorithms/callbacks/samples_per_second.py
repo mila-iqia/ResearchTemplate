@@ -1,5 +1,5 @@
 import time
-from typing import Literal
+from typing import Any, Literal
 
 from lightning import LightningModule, Trainer
 from torch import Tensor
@@ -11,11 +11,11 @@ from project.utils.typing_utils import is_sequence_of
 
 
 class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
-    def __init__(self):
+    def __init__(self, num_optimizers: int | None = None):
         super().__init__()
         self.last_step_times: dict[Literal["train", "val", "test"], float] = {}
         self.last_update_time: dict[int, float | None] = {}
-        self.num_optimizers: int | None = None
+        self.num_optimizers: int | None = num_optimizers
 
     @override
     def on_shared_epoch_start(
@@ -56,18 +56,43 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         now = time.perf_counter()
         if phase in self.last_step_times:
             elapsed = now - self.last_step_times[phase]
-            if is_sequence_of(batch, Tensor):
-                batch_size = batch[0].shape[0]
-                pl_module.log(
-                    f"{phase}/samples_per_second",
-                    batch_size / elapsed,
-                    prog_bar=True,
-                    on_step=True,
-                    on_epoch=True,
-                    sync_dist=True,
-                )
+            batch_size = self.get_num_samples(batch)
+            self.log(
+                f"{phase}/samples_per_second",
+                batch_size / elapsed,
+                module=pl_module,
+                trainer=trainer,
+                prog_bar=True,
+                on_step=True,
+                on_epoch=True,
+                sync_dist=True,
+                batch_size=batch_size,
+            )
             # todo: support other kinds of batches
         self.last_step_times[phase] = now
+
+    def log(
+        self,
+        name: str,
+        value: Any,
+        module: LightningModule | Any,
+        trainer: Trainer | Any,
+        **kwargs,
+    ):
+        # Used to possibly customize how the values are logged (e.g. for non-LightningModules).
+        # By default, uses the LightningModule.log method.
+        return module.log(
+            name,
+            value,
+            **kwargs,
+        )
+
+    def get_num_samples(self, batch: BatchType) -> int:
+        if is_sequence_of(batch, Tensor):
+            return batch[0].shape[0]
+        raise NotImplementedError(
+            f"Don't know how many 'samples' there are in batch of type {type(batch)}"
+        )
 
     @override
     def on_before_optimizer_step(
@@ -89,9 +114,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
             key = "ups"
         else:
             key = f"optimizer_{opt_idx}/ups"
-        pl_module.log(
+        self.log(
             key,
             updates_per_second,
+            module=pl_module,
+            trainer=trainer,
             prog_bar=False,
             on_step=True,
         )

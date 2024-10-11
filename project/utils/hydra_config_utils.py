@@ -147,6 +147,7 @@ def get_all_configs_in_group_of_type(
         config_name: get_target_of_config(config_group, config_name)
         for config_name in config_names
     }
+
     names_to_types: dict[str, type] = {}
     for name, target in names_to_targets.items():
         if inspect.isclass(target):
@@ -154,11 +155,13 @@ def get_all_configs_in_group_of_type(
             continue
 
         if (
-            inspect.isfunction(target)
+            (inspect.isfunction(target) or inspect.ismethod(target))
             and (annotations := typing.get_type_hints(target))
             and (return_type := annotations.get("return"))
-            and inspect.isclass(return_type)
+            and (inspect.isclass(return_type) or inspect.isclass(typing.get_origin(return_type)))
         ):
+            # Resolve generic aliases if present.
+            return_type = typing.get_origin(return_type) or return_type
             logger.info(
                 f"Assuming that the function {target} creates objects of type {return_type} based "
                 f"on its return type annotation."

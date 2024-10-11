@@ -1,9 +1,9 @@
 import dataclasses
 import logging
 import os
-from collections.abc import Callable
-from typing import Concatenate, Literal, ParamSpec, TypeVar
+from typing import Literal
 
+import chex
 import flax.linen
 import jax
 import rich
@@ -20,8 +20,6 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.typing_utils.protocols import ClassificationDataModule
-
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 
 def flatten(x: jax.Array) -> jax.Array:
@@ -58,8 +56,8 @@ class JaxFcNet(flax.linen.Module):
     num_features: int = 256
 
     @flax.linen.compact
-    def __call__(self, x: jax.Array):
-        x = flatten(x)
+    def __call__(self, x: jax.Array, forward_rng: chex.PRNGKey | None = None):
+        # x = flatten(x)
         x = flax.linen.Dense(features=self.num_features)(x)
         x = flax.linen.relu(x)
         x = flax.linen.Dense(features=self.num_classes)(x)
@@ -89,6 +87,8 @@ class JaxExample(LightningModule):
         hp: HParams = HParams(),
     ):
         super().__init__()
+        os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+
         self.datamodule = datamodule
         self.hp = hp or self.HParams()
 
@@ -191,30 +191,6 @@ def to_channels_last(x: jax.Array) -> jax.Array:
         return x.transpose(1, 2, 0)
     assert x.ndim == 4
     return x.transpose(0, 2, 3, 1)
-
-
-P = ParamSpec("P")
-Out = TypeVar("Out")
-
-
-def jit(
-    fn: Callable[P, Out],
-) -> Callable[P, Out]:
-    """Small type hint fix for jax's `jit` (preserves the signature of the callable)."""
-    return jax.jit(fn)  # type: ignore
-
-
-In = TypeVar("In")
-Aux = TypeVar("Aux")
-
-
-def value_and_grad(
-    fn: Callable[Concatenate[In, P], tuple[Out, Aux]],
-    argnums: Literal[0] = 0,
-    has_aux: Literal[True] = True,
-) -> Callable[Concatenate[In, P], tuple[tuple[Out, Aux], In]]:
-    """Small type hint fix for jax's `value_and_grad` (preserves the signature of the callable)."""
-    return jax.value_and_grad(fn, argnums=argnums, has_aux=has_aux)  # type: ignore
 
 
 def main():
