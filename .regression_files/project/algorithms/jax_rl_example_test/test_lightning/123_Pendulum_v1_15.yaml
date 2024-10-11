@@ -1,6 +1,12 @@
 val/episode_lengths:
-  type: float
-  value: 200.0
+  max: '2.e+02'
+  mean: '2.e+02'
+  min: '2.e+02'
+  shape: []
+  sum: '2.e+02'
 val/rewards:
-  type: float
-  value: -1221.737060546875
+  max: '-1.222e+03'
+  mean: '-1.222e+03'
+  min: '-1.222e+03'
+  shape: []
+  sum: '-1.222e+03'

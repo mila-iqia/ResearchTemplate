@@ -719,4 +719,6 @@ def test_lightning(
     algo.visualize(train_state, gif_path=gif_path)
     # file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
     assert len(evaluations) == 1
-    tensor_regression.check(evaluations[0])
+    # floats in regression files are saved with full precision, and the last few digits are
+    # different for some reason.
+    tensor_regression.check(jax.tree.map(np.asarray, evaluations[0]))
