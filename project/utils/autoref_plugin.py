@@ -114,6 +114,8 @@ class CustomAutoRefPlugin(BasePlugin):
             matches = re.findall(r"`([^`]+)`", line)
             for match in matches:
                 thing_name = match
+                if any(char in thing_name for char in ["/", " ", "-"]):
+                    continue
                 if thing_name in known_object_names:
                     # References like `JaxTrainer` (which are in a module that we're aware of).
                     thing = known_objects_for_this_module[known_object_names.index(thing_name)]
