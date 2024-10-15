@@ -1,23 +1,19 @@
 from __future__ import annotations
 
-import dataclasses
 import typing
 from collections.abc import Iterable
-from typing import ClassVar, Literal, ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Literal, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from torch import nn
 
-
-class Dataclass(Protocol):
-    __dataclass_fields__: ClassVar[dict[str, dataclasses.Field]]
-
-
 P = ParamSpec("P")
-OutT = TypeVar("OutT")
+OutT = TypeVar("OutT", covariant=True)
 
 
 @runtime_checkable
 class Module(Protocol[P, OutT]):
+    """Small protocol used to help annotate the input/outputs of `torch.nn.Module`s."""
+
     def forward(self, *args: P.args, **kwargs: P.kwargs) -> OutT:
         raise NotImplementedError
 
@@ -38,7 +34,7 @@ class Module(Protocol[P, OutT]):
         to = nn.Module().to
 
 
-BatchType = TypeVar("BatchType")
+BatchType = TypeVar("BatchType", covariant=True)
 
 
 @runtime_checkable
