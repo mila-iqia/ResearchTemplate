@@ -12,10 +12,18 @@ extra_css:
 theme:
   name: material
   features:
+    - toc.follow
+    - toc.integrate
     - navigation.instant
+    # - navigation.indexes
+    # - navigation.path
+    # - navigation.expand
+    # - navigation.tabs
+    # - navigation.tabs.sticky
     - navigation.instant.prefetch
     - navigation.instant.preview
     - content.code.copy
+    - navigation.tracking
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
