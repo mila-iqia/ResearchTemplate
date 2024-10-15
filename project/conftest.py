@@ -27,34 +27,28 @@ flowchart TD
 datamodule_config[
     <a href="#project.conftest.datamodule_config">datamodule_config</a>
 ] -- 'datamodule=A' --> command_line_arguments
-network_config[
-    <a href="#project.conftest.network_config">network_config</a>:
-] -- 'network=B' --> command_line_arguments
 algorithm_config[
     <a href="#project.conftest.algorithm_config">algorithm_config</a>
-] -- 'algorithm=C' --> command_line_arguments
+] -- 'algorithm=B' --> command_line_arguments
 overrides[
     <a href="#project.conftest.overrides">overrides</a>
 ] -- 'seed=123' --> command_line_arguments
 command_line_arguments[
     <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
-] -- load configs for 'datamodule=A network=B algorithm=C seed=123' --> experiment_dictconfig
+] -- load configs for 'datamodule=A algorithm=B seed=123' --> experiment_dictconfig
 experiment_dictconfig[
     <a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>
 ] -- instantiate objects from configs --> experiment_config
 experiment_config[
     <a href="#project.conftest.experiment_config">experiment_config</a>
-] --> datamodule & network & algorithm
+] --> datamodule & algorithm
 datamodule[
     <a href="#project.conftest.datamodule">datamodule</a>
-] --> algorithm
-network[
-    <a href="#project.conftest.network">network</a>
 ] --> algorithm
 algorithm[
     <a href="#project.conftest.algorithm">algorithm</a>
 ] -- is used by --> some_test
-algorithm & network & datamodule -- is used by --> some_other_test
+algorithm & datamodule -- is used by --> some_other_test
 ```
 """
 
