@@ -1,0 +1,5 @@
+defaults:
+  - default.yaml
+
+launcher:
+  _target_: project.utils._remote_launcher_plugin.ExampleLauncher"
