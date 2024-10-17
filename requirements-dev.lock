@@ -4,7 +4,7 @@
 # last locked with the following flags:
 #   pre: false
 #   features: []
-#   all-features: true
+#   all-features: false
 #   with-sources: false
 #   generate-hashes: false
 #   universal: false
@@ -21,9 +21,9 @@ absl-py==2.1.0
     # via optax
     # via orbax-checkpoint
     # via tensorflow-probability
-aiohappyeyeballs==2.4.0
+aiohappyeyeballs==2.4.3
     # via aiohttp
-aiohttp==3.10.5
+aiohttp==3.10.10
     # via datasets
     # via fsspec
 aiosignal==1.3.1
@@ -39,66 +39,66 @@ async-timeout==4.0.3
     # via aiohttp
 attrs==24.2.0
     # via aiohttp
-babel==2.16.0
-    # via mkdocs-material
+bcrypt==4.2.0
+    # via paramiko
 beautifulsoup4==4.12.3
     # via gdown
-black==24.8.0
-    # via research-project-template
+blessed==1.20.0
+    # via milatools
 blinker==1.8.2
     # via flask
-bracex==2.5
-    # via wcmatch
-brax==0.10.5
+brax==0.11.0
     # via rejax
 certifi==2024.8.30
     # via requests
     # via sentry-sdk
+cffi==1.17.1
+    # via cryptography
+    # via pynacl
 cfgv==3.4.0
     # via pre-commit
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via requests
-chex==0.1.86
+chex==0.1.87
     # via distrax
     # via evosax
     # via gymnax
     # via optax
 click==8.1.7
-    # via black
     # via flask
-    # via mkdocs
-    # via mkdocstrings
     # via wandb
-cloudpickle==3.0.0
+cloudpickle==3.1.0
     # via gym
     # via gymnasium
     # via orion
     # via submitit
     # via tensorflow-probability
-colorama==0.4.6
-    # via griffe
-    # via mkdocs-material
 colorlog==6.8.2
     # via hydra-colorlog
 contextlib2==21.6.0
     # via ml-collections
 contourpy==1.3.0
     # via matplotlib
-coverage==7.6.1
+coverage==7.6.3
     # via pytest-cov
     # via pytest-testmon
+cryptography==43.0.1
+    # via paramiko
 cycler==0.12.1
     # via matplotlib
-datasets==3.0.0
+datasets==3.0.1
     # via evaluate
     # via research-project-template
 decorator==5.1.1
+    # via fabric
     # via tensorflow-probability
+deprecated==1.2.14
+    # via fabric
 dill==0.3.8
     # via datasets
     # via evaluate
     # via multiprocess
-distlib==0.3.8
+distlib==0.3.9
     # via virtualenv
 distrax==0.1.5
     # via rejax
@@ -107,7 +107,7 @@ dm-env==1.6
 dm-tree==0.1.8
     # via dm-env
     # via tensorflow-probability
-dnspython==2.6.1
+dnspython==2.7.0
     # via pymongo
 docker-pycreds==0.4.0
     # via wandb
@@ -115,7 +115,7 @@ docstring-parser==0.16
     # via simple-parsing
 dotmap==1.3.30
     # via evosax
-etils==1.9.4
+etils==1.10.0
     # via brax
     # via mujoco
     # via mujoco-mjx
@@ -129,6 +129,8 @@ exceptiongroup==1.2.2
     # via pytest
 execnet==2.1.1
     # via pytest-xdist
+fabric==3.2.2
+    # via milatools
 falcon==3.1.3
     # via falcon-cors
     # via orion
@@ -143,7 +145,6 @@ filelock==3.16.1
     # via orion
     # via torch
     # via transformers
-    # via triton
     # via virtualenv
 flask==3.0.3
     # via brax
@@ -156,7 +157,7 @@ flax==0.8.5
     # via gymnax
     # via rejax
     # via torch-jax-interop
-fonttools==4.53.1
+fonttools==4.54.1
     # via matplotlib
 frozenlist==1.4.1
     # via aiohttp
@@ -173,8 +174,6 @@ gast==0.6.0
     # via tensorflow-probability
 gdown==5.2.0
     # via research-project-template
-ghp-import==2.1.0
-    # via mkdocs
 gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
@@ -182,9 +181,7 @@ gitpython==3.1.43
     # via wandb
 glfw==2.7.0
     # via mujoco
-griffe==1.3.1
-    # via mkdocstrings-python
-grpcio==1.66.1
+grpcio==1.67.0
     # via brax
 gunicorn==23.0.0
     # via orion
@@ -193,18 +190,18 @@ gym==0.26.2
     # via gymnax
 gym-notices==0.0.8
     # via gym
-gymnasium==0.29.1
+gymnasium==1.0.0
     # via gymnax
     # via research-project-template
 gymnax @ git+https://www.github.com/lebrice/gymnax@1d4a4b45cfa291de896cd7005fe624420dc6106c
     # via rejax
     # via research-project-template
-huggingface-hub==0.25.0
+huggingface-hub==0.26.0
     # via datasets
     # via evaluate
     # via tokenizers
     # via transformers
-humanize==4.10.0
+humanize==4.11.0
     # via orbax-checkpoint
 hydra-colorlog==1.2.0
     # via research-project-template
@@ -229,6 +226,8 @@ importlib-resources==6.4.5
     # via etils
 iniconfig==2.0.0
     # via pytest
+invoke==2.2.0
+    # via fabric
 itsdangerous==2.2.0
     # via flask
 jax==0.4.33
@@ -246,10 +245,6 @@ jax==0.4.33
     # via research-project-template
     # via torch-jax-interop
     # via xtils
-jax-cuda12-pjrt==0.4.33
-    # via jax-cuda12-plugin
-jax-cuda12-plugin==0.4.33
-    # via jax
 jaxlib==0.4.33
     # via brax
     # via chex
@@ -268,10 +263,6 @@ jaxopt==0.8.3
 jinja2==3.1.4
     # via brax
     # via flask
-    # via mkdocs
-    # via mkdocs-macros-plugin
-    # via mkdocs-material
-    # via mkdocstrings
     # via torch
 joblib==1.4.2
     # via orion
@@ -284,25 +275,14 @@ kiwisolver==1.4.7
     # via matplotlib
 lightning==2.4.0
     # via research-project-template
-lightning-utilities==0.11.7
+lightning-utilities==0.11.8
     # via lightning
     # via pytorch-lightning
     # via torchmetrics
-lxml==5.3.0
-    # via mkdocs-video
-markdown==3.7
-    # via mkdocs
-    # via mkdocs-autorefs
-    # via mkdocs-material
-    # via mkdocstrings
-    # via pymdown-extensions
 markdown-it-py==3.0.0
     # via rich
-markupsafe==2.1.5
+markupsafe==3.0.2
     # via jinja2
-    # via mkdocs
-    # via mkdocs-autorefs
-    # via mkdocstrings
     # via werkzeug
 matplotlib==3.9.2
     # via evosax
@@ -311,47 +291,9 @@ matplotlib==3.9.2
     # via seaborn
 mdurl==0.1.2
     # via markdown-it-py
-mergedeep==1.3.4
-    # via mkdocs
-    # via mkdocs-get-deps
-mkdocs==1.6.1
-    # via mkdocs-autorefs
-    # via mkdocs-awesome-pages-plugin
-    # via mkdocs-gen-files
-    # via mkdocs-literate-nav
-    # via mkdocs-macros-plugin
-    # via mkdocs-material
-    # via mkdocs-section-index
-    # via mkdocs-video
-    # via mkdocstrings
-    # via research-project-template
-mkdocs-autorefs==1.2.0
-    # via mkdocstrings
-    # via mkdocstrings-python
-mkdocs-awesome-pages-plugin==2.9.3
-    # via research-project-template
-mkdocs-gen-files==0.5.0
-    # via research-project-template
-mkdocs-get-deps==0.2.0
-    # via mkdocs
-mkdocs-literate-nav==0.6.1
-    # via research-project-template
-mkdocs-macros-plugin==1.2.0
-    # via research-project-template
-mkdocs-material==9.5.35
-    # via research-project-template
-mkdocs-material-extensions==1.3.1
-    # via mkdocs-material
-mkdocs-section-index==0.3.9
-    # via research-project-template
-mkdocs-video==1.5.0
-    # via research-project-template
-mkdocstrings==0.26.1
-    # via mkdocstrings-python
-    # via research-project-template
-mkdocstrings-python==1.11.1
-    # via mkdocstrings
-mktestdocs==0.2.2
+milatools==0.1.5
+    # via remote-slurm-executor
+mktestdocs==0.2.3
 ml-collections==0.1.1
     # via brax
 ml-dtypes==0.5.0
@@ -363,10 +305,10 @@ mpmath==1.3.0
 msgpack==1.1.0
     # via flax
     # via orbax-checkpoint
-mujoco==3.2.3
+mujoco==3.2.4
     # via brax
     # via mujoco-mjx
-mujoco-mjx==3.2.3
+mujoco-mjx==3.2.4
     # via brax
 multidict==6.1.0
     # via aiohttp
@@ -374,13 +316,9 @@ multidict==6.1.0
 multiprocess==0.70.16
     # via datasets
     # via evaluate
-mypy-extensions==1.0.0
-    # via black
-natsort==8.4.0
-    # via mkdocs-awesome-pages-plugin
 nest-asyncio==1.6.0
     # via orbax-checkpoint
-networkx==3.3
+networkx==3.4.1
     # via torch
 nodeenv==1.9.1
     # via pre-commit
@@ -402,7 +340,6 @@ numpy==1.26.4
     # via matplotlib
     # via ml-dtypes
     # via mujoco
-    # via opt-einsum
     # via optax
     # via orbax-checkpoint
     # via orion
@@ -421,63 +358,11 @@ numpy==1.26.4
     # via torchvision
     # via transformers
     # via trimesh
-nvidia-cublas-cu12==12.1.3.1
-    # via jax-cuda12-plugin
-    # via nvidia-cudnn-cu12
-    # via nvidia-cusolver-cu12
-    # via research-project-template
-    # via torch
-nvidia-cuda-cupti-cu12==12.1.105
-    # via jax-cuda12-plugin
-    # via research-project-template
-    # via torch
-nvidia-cuda-nvcc-cu12==12.6.68
-    # via jax-cuda12-plugin
-    # via research-project-template
-nvidia-cuda-nvrtc-cu12==12.1.105
-    # via research-project-template
-    # via torch
-nvidia-cuda-runtime-cu12==12.1.105
-    # via jax-cuda12-plugin
-    # via research-project-template
-    # via torch
-nvidia-cudnn-cu12==9.1.0.70
-    # via jax-cuda12-plugin
-    # via research-project-template
-    # via torch
-nvidia-cufft-cu12==11.0.2.54
-    # via jax-cuda12-plugin
-    # via research-project-template
-    # via torch
-nvidia-curand-cu12==10.3.2.106
-    # via research-project-template
-    # via torch
-nvidia-cusolver-cu12==11.4.5.107
-    # via jax-cuda12-plugin
-    # via research-project-template
-    # via torch
-nvidia-cusparse-cu12==12.1.0.106
-    # via jax-cuda12-plugin
-    # via nvidia-cusolver-cu12
-    # via research-project-template
-    # via torch
-nvidia-nccl-cu12==2.20.5
-    # via jax-cuda12-plugin
-    # via research-project-template
-    # via torch
-nvidia-nvjitlink-cu12==12.6.68
-    # via jax-cuda12-plugin
-    # via nvidia-cusolver-cu12
-    # via nvidia-cusparse-cu12
-    # via research-project-template
-nvidia-nvtx-cu12==12.1.105
-    # via research-project-template
-    # via torch
 omegaconf==2.3.0
     # via hydra-core
     # via hydra-orion-sweeper
     # via hydra-zen
-opt-einsum==3.3.0
+opt-einsum==3.4.0
     # via jax
 optax==0.2.3
     # via brax
@@ -489,7 +374,6 @@ orbax-checkpoint==0.6.4
 orion==0.2.7
     # via hydra-orion-sweeper
 packaging==24.1
-    # via black
     # via datasets
     # via evaluate
     # via gunicorn
@@ -498,8 +382,6 @@ packaging==24.1
     # via lightning
     # via lightning-utilities
     # via matplotlib
-    # via mkdocs
-    # via mkdocs-macros-plugin
     # via plotly
     # via pytest
     # via pytorch-lightning
@@ -507,61 +389,59 @@ packaging==24.1
     # via tensorboardx
     # via torchmetrics
     # via transformers
-paginate==0.5.7
-    # via mkdocs-material
-pandas==2.2.2
+pandas==2.2.3
     # via datasets
     # via evaluate
     # via orion
     # via seaborn
-pathspec==0.12.1
-    # via black
-    # via mkdocs
-pillow==10.4.0
+paramiko==3.5.0
+    # via fabric
+pillow==11.0.0
     # via brax
     # via matplotlib
     # via torchvision
 platformdirs==4.3.6
-    # via black
-    # via mkdocs-get-deps
-    # via mkdocstrings
     # via virtualenv
     # via wandb
 plotly==5.24.1
     # via orion
 pluggy==1.5.0
     # via pytest
-pre-commit==3.8.0
+pre-commit==4.0.1
+prompt-toolkit==3.0.48
+    # via questionary
+propcache==0.2.0
+    # via yarl
 protobuf==5.28.2
     # via orbax-checkpoint
     # via tensorboardx
     # via wandb
-psutil==6.0.0
+psutil==6.1.0
     # via orion
     # via wandb
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyaml==24.7.0
+pyaml==24.9.0
     # via scikit-optimize
 pyarrow==17.0.0
     # via datasets
+pycparser==2.22
+    # via cffi
 pydantic==2.9.2
     # via research-project-template
 pydantic-core==2.23.4
     # via pydantic
-pygame==2.6.0
+pygame==2.6.1
     # via gymnasium
 pygments==2.18.0
-    # via mkdocs-material
     # via rich
-pymdown-extensions==10.9
-    # via mkdocs-material
-    # via mkdocstrings
-pymongo==4.9.1
+pymongo==4.10.1
     # via orion
+pynacl==1.5.0
+    # via paramiko
 pyopengl==3.1.7
     # via mujoco
-pyparsing==3.1.4
+pyparsing==3.2.0
     # via matplotlib
 pysocks==1.7.1
     # via requests
@@ -588,9 +468,7 @@ pytest-testmon==2.1.1
 pytest-timeout==2.3.1
 pytest-xdist==3.6.1
 python-dateutil==2.9.0.post0
-    # via ghp-import
     # via matplotlib
-    # via mkdocs-macros-plugin
     # via pandas
 pytinyrenderer==0.0.14
     # via brax
@@ -607,42 +485,38 @@ pyyaml==6.0.2
     # via gymnax
     # via huggingface-hub
     # via lightning
-    # via mkdocs
-    # via mkdocs-get-deps
-    # via mkdocs-macros-plugin
     # via ml-collections
     # via omegaconf
     # via orbax-checkpoint
     # via orion
     # via pre-commit
     # via pyaml
-    # via pymdown-extensions
     # via pytest-regressions
     # via pytorch-lightning
-    # via pyyaml-env-tag
     # via rejax
     # via transformers
     # via wandb
-pyyaml-env-tag==0.1
-    # via mkdocs
+questionary==1.10.0
+    # via milatools
 regex==2024.9.11
-    # via mkdocs-material
     # via transformers
 rejax==0.1.0
+    # via research-project-template
+remote-slurm-executor @ git+https://github.com/lebrice/remote-slurm-executor@02f21bc3b623e719118c6ff6d04d16449275276c
     # via research-project-template
 requests==2.32.3
     # via datasets
     # via evaluate
     # via gdown
     # via huggingface-hub
-    # via mkdocs-material
     # via orion
     # via transformers
     # via wandb
-rich==13.8.1
+rich==13.9.2
     # via flax
+    # via milatools
     # via research-project-template
-ruff==0.6.5
+ruff==0.7.0
 safetensors==0.4.5
     # via transformers
 scikit-learn==1.5.2
@@ -662,16 +536,18 @@ scipy==1.14.1
     # via scikit-optimize
 seaborn==0.13.2
     # via gymnax
-sentry-sdk==2.14.0
+sentry-sdk==2.17.0
     # via wandb
 setproctitle==1.3.3
     # via wandb
-setuptools==75.1.0
+setuptools==75.2.0
     # via lightning-utilities
+    # via remote-slurm-executor
     # via wandb
 simple-parsing==0.1.6
     # via research-project-template
 six==1.16.0
+    # via blessed
     # via docker-pycreds
     # via ml-collections
     # via python-dateutil
@@ -680,8 +556,11 @@ smmap==5.0.1
     # via gitdb
 soupsieve==2.6
     # via beautifulsoup4
+sshconf==0.2.7
+    # via milatools
 submitit==1.5.2
     # via hydra-submitit-launcher
+    # via remote-slurm-executor
 sympy==1.13.3
     # via torch
 tabulate==0.9.0
@@ -693,21 +572,18 @@ tensorboardx==2.6.2.2
     # via brax
 tensorflow-probability==0.24.0
     # via distrax
-tensorstore==0.1.65
+tensorstore==0.1.66
     # via flax
     # via orbax-checkpoint
-termcolor==2.4.0
-    # via mkdocs-macros-plugin
 threadpoolctl==3.5.0
     # via scikit-learn
-tokenizers==0.19.1
+tokenizers==0.20.1
     # via transformers
-tomli==2.0.1
-    # via black
+tomli==2.0.2
     # via coverage
     # via pytest
     # via pytest-env
-toolz==0.12.1
+toolz==1.0.0
     # via chex
 torch==2.4.1
     # via lightning
@@ -720,7 +596,7 @@ torch==2.4.1
     # via torchvision
 torch-jax-interop==0.0.7
     # via research-project-template
-torchmetrics==1.4.2
+torchmetrics==1.4.3
     # via lightning
     # via pytorch-lightning
 torchvision==0.19.1
@@ -731,18 +607,16 @@ tqdm==4.66.5
     # via gdown
     # via huggingface-hub
     # via lightning
+    # via milatools
     # via pytorch-lightning
     # via research-project-template
     # via transformers
-transformers==4.44.2
+transformers==4.45.2
     # via research-project-template
-trimesh==4.4.9
+trimesh==4.5.0
     # via brax
     # via mujoco-mjx
-triton==3.0.0
-    # via torch
 typing-extensions==4.12.2
-    # via black
     # via brax
     # via chex
     # via etils
@@ -753,35 +627,39 @@ typing-extensions==4.12.2
     # via hydra-zen
     # via lightning
     # via lightning-utilities
+    # via milatools
     # via multidict
     # via orbax-checkpoint
     # via pydantic
     # via pydantic-core
     # via pytorch-lightning
+    # via rich
     # via simple-parsing
     # via submitit
     # via torch
-tzdata==2024.1
+    # via wandb
+tzdata==2024.2
     # via pandas
 urllib3==2.2.3
     # via requests
     # via sentry-sdk
-virtualenv==20.26.5
+virtualenv==20.27.0
     # via pre-commit
-wandb==0.18.1
+wandb==0.18.5
     # via research-project-template
-watchdog==5.0.2
-    # via mkdocs
-wcmatch==9.0
-    # via mkdocs-awesome-pages-plugin
+wcwidth==0.2.13
+    # via blessed
+    # via prompt-toolkit
 werkzeug==3.0.4
     # via flask
-xtils @ git+https://github.com/jessefarebro/xtils@b20807d980b059c598a77ff2ef05075594f49f63
+wrapt==1.16.0
+    # via deprecated
+xtils @ git+https://github.com/jessefarebro/xtils@cf368978cadb9ea5d5befc73a25b5ef004ac0fa7
     # via research-project-template
 xxhash==3.5.0
     # via datasets
     # via evaluate
-yarl==1.11.1
+yarl==1.15.4
     # via aiohttp
 zipp==3.20.2
     # via etils

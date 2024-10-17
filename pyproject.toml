@@ -36,6 +36,7 @@ dependencies = [
     "rejax>=0.1.0",
     "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
     "gymnasium[classic-control]>=0.29.1",
+    "remote-slurm-executor @ git+https://github.com/lebrice/remote-slurm-executor",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -127,7 +128,7 @@ dev-dependencies = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["project"]
+packages = ["project", "hydra_plugins"]
 
 [tool.rye.scripts]
 serve-docs = "mkdocs serve"

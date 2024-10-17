@@ -1,5 +1,6 @@
 defaults:
   - default.yaml
-
+  - override launcher: remote_submitit_slurm
+mode: MULTIRUN
 launcher:
-  _target_: project.utils._remote_launcher_plugin.ExampleLauncher"
+  cluster_hostname: narval
