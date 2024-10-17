@@ -31,6 +31,7 @@ dependencies = [
     # Only pinning this so that we can install the hydra-orion-sweeper.
     "kaleido==0.2.1",
     "hydra-orion-sweeper>=1.6.4",
+    "remote-slurm-executor @ git+https://github.com/lebrice/remote-slurm-executor",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -106,7 +107,7 @@ dev-dependencies = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["project"]
+packages = ["project", "hydra_plugins"]
 
 [tool.rye.scripts]
 serve-docs = "mkdocs serve"

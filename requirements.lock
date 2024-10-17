@@ -10,6 +10,7 @@
 #   universal: false
 
 -e file:.
+    # via file:///-
 absl-py==2.1.0
     # via chex
     # via optax
@@ -34,15 +35,22 @@ attrs==24.2.0
     # via aiohttp
 babel==2.16.0
     # via mkdocs-material
+bcrypt==4.2.0
+    # via paramiko
 beautifulsoup4==4.12.3
     # via gdown
 black==24.8.0
     # via research-project-template
+blessed==1.20.0
+    # via milatools
 bracex==2.5
     # via wcmatch
 certifi==2024.8.30
     # via requests
     # via sentry-sdk
+cffi==1.17.1
+    # via cryptography
+    # via pynacl
 charset-normalizer==3.3.2
     # via requests
 chex==0.1.86
@@ -62,11 +70,17 @@ colorlog==6.8.2
     # via hydra-colorlog
 contourpy==1.3.0
     # via matplotlib
+cryptography==43.0.1
+    # via paramiko
 cycler==0.12.1
     # via matplotlib
 datasets==2.21.0
     # via evaluate
     # via research-project-template
+decorator==5.1.1
+    # via fabric
+deprecated==1.2.14
+    # via fabric
 dill==0.3.8
     # via datasets
     # via evaluate
@@ -84,6 +98,8 @@ evaluate==0.4.2
     # via research-project-template
 exceptiongroup==1.2.2
     # via pytest
+fabric==3.2.2
+    # via milatools
 falcon==3.1.3
     # via falcon-cors
     # via orion
@@ -153,6 +169,8 @@ importlib-resources==6.4.4
     # via etils
 iniconfig==2.0.0
     # via pytest
+invoke==2.2.0
+    # via fabric
 jax==0.4.31
     # via chex
     # via flax
@@ -165,6 +183,7 @@ jax-cuda12-pjrt==0.4.31
     # via jax-cuda12-plugin
 jax-cuda12-plugin==0.4.31
     # via jax
+    # via jax-cuda12-plugin
 jaxlib==0.4.31
     # via chex
     # via jax
@@ -214,6 +233,8 @@ mdurl==0.1.2
 mergedeep==1.3.4
     # via mkdocs
     # via mkdocs-get-deps
+milatools==0.1.5
+    # via remote-slurm-executor
 mkdocs==1.6.1
     # via mkdocs-autorefs
     # via mkdocs-awesome-pages-plugin
@@ -247,6 +268,7 @@ mkdocs-section-index==0.3.9
 mkdocs-video==1.5.0
     # via research-project-template
 mkdocstrings==0.26.0
+    # via mkdocstrings
     # via mkdocstrings-python
     # via research-project-template
 mkdocstrings-python==1.11.1
@@ -371,6 +393,8 @@ pandas==2.2.2
     # via datasets
     # via evaluate
     # via orion
+paramiko==3.5.0
+    # via fabric
 pathspec==0.12.1
     # via black
     # via mkdocs
@@ -386,6 +410,8 @@ plotly==5.24.0
     # via orion
 pluggy==1.5.0
     # via pytest
+prompt-toolkit==3.0.48
+    # via questionary
 protobuf==5.28.0
     # via orbax-checkpoint
     # via wandb
@@ -396,6 +422,8 @@ pyaml==24.7.0
     # via scikit-optimize
 pyarrow==17.0.0
     # via datasets
+pycparser==2.22
+    # via cffi
 pydantic==2.8.2
     # via research-project-template
 pydantic-core==2.20.1
@@ -408,6 +436,8 @@ pymdown-extensions==10.9
     # via mkdocstrings
 pymongo==4.8.0
     # via orion
+pynacl==1.5.0
+    # via paramiko
 pyparsing==3.1.4
     # via matplotlib
 pysocks==1.7.1
@@ -444,9 +474,13 @@ pyyaml==6.0.2
     # via wandb
 pyyaml-env-tag==0.1
     # via mkdocs
+questionary==1.10.0
+    # via milatools
 regex==2024.7.24
     # via mkdocs-material
     # via transformers
+remote-slurm-executor @ git+https://github.com/lebrice/remote-slurm-executor
+    # via research-project-template
 requests==2.32.3
     # via datasets
     # via evaluate
@@ -458,6 +492,7 @@ requests==2.32.3
     # via wandb
 rich==13.8.0
     # via flax
+    # via milatools
     # via research-project-template
 safetensors==0.4.4
     # via transformers
@@ -477,20 +512,21 @@ sentry-sdk==2.13.0
     # via wandb
 setproctitle==1.3.3
     # via wandb
-setuptools==74.1.1
-    # via lightning-utilities
-    # via wandb
 simple-parsing==0.1.5
     # via research-project-template
 six==1.16.0
+    # via blessed
     # via docker-pycreds
     # via python-dateutil
 smmap==5.0.1
     # via gitdb
 soupsieve==2.6
     # via beautifulsoup4
-submitit==1.5.1
+sshconf==0.2.7
+    # via milatools
+submitit==1.5.2
     # via hydra-submitit-launcher
+    # via remote-slurm-executor
 sympy==1.13.2
     # via torch
 tabulate==0.9.0
@@ -532,6 +568,7 @@ tqdm==4.66.5
     # via gdown
     # via huggingface-hub
     # via lightning
+    # via milatools
     # via pytorch-lightning
     # via research-project-template
     # via transformers
@@ -549,6 +586,7 @@ typing-extensions==4.12.2
     # via hydra-zen
     # via lightning
     # via lightning-utilities
+    # via milatools
     # via orbax-checkpoint
     # via pydantic
     # via pydantic-core
@@ -567,6 +605,11 @@ watchdog==5.0.2
     # via mkdocs
 wcmatch==9.0
     # via mkdocs-awesome-pages-plugin
+wcwidth==0.2.13
+    # via blessed
+    # via prompt-toolkit
+wrapt==1.16.0
+    # via deprecated
 xxhash==3.5.0
     # via datasets
     # via evaluate
@@ -574,3 +617,7 @@ yarl==1.9.8
     # via aiohttp
 zipp==3.20.1
     # via etils
+setuptools==75.2.0
+    # via lightning-utilities
+    # via remote-slurm-executor
+    # via wandb
