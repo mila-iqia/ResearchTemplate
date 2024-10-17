@@ -38,6 +38,7 @@ dependencies = [
     "gymnasium[classic-control]>=0.29.1",
     "mkdocs>=1.6.1",
     "mkdocstrings[python]>=0.26.2",
+    "remote-slurm-executor @ git+https://github.com/lebrice/remote-slurm-executor",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -107,7 +108,7 @@ lint.select = ["E4", "E7", "E9", "F", "I", "UP"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["project"]
+packages = ["project", "hydra_plugins"]
 
 [tool.uv]
 managed = true
