@@ -68,7 +68,16 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
             **{
                 x: y
                 for x, y in params.items()
-                if x not in ["submitit_folder", "cluster_hostname", "repo_dir_on_cluster"]
+                if x
+                not in [
+                    "submitit_folder",
+                    "cluster_hostname",
+                    "max_num_timeout",
+                    "mem_gb",
+                    "name",
+                    "tasks_per_node",
+                    "timeout_min",
+                ]
             }
         )
 
