@@ -35,18 +35,79 @@ class RemoteSlurmQueueConf(SlurmQueueConf):
         "hydra_plugins.remote_slurm_launcher._remote_launcher_plugin.RemoteSlurmLauncher"
     )
 
-    submitit_folder: str = "${hydra.sweep.dir}/${cluster_hostname}/.submitit/%j"
-
     cluster_hostname: str = "mila"
-    # repo_dir_on_cluster: str | None = None
+    submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j"
 
 
 class RemoteSlurmLauncher(BaseSubmititLauncher):
     _EXECUTOR = "remoteslurm"
 
-    def __init__(self, **params) -> None:
+    def __init__(
+        self,
+        cluster_hostname: str,
+        submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j",
+        # maximum time for the job in minutes
+        timeout_min: int = 60,
+        # number of cpus to use for each task
+        cpus_per_task: int | None = None,
+        # number of gpus to use on each node
+        gpus_per_node: int | None = None,
+        # number of tasks to spawn on each node
+        tasks_per_node: int = 1,
+        # memory to reserve for the job on each node (in GB)
+        mem_gb: int | None = None,
+        # number of nodes to use for the job
+        nodes: int = 1,
+        # name of the job
+        name: str = "${hydra.job.name}",
+        # redirect stderr to stdout
+        stderr_to_stdout: bool = False,
+        partition: str | None = None,
+        qos: str | None = None,
+        comment: str | None = None,
+        constraint: str | None = None,
+        exclude: str | None = None,
+        gres: str | None = None,
+        cpus_per_gpu: int | None = None,
+        gpus_per_task: int | None = None,
+        mem_per_gpu: str | None = None,
+        mem_per_cpu: str | None = None,
+        account: str | None = None,
+        signal_delay_s: int = 120,
+        max_num_timeout: int = 0,
+        additional_parameters: dict[str, Any] | None = None,
+        array_parallelism: int = 256,
+        setup: list[str] | None = None,
+    ) -> None:
         # self.cluster = cluster
-        super().__init__(**params)
+        super().__init__(
+            cluster_hostname=cluster_hostname,
+            submitit_folder=submitit_folder,
+            timeout_min=timeout_min,
+            cpus_per_task=cpus_per_task,
+            gpus_per_node=gpus_per_node,
+            tasks_per_node=tasks_per_node,
+            mem_gb=mem_gb,
+            nodes=nodes,
+            name=name,
+            stderr_to_stdout=stderr_to_stdout,
+            partition=partition,
+            qos=qos,
+            comment=comment,
+            constraint=constraint,
+            exclude=exclude,
+            gres=gres,
+            cpus_per_gpu=cpus_per_gpu,
+            gpus_per_task=gpus_per_task,
+            mem_per_gpu=mem_per_gpu,
+            mem_per_cpu=mem_per_cpu,
+            account=account,
+            signal_delay_s=signal_delay_s,
+            max_num_timeout=max_num_timeout,
+            additional_parameters=additional_parameters,
+            array_parallelism=array_parallelism,
+            setup=setup,
+        )
 
     def launch(
         self, job_overrides: Sequence[Sequence[str]], initial_job_idx: int

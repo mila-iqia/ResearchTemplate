@@ -3,18 +3,13 @@ defaults:
   - override launcher: remote_submitit_slurm
 mode: MULTIRUN
 
-trainer:
-  accelerator: gpu
-  devices: 1
-  
+run:
+  # output directory, generated dynamically on each run
+  dir: logs/${hydra.launcher.cluster_hostname}/${name}/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+sweep:
+  dir: logs/${hydra.launcher.cluster_hostname}/${name}/multiruns/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  subdir: ${hydra.job.num}
+
 launcher:
   cluster_hostname: mila
   submitit_folder: "${hydra.sweep.dir}/${.cluster_hostname}/.submitit/%j"
-  stderr_to_stdout: true
-  cpus_per_task: 2
-  nodes: 1
-  # TODO: Pack more than one job on a single GPU.
-  tasks_per_node: 1
-  mem_gb: 16
-  array_parallelism: 16  # max num of jobs to run in parallel
-  gres: gpu:1
