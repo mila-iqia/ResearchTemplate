@@ -68,6 +68,9 @@ def test_run_via_cli_without_errors():
     main([".", "--stop-on-error"])  # assuming we're at the project root directory.
 
 
+@pytest.mark.xfail(
+    reason="Rye isn't used anymore. TODO: Figure out the uv equivalent of rye scripts."
+)
 def test_run_via_rye_script():
     """Actually run the command on the repo, via the `[tool.rye.scripts]` entry in
     pyproject.toml."""
@@ -75,6 +78,9 @@ def test_run_via_rye_script():
     subprocess.check_call(["rye", "run", "auto_schema"], text=True)
 
 
+@pytest.mark.xfail(
+    reason="Rye isn't used anymore. TODO: Figure out the uv equivalent of rye scripts."
+)
 def test_run_via_rye_script_without_errors():
     """Actually run the command on the repo, via the `[tool.rye.scripts]` entry in
     pyproject.toml."""
