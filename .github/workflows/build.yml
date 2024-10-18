@@ -47,9 +47,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache-suffix: "3.10"
       - name: Install dependencies
-        run: rye sync --no-lock --features=docs
+        run: uv sync --frozen --extra docs
       - name: Build the documentation (strict mode)
-        run: rye run mkdocs build --strict
+        run: uv run mkdocs build --strict
 
   unit_tests:
     needs: [linting]
