@@ -3,4 +3,6 @@ defaults:
   - override launcher: remote_submitit_slurm
 mode: MULTIRUN
 launcher:
-  cluster_hostname: narval
+  cluster_hostname: mila
+  submitit_folder: "${hydra.sweep.dir}/${.cluster_hostname}/.submitit/%j"
+

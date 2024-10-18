@@ -34,8 +34,11 @@ class RemoteSlurmQueueConf(SlurmQueueConf):
     _target_: str = (
         "hydra_plugins.remote_slurm_launcher._remote_launcher_plugin.RemoteSlurmLauncher"
     )
+
+    submitit_folder: str = "${hydra.sweep.dir}/${cluster_hostname}/.submitit/%j"
+
     cluster_hostname: str = "mila"
-    repo_dir_on_cluster: str | None = None
+    # repo_dir_on_cluster: str | None = None
 
 
 class RemoteSlurmLauncher(BaseSubmititLauncher):
@@ -58,7 +61,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         executor = RemoteSlurmExecutor(
             folder=self.params["submitit_folder"],
             cluster_hostname=self.params["cluster_hostname"],
-            repo_dir_on_cluster=self.params.get("repo_dir_on_cluster"),
+            # repo_dir_on_cluster=self.params.get("repo_dir_on_cluster"),
         )
         # specify resources/parameters
         executor.update_parameters(
