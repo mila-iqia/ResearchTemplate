@@ -8,26 +8,23 @@ module --quiet purge
 
 SLURM_TMPDIR=${SLURM_TMPDIR:-/tmp}
 
-if ! [ -x "$(command -v rye)" ]; then
-    echo "Installing Rye (a Python package manager, see https://rye.astral.sh/)"
-    # Note: same as this line, but without the need to re-launch the shell:
-    # curl -sSf https://rye.astral.sh/get | bash
-    wget https://rye.astral.sh/get --output-document $SLURM_TMPDIR/install.sh
-    source $SLURM_TMPDIR/install.sh
-    source "$HOME/.rye/env"
+if ! [ -x "$(command -v uv)" ]; then
+    echo "Installing UV (a Python package manager, see https://docs.astral.sh/uv/)"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source "$HOME/.cargo/env"
 else
-    echo "✅ Rye is already installed"
+    echo "✅ UV is already installed"
 fi
 
 # BUG: Seems like the installation script adds something to ~/.profile, but this file isn't being
 # run, even when there isn't a ~/.user_profile or ~/.bash_profile file?
 # Therefore I'm adding a line in ~/.bash_aliases instead.
-if ! grep -q 'source "$HOME/.rye/env"' ~/.bash_aliases; then
-    echo "Adding a line with 'source \"\$HOME/.rye/env\"' to ~/.bash_aliases"
-    echo "# Adding the rye command to path (https://rye.astral.sh/)" >> ~/.bash_aliases
-    echo 'source "$HOME/.rye/env"' >> ~/.bash_aliases
+if ! grep -q 'source "$HOME/.cargo/env"' ~/.bash_aliases; then
+    echo "Adding a line with 'source \"\$HOME/.cargo/env\"' to ~/.bash_aliases"
+    echo "# Adding the uv command to path (https://docs.astral.sh/uv/)" >> ~/.bash_aliases
+    echo 'source "$HOME/.cargo/env"' >> ~/.bash_aliases
 else
-    echo "✅ ~/.bash_aliases already contains 'source \"\$HOME/.rye/env\"'"
+    echo "✅ ~/.bash_aliases already contains 'source \"\$HOME/.cargo/env\"'"
 fi
 
 if ! grep -q 'module load libffi OpenSSL' ~/.bash_aliases; then
@@ -41,7 +38,7 @@ fi
 
 if ! grep -q 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' ~/.bash_aliases; then
     echo "Adding a line with 'export UV_LINK_MODE=\${UV_LINK_MODE:-"symlink"}' to ~/.bash_aliases"
-    echo '# Setting UV_LINK_MODE to symlink (so that rye can use a cache dir on $SCRATCH)' >> ~/.bash_aliases
+    echo '# Setting UV_LINK_MODE to symlink (so that uv can use a cache dir on $SCRATCH)' >> ~/.bash_aliases
     echo 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' >> ~/.bash_aliases
 else
     echo "✅ ~/.bash_aliases already contains 'export UV_LINK_MODE="symlink"'"
@@ -71,7 +68,7 @@ fi
 
 # install all dependencies
 echo "Installing all dependencies"
-rye sync --all-features
+uv sync --all-extras --frozen
 
 echo "🙌 All done! 🙌"
 echo "🤖 Next, reload the vscode window (Ctrl+shift+P, then write 'reload window' and press Enter)"
