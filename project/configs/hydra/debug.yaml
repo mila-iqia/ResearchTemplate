@@ -2,6 +2,11 @@ defaults:
   - default.yaml
   - override launcher: remote_submitit_slurm
 mode: MULTIRUN
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  
 launcher:
   cluster_hostname: mila
   submitit_folder: "${hydra.sweep.dir}/${.cluster_hostname}/.submitit/%j"
