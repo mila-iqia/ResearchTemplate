@@ -5,3 +5,11 @@ mode: MULTIRUN
 launcher:
   cluster_hostname: mila
   submitit_folder: "${hydra.sweep.dir}/${.cluster_hostname}/.submitit/%j"
+  stderr_to_stdout: true
+  cpus_per_task: 2
+  nodes: 1
+  # TODO: Pack more than one job on a single GPU.
+  tasks_per_node: 1
+  mem_gb: 16
+  array_parallelism: 16  # max num of jobs to run in parallel
+  gres: gpu:1
