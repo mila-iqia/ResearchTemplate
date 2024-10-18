@@ -13,6 +13,7 @@ repos:
       # - id: check-docstring-first
       - id: check-added-large-files
         require_serial: true
+        exclude: uv.lock
       - id: check-ast
         require_serial: true
       - id: check-yaml
@@ -27,8 +28,6 @@ repos:
       - id: check-toml
         require_serial: true
       - id: check-case-conflict
-        require_serial: true
-      - id: check-added-large-files
         require_serial: true
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit

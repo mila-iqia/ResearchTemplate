@@ -35,12 +35,12 @@ batch.token_type_ids:
   sum: 0
 grads.network.albert.embeddings.LayerNorm.bias:
   device: cpu
-  max: '9.494e-03'
-  mean: '-1.081e-05'
+  max: '9.495e-03'
+  mean: '-1.080e-05'
   min: '-1.796e-02'
   shape:
   - 128
-  sum: '-1.384e-03'
+  sum: '-1.383e-03'
 grads.network.albert.embeddings.LayerNorm.weight:
   device: cpu
   max: '1.186e-02'
@@ -51,31 +51,31 @@ grads.network.albert.embeddings.LayerNorm.weight:
   sum: '-3.360e-02'
 grads.network.albert.embeddings.position_embeddings.weight:
   device: cpu
-  max: '6.971e-01'
-  mean: '-9.095e-12'
+  max: '6.970e-01'
+  mean: '-3.638e-12'
   min: '-1.086e+00'
   shape:
   - 512
   - 128
-  sum: '-5.960e-07'
+  sum: '-2.384e-07'
 grads.network.albert.embeddings.token_type_embeddings.weight:
   device: cpu
   max: '6.053e-01'
-  mean: '-4.657e-09'
+  mean: '-1.863e-09'
   min: '-1.119e+00'
   shape:
   - 2
   - 128
-  sum: '-1.192e-06'
+  sum: '-4.768e-07'
 grads.network.albert.embeddings.word_embeddings.weight:
   device: cpu
   max: '1.541e+00'
-  mean: '3.492e-14'
-  min: '-6.232e-01'
+  mean: '-2.008e-13'
+  min: '-6.233e-01'
   shape:
   - 30000
   - 128
-  sum: '1.341e-07'
+  sum: '-7.711e-07'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.bias:
   device: cpu
   max: '6.357e-02'
@@ -83,40 +83,40 @@ grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.Lay
   min: '-6.593e-02'
   shape:
   - 768
-  sum: '-2.870e-01'
+  sum: '-2.871e-01'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm.weight:
   device: cpu
   max: '8.125e-02'
   mean: '1.121e-04'
-  min: '-5.810e-01'
+  min: '-5.811e-01'
   shape:
   - 768
-  sum: '8.613e-02'
+  sum: '8.612e-02'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.bias:
   device: cpu
   max: '6.013e-02'
-  mean: '1.940e-11'
+  mean: '-1.940e-11'
   min: '-5.395e-02'
   shape:
   - 768
-  sum: '1.490e-08'
+  sum: '-1.490e-08'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.dense.weight:
   device: cpu
   max: '1.061e-01'
-  mean: '-2.324e-12'
+  mean: '4.042e-13'
   min: '-1.112e-01'
   shape:
   - 768
   - 768
-  sum: '-1.371e-06'
+  sum: '2.384e-07'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.bias:
   device: cpu
-  max: '7.916e-09'
-  mean: '-6.855e-12'
-  min: '-5.835e-09'
+  max: '1.275e-08'
+  mean: '-1.333e-11'
+  min: '-6.650e-09'
   shape:
   - 768
-  sum: '-5.265e-09'
+  sum: '-1.023e-08'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.key.weight:
   device: cpu
   max: '6.536e-01'
@@ -159,15 +159,15 @@ grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.attention.val
   shape:
   - 768
   - 768
-  sum: '-3.593e+00'
+  sum: '-3.592e+00'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.bias:
   device: cpu
-  max: '4.212e-02'
+  max: '4.213e-02'
   mean: '-3.888e-05'
   min: '-6.737e-02'
   shape:
   - 3072
-  sum: '-1.194e-01'
+  sum: '-1.195e-01'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
   device: cpu
   max: '2.953e-01'
@@ -180,20 +180,20 @@ grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn.weight:
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.bias:
   device: cpu
   max: '5.003e-02'
-  mean: '8.731e-11'
+  mean: '-5.821e-11'
   min: '-5.843e-02'
   shape:
   - 768
-  sum: '6.706e-08'
+  sum: '-4.470e-08'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.ffn_output.weight:
   device: cpu
   max: '6.105e-01'
-  mean: '-5.053e-12'
+  mean: '-2.627e-12'
   min: '-5.125e-01'
   shape:
   - 768
   - 3072
-  sum: '-1.192e-05'
+  sum: '-6.199e-06'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.bias:
   device: cpu
   max: '6.435e-02'
@@ -204,7 +204,7 @@ grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_la
   sum: '-1.468e-01'
 grads.network.albert.encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm.weight:
   device: cpu
-  max: '5.072e-02'
+  max: '5.071e-02'
   mean: '-6.398e-04'
   min: '-4.395e-01'
   shape:
@@ -214,7 +214,7 @@ grads.network.albert.encoder.embedding_hidden_mapping_in.bias:
   device: cpu
   max: '7.07e-03'
   mean: '-8.878e-05'
-  min: '-7.23e-03'
+  min: '-7.231e-03'
   shape:
   - 768
   sum: '-6.818e-02'
@@ -247,20 +247,20 @@ grads.network.albert.pooler.weight:
 grads.network.classifier.bias:
   device: cpu
   max: '2.129e-01'
-  mean: '0.e+00'
+  mean: '7.451e-09'
   min: '-2.129e-01'
   shape:
   - 2
-  sum: '0.e+00'
+  sum: '1.490e-08'
 grads.network.classifier.weight:
   device: cpu
   max: '2.222e-01'
-  mean: '-4.657e-10'
+  mean: '-3.444e-10'
   min: '-2.222e-01'
   shape:
   - 2
   - 768
-  sum: '-7.153e-07'
+  sum: '-5.29e-07'
 outputs.labels:
   device: cpu
   max: 1

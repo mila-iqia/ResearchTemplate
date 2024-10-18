@@ -2,7 +2,7 @@
 
 There are two ways to install this project
 
-1. Using Conda (recommended for newcomers)
+1. Using [uv](https://docs.astral.sh/uv/)
 2. Using a development container (recommended if you are able to install Docker on your machine)
 
 ## Installation
@@ -16,14 +16,15 @@ There are two ways to install this project
 
 2. Installing dependencies
 
-    You can install the package using `pip install -e .`, although we recommend using the [Rye](https://rye.astral.sh/)
+    You can install the package using `pip install -e .`, but we recommend using [uv](https://docs.astral.sh/uv/)
     package manager. This makes it easier to switch python versions and to add or change the dependencies later on.
 
     1. On your machine:
 
         ```console
-        curl -sSf https://rye.astral.sh/get | bash
-        rye sync       # Creates a virtual environment and installs dependencies in it.
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        source ~/.cargo/env
+        uv sync      # Creates a virtual environment and installs dependencies in it.
         ```
 
     2. On the Mila cluster:
