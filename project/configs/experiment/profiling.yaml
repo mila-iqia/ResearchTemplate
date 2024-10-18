@@ -1,0 +1,13 @@
+# @package _global_
+
+defaults:
+  - override /datamodule: imagenet
+  - override /algorithm: example
+  - override /trainer/logger: wandb
+
+trainer:
+  min_epochs: 1
+  max_epochs: 2
+  limit_train_batches: 30
+  limit_val_batches: 2
+  num_sanity_val_steps: 0

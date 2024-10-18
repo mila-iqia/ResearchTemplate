@@ -13,7 +13,7 @@ algorithm:
     lr: 0.002
 
 trainer:
-  accelerator: gpu
+  accelerator: auto
   devices: 1
   max_epochs: 1
   logger:

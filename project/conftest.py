@@ -62,9 +62,11 @@ from __future__ import annotations
 
 import operator
 import os
+import shlex
 import sys
 import typing
 from collections import defaultdict
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -171,8 +173,8 @@ def algorithm_network_config(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def command_line_arguments(
-    devices: str,
-    accelerator: str,
+    # devices: str,
+    # accelerator: str,
     algorithm_config: str | None,
     datamodule_config: str | None,
     algorithm_network_config: str | None,
@@ -187,6 +189,11 @@ def command_line_arguments(
     function so that the respective components are created in the same way as they
     would be by Hydra in a regular run.
     """
+    if param := getattr(request, "param", None):
+        # If we manually overwrite the command-line arguments with indirect parametrization,
+        # then ignore the rest of the stuff here and just use the provided command-line args.
+        # Split the string into a list of command-line arguments if needed.
+        return shlex.split(param) if isinstance(param, str) else param
 
     combination = set([datamodule_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
@@ -195,14 +202,16 @@ def command_line_arguments(
         if combination >= configs:
             # warnings.warn(f"Applying markers because {combination} contains {configs}")
             # There is a combination of potentially unsupported configs here, e.g. MNIST and ResNets.
-            pytest.skip(reason=f"Combination {combination} contains {configs}.")
+            # BUG: This is supposed to work, but doesn't for some reason!
             # for mark in marks:
             #     request.applymarker(mark)
+            # Skipping the test entirely for now.
+            pytest.skip(reason=f"Combination {combination} contains {configs}.")
 
     default_overrides = [
         # NOTE: if we were to run the test in a slurm job, this wouldn't make sense.
-        f"trainer.devices={devices}",
-        f"trainer.accelerator={accelerator}",
+        # f"trainer.devices={devices}",
+        # f"trainer.accelerator={accelerator}",
         # TODO: Setting this here, which actually impacts the tests!
         "seed=42",
     ]
@@ -329,6 +338,7 @@ def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
         yield random_seed
 
 
+# TODO: Remove this.
 @pytest.fixture(scope="session")
 def accelerator(request: pytest.FixtureRequest):
     """Returns the accelerator to use during unit tests.
@@ -336,6 +346,8 @@ def accelerator(request: pytest.FixtureRequest):
     By default, if cuda is available, returns "cuda". If the tests are run with -vvv, then also
     runs CPU.
     """
+    # TODO: Shouldn't we get this from the experiment config instead?
+
     default_accelerator = "gpu" if torch.cuda.is_available() else "cpu"
     accelerator: str = getattr(request, "param", default_accelerator)
 
@@ -375,8 +387,18 @@ def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
 
 
 @pytest.fixture(scope="session")
-def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int | Literal["auto"]:
-    """Fixture that creates the 'devices' argument for the Trainer config."""
+def devices(
+    accelerator: str, request: pytest.FixtureRequest
+) -> Generator[list[int] | int | Literal["auto"], None, None]:
+    """Fixture that creates the 'devices' argument for the Trainer config.
+
+    Splits up the GPUs between pytest-xdist workers when using distributed testing.
+    This isn't currently used in the CI.
+
+    TODO: Design dilemna here: Should we be parametrizing the `devices` command-line override and
+    force experiments to run with this value during tests? Or should we be changing things based on
+    this value in the config?
+    """
     # When using pytest-xdist to distribute tests, each worker will use different devices.
 
     devices = getattr(request, "param", None)
@@ -391,22 +413,30 @@ def devices(accelerator: str, request: pytest.FixtureRequest) -> list[int] | int
         n_cpus = num_cpus_on_node()
         # Split the CPUS as evenly as possible (last worker might get less).
         if num_pytest_workers == 1:
-            return "auto"
+            yield "auto"
+            return
         n_cpus_for_this_worker = (
             n_cpus // num_pytest_workers
             if worker_index != num_pytest_workers - 1
             else n_cpus - n_cpus // num_pytest_workers * (num_pytest_workers - 1)
         )
         assert 1 <= n_cpus_for_this_worker <= n_cpus
-        return n_cpus_for_this_worker
+        yield n_cpus_for_this_worker
+        return
 
     if accelerator == "gpu" or (accelerator == "auto" and torch.cuda.is_available()):
         # Alternate GPUS between workers.
         n_gpus = torch.cuda.device_count()
         first_gpu_to_use = worker_index % n_gpus
         logger.info(f"Using GPU #{first_gpu_to_use}")
-        return [first_gpu_to_use]
-    return 1  # Use only one GPU by default if not distributed.
+        devices_before = os.environ.get("CUDA_VISIBLE_DEVICES")
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(first_gpu_to_use)
+        yield [first_gpu_to_use]
+        if devices_before is not None:
+            os.environ["CUDA_VISIBLE_DEVICES"] = devices_before
+        return
+
+    yield 1  # Use only one GPU by default if not distributed.
 
 
 def _override_param_id(override: Param) -> str:

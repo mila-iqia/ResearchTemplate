@@ -1,0 +1,16 @@
+cumulative_reward:
+  max: '-4.319e-01'
+  mean: '-5.755e+02'
+  min: '-1.872e+03'
+  shape:
+  - 76
+  - 128
+  sum: '-5.599e+06'
+episode_length:
+  max: 200
+  mean: '2.e+02'
+  min: 200
+  shape:
+  - 76
+  - 128
+  sum: 1945600

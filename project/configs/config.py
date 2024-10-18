@@ -1,7 +1,7 @@
 import random
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from omegaconf import OmegaConf
 
@@ -31,6 +31,13 @@ class Config:
     """
 
     datamodule: Any | None = None
+    """Configuration for the datamodule (dataset + transforms + dataloader creation).
+
+    This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
+    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
+    """
+
+    datamodule: Optional[Any] = None  # noqa
     """Configuration for the datamodule (dataset + transforms + dataloader creation).
 
     This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].

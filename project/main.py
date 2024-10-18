@@ -82,7 +82,16 @@ def run(experiment: Experiment) -> tuple[str, float | None, dict]:
     datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
 
     if datamodule is None:
-        experiment.trainer.fit(experiment.algorithm)
+        # todo: missing `rng` argument.
+        from project.trainers.jax_trainer import JaxTrainer
+
+        if isinstance(experiment.trainer, JaxTrainer):
+            import jax.random
+
+            experiment.trainer.fit(experiment.algorithm, rng=jax.random.key(0))
+        else:
+            experiment.trainer.fit(experiment.algorithm)
+
     else:
         assert isinstance(datamodule, LightningDataModule)
         experiment.trainer.fit(
