@@ -106,7 +106,7 @@ jobs:
         run: uv python pin ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --all-extras --frozen
 
       - name: Test with pytest
         run: uv run pytest -v --cov=project --cov-report=xml --cov-append

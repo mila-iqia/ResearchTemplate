@@ -36,6 +36,7 @@ dependencies = [
     "rejax>=0.1.0",
     "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
     "gymnasium[classic-control]>=0.29.1",
+    "mkdocs>=1.6.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -52,7 +53,6 @@ docs = [
     "mkdocs-literate-nav>=0.6.1",
     "mkdocs-material>=9.5.31",
     "black>=24.8.0",
-    "mkdocs>=1.6.0",
     "mkdocs-video>=1.5.0",
     "mkdocs-section-index>=0.3.9",
     "mkdocs-macros-plugin>=1.0.5",

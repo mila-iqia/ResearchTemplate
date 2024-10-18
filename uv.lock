@@ -3546,6 +3546,7 @@ dependencies = [
     { name = "kaleido" },
     { name = "lightning" },
     { name = "matplotlib" },
+    { name = "mkdocs" },
     { name = "pydantic" },
     { name = "rejax" },
     { name = "rich" },
@@ -3563,7 +3564,6 @@ dependencies = [
 [package.optional-dependencies]
 docs = [
     { name = "black" },
-    { name = "mkdocs" },
     { name = "mkdocs-awesome-pages-plugin" },
     { name = "mkdocs-gen-files" },
     { name = "mkdocs-literate-nav" },
@@ -3626,7 +3626,7 @@ requires-dist = [
     { name = "kaleido", specifier = "==0.2.1" },
     { name = "lightning", specifier = ">=2.4.0" },
     { name = "matplotlib", specifier = ">=3.9.2" },
-    { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.0" },
+    { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "mkdocs-awesome-pages-plugin", marker = "extra == 'docs'", specifier = ">=2.9.3" },
     { name = "mkdocs-gen-files", marker = "extra == 'docs'", specifier = ">=0.5.0" },
     { name = "mkdocs-literate-nav", marker = "extra == 'docs'", specifier = ">=0.6.1" },
