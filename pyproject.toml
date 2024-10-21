@@ -38,7 +38,7 @@ dependencies = [
     "gymnasium[classic-control]>=0.29.1",
     "mkdocs>=1.6.1",
     "mkdocstrings[python]>=0.26.2",
-    "remote-slurm-executor @ git+https://github.com/lebrice/remote-slurm-executor",
+    "remote-slurm-executor",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -127,6 +127,9 @@ dev-dependencies = [
     "ruff>=0.6.0",
     "tensor-regression>=0.0.8",
 ]
+
+[tool.uv.sources]
+remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", rev = "master" }
 
 # [tool.uv.tasks]
 # serve-docs = "mkdocs serve"

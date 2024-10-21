@@ -1,0 +1,4 @@
+# @package hydra
+defaults:
+  - override launcher: submitit_slurm
+mode: MULTIRUN

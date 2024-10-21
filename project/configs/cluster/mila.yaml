@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+  - override /hydra/launcher: remote_submitit_slurm
+
+# Use this to specify which remote slurm cluster the job should run on.
+# Remember to also use the resources group to select the resources allocated to the job!
+
+hydra:
+  mode: MULTIRUN
+
+  launcher:
+    cluster_hostname: mila
+    submitit_folder: "${hydra.sweep.dir}/.submitit/%j"

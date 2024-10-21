@@ -3805,7 +3805,7 @@ wheels = [
 [[package]]
 name = "remote-slurm-executor"
 version = "0.1.0"
-source = { git = "https://github.com/lebrice/remote-slurm-executor#da85748ff1ba6a201886e211caec27dfd15c825c" }
+source = { git = "https://github.com/lebrice/remote-slurm-executor?rev=master#da85748ff1ba6a201886e211caec27dfd15c825c" }
 dependencies = [
     { name = "milatools" },
     { name = "setuptools" },
@@ -3957,7 +3957,7 @@ requires-dist = [
     { name = "nvidia-nvtx-cu12", marker = "extra == 'gpu'", specifier = "==12.1.105" },
     { name = "pydantic", specifier = ">=2.8.2" },
     { name = "rejax", specifier = ">=0.1.0" },
-    { name = "remote-slurm-executor", git = "https://github.com/lebrice/remote-slurm-executor" },
+    { name = "remote-slurm-executor", git = "https://github.com/lebrice/remote-slurm-executor?rev=master" },
     { name = "rich", specifier = ">=13.7.1" },
     { name = "scikit-learn", specifier = ">=1.5.1" },
     { name = "simple-parsing", specifier = ">=0.1.5" },

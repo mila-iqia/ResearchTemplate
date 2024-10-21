@@ -1,0 +1,8 @@
+# @package _global_.hydra
+
+defaults:
+  - mila.yaml
+
+launcher:
+  cluster_hostname: narval
+  account: rrg-bengioy-ad
