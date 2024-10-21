@@ -14,8 +14,17 @@ from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
 
 @pytest.mark.parametrize(
     "argv",
-    [["algorithm=example", "datamodule=cifar10", "cluster=mila", "resources=one_gpu"]],
+    [
+        [
+            "algorithm=example",
+            "datamodule=cifar10",
+            "cluster=mila",
+            "resources=one_gpu",
+            "+trainer.fast_dev_run=True",
+        ]
+    ],
 )
+# @pytest.mark.slow() add integration tests based on mocking remote_launcher methods
 def test_instantiate_remote_slurm_launcher_plugin(
     argv: list[str], monkeypatch: pytest.MonkeyPatch
 ):
@@ -28,5 +37,6 @@ def test_instantiate_remote_slurm_launcher_plugin(
     monkeypatch.setattr(sys, "argv", ["project/main.py"] + argv)
     result = main()
 
-
-#    assert launcher_mock.called
+    launcher_mock.assert_called_once_with(
+        cluster_hostname="mila",
+    )
