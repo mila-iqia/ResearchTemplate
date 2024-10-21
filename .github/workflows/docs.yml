@@ -11,20 +11,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Rye with caching of venvs
-        uses: eifinger/setup-rye@v4
-        id: setup-rye
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: true
+          version: "latest"
+          enable-cache: true  # no need, uses the local uv cache.
+          # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: "3.10"
+
       - name: Pin python-version
-        run: rye pin 3.10
+        run: uv python pin 3.10
 
       - name: Install dependencies
-        run: rye sync --no-lock --features docs
+        run: uv sync --extra docs --frozen
 
       - name: Deploy docs
-        run: rye run mkdocs gh-deploy --force
+        run: uv run mkdocs gh-deploy --force
         # note: Checking if we really need the one below:
         # uses: mhausenblas/mkdocs-deploy-gh-pages@1.9
         # # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme
