@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/mila-iqia/ResearchTemplate#license)
 
 !!! note "Work-in-Progress"
-    Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
+    Please note: This is a Work-in-Progress. The goal is to make a first release by the end of fall 2024.
 
 This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
 
@@ -18,10 +18,10 @@ For more context, see [this  introduction to the project.](intro.md).
 
     ---
 
-    [Get started quickly](getting_started/install.md) with [a single installation script](#) and get up
+    [Get started quickly](#starting-a-new-project) with [a single installation script](#) and get up
     and running in minutes
 
-    [:octicons-arrow-right-24: Getting started](getting_started/install.md)
+    [:octicons-arrow-right-24: Getting started](#starting-a-new-project)
 
 - :test_tube:{ .lg .middle } __Well-tested, robust codebase__
 
