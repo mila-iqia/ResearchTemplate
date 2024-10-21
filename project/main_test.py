@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 
 import hydra.errors
 import hydra_zen
