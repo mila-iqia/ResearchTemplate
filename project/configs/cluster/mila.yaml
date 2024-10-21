@@ -10,4 +10,5 @@ hydra:
 
   launcher:
     cluster_hostname: mila
-    submitit_folder: "${hydra.sweep.dir}/.submitit/%j"
+    submitit_folder: "${hydra.sweep.dir}/%j"
+    stderr_to_stdout: true

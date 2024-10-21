@@ -1,4 +1,7 @@
-# @package hydra
+# @package _global_
 defaults:
-  - override launcher: submitit_slurm
-mode: MULTIRUN
+  - override /hydra/launcher: submitit_slurm
+hydra:
+  mode: MULTIRUN
+  launcher:
+    stderr_to_stdout: true
