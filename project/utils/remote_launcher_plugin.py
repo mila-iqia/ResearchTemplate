@@ -60,9 +60,11 @@ class RemoteSlurmQueueConf(SlurmQueueConf):
 
     _target_: str = "project.utils.remote_launcher_plugin.RemoteSlurmLauncher"
 
-    cluster_hostname: str = "mila"
     submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j"
     internet_access_on_compute_nodes: bool = False
+
+    cluster_hostname: str = "mila"
+    internet_on_compute_nodes: bool = True
 
 
 class RemoteSlurmLauncher(BaseSubmititLauncher):
@@ -106,10 +108,11 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         array_parallelism: int = 256,
         setup: list[str] | None = None,
     ) -> None:
+        # self.cluster = cluster
+        self.cluster_hostname = cluster_hostname
+        self.internet_access_on_compute_nodes = internet_access_on_compute_nodes
         super().__init__(
-            cluster_hostname=cluster_hostname,
             submitit_folder=submitit_folder,
-            internet_access_on_compute_nodes=internet_access_on_compute_nodes,
             timeout_min=timeout_min,
             cpus_per_task=cpus_per_task,
             gpus_per_node=gpus_per_node,
@@ -148,8 +151,8 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         params = self.params
         executor = RemoteSlurmExecutor(
             folder=self.params["submitit_folder"],
-            cluster_hostname=self.params["cluster_hostname"],
-            internet_access_on_compute_nodes=self.params["internet_access_on_compute_nodes"],
+            cluster_hostname=self.cluster_hostname,
+            internet_access_on_compute_nodes=self.internet_access_on_compute_nodes,
         )
         # Do *not* overwrite the `setup` if it's already in the executor's parameters!
         if _setup := params.get("setup"):
