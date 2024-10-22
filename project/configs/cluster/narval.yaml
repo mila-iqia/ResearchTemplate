@@ -6,3 +6,4 @@ defaults:
 launcher:
   cluster_hostname: narval
   account: rrg-bengioy-ad
+  internet_access_on_compute_nodes: false

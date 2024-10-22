@@ -37,6 +37,7 @@ def test_instantiate_remote_slurm_launcher_plugin(
     monkeypatch.setattr(sys, "argv", ["project/main.py"] + argv)
     result = main()
 
-    launcher_mock.assert_called_once_with(
-        cluster_hostname="mila",
-    )
+    launcher_mock.assert_called_once()
+    # assert False, launcher_mock.method_calls
+    launcher_mock.submit.assert_called_once()
+    assert launcher_mock.call_args_list[0].kwargs["cluster_hostname"] == "mila"
