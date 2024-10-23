@@ -95,6 +95,8 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         use_srun: bool = True,
         wckey: str = "submitit",
         additional_parameters: dict | None = None,
+        tasks_per_node: int | None = None,
+        mem_gb: int | None = None,
     ) -> None:
         setup = setup or []
         additional_parameters = additional_parameters or {}
@@ -133,9 +135,10 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
             mem=mem,
             mem_per_cpu=mem_per_cpu,
             mem_per_gpu=mem_per_gpu,
+            mem_gb=mem_gb,
             nodelist=nodelist,
             nodes=nodes,
-            ntasks_per_node=ntasks_per_node,
+            tasks_per_node=ntasks_per_node or tasks_per_node,
             num_gpus=num_gpus,
             partition=partition,
             qos=qos,
