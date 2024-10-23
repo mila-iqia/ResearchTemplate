@@ -1,6 +1,0 @@
-# @package _global_
-defaults:
-  - one_gpu.yaml
-hydra:
-  launcher:
-    gres: gpu:rtx8000:2

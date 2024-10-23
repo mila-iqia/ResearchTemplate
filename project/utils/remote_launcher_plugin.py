@@ -3,17 +3,15 @@
 
 import logging
 import os
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
 
+import hydra_zen
 from hydra.core.plugins import Plugins
 from hydra.core.singleton import Singleton
 from hydra.core.utils import JobReturn, filter_overrides
 from hydra.plugins.plugin import Plugin
 from hydra.utils import instantiate
-from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import BaseSubmititLauncher
 from omegaconf import DictConfig
 from remote_slurm_executor.slurm_remote import RemoteSlurmExecutor
@@ -53,18 +51,16 @@ def _instantiate(self: Plugins, config: DictConfig) -> Plugin:
 
 Plugins._instantiate = _instantiate
 
+# @dataclass
+# class RemoteSlurmQueueConf(SlurmQueueConf):
+#     """Slurm configuration overrides and specific parameters."""
 
-@dataclass
-class RemoteSlurmQueueConf(SlurmQueueConf):
-    """Slurm configuration overrides and specific parameters."""
+#     _target_: str = "project.utils.remote_launcher_plugin.RemoteSlurmLauncher"
 
-    _target_: str = "project.utils.remote_launcher_plugin.RemoteSlurmLauncher"
+#     submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j"
 
-    submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j"
-    internet_access_on_compute_nodes: bool = False
-
-    cluster_hostname: str = "mila"
-    internet_on_compute_nodes: bool = True
+#     cluster_hostname: str = "mila"
+#     internet_on_compute_nodes: bool = True
 
 
 class RemoteSlurmLauncher(BaseSubmititLauncher):
@@ -72,71 +68,78 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
 
     def __init__(
         self,
-        cluster_hostname: str,
-        submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j",
-        internet_access_on_compute_nodes: bool | None = None,
-        # maximum time for the job in minutes
-        timeout_min: int = 60,
-        # number of cpus to use for each task
-        cpus_per_task: int | None = None,
-        # number of gpus to use on each node
-        gpus_per_node: int | None = None,
-        # number of tasks to spawn on each node
-        tasks_per_node: int = 1,
-        # memory to reserve for the job on each node (in GB)
-        mem_gb: int | None = None,
-        # number of nodes to use for the job
-        nodes: int = 1,
-        # name of the job
-        name: str = "${hydra.job.name}",
-        # redirect stderr to stdout
-        stderr_to_stdout: bool = False,
-        partition: str | None = None,
-        qos: str | None = None,
+        executor: Callable[[], RemoteSlurmExecutor],
+        account: str | None = None,
+        array_parallelism: int = 256,
         comment: str | None = None,
         constraint: str | None = None,
-        exclude: str | None = None,
-        gres: str | None = None,
         cpus_per_gpu: int | None = None,
-        gpus_per_task: int | None = None,
-        mem_per_gpu: str | None = None,
+        cpus_per_task: int | None = None,
+        dependency: str | None = None,
+        exclude: str | None = None,
+        exclusive: bool | None = None,
+        gpus_per_node: int | str | None = None,
+        gpus_per_task: int | str | None = None,
+        gres: str | None = None,
+        # job_name: str = "submitit",
+        job_name: str = "submitit-${hydra.job.name}",
+        mail_type: str | None = None,
+        mail_user: str | None = None,
+        mem: str | None = None,
         mem_per_cpu: str | None = None,
-        account: str | None = None,
-        signal_delay_s: int = 120,
-        max_num_timeout: int = 0,
-        additional_parameters: dict[str, Any] | None = None,
-        array_parallelism: int = 256,
+        mem_per_gpu: str | None = None,
+        nodelist: str | None = None,
+        nodes: int = 1,
+        ntasks_per_node: int | None = None,
+        num_gpus: int | None = None,
+        partition: str | None = None,
+        qos: str | None = None,
         setup: list[str] | None = None,
+        signal_delay_s: int = 90,
+        srun_args: list[str] | None = None,
+        stderr_to_stdout: bool = True,  # changed!
+        time: str | int = 5,
+        use_srun: bool = True,
+        wckey: str = "submitit",
+        additional_parameters: dict | None = None,
     ) -> None:
-        # self.cluster = cluster
-        self.cluster_hostname = cluster_hostname
-        self.internet_access_on_compute_nodes = internet_access_on_compute_nodes
+        setup = setup or []
+        additional_parameters = additional_parameters or {}
+        self.executor = executor()
+
         super().__init__(
-            submitit_folder=submitit_folder,
-            timeout_min=timeout_min,
-            cpus_per_task=cpus_per_task,
-            gpus_per_node=gpus_per_node,
-            tasks_per_node=tasks_per_node,
-            mem_gb=mem_gb,
-            nodes=nodes,
-            name=name,
-            stderr_to_stdout=stderr_to_stdout,
-            partition=partition,
-            qos=qos,
+            account=account,
+            array_parallelism=array_parallelism,
             comment=comment,
             constraint=constraint,
-            exclude=exclude,
-            gres=gres,
             cpus_per_gpu=cpus_per_gpu,
+            cpus_per_task=cpus_per_task,
+            dependency=dependency,
+            exclude=exclude,
+            exclusive=exclusive,
+            gpus_per_node=gpus_per_node,
             gpus_per_task=gpus_per_task,
-            mem_per_gpu=mem_per_gpu,
+            gres=gres,
+            job_name=job_name,
+            mail_type=mail_type,
+            mail_user=mail_user,
+            mem=mem,
             mem_per_cpu=mem_per_cpu,
-            account=account,
-            signal_delay_s=signal_delay_s,
-            max_num_timeout=max_num_timeout,
-            additional_parameters=additional_parameters,
-            array_parallelism=array_parallelism,
+            mem_per_gpu=mem_per_gpu,
+            nodelist=nodelist,
+            nodes=nodes,
+            ntasks_per_node=ntasks_per_node,
+            num_gpus=num_gpus,
+            partition=partition,
+            qos=qos,
             setup=setup,
+            signal_delay_s=signal_delay_s,
+            srun_args=srun_args,
+            stderr_to_stdout=stderr_to_stdout,
+            time=time,
+            use_srun=use_srun,
+            wckey=wckey,
+            additional_parameters=additional_parameters,
         )
 
     def launch(
@@ -149,28 +152,23 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         num_jobs = len(job_overrides)
         assert num_jobs > 0
         params = self.params
-        executor = RemoteSlurmExecutor(
-            folder=self.params["submitit_folder"],
-            cluster_hostname=self.cluster_hostname,
-            internet_access_on_compute_nodes=self.internet_access_on_compute_nodes,
-        )
+        executor = self.executor
+        # specify resources/parameters\
         # Do *not* overwrite the `setup` if it's already in the executor's parameters!
         if _setup := params.get("setup"):
             executor.parameters["setup"] = (executor.parameters.get("setup", []) or []) + _setup
-
+        # TODO: Make sure that if `launch` is called multiple times, `update_parameters` isnt (or
+        # that it being called multiple times doesnt cause issues).
         executor.update_parameters(
             **{
                 x: y
                 for x, y in params.items()
                 if x
                 not in [
-                    "submitit_folder",
-                    "cluster_hostname",
-                    "max_num_timeout",
-                    "mem_gb",
-                    "name",
-                    "tasks_per_node",
-                    "timeout_min",
+                    #     "mem_gb",
+                    #     "name",
+                    #     "tasks_per_node",
+                    #     "timeout_min",
                     "setup",
                 ]
             }
@@ -202,3 +200,12 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
 
         jobs = executor.map_array(self, *zip(*job_params))
         return [j.results()[0] for j in jobs]
+
+
+RemoteSlurmQueueConf = hydra_zen.builds(
+    RemoteSlurmLauncher,
+    populate_full_signature=True,
+    # zen_partial=True,
+    hydra_convert="object",
+    zen_dataclass={"cls_name": "RemoteSlurmQueueConf"},
+)

@@ -3,7 +3,10 @@
 defaults:
   - mila.yaml
 
+mode: MULTIRUN
+
 launcher:
-  cluster_hostname: narval
-  account: rrg-bengioy-ad
-  internet_access_on_compute_nodes: false
+  executor:
+    cluster_hostname: narval
+    internet_access_on_compute_nodes: false
+  account: rrg-bengioy-ad # Replace this with your DRAC allocation!

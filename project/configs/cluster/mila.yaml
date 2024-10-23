@@ -9,6 +9,11 @@ hydra:
   mode: MULTIRUN
 
   launcher:
-    cluster_hostname: mila
-    submitit_folder: "${hydra.sweep.dir}/%j"
+    executor:
+      _target_: remote_slurm_executor.RemoteSlurmExecutor
+      _partial_: true
+      folder: "${hydra.sweep.dir}/%j"
+      cluster_hostname: mila
+      internet_access_on_compute_nodes: true
+
     stderr_to_stdout: true

@@ -23,7 +23,7 @@ def add_configs_to_hydra_store():
     ConfigStore.instance().store(
         group="hydra/launcher",
         name="remote_submitit_slurm",
-        node=RemoteSlurmQueueConf(),
+        node=RemoteSlurmQueueConf,
         provider="Mila",
     )
 
