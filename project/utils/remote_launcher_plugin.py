@@ -29,11 +29,13 @@ def _instantiate(self: Plugins, config: DictConfig) -> Plugin:
             raise ImportError("class not configured")
 
         if not self.is_in_toplevel_plugins_module(classname):
-            # All plugins must be defined inside the approved top level modules.
-            # For plugins outside of hydra-core, the approved module is hydra_plugins.
-            if classname == RemoteSlurmQueueConf._target_:
-                return instantiate(config)
+            # NOTE: This is the weirdly strict thing we're patching:
+            # "All plugins must be defined inside the approved top level modules."
+            # "For plugins outside of hydra-core, the approved module is hydra_plugins."
             # raise RuntimeError(f"Invalid plugin '{classname}': not the hydra_plugins package")
+            plugin = instantiate(config)
+            assert isinstance(plugin, Plugin)
+            return plugin
 
         if classname not in self.class_name_to_class.keys():
             raise RuntimeError(f"Unknown plugin class : '{classname}'")
@@ -50,17 +52,6 @@ def _instantiate(self: Plugins, config: DictConfig) -> Plugin:
 
 
 Plugins._instantiate = _instantiate
-
-# @dataclass
-# class RemoteSlurmQueueConf(SlurmQueueConf):
-#     """Slurm configuration overrides and specific parameters."""
-
-#     _target_: str = "project.utils.remote_launcher_plugin.RemoteSlurmLauncher"
-
-#     submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j"
-
-#     cluster_hostname: str = "mila"
-#     internet_on_compute_nodes: bool = True
 
 
 class RemoteSlurmLauncher(BaseSubmititLauncher):
