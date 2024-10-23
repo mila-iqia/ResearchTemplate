@@ -3805,7 +3805,7 @@ wheels = [
 [[package]]
 name = "remote-slurm-executor"
 version = "0.1.0"
-source = { git = "https://github.com/lebrice/remote-slurm-executor?rev=master#da85748ff1ba6a201886e211caec27dfd15c825c" }
+source = { git = "https://github.com/lebrice/remote-slurm-executor?branch=master#dcfb4e0b831c9885f53784ce19976787b0e5ea24" }
 dependencies = [
     { name = "milatools" },
     { name = "setuptools" },
@@ -3957,7 +3957,7 @@ requires-dist = [
     { name = "nvidia-nvtx-cu12", marker = "extra == 'gpu'", specifier = "==12.1.105" },
     { name = "pydantic", specifier = ">=2.8.2" },
     { name = "rejax", specifier = ">=0.1.0" },
-    { name = "remote-slurm-executor", git = "https://github.com/lebrice/remote-slurm-executor?rev=master" },
+    { name = "remote-slurm-executor", git = "https://github.com/lebrice/remote-slurm-executor?branch=master" },
     { name = "rich", specifier = ">=13.7.1" },
     { name = "scikit-learn", specifier = ">=1.5.1" },
     { name = "simple-parsing", specifier = ">=0.1.5" },
@@ -4675,7 +4675,7 @@ name = "triton"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
+    { name = "filelock", marker = "python_full_version < '3.13'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/45/27/14cc3101409b9b4b9241d2ba7deaa93535a217a211c86c4cc7151fb12181/triton-3.0.0-1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e1efef76935b2febc365bfadf74bcb65a6f959a9872e5bddf44cc9e0adce1e1a", size = 209376304 },

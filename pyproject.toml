@@ -129,7 +129,7 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", rev = "master" }
+remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", branch = "master" }
 
 # [tool.uv.tasks]
 # serve-docs = "mkdocs serve"

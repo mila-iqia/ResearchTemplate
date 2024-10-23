@@ -106,7 +106,6 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         array_parallelism: int = 256,
         setup: list[str] | None = None,
     ) -> None:
-        # self.cluster = cluster
         super().__init__(
             cluster_hostname=cluster_hostname,
             submitit_folder=submitit_folder,
@@ -151,7 +150,6 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
             folder=self.params["submitit_folder"],
             cluster_hostname=self.params["cluster_hostname"],
             internet_access_on_compute_nodes=self.params["internet_access_on_compute_nodes"],
-            # repo_dir_on_cluster=self.params.get("repo_dir_on_cluster"),
         )
         # Do *not* overwrite the `setup` if it's already in the executor's parameters!
         if _setup := params.get("setup"):
