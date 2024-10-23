@@ -148,8 +148,8 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         # Do *not* overwrite the `setup` if it's already in the executor's parameters!
         if _setup := params.get("setup"):
             executor.parameters["setup"] = (executor.parameters.get("setup", []) or []) + _setup
-        # TODO: Make sure that if `launch` is called multiple times, `update_parameters` isnt (or
-        # that it being called multiple times doesnt cause issues).
+        # TODO: Make sure that if `launch` is called multiple times, `update_parameters` isn't (or
+        # that it being called multiple times doesn't cause issues).
         executor.update_parameters(
             **{
                 x: y
@@ -190,6 +190,10 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
             )
 
         jobs = executor.map_array(self, *zip(*job_params))
+        print(f"JOB IDS: {[j.job_id for j in jobs]}")
+        # TODO: Here the results of all tasks other than task 0 is ignored. This is bad!
+        # If we have `--ntasks-per-gpu`, then perhaps the other task results are different results
+        # for different seeds, or something similar!
         return [j.results()[0] for j in jobs]
 
 

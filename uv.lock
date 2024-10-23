@@ -3805,7 +3805,7 @@ wheels = [
 [[package]]
 name = "remote-slurm-executor"
 version = "0.1.0"
-source = { git = "https://github.com/lebrice/remote-slurm-executor?branch=master#0cb876d28d0ce4f895387316b58032881c0d061c" }
+source = { git = "https://github.com/lebrice/remote-slurm-executor?branch=master#5ed5f184663c664f9f42046356c6cc853f15f519" }
 dependencies = [
     { name = "milatools" },
     { name = "setuptools" },
