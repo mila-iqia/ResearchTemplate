@@ -1,12 +1,10 @@
-# @package _global_.hydra
-
+# @package _global_
 defaults:
   - mila.yaml
 
-mode: MULTIRUN
-
-launcher:
-  executor:
-    cluster_hostname: narval
-    internet_access_on_compute_nodes: false
-  account: rrg-bengioy-ad # Replace this with your DRAC allocation!
+hydra:
+  launcher:
+    executor:
+      cluster_hostname: narval
+      internet_access_on_compute_nodes: false
+    account: rrg-bengioy-ad # Replace this with your DRAC allocation!
