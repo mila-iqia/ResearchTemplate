@@ -13,19 +13,20 @@ from project.main import main
 from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
 
 
+@pytest.mark.skipif("SLURM_JOB_ID" in os.environ, reason="Shouldn't be run on the cluster.")
+@pytest.mark.slow()
 @pytest.mark.parametrize(
     "argv",
     [
         [
             "algorithm=example",
             "datamodule=cifar10",
-            "cluster=debug",
+            "cluster=mila",
             "resources=gpu",
             "+trainer.fast_dev_run=True",
         ]
     ],
 )
-# @pytest.mark.slow() add integration tests based on mocking remote_launcher methods
 def test_instantiate_remote_slurm_launcher_plugin(
     argv: list[str], monkeypatch: pytest.MonkeyPatch
 ):
