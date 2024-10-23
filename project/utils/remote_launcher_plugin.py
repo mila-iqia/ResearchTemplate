@@ -62,6 +62,7 @@ class RemoteSlurmQueueConf(SlurmQueueConf):
 
     cluster_hostname: str = "mila"
     submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j"
+    internet_access_on_compute_nodes: bool = False
 
 
 class RemoteSlurmLauncher(BaseSubmititLauncher):
@@ -71,6 +72,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         self,
         cluster_hostname: str,
         submitit_folder: str = "${hydra.sweep.dir}/.submitit/%j",
+        internet_access_on_compute_nodes: bool | None = None,
         # maximum time for the job in minutes
         timeout_min: int = 60,
         # number of cpus to use for each task
@@ -108,6 +110,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         super().__init__(
             cluster_hostname=cluster_hostname,
             submitit_folder=submitit_folder,
+            internet_access_on_compute_nodes=internet_access_on_compute_nodes,
             timeout_min=timeout_min,
             cpus_per_task=cpus_per_task,
             gpus_per_node=gpus_per_node,
@@ -147,9 +150,13 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         executor = RemoteSlurmExecutor(
             folder=self.params["submitit_folder"],
             cluster_hostname=self.params["cluster_hostname"],
+            internet_access_on_compute_nodes=self.params["internet_access_on_compute_nodes"],
             # repo_dir_on_cluster=self.params.get("repo_dir_on_cluster"),
         )
-        # specify resources/parameters
+        # Do *not* overwrite the `setup` if it's already in the executor's parameters!
+        if _setup := params.get("setup"):
+            executor.parameters["setup"] = (executor.parameters.get("setup", []) or []) + _setup
+
         executor.update_parameters(
             **{
                 x: y
@@ -163,6 +170,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
                     "name",
                     "tasks_per_node",
                     "timeout_min",
+                    "setup",
                 ]
             }
         )

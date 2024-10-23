@@ -18,7 +18,7 @@ from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
         [
             "algorithm=example",
             "datamodule=cifar10",
-            "cluster=mila",
+            "cluster=debug",
             "resources=one_gpu",
             "+trainer.fast_dev_run=True",
         ]
@@ -35,7 +35,7 @@ def test_instantiate_remote_slurm_launcher_plugin(
     )
 
     monkeypatch.setattr(sys, "argv", ["project/main.py"] + argv)
-    result = main()
+    main()
 
     launcher_mock.assert_called_once()
     # assert False, launcher_mock.method_calls
