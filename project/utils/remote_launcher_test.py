@@ -20,7 +20,7 @@ from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
             "algorithm=example",
             "datamodule=cifar10",
             "cluster=debug",
-            "resources=one_gpu",
+            "resources=gpu",
             "+trainer.fast_dev_run=True",
         ]
     ],
