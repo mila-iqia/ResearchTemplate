@@ -5,6 +5,7 @@ import dataclasses
 import functools
 import logging
 import os
+import warnings
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -109,10 +110,12 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         if account is None and len(available_accounts := get_slurm_accounts(cluster)) > 1:
             # NOTE: tends to favour rrg-*_gpu accounts on DRAC.
             account = sorted(available_accounts)[-1]
-            logger.warning(
-                f"The slurm account to use wasn't passed, and you have multiple accounts on "
-                f"the {cluster} cluster: {available_accounts}\n"
-                f"Will use --account={account} when launching jobs."
+            warnings.warn(
+                UserWarning(
+                    f"The slurm account to use wasn't passed, and you have multiple accounts on "
+                    f"the {cluster} cluster: {available_accounts}\n"
+                    f"Will use --account={account} when launching jobs."
+                )
             )
 
         if setup and (executor_setup := self.executor.parameters.get("setup")):
@@ -229,10 +232,9 @@ from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLaunche
 # from hydra_plugins.hydra_submitit_launcher. import SlurmLauncher  # noqa
 
 from submitit.slurm.slurm import _make_sbatch_string  # noqa
-from hydra_zen import builds  # noqa
 
 # Interesting idea: Create the config based on the signature of that function directly.
-_AddedArgumentsConf = builds(
+_AddedArgumentsConf = hydra_zen.builds(
     _make_sbatch_string,
     populate_full_signature=True,
     hydra_convert="object",
