@@ -1,4 +1,6 @@
 # @package _global_
+defaults:
+  - override /hydra/launcher: patched_submitit_slurm
 trainer:
   accelerator: cpu
   devices: auto
@@ -6,9 +8,9 @@ trainer:
 hydra:
   mode: MULTIRUN
   launcher:
-    cpus_per_task: 8
     nodes: 1
     tasks_per_node: 1
+    cpus_per_task: 8
     mem_gb: 16
     array_parallelism: 16 # max num of jobs to run in parallel
     # Other things to pass to `sbatch`:

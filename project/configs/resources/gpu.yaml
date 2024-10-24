@@ -1,7 +1,6 @@
 # @package _global_
-trainer:
-  accelerator: gpu
-  devices: 1
+defaults:
+  - override /hydra/launcher: patched_submitit_slurm
 
 hydra:
   mode: MULTIRUN
@@ -17,8 +16,6 @@ hydra:
       nodes: 1
       mem: 16G
       ntasks_per_node: 1
-
-
 
     ## A list of commands to add to the generated sbatch script before running srun:
     # setup:

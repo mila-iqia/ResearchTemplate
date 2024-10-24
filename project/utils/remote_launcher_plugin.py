@@ -1,13 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # https://github.com/facebookresearch/hydra/blob/main/examples/plugins/example_launcher_plugin/hydra_plugins/example_launcher_plugin/example_launcher.py
 
+import dataclasses
 import functools
 import logging
 import os
 from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 import hydra_zen
+from hydra.core.config_store import ConfigStore
 from hydra.core.plugins import Plugins
 from hydra.core.singleton import Singleton
 from hydra.core.utils import JobReturn, filter_overrides
@@ -218,4 +221,56 @@ RemoteSlurmQueueConf = hydra_zen.builds(
     # zen_partial=True,
     hydra_convert="object",
     zen_dataclass={"cls_name": "RemoteSlurmQueueConf"},
+)
+
+
+from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf  # noqa
+from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLauncher  # noqa
+# from hydra_plugins.hydra_submitit_launcher. import SlurmLauncher  # noqa
+
+from submitit.slurm.slurm import _make_sbatch_string  # noqa
+from hydra_zen import builds  # noqa
+
+# Interesting idea: Create the config based on the signature of that function directly.
+_AddedArgumentsConf = builds(
+    _make_sbatch_string,
+    populate_full_signature=True,
+    hydra_convert="object",
+    zen_exclude=["command", "folder", "map_count"],
+)
+
+
+@dataclasses.dataclass
+class PatchedSlurmQueueConf(_AddedArgumentsConf, SlurmQueueConf):
+    """Adds more SLURM parameters to the config for the SLURM submitit launcher of Hydra."""
+
+    signal_delay_s: int = 120
+    """USR1 signal delay before timeout."""
+
+    max_num_timeout: int = 0
+    """Maximum number of retries on job timeout.
+
+    Change this only after you confirmed your code can handle re-submission by properly resuming
+    from the latest stored checkpoint. check the following for more info on slurm_max_num_timeout
+    https://github.com/facebookincubator/submitit/blob/master/docs/checkpointing.md
+    """
+
+    additional_parameters: dict[str, Any] = dataclasses.field(default_factory=dict)
+    """Useful to add parameters which are not currently available in the plugin.
+
+    Eg: {"mail-user": "blublu@fb.com", "mail-type": "BEGIN"}
+    """
+
+    array_parallelism: int = 256
+    """Maximum number of jobs running in parallel."""
+
+    setup: list[str] | None = None
+    """A list of commands to run in sbatch before running srun."""
+
+
+ConfigStore.instance().store(
+    group="hydra/launcher",
+    name="patched_submitit_slurm",
+    node=PatchedSlurmQueueConf,
+    provider="Mila",
 )
