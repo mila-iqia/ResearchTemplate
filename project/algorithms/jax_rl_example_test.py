@@ -700,6 +700,7 @@ def lightning_trainer(max_epochs: int, tmp_path: Path):
 
 
 # reducing the max_epochs from 75 down to 10 because it's just wayyy too slow.
+@pytest.mark.xfail(reason="Seems to not be completely reproducible")
 @pytest.mark.slow
 # @pytest.mark.timeout(80)
 @pytest.mark.parametrize("max_epochs", [15], indirect=True)

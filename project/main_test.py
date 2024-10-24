@@ -72,7 +72,7 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     )
 
 
-@use_overrides(["algorithm=example datamodule=cifar10 seed=1 +trainer.fast_dev_run=True"])
+@use_overrides(["algorithm=example datamodule=cifar10 seed=1 trainer.fast_dev_run=True"])
 def test_fast_dev_run(experiment_dictconfig: DictConfig):
     result = main(experiment_dictconfig)
     assert isinstance(result, dict)
