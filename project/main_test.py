@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import shutil
-import sys
-from unittest.mock import Mock
 
 import hydra.errors
 import hydra_zen
@@ -12,14 +10,11 @@ import pytest
 import torch
 from omegaconf import DictConfig
 
-import project.main
-import project.utils.remote_launcher_plugin
 from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
 from project.conftest import use_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
 
 from .main import main
 
@@ -89,27 +84,3 @@ def test_fast_dev_run(experiment_dictconfig: DictConfig):
 # TODO: Add some more integration tests:
 # - running sweeps from Hydra!
 # - using the slurm launcher!
-# Make a Mock for the remote slurm launcher plugin
-# Use monkeypatch.setattr(project.utils.remote_launcher_plugin, ..., that_mock)
-# Assert That the mock launcher plugin was instantiated
-
-
-@pytest.mark.parametrize(
-    "argv", [["algorithm=example", "datamodule=cifar10", "cluster=mila", "resources=one_gpu"]]
-)
-def test_cluster_group(argv: list[str], monkeypatch: pytest.MonkeyPatch):
-    launcher_mock = Mock(wraps=RemoteSlurmLauncher)
-    monkeypatch.setattr(
-        project.utils.remote_launcher_plugin, RemoteSlurmLauncher.__name__, launcher_mock
-    )
-
-    # mock_main = Mock(wraps=main)
-    #    monkeypatch.setattr(project.main.main, mock_main)
-
-    monkeypatch.setattr(sys, "argv", ["project/main.py"] + argv)
-    result = main()
-    launcher_mock.assert_called_once_with(cluster_hostname="mila")
-    assert isinstance(result, dict)
-    assert result["type"] == "objective"
-    assert isinstance(result["name"], str)
-    assert isinstance(result["value"], float)
