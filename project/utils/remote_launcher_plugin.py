@@ -118,7 +118,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
                 )
             )
 
-        if setup and (executor_setup := self.executor.parameters.get("setup")):
+        if setup is not None and (executor_setup := self.executor.parameters.get("setup")):
             # The executor already has some lines in "setup", don't overwrite those later.
             setup = executor_setup + setup
         if mem_gb is not None:

@@ -69,6 +69,8 @@ def test_can_load_configs(command_line_arguments: list[str]):
         [
             "algorithm=example",
             "datamodule=cifar10",
+            # TODO: The ordering is important here, we can't use `cluster` before `resources`,
+            # otherwise it will use the local launcher!
             "resources=gpu",
             "cluster=mila",
             "+trainer.fast_dev_run=True",
