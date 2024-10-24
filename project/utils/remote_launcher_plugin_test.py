@@ -6,9 +6,13 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock
 
+import hydra.utils
+import omegaconf
 import pytest
 from hydra import compose, initialize_config_module
 from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
+from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLauncher
+from milatools.utils.remote_v2 import is_already_logged_in
 
 import project.main
 import project.utils.remote_launcher_plugin
@@ -28,10 +32,17 @@ cluster_configs = _yaml_files_in(CONFIG_DIR / "cluster")
 resource_configs = _yaml_files_in(CONFIG_DIR / "resources")
 
 
+@pytest.mark.skipif("SLURM_JOB_ID" in os.environ, reason="Can't be run on the cluster just yet.")
 @pytest.mark.parametrize(
     "overrides",
     [
-        f"algorithm=example datamodule=cifar10 cluster={cluster.stem} resources={resources.stem}"
+        pytest.param(
+            f"algorithm=example datamodule=cifar10 cluster={cluster.stem} resources={resources.stem}",
+            marks=pytest.mark.skipif(
+                cluster != "mila" and not is_already_logged_in(cluster.stem),
+                reason="Logging in would go through 2FA!",
+            ),
+        )
         for cluster in cluster_configs
         for resources in resource_configs
     ],
@@ -57,10 +68,25 @@ def test_can_load_configs(command_line_arguments: list[str]):
             SlurmQueueConf._target_,
         ]
         # TODO: Also try to instantiate these configs.
-        # launcher = hydra.utils.instantiate(launcher_config)
-        # assert isinstance(launcher, remote_launcher_plugin.RemoteSlurmLauncher | SlurmLauncher)
+
+        if launcher_config["_target_"] == remote_launcher_plugin.RemoteSlurmQueueConf._target_:
+            with omegaconf.open_dict(launcher_config):
+                launcher_config["executor"]["_synced"] = True  # avoid syncing the code here.
+            launcher = hydra.utils.instantiate(launcher_config)
+            assert isinstance(launcher, remote_launcher_plugin.RemoteSlurmLauncher)
+        else:
+            launcher = hydra.utils.instantiate(launcher_config)
+            assert isinstance(launcher, SlurmLauncher)
 
 
+in_github_CI = os.environ.get("GITHUB_ACTIONS") == "true"
+
+
+@pytest.mark.skipif(
+    in_github_CI,
+    # Fails since it will actually sync the code with git push, and a branch isn't checked out.
+    reason="Can't be run on the CI",
+)
 @pytest.mark.skipif("SLURM_JOB_ID" in os.environ, reason="Shouldn't be run on the cluster.")
 @pytest.mark.slow()
 @pytest.mark.parametrize(
@@ -77,9 +103,7 @@ def test_can_load_configs(command_line_arguments: list[str]):
         ]
     ],
 )
-def test_instantiate_remote_slurm_launcher_plugin(
-    argv: list[str], monkeypatch: pytest.MonkeyPatch
-):
+def test_run_remote_job(argv: list[str], monkeypatch: pytest.MonkeyPatch):
     launcher_mock = Mock(spec=RemoteSlurmLauncher, wraps=RemoteSlurmLauncher)
     launcher_mock.__qualname__ = RemoteSlurmLauncher.__qualname__
     monkeypatch.setattr(
