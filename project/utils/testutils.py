@@ -142,16 +142,14 @@ def parametrize_when_used(
             pass
     ```
 
-    Parameters
-    ----------
-    arg_name_or_fixture: The name of the argument to parametrize, or a fixture to parametrize \
-        indirectly.
-    values: The values to be used to parametrize the test.
+    Parameters:
+        arg_name_or_fixture: The name of the argument to parametrize, or a fixture to parametrize \
+            indirectly.
+        values: The values to be used to parametrize the test.
 
-    Returns
-    -------
-    A `pytest.MarkDecorator` that parametrizes the test with the given values only when the argument
-    is used (directly or indirectly) by the test.
+    Returns:
+        A `pytest.MarkDecorator` that parametrizes the test with the given values only when the \
+            argument is used (directly or indirectly) by the test.
     """
     if indirect is None:
         indirect = not isinstance(arg_name_or_fixture, str)
@@ -179,14 +177,13 @@ def run_for_all_configs_in_group(
     The test wrapped test will uses all config from that group if they are used either as an input
     argument to the test function or if it the input argument to a fixture function.
 
-    Parameters
-    ----------
-    group_name: List of datamodule names to use for tests. \
-        By default, lists out the generic datamodules (the datamodules that aren't specific \
-        to a single algorithm, for example the InfGendatamodules of WakeSleep.)
+    Parameters:
+        group_name: List of datamodule names to use for tests. \
+            By default, lists out the generic datamodules (the datamodules that aren't specific \
+            to a single algorithm, for example the InfGendatamodules of WakeSleep.)
 
-    config_name_to_marks: Dictionary from config names to pytest marks (e.g. \
-        `pytest.mark.xfail`, `pytest.mark.skip`) to use for that particular config.
+        config_name_to_marks: Dictionary from config names to pytest marks (e.g. \
+            `pytest.mark.xfail`, `pytest.mark.skip`) to use for that particular config.
     """
     if config_name_to_marks is None:
         config_name_to_marks = {

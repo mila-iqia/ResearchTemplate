@@ -1,49 +1,49 @@
+---
+additional_python_references:
+  - project.algorithms.jax_rl_example
+  - project.algorithms.example
+  - project.algorithms.jax_example
+  - project.algorithms.hf_example
+  - project.trainers.jax_trainer
+---
+
 # Using Jax with PyTorch-Lightning
 
 > 🔥 NOTE: This is a feature that is entirely unique to this template! 🔥
 
-You can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.
+This template includes examples that use either Jax, PyTorch, or both!
 
-**How does this work?**
-Well, we use [torch-jax-interop](https://www.github.com/lebrice/torch_jax_interop), another package developed here at Mila, which allows easy interop between torch and jax code. See the readme on that repo for more details.
-
-You can use Jax in your network or learning algorithm, for example in your forward / backward passes, to update parameters, etc. but not the training loop itself, since that is handled by the [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer].
-There are lots of good reasons why you might want to let Lightning handle the training loop.
-which are very well described [here](https://lightning.ai/docs/pytorch/stable/).
-
-??? note "What about end-to-end training in Jax?"
-
-    See the [Jax RL Example (coming soon!)](https://github.com/mila-iqia/ResearchTemplate/pull/55)
+| Example link                                      | Reference          | Framework   | Lightning?   |
+| ------------------------------------------------- | ------------------ | ----------- | ------------ |
+| [ExampleAlgorithm](../examples/jax_sl_example.md) | `ExampleAlgorithm` | Torch       | yes          |
+| [JaxExample](../examples/jax_sl_example.md)       | `JaxExample`       | Torch + Jax | yes          |
+| [HFExample](../examples/nlp.md)                   | `HFExample`        | Torch + 🤗   | yes          |
+| [JaxRLExample](../examples/jax_rl_example.md)     | `JaxRLExample`     | Jax         | no (almost!) |
 
 
-## `JaxExample`: a LightningModule that uses Jax
+In fact, here you can mix and match both Jax and Torch code. For example, you can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.
 
-The [JaxExample][project.algorithms.jax_example.JaxExample] algorithm uses a network which is a [flax.linen.Module](https://flax.readthedocs.io/en/latest/).
-The network is wrapped with `torch_jax_interop.JaxFunction`, so that it can accept torch tensors as inputs, produces torch tensors as outputs, and the parameters are saved as as `torch.nn.Parameter`s (which use the same underlying memory as the jax arrays).
-In this example, the loss function and optimizers are in PyTorch, while the network forward and backward passes are written in Jax.
+??? note "**How does this work?**"
+    Well, we use [torch-jax-interop](https://www.github.com/lebrice/torch_jax_interop), another package developed here at Mila 😎, that allows easy interop between torch and jax code. Feel free to take a look at it if you'd like to use it as part of your own project. 😁
 
-The loss that is returned in the training step is used by Lightning in the usual way. The backward
-pass uses Jax to calculate the gradients, and the weights are updated by a PyTorch optimizer.
 
-!!! note
-    You could also very well do both the forward **and** backward passes in Jax! To do this, [use the 'manual optimization' mode of PyTorch-Lightning](https://lightning.ai/docs/pytorch/stable/model/manual_optimization.html) and perform the parameter updates yourself. For the rest of Lightning to work, just make sure to store the parameters as torch.nn.Parameters. An example of how to do this will be added shortly.
 
-### Jax Network
+## Using PyTorch-Lightning to train a Jax network
 
-{{ inline('project.algorithms.jax_example.CNN') }}
+If you'd like to use Jax in your network or learning algorithm, while keeping the same style of
+training loop as usual, you can!
 
-### Jax Algorithm
+- Use Jax for the forward / backward passes, the parameter updates, dataset preprocessing, etc.
+- Leave the training loop / callbacks / logging / checkpointing / etc to Lightning
 
-{{ inline('project.algorithms.jax_example.JaxExample') }}
+The [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer] will not be able to tell that you're using Jax!
 
-### Configs
+**Take a look at [this image classification example that uses a Jax network](../examples/jax_sl_example.md).**
 
-#### JaxExample algorithm config
 
-{{ inline('project/configs/algorithm/jax_example.yaml') }}
+## End-to-end training in Jax: the `JaxTrainer`
 
-## Running the example
+The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl_example.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s.
 
-```console
-$ python project/main.py algorithm=jax_example network=jax_cnn datamodule=cifar10
-```
+The "algorithm" needs to match the `JaxModule` protocol:
+- `JaxModule.training_step`: train using a batch of data

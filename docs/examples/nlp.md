@@ -1,4 +1,5 @@
-# NLP Example - HuggingFace + PyTorch-Lightning
+# NLP (PyTorch)
+
 
 ## Overview
 

@@ -103,7 +103,7 @@ plugins:
             - https://jax.readthedocs.io/en/latest/objects.inv
             - https://mit-ll-responsible-ai.github.io/hydra-zen/objects.inv
           options:
-            docstring_style: numpy
+            docstring_style: google
             members_order: source
             annotations_path: brief
             show_docstring_attributes: true
