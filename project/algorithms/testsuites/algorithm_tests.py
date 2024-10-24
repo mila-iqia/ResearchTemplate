@@ -20,7 +20,6 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
-from project.utils.testutils import ParametrizedFixture
 from project.utils.typing_utils import PyTree, is_sequence_of
 from project.utils.typing_utils.protocols import DataModule
 
@@ -48,7 +47,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     See the [project.algorithms.example_test][] module for an example.
     """
 
-    algorithm_config: ParametrizedFixture[str]
+    # algorithm_config: ParametrizedFixture[str]
 
     def test_initialization_is_deterministic(
         self,

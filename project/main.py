@@ -8,17 +8,18 @@ from logging import getLogger as get_logger
 from pathlib import Path
 
 import hydra
+import lightning
 import omegaconf
 import rich
-import wandb
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.experiment import Experiment, setup_experiment
+from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.typing_utils.protocols import DataModule
 from project.utils.utils import print_config
 
 logger = get_logger(__name__)
@@ -55,57 +56,72 @@ def main(dict_config: DictConfig) -> dict:
 
     config: Config = resolve_dictconfig(dict_config)
 
-    experiment: Experiment = setup_experiment(config)
+    from project.experiment import (
+        instantiate_algorithm,
+        instantiate_datamodule,
+        instantiate_trainer,
+        seed_rng,
+        setup_logging,
+    )
+
+    experiment_config = config
+    setup_logging(experiment_config)
+    seed_rng(experiment_config)
+
+    trainer = instantiate_trainer(experiment_config)
+
+    datamodule = instantiate_datamodule(experiment_config.datamodule)
+
+    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+    # experiment: Experiment = setup_experiment(config)
+
+    import wandb
+
     if wandb.run:
         wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
         wandb.run.config.update(
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
 
-    metric_name, objective, _metrics = run(experiment)
-    assert objective is not None
-    return dict(name=metric_name, type="objective", value=objective)
-    # return {metric_name: objective}
-
-
-def run(experiment: Experiment) -> tuple[str, float | None, dict]:
-    """Run the experiment: training followed by evaluation.
-
-    Returns the metrics of the evaluation.
-    """
-
     # Train the model using the dataloaders of the datamodule:
     # The Algorithm gets to "wrap" the datamodule if it wants. This might be useful in the
     # case of RL, where we need to set the actor to use in the environment, as well as
     # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
     # TODO: Add ckpt_path argument to resume a training run.
-    datamodule = getattr(experiment.algorithm, "datamodule", experiment.datamodule)
+    datamodule = getattr(algorithm, "datamodule", datamodule)
 
     if datamodule is None:
-        # todo: missing `rng` argument.
         from project.trainers.jax_trainer import JaxTrainer
 
-        if isinstance(experiment.trainer, JaxTrainer):
+        if isinstance(trainer, JaxTrainer):
             import jax.random
 
-            experiment.trainer.fit(experiment.algorithm, rng=jax.random.key(0))
+            trainer.fit(algorithm, rng=jax.random.key(0))  # type: ignore
         else:
-            experiment.trainer.fit(experiment.algorithm)
+            trainer.fit(algorithm)
 
     else:
         assert isinstance(datamodule, LightningDataModule)
-        experiment.trainer.fit(
-            experiment.algorithm,
+        trainer.fit(
+            algorithm,
             datamodule=datamodule,
         )
 
-    metric_name, error, metrics = evaluation(experiment)
+    metric_name, error, _metrics = evaluation(
+        trainer=trainer, datamodule=datamodule, algorithm=algorithm
+    )
+
     if wandb.run:
         wandb.finish()
-    return metric_name, error, metrics
+
+    assert error is not None
+    return dict(name=metric_name, type="objective", value=error)
+    # return {metric_name: objective}
 
 
-def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
+def evaluation(
+    trainer: JaxTrainer | lightning.Trainer, datamodule: DataModule, algorithm
+) -> tuple[str, float | None, dict]:
     """Return the classification error.
 
     By default, if validation is to be performed, returns the validation error. Returns the
@@ -115,14 +131,14 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
     # TODO Probably log the hydra config with something like this:
     # exp.trainer.logger.log_hyperparams()
     # When overfitting on a single batch or only training, we return the train error.
-    if (experiment.trainer.limit_val_batches == experiment.trainer.limit_test_batches == 0) or (
-        experiment.trainer.overfit_batches == 1  # type: ignore
+    if (trainer.limit_val_batches == trainer.limit_test_batches == 0) or (
+        trainer.overfit_batches == 1  # type: ignore
     ):
         # We want to report the training error.
         metrics = {
-            **experiment.trainer.logged_metrics,
-            **experiment.trainer.callback_metrics,
-            **experiment.trainer.progress_bar_metrics,
+            **trainer.logged_metrics,
+            **trainer.callback_metrics,
+            **trainer.progress_bar_metrics,
         }
         rich.print(metrics)
         if "train/accuracy" in metrics:
@@ -141,18 +157,14 @@ def evaluation(experiment: Experiment) -> tuple[str, float | None, dict]:
                 f"Here are the available metric names:\n"
                 f"{list(metrics.keys())}"
             )
-    assert isinstance(experiment.datamodule, LightningDataModule)
+    assert isinstance(datamodule, LightningDataModule)
 
-    if experiment.trainer.limit_val_batches != 0:
-        results = experiment.trainer.validate(
-            model=experiment.algorithm, datamodule=experiment.datamodule
-        )
+    if trainer.limit_val_batches != 0:
+        results = trainer.validate(model=algorithm, datamodule=datamodule)
         results_type = "val"
     else:
         warnings.warn(RuntimeWarning("About to use the test set for evaluation!"))
-        results = experiment.trainer.test(
-            model=experiment.algorithm, datamodule=experiment.datamodule
-        )
+        results = trainer.test(model=algorithm, datamodule=datamodule)
         results_type = "test"
 
     if results is None:

@@ -1480,16 +1480,16 @@ wheels = [
 
 [[package]]
 name = "hydra-zen"
-version = "0.13.0"
+version = "0.13.1rc1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "hydra-core" },
     { name = "omegaconf" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/a9/747cd74012a33f61fbe7b079e91385214d0d0dc707721cd95afb2c823a75/hydra_zen-0.13.0.tar.gz", hash = "sha256:1b53d74aa1f0baa04fafdac6aba7a94ae40929e7b0a5a5081d8740f74322052d", size = 1329558 }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/8e/75255e0f0b8042d84df6afe9d3ab2d8b0f45359f3f7a80c2194e7371de2a/hydra_zen-0.13.1rc1.tar.gz", hash = "sha256:37f577e2615fc5692eab73c954f4f8dc1d01386327d208057cc169fbf5d86e0b", size = 1329925 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/33/ca/8f984e7a8e39ed2bf1622a1ae0fe26e65011fed150548a9319217e92925f/hydra_zen-0.13.0-py3-none-any.whl", hash = "sha256:6050b62be96d2a47b2abf0e9c0ebcce1e9a4e259e173870338ab049b833f26cf", size = 103784 },
+    { url = "https://files.pythonhosted.org/packages/d7/bd/0061300354aed319076b8564d2137967794f3b886065c2a532db87b51180/hydra_zen-0.13.1rc1-py3-none-any.whl", hash = "sha256:c0d5dfb3a47aaf507e7df1eca561766cdadcd1c047107010d5a746c929c2d45f", size = 103951 },
 ]
 
 [[package]]
@@ -3926,7 +3926,7 @@ requires-dist = [
     { name = "hydra-core", specifier = ">=1.3.2" },
     { name = "hydra-orion-sweeper", specifier = ">=1.6.4" },
     { name = "hydra-submitit-launcher", specifier = ">=1.2.0" },
-    { name = "hydra-zen", specifier = ">=0.13.0" },
+    { name = "hydra-zen", specifier = "==0.13.1rc1" },
     { name = "jax", specifier = "==0.4.33" },
     { name = "jax", extras = ["cuda12"], marker = "extra == 'gpu'", specifier = ">=0.4.31" },
     { name = "jaxlib", specifier = "==0.4.33" },

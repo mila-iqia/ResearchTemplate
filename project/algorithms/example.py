@@ -13,8 +13,8 @@ from typing import Literal, TypeVar
 
 import torch
 from hydra_zen.typing import Builds, PartialBuilds
-from lightning import LightningModule
 from lightning.pytorch.callbacks.callback import Callback
+from lightning.pytorch.core import LightningModule
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
@@ -51,7 +51,8 @@ class ExampleAlgorithm(LightningModule):
             datamodule: Object used to load train/val/test data.
                 See the lightning docs for [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule]
                 for more info.
-            network: The config of the network to instantiate and train.
+            network:
+                The config of the network to instantiate and train.
             optimizer: The config for the Optimizer. Instantiating this will return a function \
                 (a [functools.partial][]) that will create the Optimizer given the hyper-parameters.
             init_seed: The seed to use when initializing the weights of the network.
@@ -89,6 +90,7 @@ class ExampleAlgorithm(LightningModule):
                 _ = self.network(self.example_input_array)
 
     def forward(self, input: Tensor) -> Tensor:
+        """Forward pass of the network."""
         logits = self.network(input)
         return logits
 
@@ -116,6 +118,10 @@ class ExampleAlgorithm(LightningModule):
         return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self):
+        """Creates the optimizers.
+
+        See [`lightning.pytorch.core.LightningModule.configure_optimizers`][] for more information.
+        """
         # Instantiate the optimizer config into a functools.partial object.
         optimizer_partial = instantiate(self.optimizer_config)
         # Call the functools.partial object, passing the parameters as an argument.
@@ -124,6 +130,7 @@ class ExampleAlgorithm(LightningModule):
         return optimizer
 
     def configure_callbacks(self) -> Sequence[Callback] | Callback:
+        """Creates callbacks to be used by default during training."""
         return [
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         ]

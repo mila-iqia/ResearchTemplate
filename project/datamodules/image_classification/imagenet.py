@@ -83,17 +83,16 @@ class ImageNetDataModule(VisionDataModule):
     ):
         """Creates an ImageNet datamodule (doesn't load or prepare the dataset yet).
 
-        Parameters
-        ----------
-        data_dir: path to the imagenet dataset file
-        val_split: save `val_split`% of the training data *of each class* for validation.
-        image_size: final image size
-        num_workers: how many data workers
-        batch_size: batch_size
-        shuffle: If true shuffles the data every epoch
-        pin_memory: If true, the data loader will copy Tensors into CUDA pinned memory before \
-                    returning them
-        drop_last: If true drops the last incomplete batch
+        Parameters:
+            data_dir: path to the imagenet dataset file
+            val_split: save `val_split`% of the training data *of each class* for validation.
+            image_size: final image size
+            num_workers: how many data workers
+            batch_size: batch_size
+            shuffle: If true shuffles the data every epoch
+            pin_memory: If true, the data loader will copy Tensors into CUDA pinned memory before \
+                        returning them
+            drop_last: If true drops the last incomplete batch
         """
         self.image_size = image_size
         super().__init__(

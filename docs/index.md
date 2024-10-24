@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/mila-iqia/ResearchTemplate#license)
 
 !!! note "Work-in-Progress"
-    Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
+    Please note: This is a Work-in-Progress. The goal is to make a first release by the end of fall 2024.
 
 This is a research project template. It is meant to be a starting point for ML researchers at [Mila](https://mila.quebec/en).
 
@@ -18,10 +18,10 @@ For more context, see [this  introduction to the project.](intro.md).
 
     ---
 
-    [Get started quickly](install.md) with [a single installation script](#) and get up
+    [Get started quickly](#starting-a-new-project) with [a single installation script](#) and get up
     and running in minutes
 
-    [:octicons-arrow-right-24: Getting started](install.md)
+    [:octicons-arrow-right-24: Getting started](#starting-a-new-project)
 
 - :test_tube:{ .lg .middle } __Well-tested, robust codebase__
 
@@ -49,7 +49,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
     1. The source code for the example is available [here](https://github.com/mila-iqia/ResearchTemplate/blob/master/project/algorithms/example.py)
 
-    [:octicons-arrow-right-24: Check out the examples here](examples/examples.md)
+    [:octicons-arrow-right-24: Check out the examples here](examples/index.md)
 
 <!--
 -   :material-scale-balance:{ .lg .middle } __Open Source, MIT__
@@ -62,41 +62,101 @@ For more context, see [this  introduction to the project.](intro.md).
 
 </div>
 
-## Overview
 
-This project makes use of the following libraries:
+## Starting a new project
 
-- [Hydra](https://hydra.cc/) is used to configure the project. It allows you to define configuration files and override them from the command line.
-- [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) is used to as the training framework. It provides a high-level interface to organize ML research code.
-    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as described in the [Jax example](features/jax.md) 🔥
-- [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
-- [pytest](https://docs.pytest.org/en/stable/) is used for testing.
+To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate).
+
+
+## Setting up your environment
+
+Here are two recommended ways to setup your development environment:
+
+* Using the [uv](https://rye.astral.sh/) package manager
+* Using a development container (recommended if you are able to install Docker on your machine)
+
+
+=== "Locally (Linux / Mac)"
+
+    1. Clone your new repo and navigate into it
+
+        ```bash
+        git clone https://www.github.com/your-username/your-repo-name
+        cd your-repo-name
+        ```
+
+    2. Install the package manager
+
+        ```bash
+        # Install uv
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        source $HOME/.cargo/env
+        ```
+
+    3. Install dependencies
+
+        ```bash
+        uv sync  # Creates a virtual environment and installs dependencies in it.
+        ```
+
+=== "Locally (Windows)"
+
+    1. Install WSL following [this guide](https://learn.microsoft.com/en-us/windows/wsl/install)
+    2. Follow the installation instructions for Linux
+
+=== "On a SLURM cluster"
+
+    1. Clone your new repo and navigate into it
+
+        ```bash
+        git clone https://www.github.com/your-username/your-repo-name
+        cd your-repo-name
+        ```
+
+    2. (Mila cluster) - Launch the setup script
+
+        If you're on the `mila` cluster, you can run the setup script on a *compute* node, just to be nice:
+
+        ```console
+        srun --pty --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=00:10:00 scripts/mila_setup.sh
+        ```
+
 
 ## Usage
 
 To see all available options:
 
 ```bash
-python project/main.py --help
+uv run python project/main.py --help
 ```
 
-For a detailed list of examples, see the [examples page](examples/examples.md).
+For a detailed list of examples, see the [examples page](examples/index.md).
 
-<!-- * `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit. -->
 
-## Project layout
+## Developing inside a container (advanced)
 
-```
-pyproject.toml   # Project metadata and dependencies
-project/
-    main.py      # main entry-point
-    algorithms/  # learning algorithms
-    datamodules/ # datasets, processing and loading
-    networks/    # Neural networks used by algorithms
-    configs/     # configuration files
-docs/            # documentation
-conftest.py      # Test fixtures and utilities
-```
+This repo provides a [Devcontainer](https://code.visualstudio.com/docs/remote/containers) configuration for [Visual Studio Code](https://code.visualstudio.com/) to use a Docker container as a pre-configured development environment. This avoids struggles setting up a development environment and makes them reproducible and consistent.
+
+If that sounds useful to you, we recommend you first make yourself familiar with the [container tutorials](https://code.visualstudio.com/docs/remote/containers-tutorial) if you want to use them. The devcontainer.json file assumes that you have a GPU locally by default. If not, you can simply comment out the "--gpus" flag in the `.devcontainer/devcontainer.json` file.
+
+
+1. Setup Docker on your local machine
+
+    On an Linux machine where you have root access, you can install Docker using the following commands:
+
+    ```bash
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    ```
+
+    On Windows or Mac, follow [these installation instructions](https://code.visualstudio.com/docs/remote/containers#_installation)
+
+2. (optional) Install the [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to use your local machine's GPU(s).
+
+3. Install the [Dev Containers extension](vscode:extension/ms-vscode-remote.remote-containers) for Visual Studio Code.
+
+4. When opening repository in Visual Studio Code, you should be prompted to reopen the repository in a container:
+
+    ![VsCode popup image](https://github.com/mila-iqia/ResearchTemplate/assets/13387299/37d00ce7-1214-44b2-b1d6-411ee286999f)
+
+    Alternatively, you can open the command palette (Ctrl+Shift+P) and select `Dev Containers: Rebuild and Reopen in Container`.
