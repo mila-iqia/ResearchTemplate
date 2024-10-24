@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # https://github.com/facebookresearch/hydra/blob/main/examples/plugins/example_launcher_plugin/hydra_plugins/example_launcher_plugin/example_launcher.py
 
+import functools
 import logging
 import os
 from collections.abc import Callable, Sequence
@@ -15,6 +16,7 @@ from hydra.utils import instantiate
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import BaseSubmititLauncher
 from omegaconf import DictConfig
 from remote_slurm_executor.slurm_remote import RemoteSlurmExecutor
+from remote_slurm_executor.utils import LoginNode
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,20 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         setup = setup or []
         additional_parameters = additional_parameters or {}
         self.executor = executor()
+        cluster = self.executor.cluster_hostname
+
+        if account is None and len(available_accounts := get_slurm_accounts(cluster)) > 1:
+            # NOTE: tends to favour rrg-*_gpu accounts on DRAC.
+            account = sorted(available_accounts)[-1]
+            logger.warning(
+                f"The slurm account to use wasn't passed, and you have multiple accounts on "
+                f"the {cluster} cluster: {available_accounts}\n"
+                f"Will use --account={account} when launching jobs."
+            )
+
+        if setup and (executor_setup := self.executor.parameters.get("setup")):
+            # The executor already has some lines in "setup", don't overwrite those later.
+            setup = executor_setup + setup
 
         super().__init__(
             account=account,
@@ -132,6 +148,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
             wckey=wckey,
             additional_parameters=additional_parameters,
         )
+        self.executor.update_parameters(**self.params)
 
     def launch(
         self, job_overrides: Sequence[Sequence[str]], initial_job_idx: int
@@ -142,28 +159,11 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
 
         num_jobs = len(job_overrides)
         assert num_jobs > 0
-        params = self.params
-        executor = self.executor
         # specify resources/parameters\
         # Do *not* overwrite the `setup` if it's already in the executor's parameters!
-        if _setup := params.get("setup"):
-            executor.parameters["setup"] = (executor.parameters.get("setup", []) or []) + _setup
+
         # TODO: Make sure that if `launch` is called multiple times, `update_parameters` isn't (or
         # that it being called multiple times doesn't cause issues).
-        executor.update_parameters(
-            **{
-                x: y
-                for x, y in params.items()
-                if x
-                not in [
-                    #     "mem_gb",
-                    #     "name",
-                    #     "tasks_per_node",
-                    #     "timeout_min",
-                    "setup",
-                ]
-            }
-        )
 
         logger.info(
             f"Submitit '{self._EXECUTOR}' sweep output dir : " f"{self.config.hydra.sweep.dir}"
@@ -188,13 +188,25 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
                     Singleton.get_state(),
                 )
             )
-
-        jobs = executor.map_array(self, *zip(*job_params))
+        # NOTE: A bit weird that the executor is pickling itself here, but oh well.
+        jobs = self.executor.map_array(self, *zip(*job_params))
         print(f"JOB IDS: {[j.job_id for j in jobs]}")
         # TODO: Here the results of all tasks other than task 0 is ignored. This is bad!
         # If we have `--ntasks-per-gpu`, then perhaps the other task results are different results
         # for different seeds, or something similar!
         return [j.results()[0] for j in jobs]
+
+
+@functools.cache
+def get_slurm_accounts(cluster: str) -> list[str]:
+    """Gets the SLURM accounts of the user using sacctmgr on the slurm cluster."""
+    logger.debug(f"Fetching the list of SLURM accounts available on the {cluster} cluster.")
+    result = LoginNode(cluster).run(
+        "sacctmgr --noheader show associations where user=$USER format=Account%50"
+    )
+    accounts = [line.strip() for line in result.stdout.splitlines()]
+    assert accounts
+    return accounts
 
 
 RemoteSlurmQueueConf = hydra_zen.builds(
