@@ -57,11 +57,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         if phase in self.last_step_times:
             elapsed = now - self.last_step_times[phase]
             batch_size = self.get_num_samples(batch)
-            self.log(
+            pl_module.log(
                 f"{phase}/samples_per_second",
                 batch_size / elapsed,
-                module=pl_module,
-                trainer=trainer,
+                # module=pl_module,
+                # trainer=trainer,
                 prog_bar=True,
                 on_step=True,
                 on_epoch=True,
@@ -114,11 +114,11 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
             key = "ups"
         else:
             key = f"optimizer_{opt_idx}/ups"
-        self.log(
+        pl_module.log(
             key,
             updates_per_second,
-            module=pl_module,
-            trainer=trainer,
+            # module=pl_module,
+            # trainer=trainer,
             prog_bar=False,
             on_step=True,
         )

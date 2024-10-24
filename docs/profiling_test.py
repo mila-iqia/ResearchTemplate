@@ -83,7 +83,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         """
         experiment=profiling \
         algorithm=example \
-        resources=one_gpu \
+        resources=gpu \
         hydra.launcher.gres='gpu:a100:1' \
         hydra.launcher.cpus_per_task=4 \
         datamodule.num_workers=8 \

@@ -5,9 +5,9 @@ defaults:
   - optional datamodule: null
   - trainer: default.yaml
   - hydra: default.yaml
-
-  # Allows launching LOTS of runs in parallel on a cluster thanks to the submitit launcher.
   - resources: null
+  # Allows launching LOTS of runs in parallel on a cluster thanks to the submitit launcher.
+  - cluster: null
 
   # experiment configs allow for version control of specific hyperparameters
   # e.g. best hyperparameters for given model and datamodule

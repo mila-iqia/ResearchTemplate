@@ -645,6 +645,7 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
     def on_fit_end(self, trainer: lightning.Trainer, pl_module: lightning.LightningModule) -> None:
         super().on_fit_end(trainer, pl_module)
 
+    @override
     def log(
         self,
         name: str,
