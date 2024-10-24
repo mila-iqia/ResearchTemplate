@@ -11,7 +11,7 @@ hydra:
     dir: logs/${name}/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
     dir: logs/${name}/multiruns
-    subdir: ${hydra.job.num}
+    subdir: ${hydra.job.id}
 
   launcher:
     executor:
