@@ -12,4 +12,3 @@ hydra:
   launcher:
     stderr_to_stdout: true
     submitit_folder: ${hydra.sweep.dir}/%j
-
