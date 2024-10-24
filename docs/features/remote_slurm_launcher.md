@@ -1,5 +1,6 @@
 # Remote Slurm Submitit Launcher
 
+> 🔥 NOTE: This is a feature that is entirely unique to this template! 🔥
 
 This template includes a custom submitit launcher, that can be used to launch jobs on *remote* slurm clusters.
 This allows you to develop code locally, and easily ship it to a different cluster.
@@ -14,7 +15,7 @@ This feature allows you to launch jobs on remote slurm clusters using two config
     - `cpu`: CPU job
     - `gpu`: GPU job
 - The `cluster` config group controls where to run the job:
-    - `current`: Run on the current cluster. Assumes that you're already on a SLURM cluster (e.g. when using `mila code`). This uses the usual `submitit_slurm` launcher.
+    - `current`: Run on the current cluster. Use this if you're already on a SLURM cluster (e.g. when using `mila code`). This uses the usual `submitit_slurm` launcher.
     - `mila`: Launches the job on the Mila cluster.
     - `narval`: Remotely launches the job on the Narval cluster
     - `cedar`: Remotely launches the job on the Cedar cluster
@@ -23,43 +24,42 @@ This feature allows you to launch jobs on remote slurm clusters using two config
 
 ## Examples
 
-
-### Remotely launching a GPU job on the Mila cluster from a local machine:
-```bash
-python project/main.py experiment=example resources=gpu cluster=mila
-```
-
-### Launching a job on a DRAC cluster from a local machine
-```bash
-python project/main.py experiment=example resources=gpu cluster=narval
-```
-
-### Launching a GPU job on Narval from the Mila cluster
-Assuming you already have SSH access setup from `mila` to `narval`, the command is exactly the same as above:
-```bash
-python project/main.py experiment=example resources=gpu cluster=narval
-```
-
-### Launching a sweep while debugging code on the Mila cluster
-
-```bash
-python project/main.py experiment=example algorithm.optimizer.lr=0.01,0.02,0.03 resources=gpu
-```
+This assumes that you've already setup SSH access to the clusters (for example using `mila init`).
 
 
-### Launching a GPU job on the Mila cluster from your laptop
+### Local machine -> Mila
 
 ```bash
 python project/main.py experiment=example resources=gpu cluster=mila
 ```
 
-
-### Launching a GPU job on the Narval cluster from your laptop
+### Local machine -> DRAC cluster (narval)
 
 ```bash
 python project/main.py experiment=example resources=gpu cluster=narval
 ```
+
+
+### Mila -> DRAC cluster (narval)
+
+This assumes that you've already setup SSH access from `mila` to the DRAC clusters.
+
+Note that command is about the same as [above](#local-machine---drac-cluster-narval)
+
+```bash
+python project/main.py experiment=example resources=gpu cluster=narval
+```
+
 
 !!! warning
 
-    NOTE: At the moment it is very important that the "cluster" config be used **after** the "resources" config! Otherwise the submitit_slurm launcher is used.
+    If you want to launch jobs on a remote cluster, it is (currently) necessary to place the "resources" config **before** the "cluster" config on the command-line.
+
+
+## Launching jobs on the current SLURM cluster
+
+If you develop on a SLURM cluster, you can use the `cluster=current`, or simply omit the `cluster` config group and only use a config from the `resources` group.
+
+```bash
+(mila) $ python project/main.py experiment=example resources=gpu cluster=current
+```
