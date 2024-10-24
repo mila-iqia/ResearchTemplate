@@ -244,7 +244,7 @@ _AddedArgumentsConf = builds(
 class PatchedSlurmQueueConf(_AddedArgumentsConf, SlurmQueueConf):
     """Adds more SLURM parameters to the config for the SLURM submitit launcher of Hydra."""
 
-    _target_: str = "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"
+    _target_: str = "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"  # type: ignore
 
     signal_delay_s: int = 120
     """USR1 signal delay before timeout."""
