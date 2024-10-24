@@ -121,6 +121,12 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         if setup and (executor_setup := self.executor.parameters.get("setup")):
             # The executor already has some lines in "setup", don't overwrite those later.
             setup = executor_setup + setup
+        if mem_gb is not None:
+            assert mem is None, "can't use both mem and mem_gb"
+            mem = f"{mem_gb}GB"
+        if tasks_per_node is not None:
+            assert ntasks_per_node is None, "can't use both tasks_per_node and ntasks_per_node"
+            ntasks_per_node = tasks_per_node
 
         super().__init__(
             account=account,
@@ -141,10 +147,8 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
             mem=mem,
             mem_per_cpu=mem_per_cpu,
             mem_per_gpu=mem_per_gpu,
-            mem_gb=mem_gb,
             nodelist=nodelist,
             nodes=nodes,
-            tasks_per_node=ntasks_per_node or tasks_per_node,
             num_gpus=num_gpus,
             partition=partition,
             qos=qos,

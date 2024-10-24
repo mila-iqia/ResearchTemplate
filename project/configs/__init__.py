@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
+from omegaconf import OmegaConf
 
 from project.configs.algorithm.network import network_store
 from project.configs.algorithm.optimizer import optimizers_store
@@ -12,6 +13,8 @@ from project.utils.remote_launcher_plugin import RemoteSlurmQueueConf
 
 cs = ConfigStore.instance()
 cs.store(name="base_config", node=Config)
+
+OmegaConf.register_new_resolver("eval", eval)
 
 
 def add_configs_to_hydra_store():

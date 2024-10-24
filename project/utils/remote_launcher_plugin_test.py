@@ -69,8 +69,8 @@ def test_can_load_configs(command_line_arguments: list[str]):
         [
             "algorithm=example",
             "datamodule=cifar10",
-            "cluster=mila",
             "resources=gpu",
+            "cluster=mila",
             "+trainer.fast_dev_run=True",
         ]
     ],
@@ -79,6 +79,7 @@ def test_instantiate_remote_slurm_launcher_plugin(
     argv: list[str], monkeypatch: pytest.MonkeyPatch
 ):
     launcher_mock = Mock(spec=RemoteSlurmLauncher, wraps=RemoteSlurmLauncher)
+    launcher_mock.__qualname__ = RemoteSlurmLauncher.__qualname__
     monkeypatch.setattr(
         project.utils.remote_launcher_plugin, RemoteSlurmLauncher.__name__, launcher_mock
     )
