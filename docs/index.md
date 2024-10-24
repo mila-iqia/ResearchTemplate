@@ -121,9 +121,24 @@ Here are two recommended ways to setup your development environment:
         srun --pty --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=00:10:00 scripts/mila_setup.sh
         ```
 
-## Using a development container
 
-This repo provides a [Devcontainer](https://code.visualstudio.com/docs/remote/containers) configuration for [Visual Studio Code](https://code.visualstudio.com/) to use a Docker container as a pre-configured development environment. This avoids struggles setting up a development environment and makes them reproducible and consistent.  and make yourself familiar with the [container tutorials](https://code.visualstudio.com/docs/remote/containers-tutorial) if you want to use them. In order to use GPUs, you can enable them within the `.devcontainer/devcontainer.json` file.
+## Usage
+
+To see all available options:
+
+```bash
+uv run python project/main.py --help
+```
+
+For a detailed list of examples, see the [examples page](examples/index.md).
+
+
+## Developing inside a container (advanced)
+
+This repo provides a [Devcontainer](https://code.visualstudio.com/docs/remote/containers) configuration for [Visual Studio Code](https://code.visualstudio.com/) to use a Docker container as a pre-configured development environment. This avoids struggles setting up a development environment and makes them reproducible and consistent.
+
+If that sounds useful to you, we recommend you first make yourself familiar with the [container tutorials](https://code.visualstudio.com/docs/remote/containers-tutorial) if you want to use them. The devcontainer.json file assumes that you have a GPU locally by default. If not, you can simply comment out the "--gpus" flag in the `.devcontainer/devcontainer.json` file.
+
 
 1. Setup Docker on your local machine
 
@@ -145,44 +160,3 @@ This repo provides a [Devcontainer](https://code.visualstudio.com/docs/remote/co
     ![VsCode popup image](https://github.com/mila-iqia/ResearchTemplate/assets/13387299/37d00ce7-1214-44b2-b1d6-411ee286999f)
 
     Alternatively, you can open the command palette (Ctrl+Shift+P) and select `Dev Containers: Rebuild and Reopen in Container`.
-
-
-
-## Overview
-
-This project makes use of the following libraries:
-
-- [Hydra](https://hydra.cc/) is used to configure the project. It allows you to define configuration files and override them from the command line.
-- [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) is used to as the training framework. It provides a high-level interface to organize ML research code.
-    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as described in the [Jax example](features/jax.md) 🔥
-- [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
-- [pytest](https://docs.pytest.org/en/stable/) is used for testing.
-
-## Usage
-
-To see all available options:
-
-```bash
-python project/main.py --help
-```
-
-For a detailed list of examples, see the [examples page](examples/index.md).
-
-<!-- * `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit. -->
-
-## Project layout
-
-```
-pyproject.toml   # Project metadata and dependencies
-project/
-    main.py      # main entry-point
-    algorithms/  # learning algorithms
-    datamodules/ # datasets, processing and loading
-    networks/    # Neural networks used by algorithms
-    configs/     # configuration files
-docs/            # documentation
-conftest.py      # Test fixtures and utilities
-```
