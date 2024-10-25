@@ -290,8 +290,21 @@ def instance_attr(
 
         logger.debug(f"Trying the next attribute in {attributes}.")
 
+    if not objects_cache:
+        if len(attributes) == 1:
+            attribute = attributes[0]
+            parent, _, attr = attribute.rpartition(".")
+            raise RuntimeError(
+                f"Could not find attribute {attribute!r} on any instantiated config! "
+                f"Did you forget to set a value for the {parent!r} config? Are you sure that the "
+                f"object at path {parent!r} has an attribute named {attr!r}?"
+            )
+        raise RuntimeError(
+            f"Could not find any of {attributes} in the configs that were instantiated! "
+            f"Did you forget to set a value for one of these configs?"
+        )
     raise RuntimeError(
-        f"Could not find any of these attributes {attributes} from the instantiated objects: "
+        f"Could not find any of these attributes {attributes} from the instantiated configs: "
         + str({k: type(v) for k, v in objects_cache.items()})
         # + "\n".join([f"- {k}: {type(v)}" for k, v in all_init_field_items.items()])
     )
