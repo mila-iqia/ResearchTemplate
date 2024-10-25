@@ -11,8 +11,7 @@
 		},
 		"ghcr.io/devcontainers-contrib/features/apt-get-packages": {
 			"packages": [
-				"vim",
-				"sshfs"
+				"vim"
 			]
 		},
 		"ghcr.io/va-h/devcontainers-features/uv:1": {}
@@ -75,46 +74,46 @@
 			]
 		}
 	},
+	// create the cache dir on the host machine if it doesn exist yet so the mount below
+	// doesn't fail.
+	"initializeCommand": {
+		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}", // this is fine on compute nodes
+		"create ssh cache dir": "mkdir -p ~/.cache/ssh", // Used to store the ssh sockets (from ControlPath directive).
+		"create uv cache dir": "mkdir -p ~/.cache/uv" // Used to store the ssh sockets (from ControlPath directive).
+	},
 	"containerEnv": {
 		"SCRATCH": "/home/vscode/scratch",
 		"SLURM_TMPDIR": "/tmp",
 		"NETWORK_DIR": "/network",
-		"UV_LINK_MODE": "symlink"
+		"UV_LINK_MODE": "symlink",
+		"UV_CACHE_DIR": "/home/vscode/.uv_cache"
 	},
 	"mounts": [
 		// https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
 		// Mount a directory which will contain the pdm installation cache (shared with the host machine).
-		// This will use $SCRATCH/.cache/pdm, otherwise
 		// Mount a "$SCRATCH" directory in the host to ~/scratch in the container.
 		"source=${localEnv:SCRATCH},target=/home/vscode/scratch,type=bind,consistency=cached",
-		// Mount a /network to match the /network directory on the host.
-		// FIXME: This assumes that either the NETWORK_DIR environment variable is set on the host, or
-		// that the /network directory exists.
-		"source=${localEnv:NETWORK_DIR:/network},target=/network,type=bind,readonly",
 		// Mount $SLURM_TMPDIR on the host machine to /tmp/slurm_tmpdir in the container.
 		// note: there's also a SLURM_TMPDIR env variable set to /tmp/slurm_tmpdir in the container.
 		// NOTE: this assumes that either $SLURM_TMPDIR is set on the host machine (e.g. a compute node)
 		// or that `/tmp/slurm_tmpdir` exists on the host machine.
 		"source=${localEnv:SLURM_TMPDIR:/tmp/slurm_tmpdir},target=/tmp,type=bind,consistency=cached",
-		// Mount the ssh directory on the host machine to the container.
-		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
+		// Mount the ssh directory on the host machine to the container so we can use SSH in the
+		// same way as on the local machine.
+		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
+		// Mount the ssh cache directory on the host machine to the container.
+		"source=${localEnv:HOME}/.cache/uv,target=/home/vscode/.uv_cache,type=bind,consistency=cached"
 	],
 	"runArgs": [
-		"--gpus",
-		"all",
+		"--gpus", // COMMENT OUT IF YOUR LAPTOP DOES NOT HAVE A GPU!
+		"all", // COMMENT OUT IF YOUR LAPTOP DOES NOT HAVE A GPU!
 		"--ipc=host"
 	],
-	// create the pdm cache dir on the host machine if it doesn exist yet so the mount above
-	// doesn't fail.
-	"initializeCommand": {
-		"create fake SLURM_TMPDIR": "mkdir -p ${SLURM_TMPDIR:-/tmp/slurm_tmpdir}", // this is fine on compute nodes
-		"create ssh cache dir": "mkdir -p ~/.cache/ssh"
-	},
 	"onCreateCommand": {
 		"pre-commit": "pre-commit install --install-hooks"
 	},
 	"updateContentCommand": {
-		"Sync dependencies": "uv sync --frozen"
+		"Sync dependencies": "uv sync --locked"
 	},
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": {
