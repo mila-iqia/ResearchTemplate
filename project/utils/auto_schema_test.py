@@ -6,6 +6,8 @@ import pytest
 import yaml
 from pytest_regressions.file_regression import FileRegressionFixture
 
+from project.utils.env_vars import REPO_ROOTDIR
+
 from .auto_schema import add_schema_header, create_schema_for_config, main
 
 
@@ -47,7 +49,7 @@ def test_make_schema(config_file: Path, file_regression: FileRegressionFixture):
 
     config = yaml.load(config_file.read_text(), yaml.FullLoader)
     schema = create_schema_for_config(
-        config=config, config_file=config_file, configs_dir=_config_dir
+        config=config, config_file=config_file, configs_dir=_config_dir, repo_root=REPO_ROOTDIR
     )
 
     add_schema_header(config_file, schema_path=schema_file)

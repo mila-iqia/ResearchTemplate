@@ -25,6 +25,7 @@ from omegaconf import DictConfig
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.trainers.jax_trainer import JaxTrainer
+from project.utils import auto_schema
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.typing_utils.protocols import DataModule
@@ -36,6 +37,15 @@ PROJECT_NAME = Path(__file__).parent.name
 
 add_configs_to_hydra_store()
 
+auto_schema.config = auto_schema.AutoSchemaPluginConfig(
+    schemas_dir=REPO_ROOTDIR / ".schemas",
+    regen_schemas=False,
+    stop_on_error=False,
+    quiet=True,
+    add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
+)
+auto_schema.register_auto_schema_plugin()
+
 
 @hydra.main(
     config_path=f"pkg://{PROJECT_NAME}.configs",
@@ -46,21 +56,7 @@ def main(dict_config: DictConfig) -> dict:
     """Main entry point for training a model."""
     print_config(dict_config, resolve=False)
 
-    from project.utils.auto_schema import add_schemas_to_all_hydra_configs
-
     # Note: running this should take ~5 seconds the first time and <1s after that.
-    try:
-        add_schemas_to_all_hydra_configs(
-            config_files=None,
-            repo_root=REPO_ROOTDIR,
-            configs_dir=REPO_ROOTDIR / PROJECT_NAME / "configs",
-            regen_schemas=False,
-            stop_on_error=False,
-            quiet=True,
-            add_headers=False,  # don't add headers if we can't add an entry in vscode settings.
-        )
-    except Exception:
-        logger.error("Unable to add schemas to all hydra configs.")
 
     config: Config = resolve_dictconfig(dict_config)
 

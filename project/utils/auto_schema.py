@@ -27,13 +27,14 @@ import warnings
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Literal, TypedDict, TypeVar
+from typing import Any, ClassVar, Literal, TypedDict, TypeVar
 
 import docstring_parser as dp
 import flax
 import flax.linen
 import flax.struct
 import hydra.errors
+import hydra.plugins
 import hydra.utils
 import hydra_zen
 import lightning.pytorch.callbacks
@@ -53,13 +54,17 @@ from pydantic_core import core_schema
 from tqdm.rich import tqdm_rich
 from typing_extensions import NotRequired, Required
 
-from project.utils.env_vars import REPO_ROOTDIR
-
 logger = get_logger(__name__)
 
 _SpecialEntries = TypedDict(
     "_SpecialEntries", {"$defs": dict[str, dict], "$schema": str}, total=False
 )
+
+
+def register_auto_schema_plugin():
+    import hydra.core.plugins
+
+    hydra.core.plugins.Plugins.instance().register(AutoSchemaPlugin)
 
 
 class PropertySchema(_SpecialEntries, total=False):
@@ -224,26 +229,17 @@ def main(argv: list[str] | None = None):
         ],
     )
 
-    from project.main import PROJECT_NAME
-    from project.utils.env_vars import REPO_ROOTDIR
-
-    CONFIGS_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
-
-    # FIXME: remove this, perhaps it could be an argument?
-    from project.utils.env_vars import REPO_ROOTDIR
-
-    repo_root = REPO_ROOTDIR
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "path",
         type=Path,
-        default=REPO_ROOTDIR,
+        default=Path.cwd(),
         help="Directory containing configs, of path to config file.",
     )
-    parser.add_argument("--configs-dir", type=Path, default=CONFIGS_DIR)
+    parser.add_argument("--configs-dir", type=Path)
     parser.add_argument("--schemas-dir", type=Path, default=None, required=False)
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd(), required=False)
     parser.add_argument("--regen-schemas", action=argparse.BooleanOptionalAction)
     parser.add_argument("--stop-on-error", action=argparse.BooleanOptionalAction)
     parser.add_argument(
@@ -267,6 +263,7 @@ def main(argv: list[str] | None = None):
     path: Path = args.path
     configs_dir: Path = args.configs_dir
     schemas_dir: Path = args.schemas_dir
+    repo_root: Path = args.repo_root
     regen_schemas: bool = args.regen_schemas
     stop_on_error: bool = args.stop_on_error
     quiet: bool = args.quiet
@@ -317,8 +314,24 @@ def add_schemas_to_all_hydra_configs(
     regen_schemas: bool = False,
     stop_on_error: bool = False,
     quiet: bool = False,
-    add_headers: bool | None = None,
+    add_headers: bool | None = False,
 ):
+    """Adds schemas to all the passed Hydra config files.
+
+    Parameters:
+        config_files: List of paths to the Hydra config files. If None, all YAML files in configs_dir are used.
+        repo_root: The root directory of the repository.
+        configs_dir: The directory containing the Hydra config files.
+        schemas_dir: The directory to store the generated schema files. Defaults to ".schemas" in the repo_root.
+        regen_schemas: If True, regenerate schemas even if they already exist. Defaults to False.
+        stop_on_error: If True, raise an exception on error. Defaults to False.
+        quiet: If True, suppress progress bar output. Defaults to False.
+        add_headers: Determines how to associate schema files with config files.
+
+            - If None, try adding to VSCode settings first, then fallback to adding headers.
+            - If False, only use VSCode settings.
+            - If True, only add headers.
+    """
     if config_files is None:
         config_files = _yaml_files_in(configs_dir)
     if not config_files:
@@ -339,6 +352,7 @@ def add_schemas_to_all_hydra_configs(
             desc="Creating schemas for Hydra config files...",
             total=len(config_files),
             leave=not quiet,
+            disable=quiet,
         )
 
     for config_file in pbar:
@@ -379,9 +393,9 @@ def add_schemas_to_all_hydra_configs(
             logger.debug(f"Creating a schema for {pretty_config_file_name}")
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
-                config = _load_config(config_file, configs_dir=configs_dir)
+                config = _load_config(config_file, configs_dir=configs_dir, repo_root=repo_root)
             schema = create_schema_for_config(
-                config, config_file=config_file, configs_dir=configs_dir
+                config, config_file=config_file, configs_dir=configs_dir, repo_root=repo_root
             )
             schema_file.parent.mkdir(exist_ok=True, parents=True)
             schema_file.write_text(json.dumps(schema, indent=2).rstrip() + "\n\n")
@@ -394,7 +408,9 @@ def add_schemas_to_all_hydra_configs(
             Exception,  # todo: remove this to harden the code.
         ) as exc:
             logger.warning(
-                f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
+                RuntimeWarning(
+                    f"Unable to create a schema for config {pretty_config_file_name}: {exc}"
+                )
             )
             if stop_on_error:
                 raise
@@ -424,7 +440,7 @@ def add_schemas_to_all_hydra_configs(
             pass
 
         try:
-           _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
+            _add_schemas_to_vscode_settings(config_file_to_schema_file, repo_root=repo_root)
         except Exception as exc:
             logger.error(
                 f"Unable to write schemas in the vscode settings file. "
@@ -561,7 +577,7 @@ def _all_subentries_with_target(config: dict) -> dict[tuple[str, ...], dict]:
 
 
 def create_schema_for_config(
-    config: dict | DictConfig, config_file: Path, configs_dir: Path | None
+    config: dict | DictConfig, config_file: Path, configs_dir: Path | None, repo_root: Path
 ) -> Schema | ObjectSchema:
     """IDEA: Create a schema for the given config.
 
@@ -590,6 +606,7 @@ def create_schema_for_config(
                 schema=schema,
                 defaults=config["defaults"],
                 configs_dir=configs_dir,
+                repo_root=repo_root,
             )
 
     # Config file that contains entries that may or may not have a _target_.
@@ -644,6 +661,7 @@ def _update_schema_from_defaults(
     schema: Schema,
     defaults: list[str | dict[str, str]],
     configs_dir: Path,
+    repo_root: Path,
 ):
     defaults_list = defaults
 
@@ -669,7 +687,9 @@ def _update_schema_from_defaults(
                     break
 
         # try:
-        default_config = _load_config(other_config_path, configs_dir=configs_dir)
+        default_config = _load_config(
+            other_config_path, configs_dir=configs_dir, repo_root=repo_root
+        )
         # except omegaconf.errors.MissingMandatoryValue:
         #     default_config = OmegaConf.load(other_config_path)
 
@@ -677,6 +697,7 @@ def _update_schema_from_defaults(
             config=default_config,
             config_file=other_config_path,
             configs_dir=configs_dir,
+            repo_root=repo_root,
         )
 
         logger.debug(f"Schema from default {default}: {schema_of_default}")
@@ -776,7 +797,7 @@ def _has_package_global_line(config_file: Path) -> int | None:
     return False
 
 
-def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
+def _load_config(config_path: Path, configs_dir: Path, repo_root: Path) -> DictConfig:
     *config_groups, config_name = config_path.relative_to(configs_dir).with_suffix("").parts
     logger.debug(
         f"config_path: ./{_relative_to_cwd(config_path)}, {config_groups=}, {config_name=}, configs_dir: {configs_dir}"
@@ -789,8 +810,8 @@ def _load_config(config_path: Path, configs_dir: Path) -> DictConfig:
     setup_globals()
 
     # FIXME!
-    if configs_dir.is_relative_to(REPO_ROOTDIR) and (configs_dir / "__init__.py").exists():
-        config_module = str(configs_dir.relative_to(REPO_ROOTDIR)).replace("/", ".")
+    if configs_dir.is_relative_to(repo_root) and (configs_dir / "__init__.py").exists():
+        config_module = str(configs_dir.relative_to(repo_root)).replace("/", ".")
         search_path = create_config_search_path(f"pkg://{config_module}")
     else:
         search_path = create_config_search_path(str(configs_dir))
@@ -1034,24 +1055,53 @@ class _MyGenerateJsonSchema(GenerateJsonSchema):
         return super().enum_schema(schema)
 
 
+@hydra_zen.hydrated_dataclass(
+    add_schemas_to_all_hydra_configs, populate_full_signature=True, zen_partial=True
+)
+class AutoSchemaPluginConfig:
+    """Config for the AutoSchemaPlugin."""
+
+    schemas_dir: Path | None = None
+    regen_schemas: bool = False
+    stop_on_error: bool = False
+    quiet: bool = True
+    add_headers: bool | None = False
+
+
+config: AutoSchemaPluginConfig | None = None
+
+
 class AutoSchemaPlugin(SearchPathPlugin):
     provider: str
     path: str
+    _ALREADY_DID: ClassVar[bool] = False
 
     def __init__(self) -> None:
         super().__init__()
+        self.config = config or AutoSchemaPluginConfig()
+        self.fn = hydra_zen.instantiate(self.config)
 
     def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
+        if type(self)._ALREADY_DID:
+            # TODO: figure out what's causing this.
+            logger.debug(f"Avoiding weird recursion in the {AutoSchemaPlugin.__name__}.")
+            return
+        type(self)._ALREADY_DID = True
+
         search_path_entries = search_path.get_path()
+
         # WIP: Trying to infer the project root, configs dir from the Hydra context.
         # Currently hard-coded.
 
-        for seach_path_entry in search_path_entries:
-            if seach_path_entry.provider != "main":
+        for search_path_entry in search_path_entries:
+            # TODO: There are probably lots of assumptions that are specific to the
+            # ResearchTemplate repo that would need to be removed / generalized before we can make
+            # this a pip-installable hydra plugin..
+            if search_path_entry.provider != "main":
                 continue
 
-            if seach_path_entry.path.startswith("pkg://"):
-                configs_pkg = seach_path_entry.path.removeprefix("pkg://")
+            if search_path_entry.path.startswith("pkg://"):
+                configs_pkg = search_path_entry.path.removeprefix("pkg://")
                 project_package = configs_pkg.split(".")[0]
                 _project_module = importlib.import_module(project_package)
                 assert (
@@ -1067,12 +1117,11 @@ class AutoSchemaPlugin(SearchPathPlugin):
                         f"and the configs directory at {configs_dir}!"
                     )
                     continue
-                    logger.debug("Assuming that the ")
-                add_schemas_to_all_hydra_configs(
+                # print(f"{self.fn=}, {_project_module}, {repo_root=}, {configs_dir=}")
+                self.fn(
                     config_files=None,
                     repo_root=repo_root,
                     configs_dir=configs_dir,
-                    quiet=True,
                 )
 
 

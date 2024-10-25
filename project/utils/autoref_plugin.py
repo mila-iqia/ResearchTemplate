@@ -74,6 +74,7 @@ class CustomAutoRefPlugin(BasePlugin):
         #         assert False, markdown
         #     additional_objects = _expand(module_path)
         if referenced_packages := page.meta.get("additional_python_references", []):
+            logger.debug(f"Loading extra references: {referenced_packages}")
             additional_objects: list[object] = _get_referencable_objects_from_doc_page_header(
                 referenced_packages
             )
@@ -127,7 +128,7 @@ class CustomAutoRefPlugin(BasePlugin):
                     continue
 
                 new_ref = f"[`{thing_name}`][{_full_path(thing)}]"
-                logger.info(
+                logger.debug(
                     f"Replacing `{thing_name}` with {new_ref} in {page.file.abs_src_path}:{line_index}"
                 )
                 line = line.replace(f"`{thing_name}`", new_ref)
