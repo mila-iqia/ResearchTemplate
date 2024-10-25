@@ -2,8 +2,9 @@
 defaults:
   - example.yaml # A configuration for a single run (that works!)
   - override /trainer/logger: wandb
-  - override /hydra/launcher: submitit_slurm
   - override /hydra/sweeper: orion
+  - override /resources: gpu
+  - override /cluster: ??? # use `current` if you are already on a cluster, otherwise use one of the `cluster` configs.
 
 log_level: DEBUG
 name: "sweep-example"
@@ -46,36 +47,25 @@ hydra:
     subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
 
   launcher:
-    cpus_per_task: 2
-    nodes: 1
-    # TODO: Pack more than one job on a single GPU.
-    tasks_per_node: 1
-    mem_gb: 16
-    gres: gpu:1
-    # note: Can't currently use this argument with the submitit launcher plugin. We would need to
-    # create a subclass to add support for it.
-    # ntasks_per_gpu: 2
-
     # todo: bump this up.
-    array_parallelism: 1 # max num of jobs to run in parallel
-
-    stderr_to_stdout: true
-
-    ## A list of commands to add to the generated sbatch script before running srun:
-    setup:
-    # - export LD_PRELOAD=/some/folder/with/libraries/
-
-    # Other things to pass to `sbatch`:
+    array_parallelism: 5 # max num of jobs to run in parallel
     additional_parameters:
       time: 0-00:10:00 # maximum wall time allocated for the job (D-HH:MM:SS)
-
+      # TODO: Pack more than one job on a single GPU, and support this with both a
+      # patched submitit launcher as well as our remote submitit launcher, as well as by patching the
+      # orion sweeper to not drop these other results.
+      ntasks_per_gpu: 1
   sweeper:
     params:
       algorithm:
         optimizer:
           lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
           # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
+      trainer:
+        # Let the HPO algorithm allocate more epochs to more promising HP configurations.
+        max_epochs: "fidelity(1, 10, default_value=1)"
 
+    parametrization: null
     experiment:
       name: "${name}"
       version: 1
