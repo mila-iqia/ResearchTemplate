@@ -8,7 +8,7 @@
     * features/*.md
   * Examples 🧪
     * [Image Classification (⚡)](examples/supervised_learning.md)
-    * [Image Classification ([jax](+⚡)](examples/jax_sl_example.md)
+    * [Image Classification (jax+⚡)](examples/jax_sl_example.md)
     * [NLP (🤗+⚡)](examples/nlp.md)
     * [RL (jax)](examples/jax_rl_example.md)
     * [Running sweeps](examples/sweeps.md)
