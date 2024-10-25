@@ -43,7 +43,8 @@ The [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer] will not be a
 
 ## End-to-end training in Jax: the `JaxTrainer`
 
-The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl_example.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s.
+The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl_example.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s, which are a simplified, jax-based look-alike of `lightning.LightningModule`s.
+
 
 The "algorithm" needs to match the `JaxModule` protocol:
 - `JaxModule.training_step`: train using a batch of data

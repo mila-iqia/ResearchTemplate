@@ -14,6 +14,7 @@ This example follows the same structure as the other examples:
 
 
 However, there are some very important differences:
+
 - There is no "datamodule". The algorithm accepts an Environment (`gymnax.Environment`) as input.
 - The "Trainer" is a `JaxTrainer`, instead of a `lightning.Trainer`.
   - The full training loop is written in Jax;
@@ -21,12 +22,23 @@ However, there are some very important differences:
 - The `JaxRLExample` class is an algorithm based on rejax.PPO.
 
 
+
+
 ## JaxRLExample
 
-The `JaxRLExample` class is a
+The `JaxRLExample` is based on [rejax.PPO](https://github.com/keraJLi/rejax/blob/main/rejax/algos/ppo.py).
+It follows the structure of a `JaxModule`, and is trained with a `JaxTrainer`.
+
 
 ??? note "Click to show the code for JaxRLExample"
     {{ inline('project.algorithms.jax_rl_example.JaxRLExample', 4) }}
+
+
+## JaxModule
+
+The `JaxModule` class is made to look a bit like the `lightning.LightningModule` class:
+
+{{ inline('project.trainers.jax_trainer.JaxModule', 0) }}
 
 
 ## JaxTrainer
