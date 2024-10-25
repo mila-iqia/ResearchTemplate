@@ -1,34 +1,26 @@
+"""Utilities to help annotate the types of values in the project."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, NewType, TypeAlias, TypeGuard
+from typing import Any, NewType, TypeGuard
 
-from torch import Tensor
-from typing_extensions import TypeVar, TypeVarTuple, Unpack
+from typing_extensions import TypeVar
 
-from .protocols import Dataclass, DataModule, Module
+from .protocols import DataModule, Module
 
 # These are used to show which dim is which.
 C = NewType("C", int)
 H = NewType("H", int)
 W = NewType("W", int)
-S = NewType("S", int)
 
 
-OutT = TypeVar("OutT", default=Tensor, covariant=True)
-Ts = TypeVarTuple("Ts", default=Unpack[tuple[Tensor, ...]])
-T = TypeVar("T", default=Tensor)
+T = TypeVar("T")
 K = TypeVar("K")
 V = TypeVar("V")
 
-NestedDict: TypeAlias = dict[K, V | "NestedDict[K, V]"]
 NestedMapping = Mapping[K, V | "NestedMapping[K, V]"]
 PyTree = T | Iterable["PyTree[T]"] | Mapping[Any, "PyTree[T]"]
-
-
-def is_list_of(object: Any, item_type: type[V] | tuple[type[V], ...]) -> TypeGuard[list[V]]:
-    """Used to check (and tell the type checker) that `object` is a list of items of this type."""
-    return isinstance(object, list) and is_sequence_of(object, item_type)
 
 
 def is_sequence_of(
@@ -49,8 +41,6 @@ def is_mapping_of(object: Any, key_type: type[K], value_type: type[V]) -> TypeGu
 
 
 __all__ = [
-    "HasInputOutputShapes",
     "Module",
-    "Dataclass",
     "DataModule",
 ]

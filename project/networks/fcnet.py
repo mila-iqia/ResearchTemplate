@@ -6,8 +6,6 @@ import numpy as np
 import pydantic
 from torch import nn
 
-from project.networks.layers.layers import Flatten
-
 
 class FcNet(nn.Sequential):
     @pydantic.dataclasses.dataclass
@@ -66,7 +64,7 @@ class FcNet(nn.Sequential):
         ):
             block_layers = []
             if block_index == 0:
-                block_layers.append(Flatten())
+                block_layers.append(nn.Flatten())
 
             if in_dims is None:
                 block_layers.append(nn.LazyLinear(out_dims, bias=self.hparams.use_bias))

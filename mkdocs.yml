@@ -12,10 +12,18 @@ extra_css:
 theme:
   name: material
   features:
+    - toc.follow
+    - toc.integrate
     - navigation.instant
+    # - navigation.indexes
+    # - navigation.path
+    # - navigation.expand
+    # - navigation.tabs
+    # - navigation.tabs.sticky
     - navigation.instant.prefetch
     - navigation.instant.preview
     - content.code.copy
+    - navigation.tracking
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
@@ -61,6 +69,11 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
 
 plugins:
   - search
@@ -88,6 +101,7 @@ plugins:
             - https://docs.python.org/3/objects.inv
             - https://pytorch.org/docs/stable/objects.inv
             - https://jax.readthedocs.io/en/latest/objects.inv
+            - https://mit-ll-responsible-ai.github.io/hydra-zen/objects.inv
           options:
             docstring_style: google
             members_order: source
@@ -106,15 +120,10 @@ plugins:
       video_controls: True
       css_style:
         width: "100%"
+
+  # - pymdownx.details
 # todo: take a look at https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/mkdocs.yml
 #   - admonition
-#   - pymdownx.details
-#   - pymdownx.superfences
-#   - pymdownx.tabbed:
-#       alternate_style: true
-#       slugify: !!python/object/apply:pymdownx.slugs.slugify
-#         kwds:
-#           case: lower
 #   - tables
 #   - toc:
 #       toc_depth: 2

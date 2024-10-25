@@ -14,7 +14,7 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.vision import VisionDataModule
-from project.utils.testutils import run_for_all_datamodules
+from project.utils.testutils import run_for_all_configs_in_group
 from project.utils.typing_utils import is_sequence_of
 
 
@@ -37,7 +37,7 @@ from project.utils.typing_utils import is_sequence_of
     ],
 )
 @pytest.mark.parametrize("overrides", ["algorithm=no_op"], indirect=True)
-@run_for_all_datamodules()
+@run_for_all_configs_in_group(group_name="datamodule")
 def test_first_batch(
     datamodule: LightningDataModule,
     request: pytest.FixtureRequest,
