@@ -99,7 +99,7 @@ in_github_CI = os.environ.get("GITHUB_ACTIONS") == "true"
             # otherwise it will use the local launcher!
             "resources=gpu",
             "cluster=mila",
-            "+trainer.fast_dev_run=True",
+            "trainer.fast_dev_run=True",
         ]
     ],
 )
