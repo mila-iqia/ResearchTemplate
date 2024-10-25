@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None):
 
     path: Path = args.path
     configs_dir: Path = args.configs_dir
-    schemas_dir: Path = args.schemas_dir
+    schemas_dir: Path | None = args.schemas_dir
     repo_root: Path = args.repo_root
     regen_schemas: bool = args.regen_schemas
     stop_on_error: bool = args.stop_on_error
@@ -288,6 +288,8 @@ def main(argv: list[str] | None = None):
         config_files = _yaml_files_in(configs_dir)
     else:
         config_files = [path]
+    if schemas_dir is None:
+        schemas_dir = repo_root / ".schemas"
 
     add_schemas_to_all_hydra_configs(
         config_files=config_files,
