@@ -1,3 +1,9 @@
+"""Example of an RL algorithm (PPO) written entirely in Jax.
+
+This is based on [`rejax.PPO`](https://github.com/keraJLi/rejax/blob/main/rejax/algos/ppo.py).
+See the `JaxRLExample` class for a description of the differences w.r.t. `rejax.PPO`.
+"""
+
 from __future__ import annotations
 
 import contextlib
@@ -516,14 +522,13 @@ class JaxRLExample(
         train_state: PPOState[TEnvState] | None = None,
         skip_initial_evaluation: bool = False,
     ) -> tuple[PPOState[TEnvState], EvalMetrics]:
-        """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
+        """Full training loop in jax.
 
-        This doesn't get used when using the `JaxTrainer`, since this is the equivalent of the
-        `JaxTrainer.fit` method.
+        This is only here to match the API of `rejax.PPO.train`. This doesn't get called when using
+        the `JaxTrainer`, since `JaxTrainer.fit` already does the same thing, but also with support
+        for some `JaxCallback`s (as well as some `lightning.Callback`s!).
 
         Unfolded version of `rejax.PPO.train`.
-
-        Training loop in pure jax (a lot faster than when using pytorch-lightning).
         """
         if train_state is None and rng is None:
             raise ValueError("Either train_state or rng must be provided")

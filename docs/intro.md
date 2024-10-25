@@ -38,7 +38,7 @@ project/
     algorithms/  # learning algorithms
     datamodules/ # datasets, processing and loading
     networks/    # Neural networks used by algorithms
-    configs/     # configuration files
+    configs/     # Hydra configuration files
 docs/            # documentation
 conftest.py      # Test fixtures and utilities
 ```

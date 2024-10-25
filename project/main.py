@@ -1,4 +1,12 @@
-"""Main entry-point."""
+"""Training script using [Hydra](https://hydra.cc).
+
+This does the following:
+1. Parses the config using Hydra;
+2. Instantiated the components (trainer / algorithm), optionally datamodule and network;
+3. Trains the model;
+4. Optionally runs an evaluation loop.
+
+"""
 
 from __future__ import annotations
 
