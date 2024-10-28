@@ -3866,6 +3866,7 @@ dependencies = [
     { name = "tqdm" },
     { name = "transformers" },
     { name = "wandb" },
+    { name = "watchdog" },
     { name = "xtils", extra = ["jitpp"] },
 ]
 
@@ -3967,6 +3968,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.66.5" },
     { name = "transformers", specifier = ">=4.44.0" },
     { name = "wandb", specifier = ">=0.17.6" },
+    { name = "watchdog", specifier = ">=5.0.3" },
     { name = "xtils", extras = ["jitpp"], git = "https://github.com/jessefarebro/xtils" },
 ]
 

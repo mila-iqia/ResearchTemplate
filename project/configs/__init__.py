@@ -16,19 +16,19 @@ cs.store(name="base_config", node=Config)
 
 OmegaConf.register_new_resolver("eval", eval)
 
+ConfigStore.instance().store(
+    group="hydra/launcher",
+    name="remote_submitit_slurm",
+    node=RemoteSlurmQueueConf,
+    provider="Mila",
+)
+
 
 def add_configs_to_hydra_store():
     """Adds all configs to the Hydra Config store."""
     datamodule_store.add_to_hydra_store()
     network_store.add_to_hydra_store()
     optimizers_store.add_to_hydra_store()
-
-    ConfigStore.instance().store(
-        group="hydra/launcher",
-        name="remote_submitit_slurm",
-        node=RemoteSlurmQueueConf,
-        provider="Mila",
-    )
 
 
 # todo: move the algorithm_store.add_to_hydra_store() here?
