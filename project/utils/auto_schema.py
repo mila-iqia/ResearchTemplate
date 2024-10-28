@@ -360,7 +360,6 @@ def add_schemas_to_all_hydra_configs(
     """Adds schemas to all the passed Hydra config files.
 
     Parameters:
-        config_files: List of paths to the Hydra config files. If None, all YAML files in configs_dir are used.
         repo_root: The root directory of the repository.
         configs_dir: The directory containing the Hydra config files.
         schemas_dir: The directory to store the generated schema files. Defaults to ".schemas" in the repo_root.
