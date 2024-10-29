@@ -51,7 +51,8 @@
 					".venv": true,
 					".pytest_cache": true,
 					".benchmarks": true,
-					".ruff_cache": true
+					".ruff_cache": true,
+					".regression_files": true
 				},
 				"python.testing.unittestEnabled": false,
 				"python.testing.pytestEnabled": true,
