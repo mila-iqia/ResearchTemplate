@@ -54,7 +54,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
     with pytest.raises(
         omegaconf.errors.InterpolationResolutionError,
-        match="Could not find any of these attributes",
+        match="Did you forget to set a value for the 'datamodule' config?",
     ):
         _ = resolve_dictconfig(experiment_dictconfig)
 
