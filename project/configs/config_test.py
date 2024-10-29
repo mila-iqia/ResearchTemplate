@@ -1,20 +1,37 @@
 """TODO: Add tests for the configurations?"""
 
+from unittest.mock import Mock
+
 import hydra_zen
 import lightning
 import omegaconf
 import pytest
 from hydra.core.config_store import ConfigStore
+from omegaconf import DictConfig
 
-from project.configs.config import Config
+import project
+import project.main
 from project.conftest import command_line_overrides
-from project.experiment import Experiment, setup_experiment
 from project.main import PROJECT_NAME
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 
 CONFIG_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
 
 experiment_configs = list((CONFIG_DIR / "experiment").glob("*.yaml"))
+
+
+@pytest.fixture
+def mock_train(monkeypatch: pytest.MonkeyPatch):
+    mock_train_fn = Mock(spec=project.main.train)
+    monkeypatch.setattr(project.main, project.main.train.__name__, mock_train_fn)
+    return mock_train_fn
+
+
+@pytest.fixture
+def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
+    mock_eval_fn = Mock(spec=project.main.evaluation, return_value=("fake", 0.0, {}))
+    monkeypatch.setattr(project.main, project.main.evaluation.__name__, mock_eval_fn)
+    return mock_eval_fn
 
 
 @pytest.mark.parametrize(
@@ -34,9 +51,15 @@ experiment_configs = list((CONFIG_DIR / "experiment").glob("*.yaml"))
     indirect=True,
     ids=[experiment.name for experiment in list(experiment_configs)],
 )
-def test_can_load_experiment_configs(experiment_config: Config):
-    experiment = setup_experiment(experiment_config)
-    assert isinstance(experiment, Experiment)
+def test_can_load_experiment_configs(
+    experiment_dictconfig: DictConfig, mock_train: Mock, mock_evaluate: Mock
+):
+    # Mock out some part of the `main` function to not actually run anything.
+
+    results = project.main.main(experiment_dictconfig)
+    assert results is not None
+    mock_train.assert_called_once()
+    mock_evaluate.assert_called_once()
 
 
 class DummyModule(lightning.LightningModule):
@@ -47,14 +70,14 @@ class DummyModule(lightning.LightningModule):
         return self.network(x)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def cs():
     state_before = ConfigStore.get_state()
     yield ConfigStore.instance()
     ConfigStore.set_state(state_before)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def register_dummy_configs(cs: ConfigStore):
     cs.store(
         "dummy",
@@ -77,10 +100,9 @@ def register_dummy_configs(cs: ConfigStore):
 
 
 @pytest.mark.parametrize(
-    "algorithm_config",
-    ["dummy", "dummy_partial"],
+    command_line_overrides.__name__,
+    ["algorithm=dummy", "algorithm=dummy_partial"],
     indirect=True,
-    # scope="module",
 )
 def test_can_use_algo_without_datamodule(
     register_dummy_configs: None, algorithm: lightning.LightningModule

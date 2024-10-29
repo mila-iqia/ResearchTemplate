@@ -799,7 +799,7 @@ def render_episode(
 
 
 class RenderEpisodesCallback(JaxCallback):
-    on_every_epoch: int = False
+    on_every_epoch: bool = False
 
     def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
         if not self.on_every_epoch:

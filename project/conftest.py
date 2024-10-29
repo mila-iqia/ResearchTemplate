@@ -54,6 +54,7 @@ algorithm & datamodule -- is used by --> some_other_test
 
 from __future__ import annotations
 
+import copy
 import operator
 import os
 import shlex
@@ -114,7 +115,7 @@ DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def original_datadir(original_datadir: Path):
     """Overwrite the original_datadir fixture value to change where regression files are created.
 
@@ -247,12 +248,12 @@ def experiment_dictconfig(
         return dict_config
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def experiment_config(
     experiment_dictconfig: DictConfig,
 ) -> Config:
     """The experiment configuration, with all interpolations resolved."""
-    config = resolve_dictconfig(experiment_dictconfig)
+    config = resolve_dictconfig(copy.deepcopy(experiment_dictconfig))
     return config
 
 
@@ -367,17 +368,6 @@ def device(accelerator: str) -> torch.device:
     raise NotImplementedError(accelerator)
 
 
-@pytest.fixture(
-    scope="session",
-    params=None,
-    # ids=lambda args: f"gpus={args}" if _cuda_available else f"cpus={args}",
-)
-def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
-    num_devices = getattr(request, "param", 1)
-    assert isinstance(num_devices, int)
-    return num_devices
-
-
 @pytest.fixture(scope="session")
 def devices(
     accelerator: str, request: pytest.FixtureRequest
@@ -441,10 +431,7 @@ def _override_param_id(override: Param) -> str:
     return str(override)
 
 
-@pytest.fixture(
-    scope="session",
-    ids=_override_param_id,
-)
+@pytest.fixture(scope="session", ids=_override_param_id)
 def command_line_overrides(request: pytest.FixtureRequest):
     """Fixture that makes it possible to specify command-line overrides to use in a given test.
 

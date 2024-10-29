@@ -19,6 +19,7 @@ import hydra.utils
 import hydra_zen.structured_configs._utils
 import omegaconf
 from hydra_zen import instantiate
+from lightning import LightningDataModule
 from omegaconf import DictConfig, OmegaConf
 
 if typing.TYPE_CHECKING:
@@ -108,9 +109,12 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
         with omegaconf.open_dict(dict_config):
             v = dict_config._get_flag("allow_objects")
             dict_config._set_flag("allow_objects", True)
-            instantiated_objects_cache["datamodule"] = dict_config["datamodule"] = (
-                hydra.utils.instantiate(dict_config["datamodule"])
-            )
+            if isinstance(dict_config["datamodule"], LightningDataModule):
+                dm = dict_config["datamodule"]
+            else:
+                dm = hydra.utils.instantiate(dict_config["datamodule"])
+                dict_config["datamodule"] = dm
+            instantiated_objects_cache["datamodule"] = dm
             dict_config._set_flag("allow_objects", v)
 
     config = OmegaConf.to_object(dict_config)

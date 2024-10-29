@@ -73,11 +73,12 @@ def main(dict_config: DictConfig) -> dict:
     setup_logging(experiment_config)
     seed_rng(experiment_config)
 
-    callbacks: list[Callback] = instantiate_values(config.trainer.pop("callbacks", None))
-    logger: list[Logger] = instantiate_values(config.trainer.pop("logger", None))
+    trainer_config = config.trainer.copy()  # Avoid mutating the input config, if passed.
+    callbacks: list[Callback] = instantiate_values(trainer_config.pop("callbacks", None))
+    logger: list[Logger] = instantiate_values(trainer_config.pop("logger", None))
 
     trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
-        config.trainer, callbacks=callbacks, logger=logger
+        trainer_config, callbacks=callbacks, logger=logger
     )
 
     datamodule: lightning.LightningDataModule | None = instantiate_datamodule(
@@ -96,34 +97,7 @@ def main(dict_config: DictConfig) -> dict:
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
 
-    if isinstance(trainer, JaxTrainer):
-        if datamodule is not None:
-            raise NotImplementedError(
-                "The JaxTrainer doesn't yet support using a datamodule. For now, you should "
-                f"return a batch of data from the {JaxModule.get_batch.__name__} method in your "
-                f"algorithm."
-            )
-
-        if not isinstance(algorithm, JaxModule):
-            raise TypeError(
-                f"The selected algorithm ({algorithm}) doesn't implement the required methods of "
-                f"a {JaxModule.__name__}, so it can't be used with the `{JaxTrainer.__name__}`. "
-                f"Try to subclass {JaxModule.__name__} and implement the missing methods."
-            )
-        rng = jax.random.key(config.seed)
-        # TODO: Use ckpt_path argument to load the training state and resume the training run.
-        trainer.fit(algorithm, rng=rng)
-    else:
-        # Train the model using the dataloaders of the datamodule:
-        # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
-        # example in RL, where we need to set the actor to use in the environment, as well as
-        # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
-        datamodule = getattr(algorithm, "datamodule", datamodule)
-        trainer.fit(
-            algorithm,
-            datamodule=datamodule,
-            ckpt_path=config.ckpt_path,
-        )
+    train(config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm)
 
     metric_name, error, _metrics = evaluation(
         trainer=trainer, datamodule=datamodule, algorithm=algorithm
@@ -134,7 +108,45 @@ def main(dict_config: DictConfig) -> dict:
 
     assert error is not None
     return dict(name=metric_name, type="objective", value=error)
-    # return {metric_name: objective}
+
+
+def train(
+    config: Config,
+    trainer: lightning.Trainer | JaxTrainer,
+    datamodule: lightning.LightningDataModule | None,
+    algorithm: lightning.LightningModule | JaxModule,
+):
+    if isinstance(trainer, lightning.Trainer):
+        assert isinstance(algorithm, lightning.LightningModule)
+        # Train the model using the dataloaders of the datamodule:
+        # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
+        # example in RL, where we need to set the actor to use in the environment, as well as
+        # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
+        datamodule = getattr(algorithm, "datamodule", datamodule)
+        trainer.fit(
+            algorithm,
+            datamodule=datamodule,
+            ckpt_path=config.ckpt_path,
+        )
+        return
+
+    if datamodule is not None:
+        raise NotImplementedError(
+            "The JaxTrainer doesn't yet support using a datamodule. For now, you should "
+            f"return a batch of data from the {JaxModule.get_batch.__name__} method in your "
+            f"algorithm."
+        )
+
+    if not isinstance(algorithm, JaxModule):
+        raise TypeError(
+            f"The selected algorithm ({algorithm}) doesn't implement the required methods of "
+            f"a {JaxModule.__name__}, so it can't be used with the `{JaxTrainer.__name__}`. "
+            f"Try to subclass {JaxModule.__name__} and implement the missing methods."
+        )
+    rng = jax.random.key(config.seed)
+    # TODO: Use ckpt_path argument to load the training state and resume the training run.
+    assert config.ckpt_path is None
+    trainer.fit(algorithm, rng=rng)
 
 
 def instantiate_values(config_dict: DictConfig | None) -> list[Any]:

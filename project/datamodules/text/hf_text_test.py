@@ -14,7 +14,7 @@ from project.utils.testutils import (
 from project.utils.typing_utils.protocols import DataModule
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def datamodule(
     datamodule_config: str | None,
     command_line_overrides: list[str] | None,
@@ -36,7 +36,7 @@ def datamodule(
     # NOTE: creating the datamodule by itself instead of with everything else.
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def prepared_datamodule(
     datamodule: HFDataModule,
     tmp_path_factory: pytest.TempPathFactory,

@@ -7,13 +7,10 @@ from omegaconf import DictConfig
 from project.conftest import (  # noqa: F401
     accelerator,
     algorithm_config,
-    algorithm_network_config,
     command_line_arguments,
     command_line_overrides,
     datamodule_config,
-    devices,
     experiment_dictconfig,
-    num_devices_to_use,
 )
 from project.experiment import setup_experiment
 from project.utils.hydra_utils import resolve_dictconfig
