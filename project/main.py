@@ -157,12 +157,15 @@ def instantiate_values(config_dict: DictConfig | None) -> list[Any]:
     return [v for v in objects_dict.values() if v is not None]
 
 
+MetricName = str
+
+
 def evaluation(
     trainer: JaxTrainer | lightning.Trainer,
     datamodule: lightning.LightningDataModule | None,
     algorithm,
-) -> tuple[str, float | None, dict]:
-    """Return the classification error.
+) -> tuple[MetricName, float | None, dict]:
+    """Evaluates the algorithm and returns the metrics.
 
     By default, if validation is to be performed, returns the validation error. Returns the
     training error when `trainer.overfit_batches != 0` (e.g. when debugging or testing). Otherwise,

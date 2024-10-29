@@ -30,8 +30,8 @@ datamodule_config[
 algorithm_config[
     <a href="#project.conftest.algorithm_config">algorithm_config</a>
 ] -- 'algorithm=B' --> command_line_arguments
-overrides[
-    <a href="#project.conftest.overrides">overrides</a>
+command_line_overrides[
+    <a href="#project.conftest.command_line_overrides">command_line_overrides</a>
 ] -- 'seed=123' --> command_line_arguments
 command_line_arguments[
     <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
@@ -172,7 +172,7 @@ def command_line_arguments(
     algorithm_config: str | None,
     datamodule_config: str | None,
     algorithm_network_config: str | None,
-    overrides: tuple[str, ...],
+    command_line_overrides: tuple[str, ...],
     request: pytest.FixtureRequest,
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
@@ -216,7 +216,7 @@ def command_line_arguments(
     if datamodule_config:
         default_overrides.append(f"datamodule={datamodule_config}")
 
-    all_overrides = default_overrides + list(overrides)
+    all_overrides = default_overrides + list(command_line_overrides)
     return all_overrides
 
 
@@ -447,7 +447,7 @@ def _override_param_id(override: Param) -> str:
     scope="session",
     ids=_override_param_id,
 )
-def overrides(request: pytest.FixtureRequest):
+def command_line_overrides(request: pytest.FixtureRequest):
     """Fixture that makes it possible to specify command-line overrides to use in a given test.
 
     Tests that require running an experiment should use the `experiment_config` fixture below.
@@ -461,40 +461,6 @@ def overrides(request: pytest.FixtureRequest):
     cmdline_overrides = tuple(cmdline_overrides)
     assert all(isinstance(override, str) for override in cmdline_overrides)
     return cmdline_overrides
-
-
-def use_overrides(command_line_overrides: Param | list[Param], ids=None):
-    """Marks a test so that it can use components created using the given command-line arguments.
-
-    For example:
-
-    ```python
-    @use_overrides("algorithm=my_algo network=fcnet")
-    def test_my_algo(algorithm: MyAlgorithm):
-        #The algorithm will be setup the same as if we did
-        #   `python main.py algorithm=my_algo network=fcnet`.
-        ...
-    ```
-    """
-    # todo: Use some parametrize_when_used with some additional arg that says that multiple
-    # invocations of this should be appended together instead of added to the list. For example:
-    # @use_overrides("algorithm=my_algo network=fcnet")
-    # @use_overrides("network=bar")
-    # should end up doing
-    # ```
-    # pytest.mark.parametrize("overrides", ["algorithm=my_algo network=fcnet network=bar"], indirect=True)
-    # ```
-
-    return pytest.mark.parametrize(
-        overrides.__name__,
-        (
-            [command_line_overrides]
-            if isinstance(command_line_overrides, str | tuple)
-            else command_line_overrides
-        ),
-        indirect=True,
-        ids=ids if ids is not None else _override_param_id,
-    )
 
 
 @contextmanager

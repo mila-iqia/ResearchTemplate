@@ -17,7 +17,7 @@ from project.utils.typing_utils.protocols import DataModule
 @pytest.fixture(scope="session")
 def datamodule(
     datamodule_config: str | None,
-    overrides: list[str] | None,
+    command_line_overrides: list[str] | None,
 ) -> DataModule:
     """Fixture that creates the datamodule for the given config."""
     # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
@@ -25,7 +25,7 @@ def datamodule(
 
     config = get_config_loader().load_configuration(
         f"datamodule/{datamodule_config}.yaml",
-        overrides=overrides or [],
+        overrides=command_line_overrides or [],
         run_mode=RunMode.RUN,
     )
     datamodule_config = config["datamodule"]

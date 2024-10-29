@@ -12,7 +12,7 @@ from omegaconf import DictConfig
 
 from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
-from project.conftest import use_overrides
+from project.conftest import command_line_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.utils.hydra_utils import resolve_dictconfig
 
@@ -40,7 +40,7 @@ def test_torch_can_use_the_GPU():
 
 
 @pytest.mark.xfail(raises=hydra.errors.ConfigCompositionException, strict=True)
-@pytest.mark.parametrize("overrides", [""], indirect=True)
+@pytest.mark.parametrize(command_line_overrides.__name__, [""], indirect=True)
 def test_defaults(experiment_dictconfig: DictConfig) -> None:
     """Test to check what the default values are when not specifying anything on the command-
     line."""
@@ -49,7 +49,7 @@ def test_defaults(experiment_dictconfig: DictConfig) -> None:
     #     _ = resolve_dictconfig(experiment_dictconfig)
 
 
-@pytest.mark.parametrize("overrides", ["algorithm=example"], indirect=True)
+@pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)
 def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
     with pytest.raises(
@@ -59,7 +59,9 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
         _ = resolve_dictconfig(experiment_dictconfig)
 
 
-@pytest.mark.parametrize("overrides", ["algorithm=example datamodule=cifar10"], indirect=True)
+@pytest.mark.parametrize(
+    command_line_overrides.__name__, ["algorithm=example datamodule=cifar10"], indirect=True
+)
 def test_example_experiment_defaults(experiment_config: Config) -> None:
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
 
@@ -72,10 +74,12 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     )
 
 
-@use_overrides(
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
     [
         "algorithm=example datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
-    ]
+    ],
+    indirect=True,
 )
 def test_fast_dev_run(experiment_dictconfig: DictConfig):
     result = main(experiment_dictconfig)

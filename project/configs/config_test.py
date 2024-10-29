@@ -7,6 +7,7 @@ import pytest
 from hydra.core.config_store import ConfigStore
 
 from project.configs.config import Config
+from project.conftest import command_line_overrides
 from project.experiment import Experiment, setup_experiment
 from project.main import PROJECT_NAME
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
@@ -17,7 +18,7 @@ experiment_configs = list((CONFIG_DIR / "experiment").glob("*.yaml"))
 
 
 @pytest.mark.parametrize(
-    "overrides",
+    command_line_overrides.__name__,
     [
         pytest.param(
             f"experiment={experiment.name}",
