@@ -51,7 +51,7 @@ class Config:
     """Logging level."""
 
     # Random seed.
-    seed: int | None = field(default_factory=lambda: random.randint(0, int(1e5)))
+    seed: int = field(default_factory=lambda: random.randint(0, int(1e5)))
     """Random seed for reproducibility.
 
     If None, a random seed is generated.
@@ -63,3 +63,9 @@ class Config:
     debug: bool = False
 
     verbose: bool = False
+
+    ckpt_path: str | None = None
+    """Path to a checkpoint to load the training state and resume the training run.
+
+    This is the same as the `ckpt_path` argument in the `lightning.Trainer.fit` method.
+    """
