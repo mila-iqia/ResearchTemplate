@@ -67,8 +67,6 @@ def main(dict_config: DictConfig) -> dict:
     """
     print_config(dict_config, resolve=False)
 
-    # Note: running this should take ~5 seconds the first time and <1s after that.
-
     config: Config = resolve_dictconfig(dict_config)
 
     experiment_config = config
