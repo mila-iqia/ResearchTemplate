@@ -74,8 +74,8 @@ def main(dict_config: DictConfig) -> dict:
     seed_rng(experiment_config)
 
     trainer_config = config.trainer.copy()  # Avoid mutating the input config, if passed.
-    callbacks: list[Callback] = instantiate_values(trainer_config.pop("callbacks", None))
-    logger: list[Logger] = instantiate_values(trainer_config.pop("logger", None))
+    callbacks: list[Callback] | None = instantiate_values(trainer_config.pop("callbacks", None))
+    logger: list[Logger] | None = instantiate_values(trainer_config.pop("logger", None))
 
     trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
         trainer_config, callbacks=callbacks, logger=logger
@@ -149,7 +149,7 @@ def train(
     trainer.fit(algorithm, rng=rng)
 
 
-def instantiate_values(config_dict: DictConfig | None) -> list[Any]:
+def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
     """Returns the list of objects at the values in this dict of configs.
 
     This is used for the config of the `trainer/logger` and `trainer/callbacks` fields, where
@@ -163,6 +163,8 @@ def instantiate_values(config_dict: DictConfig | None) -> list[Any]:
     if not config_dict:
         return []
     objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
+    if objects_dict is None:
+        return None
     assert isinstance(objects_dict, dict | DictConfig)
     return [v for v in objects_dict.values() if v is not None]
 
