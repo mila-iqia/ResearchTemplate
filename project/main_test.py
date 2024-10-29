@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import shutil
 
-import hydra.errors
 import hydra_zen
 import omegaconf.errors
 import pytest
@@ -40,19 +39,13 @@ def test_torch_can_use_the_GPU():
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
 
 
-@pytest.mark.xfail(raises=hydra.errors.ConfigCompositionException, strict=True)
-@pytest.mark.parametrize(command_line_overrides.__name__, [""], indirect=True)
-def test_defaults(experiment_dictconfig: DictConfig) -> None:
-    """Test to check what the default values are when not specifying anything on the command-
-    line."""
-    # todo: the error is actually raised before this.
-    # with pytest.raises(hydra.errors.ConfigCompositionException):
-    #     _ = resolve_dictconfig(experiment_dictconfig)
-
-
 @pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)
 def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
-    """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
+    """Test to check that the datamodule is required (even when just the example algorithm is set).
+
+    TODO: We could probably move the `datamodule` config under `algorithm/datamodule`. Maybe that
+    would be better?
+    """
     with pytest.raises(
         omegaconf.errors.InterpolationResolutionError,
         match="Did you forget to set a value for the 'datamodule' config?",
