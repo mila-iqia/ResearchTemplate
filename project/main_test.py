@@ -12,6 +12,7 @@ from omegaconf import DictConfig
 
 from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
+from project.configs.config_test import CONFIG_DIR
 from project.conftest import command_line_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.utils.hydra_utils import resolve_dictconfig
@@ -87,6 +88,15 @@ def test_fast_dev_run(experiment_dictconfig: DictConfig):
     assert result["type"] == "objective"
     assert isinstance(result["name"], str)
     assert isinstance(result["value"], float)
+
+
+def test_run_auto_schema_via_cli_without_errors():
+    """Checks that the command completes without errors."""
+    # Run programmatically instead of with a subprocess so we can get nice coverage stats.
+    # assuming we're at the project root directory.
+    from hydra_auto_schema.__main__ import main as hydra_auto_schema_main
+
+    hydra_auto_schema_main([str(CONFIG_DIR), "--stop-on-error"])
 
 
 # TODO: Add some more integration tests:

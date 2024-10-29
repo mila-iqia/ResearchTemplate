@@ -167,8 +167,6 @@ def algorithm_network_config(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def command_line_arguments(
-    # devices: str,
-    # accelerator: str,
     algorithm_config: str | None,
     datamodule_config: str | None,
     algorithm_network_config: str | None,
