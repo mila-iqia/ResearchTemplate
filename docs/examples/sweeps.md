@@ -26,8 +26,9 @@ python project/main.py experiment=local_sweep_example
 ??? note "Click to show the yaml config file"
     {{inline('project/configs/experiment/cluster_sweep_example.yaml', 4)}}
 
-You can use it like so:
+Here's how you can easily launch a sweep remotely on the Mila cluster.
+If you are already on a slurm cluster, use the `"cluster=current"` config.
 
 ```console
-python project/main.py experiment=cluster_sweep_example
+python project/main.py experiment=cluster_sweep_example cluster=mila
 ```

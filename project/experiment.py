@@ -27,9 +27,10 @@ import rich.console
 import rich.logging
 import rich.traceback
 from hydra_zen.typing import Builds
-from lightning import Callback, LightningModule, Trainer, seed_everything
+from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 
 from project.configs.config import Config
+from project.trainers.jax_trainer import JaxModule
 from project.utils.typing_utils.protocols import DataModule
 from project.utils.utils import validate_datamodule
 
@@ -160,8 +161,8 @@ def instantiate_trainer(experiment_config: Config) -> Trainer:
 
 
 def instantiate_datamodule(
-    datamodule_config: Builds[type[DataModule]] | DataModule | None,
-) -> DataModule | None:
+    datamodule_config: Builds[type[LightningDataModule]] | LightningDataModule | None,
+) -> LightningDataModule | None:
     """Instantiate the datamodule from the configuration dict.
 
     Any interpolations in the config will have already been resolved by the time we get here.
@@ -177,7 +178,6 @@ def instantiate_datamodule(
     else:
         logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
         datamodule = instantiate(datamodule_config)
-        # assert isinstance(datamodule, DataModule)
 
     datamodule = validate_datamodule(datamodule)
     return datamodule
@@ -185,7 +185,7 @@ def instantiate_datamodule(
 
 def instantiate_algorithm(
     algorithm_config: Config, datamodule: DataModule | None
-) -> LightningModule:
+) -> LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
     It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
@@ -223,7 +223,7 @@ def instantiate_algorithm(
         # )
         algorithm = algo_or_algo_partial
 
-    if not isinstance(algorithm, LightningModule):
+    if not isinstance(algorithm, LightningModule | JaxModule):
         logger.warning(
             UserWarning(
                 f"Your algorithm ({algorithm}) is not a LightningModule. Beware that this isn't "

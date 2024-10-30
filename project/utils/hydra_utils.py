@@ -19,6 +19,7 @@ import hydra.utils
 import hydra_zen.structured_configs._utils
 import omegaconf
 from hydra_zen import instantiate
+from lightning import LightningDataModule
 from omegaconf import DictConfig, OmegaConf
 
 if typing.TYPE_CHECKING:
@@ -108,9 +109,12 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
         with omegaconf.open_dict(dict_config):
             v = dict_config._get_flag("allow_objects")
             dict_config._set_flag("allow_objects", True)
-            instantiated_objects_cache["datamodule"] = dict_config["datamodule"] = (
-                hydra.utils.instantiate(dict_config["datamodule"])
-            )
+            if isinstance(dict_config["datamodule"], LightningDataModule):
+                dm = dict_config["datamodule"]
+            else:
+                dm = hydra.utils.instantiate(dict_config["datamodule"])
+                dict_config["datamodule"] = dm
+            instantiated_objects_cache["datamodule"] = dm
             dict_config._set_flag("allow_objects", v)
 
     config = OmegaConf.to_object(dict_config)
@@ -290,8 +294,21 @@ def instance_attr(
 
         logger.debug(f"Trying the next attribute in {attributes}.")
 
+    if not objects_cache:
+        if len(attributes) == 1:
+            attribute = attributes[0]
+            parent, _, attr = attribute.rpartition(".")
+            raise RuntimeError(
+                f"Could not find attribute {attribute!r} on any instantiated config! "
+                f"Did you forget to set a value for the {parent!r} config? Are you sure that the "
+                f"object at path {parent!r} has an attribute named {attr!r}?"
+            )
+        raise RuntimeError(
+            f"Could not find any of {attributes} in the configs that were instantiated! "
+            f"Did you forget to set a value for one of these configs?"
+        )
     raise RuntimeError(
-        f"Could not find any of these attributes {attributes} from the instantiated objects: "
+        f"Could not find any of these attributes {attributes} from the instantiated configs: "
         + str({k: type(v) for k, v in objects_cache.items()})
         # + "\n".join([f"- {k}: {type(v)}" for k, v in all_init_field_items.items()])
     )

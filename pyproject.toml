@@ -39,6 +39,8 @@ dependencies = [
     "mkdocs>=1.6.1",
     "mkdocstrings[python]>=0.26.2",
     "remote-slurm-executor",
+    "watchdog>=5.0.3",
+    "hydra-auto-schema",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -130,6 +132,7 @@ dev-dependencies = [
 
 [tool.uv.sources]
 remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", branch = "master" }
+hydra-auto-schema = { git = "https://github.com/lebrice/hydra-auto-schema", rev = "master" }
 
 # [tool.uv.tasks]
 # serve-docs = "mkdocs serve"

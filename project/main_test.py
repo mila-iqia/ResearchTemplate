@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import shutil
 
-import hydra.errors
 import hydra_zen
 import omegaconf.errors
 import pytest
@@ -12,7 +11,8 @@ from omegaconf import DictConfig
 
 from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
-from project.conftest import use_overrides
+from project.configs.config_test import CONFIG_DIR
+from project.conftest import command_line_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.utils.hydra_utils import resolve_dictconfig
 
@@ -39,27 +39,23 @@ def test_torch_can_use_the_GPU():
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
 
 
-@pytest.mark.xfail(raises=hydra.errors.ConfigCompositionException, strict=True)
-@pytest.mark.parametrize("overrides", [""], indirect=True)
-def test_defaults(experiment_dictconfig: DictConfig) -> None:
-    """Test to check what the default values are when not specifying anything on the command-
-    line."""
-    # todo: the error is actually raised before this.
-    # with pytest.raises(hydra.errors.ConfigCompositionException):
-    #     _ = resolve_dictconfig(experiment_dictconfig)
-
-
-@pytest.mark.parametrize("overrides", ["algorithm=example"], indirect=True)
+@pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)
 def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
-    """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
+    """Test to check that the datamodule is required (even when just the example algorithm is set).
+
+    TODO: We could probably move the `datamodule` config under `algorithm/datamodule`. Maybe that
+    would be better?
+    """
     with pytest.raises(
         omegaconf.errors.InterpolationResolutionError,
-        match="Could not find any of these attributes",
+        match="Did you forget to set a value for the 'datamodule' config?",
     ):
         _ = resolve_dictconfig(experiment_dictconfig)
 
 
-@pytest.mark.parametrize("overrides", ["algorithm=example datamodule=cifar10"], indirect=True)
+@pytest.mark.parametrize(
+    command_line_overrides.__name__, ["algorithm=example datamodule=cifar10"], indirect=True
+)
 def test_example_experiment_defaults(experiment_config: Config) -> None:
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
 
@@ -72,13 +68,29 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     )
 
 
-@use_overrides(["algorithm=example datamodule=cifar10 seed=1 trainer.fast_dev_run=True"])
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    [
+        "algorithm=example datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
+    ],
+    indirect=True,
+)
 def test_fast_dev_run(experiment_dictconfig: DictConfig):
     result = main(experiment_dictconfig)
     assert isinstance(result, dict)
     assert result["type"] == "objective"
     assert isinstance(result["name"], str)
     assert isinstance(result["value"], float)
+
+
+@pytest.mark.xfail(reason="TODO: cluster sweep example causes pydantic serialization error")
+def test_run_auto_schema_via_cli_without_errors():
+    """Checks that the command completes without errors."""
+    # Run programmatically instead of with a subprocess so we can get nice coverage stats.
+    # assuming we're at the project root directory.
+    from hydra_auto_schema.__main__ import main as hydra_auto_schema_main
+
+    hydra_auto_schema_main([str(CONFIG_DIR), "--stop-on-error", "-vv"])
 
 
 # TODO: Add some more integration tests:

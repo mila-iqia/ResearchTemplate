@@ -30,8 +30,8 @@ datamodule_config[
 algorithm_config[
     <a href="#project.conftest.algorithm_config">algorithm_config</a>
 ] -- 'algorithm=B' --> command_line_arguments
-overrides[
-    <a href="#project.conftest.overrides">overrides</a>
+command_line_overrides[
+    <a href="#project.conftest.command_line_overrides">command_line_overrides</a>
 ] -- 'seed=123' --> command_line_arguments
 command_line_arguments[
     <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
@@ -54,6 +54,7 @@ algorithm & datamodule -- is used by --> some_other_test
 
 from __future__ import annotations
 
+import copy
 import operator
 import os
 import shlex
@@ -114,7 +115,7 @@ DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def original_datadir(original_datadir: Path):
     """Overwrite the original_datadir fixture value to change where regression files are created.
 
@@ -167,12 +168,10 @@ def algorithm_network_config(request: pytest.FixtureRequest) -> str | None:
 
 @pytest.fixture(scope="session")
 def command_line_arguments(
-    # devices: str,
-    # accelerator: str,
     algorithm_config: str | None,
     datamodule_config: str | None,
     algorithm_network_config: str | None,
-    overrides: tuple[str, ...],
+    command_line_overrides: tuple[str, ...],
     request: pytest.FixtureRequest,
 ):
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
@@ -216,7 +215,7 @@ def command_line_arguments(
     if datamodule_config:
         default_overrides.append(f"datamodule={datamodule_config}")
 
-    all_overrides = default_overrides + list(overrides)
+    all_overrides = default_overrides + list(command_line_overrides)
     return all_overrides
 
 
@@ -249,12 +248,12 @@ def experiment_dictconfig(
         return dict_config
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def experiment_config(
     experiment_dictconfig: DictConfig,
 ) -> Config:
     """The experiment configuration, with all interpolations resolved."""
-    config = resolve_dictconfig(experiment_dictconfig)
+    config = resolve_dictconfig(copy.deepcopy(experiment_dictconfig))
     return config
 
 
@@ -369,17 +368,6 @@ def device(accelerator: str) -> torch.device:
     raise NotImplementedError(accelerator)
 
 
-@pytest.fixture(
-    scope="session",
-    params=None,
-    # ids=lambda args: f"gpus={args}" if _cuda_available else f"cpus={args}",
-)
-def num_devices_to_use(accelerator: str, request: pytest.FixtureRequest) -> int:
-    num_devices = getattr(request, "param", 1)
-    assert isinstance(num_devices, int)
-    return num_devices
-
-
 @pytest.fixture(scope="session")
 def devices(
     accelerator: str, request: pytest.FixtureRequest
@@ -443,11 +431,8 @@ def _override_param_id(override: Param) -> str:
     return str(override)
 
 
-@pytest.fixture(
-    scope="session",
-    ids=_override_param_id,
-)
-def overrides(request: pytest.FixtureRequest):
+@pytest.fixture(scope="session", ids=_override_param_id)
+def command_line_overrides(request: pytest.FixtureRequest):
     """Fixture that makes it possible to specify command-line overrides to use in a given test.
 
     Tests that require running an experiment should use the `experiment_config` fixture below.
@@ -461,40 +446,6 @@ def overrides(request: pytest.FixtureRequest):
     cmdline_overrides = tuple(cmdline_overrides)
     assert all(isinstance(override, str) for override in cmdline_overrides)
     return cmdline_overrides
-
-
-def use_overrides(command_line_overrides: Param | list[Param], ids=None):
-    """Marks a test so that it can use components created using the given command-line arguments.
-
-    For example:
-
-    ```python
-    @use_overrides("algorithm=my_algo network=fcnet")
-    def test_my_algo(algorithm: MyAlgorithm):
-        #The algorithm will be setup the same as if we did
-        #   `python main.py algorithm=my_algo network=fcnet`.
-        ...
-    ```
-    """
-    # todo: Use some parametrize_when_used with some additional arg that says that multiple
-    # invocations of this should be appended together instead of added to the list. For example:
-    # @use_overrides("algorithm=my_algo network=fcnet")
-    # @use_overrides("network=bar")
-    # should end up doing
-    # ```
-    # pytest.mark.parametrize("overrides", ["algorithm=my_algo network=fcnet network=bar"], indirect=True)
-    # ```
-
-    return pytest.mark.parametrize(
-        overrides.__name__,
-        (
-            [command_line_overrides]
-            if isinstance(command_line_overrides, str | tuple)
-            else command_line_overrides
-        ),
-        indirect=True,
-        ids=ids if ids is not None else _override_param_id,
-    )
 
 
 @contextmanager

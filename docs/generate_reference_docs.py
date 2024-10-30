@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-# based on https://github.com/mkdocstrings/mkdocstrings/blob/5802b1ef5ad9bf6077974f777bd55f32ce2bc219/docs/gen_doc_stubs.py#L25
+"""Script used to generate the reference docs for the project from the source code.
 
+Based on
+https://github.com/mkdocstrings/mkdocstrings/blob/5802b1ef5ad9bf6077974f777bd55f32ce2bc219/docs/gen_doc_stubs.py#L25
+"""
 
-import os
+import textwrap
 from logging import getLogger as get_logger
 from pathlib import Path
 
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 logger = get_logger(__name__)
 
 
@@ -38,7 +40,21 @@ def main():
 
         with mkdocs_gen_files.open(full_doc_path, "w") as fd:
             ident = ".".join(parts)
-            fd.write(f"::: {ident}\n")
+            fd.write(
+                textwrap.dedent(
+                    # f"""\
+                    # ---
+                    # additional_python_references:
+                    # - {ident}
+                    # ---
+                    # ::: {ident}
+                    # """
+                    f"""\
+                    ::: {ident}
+                    """
+                )
+            )
+            # fd.write(f"::: {ident}\n")
 
         mkdocs_gen_files.set_edit_path(full_doc_path, path.relative_to(root))
 

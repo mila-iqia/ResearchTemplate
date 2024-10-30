@@ -10,6 +10,7 @@ from lightning.pytorch.trainer.states import RunningStage
 from tensor_regression.fixture import TensorRegressionFixture, get_test_source_and_temp_file_paths
 from torch import Tensor
 
+from project.conftest import command_line_overrides
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
@@ -36,7 +37,7 @@ from project.utils.typing_utils import is_sequence_of
         ),
     ],
 )
-@pytest.mark.parametrize("overrides", ["algorithm=no_op"], indirect=True)
+@pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=no_op"], indirect=True)
 @run_for_all_configs_in_group(group_name="datamodule")
 def test_first_batch(
     datamodule: LightningDataModule,

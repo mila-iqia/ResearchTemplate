@@ -234,7 +234,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         #     name="algorithm_config",
         #     values=configs_for_this_algorithm,
         #     ids=configs_for_this_algorithm,
-        #     scope="session",
+        #     ,
         # )
 
         # TODO: Could also add a parametrize_when_used mark to parametrize the datamodule, network,
@@ -286,6 +286,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         Overwrite this if you train your algorithm differently.
         """
+        # TODO: Why are we creating the trainer here manually, why not load it from the config?
         trainer = lightning.Trainer(
             accelerator=accelerator,
             callbacks=callbacks,

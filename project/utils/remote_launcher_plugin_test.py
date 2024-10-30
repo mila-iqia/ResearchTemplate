@@ -6,10 +6,11 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock
 
+import hydra
 import hydra.utils
 import omegaconf
 import pytest
-from hydra import compose, initialize_config_module
+from hydra import initialize_config_module
 from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLauncher
 from milatools.utils.remote_v2 import is_already_logged_in
@@ -17,6 +18,7 @@ from milatools.utils.remote_v2 import is_already_logged_in
 import project.main
 import project.utils.remote_launcher_plugin
 from project.configs.config_test import CONFIG_DIR
+from project.conftest import command_line_overrides
 from project.main import PROJECT_NAME, main
 from project.utils import remote_launcher_plugin
 from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
@@ -34,7 +36,7 @@ resource_configs = _yaml_files_in(CONFIG_DIR / "resources")
 
 @pytest.mark.skipif("SLURM_JOB_ID" in os.environ, reason="Can't be run on the cluster just yet.")
 @pytest.mark.parametrize(
-    "overrides",
+    command_line_overrides.__name__,
     [
         pytest.param(
             f"algorithm=example datamodule=cifar10 cluster={cluster.stem} resources={resources.stem}",
@@ -56,7 +58,7 @@ def test_can_load_configs(command_line_arguments: list[str]):
         job_name="test",
         version_base="1.2",
     ):
-        _config = compose(
+        _config = hydra.compose(
             config_name="config",
             overrides=command_line_arguments,
             return_hydra_config=True,

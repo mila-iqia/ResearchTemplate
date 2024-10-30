@@ -9,12 +9,12 @@ In this example, the loss function and optimizers are in PyTorch, while the netw
 The loss that is returned in the training step is used by Lightning in the usual way. The backward
 pass uses Jax to calculate the gradients, and the weights are updated by a PyTorch optimizer.
 
-!!! note
+!!! info
     You could also very well do both the forward **and** backward passes in Jax! To do this, [use the 'manual optimization' mode of PyTorch-Lightning](https://lightning.ai/docs/pytorch/stable/model/manual_optimization.html) and perform the parameter updates yourself. For the rest of Lightning to work, just make sure to store the parameters as torch.nn.Parameters. An example of how to do this will be added shortly.
 
 
 
-!!! note "What about end-to-end training in Jax?"
+!!! question "What about end-to-end training in Jax?"
 
     See the [Jax RL Example](../examples/jax_rl_example.md)! :smile:
 

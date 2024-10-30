@@ -33,18 +33,18 @@ This assumes that you've already setup SSH access to the clusters (for example u
 python project/main.py experiment=example resources=gpu cluster=mila
 ```
 
-### Local machine -> DRAC cluster (narval)
+### Local machine -> DRAC (narval)
 
 ```bash
 python project/main.py experiment=example resources=gpu cluster=narval
 ```
 
 
-### Mila -> DRAC cluster (narval)
+### Mila -> DRAC (narval)
 
 This assumes that you've already setup SSH access from `mila` to the DRAC clusters.
 
-Note that command is about the same as [above](#local-machine---drac-cluster-narval)
+Note that command is exactly the same as above.
 
 ```bash
 python project/main.py experiment=example resources=gpu cluster=narval

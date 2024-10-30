@@ -116,7 +116,7 @@ def import_object(target_path: str):
 
     parts = target_path.split(".")
     try:
-        return importlib.import_module(name=parts[-1], package=".".join(parts[:-1]))
+        return importlib.import_module(name=f".{parts[-1]}", package=".".join(parts[:-1]))
     except (ModuleNotFoundError, AttributeError):
         pass
 
