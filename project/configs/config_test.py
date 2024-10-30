@@ -40,7 +40,9 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
 # additional `cluster` argument. Also, the
 # example config uses wandb by default, which is
 # probably bad, since it might be creating empty
-# jobs during tests.
+# jobs in wandb during tests (since the logger is
+# instantiated in main, even if the train fn is 
+# mocked.
 
 @pytest.mark.skip(reason="TODO: test is too general")
 @pytest.mark.parametrize(
