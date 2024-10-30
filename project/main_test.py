@@ -83,7 +83,7 @@ def test_fast_dev_run(experiment_dictconfig: DictConfig):
     assert isinstance(result["value"], float)
 
 
-@pytest.mark.xfail(reason="cluster sweep example causes pydantic serialization error")
+@pytest.mark.xfail(reason="TODO: cluster sweep example causes pydantic serialization error")
 def test_run_auto_schema_via_cli_without_errors():
     """Checks that the command completes without errors."""
     # Run programmatically instead of with a subprocess so we can get nice coverage stats.
