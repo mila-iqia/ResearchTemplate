@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 from project.conftest import (  # noqa: F401
     accelerator,
     algorithm_config,
+    algorithm_network_config,
     command_line_arguments,
     command_line_overrides,
     datamodule_config,
