@@ -89,7 +89,7 @@ def test_run_auto_schema_via_cli_without_errors():
     # assuming we're at the project root directory.
     from hydra_auto_schema.__main__ import main as hydra_auto_schema_main
 
-    hydra_auto_schema_main([str(CONFIG_DIR), "--stop-on-error"])
+    hydra_auto_schema_main([str(CONFIG_DIR), "--stop-on-error", "-vv"])
 
 
 # TODO: Add some more integration tests:
