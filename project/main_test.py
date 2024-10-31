@@ -2,21 +2,26 @@
 from __future__ import annotations
 
 import shutil
+from unittest.mock import Mock
 
 import hydra_zen
 import omegaconf.errors
 import pytest
 import torch
+from hydra.types import RunMode
 from omegaconf import DictConfig
 
+import project.main
 from project.algorithms.example import ExampleAlgorithm
 from project.configs.config import Config
-from project.configs.config_test import CONFIG_DIR
 from project.conftest import command_line_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
+from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 from project.utils.hydra_utils import resolve_dictconfig
 
-from .main import main
+from .main import PROJECT_NAME, main
+
+CONFIG_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
 
 
 def test_jax_can_use_the_GPU():
@@ -37,6 +42,60 @@ def test_torch_can_use_the_GPU():
     """Test that torch can use the GPU if it we have one."""
 
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
+
+
+@pytest.fixture
+def mock_train(monkeypatch: pytest.MonkeyPatch):
+    mock_train_fn = Mock(spec=project.main.train)
+    monkeypatch.setattr(project.main, project.main.train.__name__, mock_train_fn)
+    return mock_train_fn
+
+
+@pytest.fixture
+def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
+    mock_eval_fn = Mock(spec=project.main.evaluation, return_value=("fake", 0.0, {}))
+    monkeypatch.setattr(project.main, project.main.evaluation.__name__, mock_eval_fn)
+    return mock_eval_fn
+
+
+# The problem is that not all experiment configs
+# are to be used in the same way. For example,
+# the cluster_sweep_config.yaml needs an
+# additional `cluster` argument. Also, the
+# example config uses wandb by default, which is
+# probably bad, since it might be creating empty
+# jobs in wandb during tests (since the logger is
+# instantiated in main, even if the train fn is
+# mocked.
+experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
+
+
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    [
+        f"experiment={experiment}"
+        if experiment != "cluster_sweep_example"
+        else f"experiment={experiment} cluster=mila"
+        if SLURM_JOB_ID is None
+        else f"experiment={experiment} cluster=current"
+        for experiment in list(experiment_configs)
+    ],
+    indirect=True,
+    ids=[experiment for experiment in list(experiment_configs)],
+)
+def test_can_load_experiment_configs(
+    experiment_dictconfig: DictConfig, mock_train: Mock, mock_evaluate: Mock
+):
+    # Mock out some part of the `main` function to not actually run anything.
+    if experiment_dictconfig["hydra"]["mode"] == RunMode.MULTIRUN:
+        pytest.skip(
+            reason="Config is a multi-run config (e.g. a sweep). "
+            "Not running with `main`, as it wouldn't make much sense."
+        )
+    results = project.main.main(experiment_dictconfig)
+    assert results is not None
+    mock_train.assert_called_once()
+    mock_evaluate.assert_called_once()
 
 
 @pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)

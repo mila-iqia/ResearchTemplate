@@ -8,6 +8,8 @@ defaults:
 
 log_level: DEBUG
 name: "sweep-example"
+
+# Set the seed to be the SLURM_PROCID, so that if we run more than one task per GPU, we get
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
 seed: ${oc.env:SLURM_PROCID,123}
 
@@ -44,7 +46,7 @@ hydra:
   sweep:
     dir: logs/${name}/multiruns/
     # subdir: ${hydra.job.num}
-    subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
+    subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID,0}
 
   launcher:
     # todo: bump this up.

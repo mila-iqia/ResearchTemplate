@@ -1,6 +1,7 @@
 import shutil
 
 import hydra.errors
+import lightning
 import pytest
 from omegaconf import DictConfig
 
@@ -13,7 +14,12 @@ from project.conftest import (  # noqa: F401
     datamodule_config,
     experiment_dictconfig,
 )
-from project.experiment import setup_experiment
+from project.experiment import (
+    instantiate_algorithm,
+    instantiate_datamodule,
+    instantiate_trainer,
+    setup_logging,
+)
 from project.utils.hydra_utils import resolve_dictconfig
 
 
@@ -111,5 +117,11 @@ def test_notebook_commands_dont_cause_errors(experiment_dictconfig: DictConfig):
     # check for any errors related to OmegaConf interpolations and such
     config = resolve_dictconfig(experiment_dictconfig)
     # check for any errors when actually instantiating the components.
-    _experiment = setup_experiment(config)
+    # _experiment = _setup_experiment(config)
+    setup_logging(config)
+    lightning.seed_everything(config.seed, workers=True)
+    _trainer = instantiate_trainer(config)
+    datamodule = instantiate_datamodule(config.datamodule)
+    _algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
+
     # Note: Here we don't actually do anything with the objects.

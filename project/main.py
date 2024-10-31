@@ -31,7 +31,6 @@ from project.configs.config import Config
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
-    seed_rng,
     setup_logging,
 )
 from project.trainers.jax_trainer import JaxModule, JaxTrainer
@@ -64,29 +63,42 @@ def main(dict_config: DictConfig) -> dict:
 
     This does roughly the same thing as
     https://github.com/ashleve/lightning-hydra-template/blob/main/src/train.py
+
+    1. Instantiates the experiment components from the Hydra configuration:
+        - trainer
+        - algorithm
+        - datamodule (optional)
+    2. Calls `train` to train the algorithm
+    3. Calls `evaluation` to evaluate the model
+    4. Returns the evaluation metrics.
     """
     print_config(dict_config, resolve=False)
 
+    # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
 
-    experiment_config = config
-    setup_logging(experiment_config)
-    seed_rng(experiment_config)
+    # Now we instantiate the components.
 
-    trainer_config = config.trainer.copy()  # Avoid mutating the input config, if passed.
+    # seed the random number generators, so the weights that are
+    # constructed are deterministic and reproducible.
+
+    setup_logging(config)
+    lightning.seed_everything(seed=config.seed, workers=True)
+
+    # Create the Trainer
+    trainer_config = config.trainer.copy()  # Avoid mutating the config if possible.
     callbacks: list[Callback] | None = instantiate_values(trainer_config.pop("callbacks", None))
     logger: list[Logger] | None = instantiate_values(trainer_config.pop("logger", None))
-
     trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
         trainer_config, callbacks=callbacks, logger=logger
     )
 
-    datamodule: lightning.LightningDataModule | None = instantiate_datamodule(
-        experiment_config.datamodule
-    )
+    # Create the datamodule (if present)
+    datamodule: lightning.LightningDataModule | None = instantiate_datamodule(config.datamodule)
 
+    # Create the "algorithm"
     algorithm: lightning.LightningModule | JaxModule = instantiate_algorithm(
-        experiment_config.algorithm, datamodule=datamodule
+        config.algorithm, datamodule=datamodule
     )
 
     import wandb
@@ -97,8 +109,10 @@ def main(dict_config: DictConfig) -> dict:
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
 
+    # Train the algorithm.
     train(config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm)
 
+    # Evaluate the algorithm.
     metric_name, error, _metrics = evaluation(
         trainer=trainer, datamodule=datamodule, algorithm=algorithm
     )

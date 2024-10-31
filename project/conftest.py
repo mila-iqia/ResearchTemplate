@@ -68,6 +68,7 @@ from pathlib import Path
 from typing import Literal
 
 import jax
+import lightning
 import lightning.pytorch as pl
 import pytest
 import tensor_regression.stats
@@ -88,7 +89,6 @@ from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
     instantiate_trainer,
-    seed_rng,
     setup_logging,
 )
 from project.main import PROJECT_NAME
@@ -287,7 +287,7 @@ def trainer(
     experiment_config: Config,
 ) -> pl.Trainer:
     setup_logging(experiment_config)
-    seed_rng(experiment_config)
+    lightning.seed_everything(experiment_config.seed, workers=True)
     return instantiate_trainer(experiment_config)
 
 
