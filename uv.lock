@@ -1425,8 +1425,8 @@ wheels = [
 
 [[package]]
 name = "hydra-auto-schema"
-version = "0.0.1.post6+b16b59a"
-source = { git = "https://github.com/lebrice/hydra-auto-schema?rev=master#b16b59a413144e7e2314627d4e8fcbbfbe041275" }
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docstring-parser" },
     { name = "hydra-core" },
@@ -1436,6 +1436,10 @@ dependencies = [
     { name = "rich" },
     { name = "tqdm" },
     { name = "watchdog" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/82/0b/0fb5615fc7b6f1313fbb25a1b6a9402d07291876c0c0a41ca7ba02709a27/hydra_auto_schema-0.0.3.tar.gz", hash = "sha256:32918b6026a9e2eb0d7b4226a12b0a28f7346168551b2553e09aab650f77ae02", size = 51587 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/bc/f67466ab7ec7f5b78331222973cd74b2f90fe4c6a83d348b3035bda51462/hydra_auto_schema-0.0.3-py3-none-any.whl", hash = "sha256:86db1ae2ad260e41081ecc89397014a878eeee0bc06a7b8df2cb916ac6f794ea", size = 24909 },
 ]
 
 [[package]]
@@ -3939,7 +3943,7 @@ requires-dist = [
     { name = "gdown", specifier = ">=5.2.0" },
     { name = "gymnasium", extras = ["classic-control"], specifier = ">=0.29.1" },
     { name = "gymnax", git = "https://www.github.com/lebrice/gymnax?rev=fix-classic-control-rendering" },
-    { name = "hydra-auto-schema", git = "https://github.com/lebrice/hydra-auto-schema?rev=master" },
+    { name = "hydra-auto-schema", specifier = ">=0.0.3" },
     { name = "hydra-colorlog", specifier = ">=1.2.0" },
     { name = "hydra-core", specifier = ">=1.3.2" },
     { name = "hydra-orion-sweeper", specifier = ">=1.6.4" },
