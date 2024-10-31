@@ -41,7 +41,7 @@ resource_configs = _yaml_files_in(CONFIG_DIR / "resources")
         pytest.param(
             f"algorithm=example datamodule=cifar10 cluster={cluster.stem} resources={resources.stem}",
             marks=pytest.mark.skipif(
-                cluster != "mila" and not is_already_logged_in(cluster.stem),
+                cluster.stem != "mila" and not is_already_logged_in(cluster.stem),
                 reason="Logging in would go through 2FA!",
             ),
         )
