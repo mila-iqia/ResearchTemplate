@@ -58,15 +58,6 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
     return mock_eval_fn
 
 
-# The problem is that not all experiment configs
-# are to be used in the same way. For example,
-# the cluster_sweep_config.yaml needs an
-# additional `cluster` argument. Also, the
-# example config uses wandb by default, which is
-# probably bad, since it might be creating empty
-# jobs in wandb during tests (since the logger is
-# instantiated in main, even if the train fn is
-# mocked.
 experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
 
 
