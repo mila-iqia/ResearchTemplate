@@ -1,16 +1,13 @@
 # ADAPTED FROM https://github.com/facebookresearch/hydra/blob/main/examples/advanced/hydra_app_example/tests/test_example.py
 from __future__ import annotations
 
-import os
 import shutil
-import subprocess
 import sys
 import uuid
 from unittest.mock import Mock
 
 import hydra_zen
 import omegaconf.errors
-import psutil
 import pytest
 import torch
 from _pytest.mark.structures import ParameterSet
@@ -48,25 +45,6 @@ def test_torch_can_use_the_GPU():
     """Test that torch can use the GPU if it we have one."""
 
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
-
-
-def total_ram_GB():
-    """Returns the total amount of VRAM available."""
-    # mem is in bytes.
-    if "SLURM_MEM_PER_NODE" in os.environ:
-        # Inside a SLURM job step via `srun` or `ssh mila-cpu`.
-        mem_in_mb = int(os.environ["SLURM_MEM_PER_NODE"])
-    elif "SLURM_JOB_ID" in os.environ:
-        # Connected to a compute node via SSH (only SLURM_JOB_ID env var is inherited).
-        mem_in_mb = int(
-            subprocess.check_output(
-                ("srun", "--overlap", "--pty", "printenv", "SLURM_MEM_PER_NODE"), text=True
-            )
-        )
-    else:
-        # total from psutil is in bytes.
-        mem_in_mb = psutil.virtual_memory().total / 1024**2
-    return mem_in_mb / 1024
 
 
 @pytest.fixture
