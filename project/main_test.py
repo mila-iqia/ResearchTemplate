@@ -94,7 +94,7 @@ experiment_commands_to_test = [
 
 
 @pytest.mark.parametrize("experiment_config", experiment_configs)
-def test_experiment_configs_is_tested(experiment_config: str):
+def test_experiment_config_is_tested(experiment_config: str):
     select_experiment_command = f"experiment={experiment_config}"
 
     for test_command in experiment_commands_to_test:
