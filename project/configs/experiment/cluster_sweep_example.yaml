@@ -1,4 +1,7 @@
 # @package _global_
+
+# This is an "experiment" config, that groups together other configs into a ready-to-run example.
+
 defaults:
   - example.yaml # A configuration for a single run (that works!)
   - override /trainer/logger: wandb

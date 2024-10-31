@@ -32,17 +32,6 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
     return mock_eval_fn
 
 
-# The problem is that not all experiment configs
-# are to be used in the same way. For example,
-# the cluster_sweep_config.yaml needs an
-# additional `cluster` argument. Also, the
-# example config uses wandb by default, which is
-# probably bad, since it might be creating empty
-# jobs in wandb during tests (since the logger is
-# instantiated in main, even if the train fn is
-# mocked.
-
-
 class DummyModule(lightning.LightningModule):
     def __init__(self, bob: int = 123):
         super().__init__()
