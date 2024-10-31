@@ -432,7 +432,7 @@ def _override_param_id(override: Param) -> str:
 
 
 @pytest.fixture(scope="session", ids=_override_param_id)
-def command_line_overrides(request: pytest.FixtureRequest):
+def command_line_overrides(request: pytest.FixtureRequest) -> tuple[str, ...]:
     """Fixture that makes it possible to specify command-line overrides to use in a given test.
 
     Tests that require running an experiment should use the `experiment_config` fixture below.

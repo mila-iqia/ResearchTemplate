@@ -115,6 +115,7 @@ class PPOHParams(flax.struct.PyTreeNode):
     learning_rate: chex.Scalar = 0.0003
     gamma: chex.Scalar = 0.99
     max_grad_norm: chex.Scalar = jnp.inf
+    # todo: this `jnp.inf` is causing issues in the yaml schema because it becomes `Infinity`.
 
     gae_lambda: chex.Scalar = 0.95
     clip_eps: chex.Scalar = 0.2

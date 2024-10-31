@@ -108,7 +108,6 @@ def main(dict_config: DictConfig) -> dict:
         wandb.run.config.update(
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
-
     # Train the algorithm.
     train(config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm)
 
@@ -175,7 +174,7 @@ def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
     This would then return a list with the instantiated WandbLogger and TensorBoardLogger objects.
     """
     if not config_dict:
-        return []
+        return None
     objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
     if objects_dict is None:
         return None

@@ -5,7 +5,9 @@ defaults:
   - override /trainer: jax
   - override /trainer/callbacks: rich_progress_bar
   - override /datamodule: null
+  # - /trainer/logger: tensorboard
 trainer:
+  _convert_: object
   max_epochs: 75
   training_steps_per_epoch: 1
   callbacks:

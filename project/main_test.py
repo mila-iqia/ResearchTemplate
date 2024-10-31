@@ -1,13 +1,19 @@
 # ADAPTED FROM https://github.com/facebookresearch/hydra/blob/main/examples/advanced/hydra_app_example/tests/test_example.py
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
+import sys
+import uuid
 from unittest.mock import Mock
 
 import hydra_zen
 import omegaconf.errors
+import psutil
 import pytest
 import torch
+from _pytest.mark.structures import ParameterSet
 from hydra.types import RunMode
 from omegaconf import DictConfig
 
@@ -44,6 +50,25 @@ def test_torch_can_use_the_GPU():
     assert torch.cuda.is_available() == bool(shutil.which("nvidia-smi"))
 
 
+def total_ram_GB():
+    """Returns the total amount of VRAM available."""
+    # mem is in bytes.
+    if "SLURM_MEM_PER_NODE" in os.environ:
+        # Inside a SLURM job step via `srun` or `ssh mila-cpu`.
+        mem_in_mb = int(os.environ["SLURM_MEM_PER_NODE"])
+    elif "SLURM_JOB_ID" in os.environ:
+        # Connected to a compute node via SSH (only SLURM_JOB_ID env var is inherited).
+        mem_in_mb = int(
+            subprocess.check_output(
+                ("srun", "--overlap", "--pty", "printenv", "SLURM_MEM_PER_NODE"), text=True
+            )
+        )
+    else:
+        # total from psutil is in bytes.
+        mem_in_mb = psutil.virtual_memory().total / 1024**2
+    return mem_in_mb / 1024
+
+
 @pytest.fixture
 def mock_train(monkeypatch: pytest.MonkeyPatch):
     mock_train_fn = Mock(spec=project.main.train)
@@ -60,19 +85,55 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
 
 experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
 
+experiment_commands_to_test = [
+    "experiment=example trainer.fast_dev_run=True",
+    "experiment=hf_example trainer.fast_dev_run=True",
+    # "experiment=jax_example trainer.fast_dev_run=True",
+    "experiment=jax_rl_example trainer.max_epochs=1",
+    pytest.param(
+        f"experiment=cluster_sweep_example "
+        f"trainer/logger=[] "  # disable logging.
+        f"trainer.fast_dev_run=True "  # make each job quicker to run
+        f"hydra.sweeper.worker.max_trials=1 "  # limit the number of jobs that get launched.
+        f"cluster={'current' if SLURM_JOB_ID else 'mila'} ",
+        marks=pytest.mark.slow,
+    ),
+    pytest.param(
+        "experiment=local_sweep_example "
+        "trainer/logger=[] "  # disable logging.
+        "trainer.fast_dev_run=True "  # make each job quicker to run
+        "hydra.sweeper.worker.max_trials=2 ",  # Run a small number of trials.
+        marks=pytest.mark.slow,
+    ),
+    pytest.param(
+        "experiment=profiling "
+        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
+        "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
+        "trainer.fast_dev_run=True ",  # make each job quicker to run
+        marks=pytest.mark.slow,
+    ),
+]
+
+
+@pytest.mark.parametrize("experiment_config", experiment_configs)
+def test_experiment_configs_is_tested(experiment_config: str):
+    select_experiment_command = f"experiment={experiment_config}"
+
+    for test_command in experiment_commands_to_test:
+        if isinstance(test_command, ParameterSet):
+            assert len(test_command.values) == 1
+            assert isinstance(test_command.values[0], str), test_command.values
+            test_command = test_command.values[0]
+        if select_experiment_command in test_command:
+            return  # success.
+
+    raise RuntimeError(f"{experiment_config=} is not tested by any of the test commands!")
+
 
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
-    [
-        f"experiment={experiment}"
-        if experiment != "cluster_sweep_example"
-        else f"experiment={experiment} cluster=mila"
-        if SLURM_JOB_ID is None
-        else f"experiment={experiment} cluster=current"
-        for experiment in list(experiment_configs)
-    ],
+    experiment_commands_to_test,
     indirect=True,
-    ids=[experiment for experiment in list(experiment_configs)],
 )
 def test_can_load_experiment_configs(
     experiment_dictconfig: DictConfig, mock_train: Mock, mock_evaluate: Mock
@@ -87,6 +148,27 @@ def test_can_load_experiment_configs(
     assert results is not None
     mock_train.assert_called_once()
     mock_evaluate.assert_called_once()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    experiment_commands_to_test,
+    indirect=True,
+)
+def test_can_run_experiment(
+    command_line_overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    # Mock out some part of the `main` function to not actually run anything.
+    # Get a unique hash id:
+    # todo: Set a unique name to avoid collisions between tests and reusing previous results.
+    name = f"{request.function.__name__}_{uuid.uuid4().hex}"
+    command_line_args = ["project/main.py"] + list(command_line_overrides) + [f"name={name}"]
+    print(command_line_args)
+    monkeypatch.setattr(sys, "argv", command_line_args)
+    project.main.main()
 
 
 @pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)
