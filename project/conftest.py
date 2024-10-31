@@ -186,7 +186,10 @@ def command_line_arguments(
         # If we manually overwrite the command-line arguments with indirect parametrization,
         # then ignore the rest of the stuff here and just use the provided command-line args.
         # Split the string into a list of command-line arguments if needed.
-        return shlex.split(param) if isinstance(param, str) else param
+        if isinstance(param, str):
+            return tuple(shlex.split(param))
+        assert isinstance(param, list | tuple)
+        return tuple(param)
 
     combination = set([datamodule_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():

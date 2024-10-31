@@ -2,6 +2,7 @@
 # Use monkeypatch.setattr(project.utils.remote_launcher_plugin, ..., that_mock)
 # Assert That the mock launcher plugin was instantiated
 import os
+import shlex
 import sys
 from pathlib import Path
 from unittest.mock import Mock
@@ -18,9 +19,9 @@ from milatools.utils.remote_v2 import is_already_logged_in
 import project.main
 import project.utils.remote_launcher_plugin
 from project.configs.config_test import CONFIG_DIR
-from project.conftest import command_line_overrides
 from project.main import PROJECT_NAME, main
 from project.utils import remote_launcher_plugin
+from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
 
 
@@ -30,27 +31,31 @@ def _yaml_files_in(directory: str | Path, recursive: bool = False):
     return list(glob("*.yml")) + list(glob("*.yaml"))
 
 
-cluster_configs = _yaml_files_in(CONFIG_DIR / "cluster")
-resource_configs = _yaml_files_in(CONFIG_DIR / "resources")
+cluster_configs = [p.stem for p in _yaml_files_in(CONFIG_DIR / "cluster")]
+resource_configs = [p.stem for p in _yaml_files_in(CONFIG_DIR / "resources")]
 
 
-@pytest.mark.skipif("SLURM_JOB_ID" in os.environ, reason="Can't be run on the cluster just yet.")
 @pytest.mark.parametrize(
-    command_line_overrides.__name__,
+    "command_line_args",
     [
         pytest.param(
-            f"algorithm=example datamodule=cifar10 cluster={cluster.stem} resources={resources.stem}",
-            marks=pytest.mark.skipif(
-                cluster.stem != "mila" and not is_already_logged_in(cluster.stem),
-                reason="Logging in would go through 2FA!",
-            ),
+            f"algorithm=example datamodule=cifar10 trainer.fast_dev_run=True cluster={cluster} resources={resources}",
+            marks=[
+                pytest.mark.skipif(
+                    SLURM_JOB_ID is None and cluster == "current",
+                    reason="Can only be run on a slurm cluster.",
+                ),
+                pytest.mark.skipif(
+                    cluster not in ["current", "mila"] and not is_already_logged_in(cluster),
+                    reason="Logging in could go through 2FA!",
+                ),
+            ],
         )
         for cluster in cluster_configs
         for resources in resource_configs
     ],
-    indirect=True,
 )
-def test_can_load_configs(command_line_arguments: list[str]):
+def test_can_load_configs(command_line_args: str):
     """Test that the cluster and resource configs can be loaded without errors."""
 
     with initialize_config_module(
@@ -58,9 +63,10 @@ def test_can_load_configs(command_line_arguments: list[str]):
         job_name="test",
         version_base="1.2",
     ):
+        overrides = shlex.split(command_line_args)
         _config = hydra.compose(
             config_name="config",
-            overrides=command_line_arguments,
+            overrides=overrides,
             return_hydra_config=True,
         )
 
