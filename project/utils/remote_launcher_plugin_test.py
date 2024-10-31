@@ -23,6 +23,7 @@ from project.main import PROJECT_NAME, main
 from project.utils import remote_launcher_plugin
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
+from project.utils.testutils import IN_GITHUB_CI, IN_SELF_HOSTED_GITHUB_CI
 
 
 def _yaml_files_in(directory: str | Path, recursive: bool = False):
@@ -46,8 +47,14 @@ resource_configs = [p.stem for p in _yaml_files_in(CONFIG_DIR / "resources")]
                     reason="Can only be run on a slurm cluster.",
                 ),
                 pytest.mark.skipif(
-                    cluster not in ["current", "mila"] and not is_already_logged_in(cluster),
-                    reason="Logging in could go through 2FA!",
+                    IN_SELF_HOSTED_GITHUB_CI
+                    and cluster != "mila"
+                    and not is_already_logged_in(cluster),
+                    reason="Can only use remote clusters from s-h runner if connection already exists (2FA).",
+                ),
+                pytest.mark.skipif(
+                    IN_GITHUB_CI and not IN_SELF_HOSTED_GITHUB_CI,
+                    reason="Can't connect to clusters from the GitHub cloud CI runner.",
                 ),
             ],
         )
