@@ -89,6 +89,7 @@ experiment_commands_to_test = [
         f"trainer/logger=[] "  # disable logging.
         f"trainer.fast_dev_run=True "  # make each job quicker to run
         f"hydra.sweeper.worker.max_trials=1 "  # limit the number of jobs that get launched.
+        f"resources=cpu "
         f"cluster={'current' if SLURM_JOB_ID else 'mila'} ",
         marks=[
             pytest.mark.slow,
@@ -148,12 +149,16 @@ def test_can_load_experiment_configs(
 ):
     # Mock out some part of the `main` function to not actually run anything.
     if experiment_dictconfig["hydra"]["mode"] == RunMode.MULTIRUN:
-        pytest.skip(
-            reason="Config is a multi-run config (e.g. a sweep). "
-            "Not running with `main`, as it wouldn't make much sense."
-        )
-    results = project.main.main(experiment_dictconfig)
-    assert results is not None
+        # NOTE: Can't pass a dictconfig to `main` function when doing a multirun (seems to just do
+        # a single run). If we try to call `main` without arguments and with the right arguments on\
+        # the command-line, with the right functions mocked out, those might not get used at all
+        # since `main` seems to create the launcher which pickles stuff and uses subprocesses.
+        # Pretty gnarly stuff.
+        pytest.skip(reason="Config is a multi-run config (e.g. a sweep). ")
+    else:
+        results = project.main.main(experiment_dictconfig)
+        assert results is not None
+
     mock_train.assert_called_once()
     # One of them should have been called once.
     assert (mock_evaluate_lightningmodule.call_count == 1) ^ (
