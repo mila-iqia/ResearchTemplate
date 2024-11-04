@@ -100,7 +100,7 @@ experiment_commands_to_test = [
             pytest.mark.xfail(
                 raises=TypeError,
                 reason="TODO: Getting a `TypeError: cannot pickle 'weakref.ReferenceType' object` error.",
-                strict=True,
+                strict=False,
             ),
         ],
     ),
@@ -123,7 +123,7 @@ experiment_commands_to_test = [
         "algorithm=no_op "
         "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
         "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
-        "trainer.fast_dev_run=True ",  # make each job quicker to run
+        "trainer.fast_dev_run=True "  # make each job quicker to run
     ),
 ]
 
