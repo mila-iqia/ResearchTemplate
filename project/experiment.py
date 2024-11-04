@@ -15,8 +15,6 @@ import copy
 import functools
 import logging
 import os
-import random
-from dataclasses import dataclass
 from logging import getLogger as get_logger
 from typing import Any
 
@@ -27,7 +25,7 @@ import rich.console
 import rich.logging
 import rich.traceback
 from hydra_zen.typing import Builds
-from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
+from lightning import Callback, LightningDataModule, LightningModule, Trainer
 
 from project.configs.config import Config
 from project.trainers.jax_trainer import JaxModule
@@ -44,50 +42,6 @@ logger = get_logger(__name__)
 # instantiate = _use_pydantic(hydra_zen.instantiate)
 
 instantiate = hydra_zen.instantiate
-
-
-@dataclass
-class Experiment:
-    """Dataclass containing everything used in an experiment.
-
-    This gets created from the config that are parsed from Hydra. Can be used to run the experiment
-    by calling `run(experiment)`. Could also be serialized to a file or saved to disk, which might
-    come in handy with `submitit` later on.
-    """
-
-    algorithm: LightningModule
-    datamodule: DataModule | None
-    trainer: Trainer
-
-
-def setup_experiment(experiment_config: Config) -> Experiment:
-    """Instantiate the experiment components from the Hydra configuration.
-
-    All the interpolations in the configs have already been resolved by
-    [project.utils.hydra_utils.resolve_dictconfig][]. Now we only need to instantiate the components
-    from their configs.
-
-    Do all the postprocessing necessary (e.g., create the network, datamodule, callbacks,
-    Trainer, Algorithm, etc) to go from the options that come from Hydra, into all required
-    components for the experiment, which is stored as a dataclass called `Experiment`.
-
-    NOTE: This also has the effect of seeding the random number generators, so the weights that are
-    constructed are deterministic and reproducible.
-    """
-    setup_logging(experiment_config)
-    seed_rng(experiment_config)
-    trainer = instantiate_trainer(experiment_config)
-
-    datamodule = instantiate_datamodule(experiment_config.datamodule)
-
-    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
-
-    return Experiment(
-        trainer=trainer,
-        algorithm=algorithm,
-        # network=network,
-        datamodule=datamodule,
-    )
 
 
 def setup_logging(experiment_config: Config) -> None:
@@ -114,16 +68,6 @@ def setup_logging(experiment_config: Config) -> None:
         root_logger.setLevel(logging.INFO)
     elif experiment_config.verbose:
         root_logger.setLevel(logging.DEBUG)
-
-
-def seed_rng(experiment_config: Config):
-    if experiment_config.seed is not None:
-        seed = experiment_config.seed
-        print(f"seed manually set to {experiment_config.seed}")
-    else:
-        seed = random.randint(0, int(1e5))
-        print(f"Randomly selected seed: {seed}")
-    seed_everything(seed=seed, workers=True)
 
 
 def instantiate_trainer(experiment_config: Config) -> Trainer:

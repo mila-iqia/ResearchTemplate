@@ -1,4 +1,7 @@
 # @package _global_
+
+# This is an "experiment" config, that groups together other configs into a ready-to-run example.
+
 defaults:
   - example.yaml # A configuration for a single run (that works!)
   - override /trainer/logger: wandb
@@ -8,6 +11,8 @@ defaults:
 
 log_level: DEBUG
 name: "sweep-example"
+
+# Set the seed to be the SLURM_PROCID, so that if we run more than one task per GPU, we get
 # TODO: This should technically be something like the "run_id", which would be different than SLURM_PROCID when using >1 gpus per "run".
 seed: ${oc.env:SLURM_PROCID,123}
 
@@ -44,7 +49,7 @@ hydra:
   sweep:
     dir: logs/${name}/multiruns/
     # subdir: ${hydra.job.num}
-    subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID}
+    subdir: ${hydra.job.id}/task${oc.env:SLURM_PROCID,0}
 
   launcher:
     # todo: bump this up.
@@ -54,16 +59,17 @@ hydra:
       # TODO: Pack more than one job on a single GPU, and support this with both a
       # patched submitit launcher as well as our remote submitit launcher, as well as by patching the
       # orion sweeper to not drop these other results.
-      ntasks_per_gpu: 1
+      # ntasks_per_gpu: 1
   sweeper:
     params:
       algorithm:
         optimizer:
           lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
           # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
-      trainer:
-        # Let the HPO algorithm allocate more epochs to more promising HP configurations.
-        max_epochs: "fidelity(1, 10, default_value=1)"
+      # todo: setup a fidelity parameter. Seems to not be working right now.
+      # trainer:
+      #   # Let the HPO algorithm allocate more epochs to more promising HP configurations.
+      #   max_epochs: "fidelity(1, 10, default_value=1)"
 
     parametrization: null
     experiment:

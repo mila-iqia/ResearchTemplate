@@ -68,6 +68,7 @@ from pathlib import Path
 from typing import Literal
 
 import jax
+import lightning
 import lightning.pytorch as pl
 import pytest
 import tensor_regression.stats
@@ -88,7 +89,6 @@ from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,
     instantiate_trainer,
-    seed_rng,
     setup_logging,
 )
 from project.main import PROJECT_NAME
@@ -186,7 +186,10 @@ def command_line_arguments(
         # If we manually overwrite the command-line arguments with indirect parametrization,
         # then ignore the rest of the stuff here and just use the provided command-line args.
         # Split the string into a list of command-line arguments if needed.
-        return shlex.split(param) if isinstance(param, str) else param
+        if isinstance(param, str):
+            return tuple(shlex.split(param))
+        assert isinstance(param, list | tuple)
+        return tuple(param)
 
     combination = set([datamodule_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
@@ -221,7 +224,7 @@ def command_line_arguments(
 
 @pytest.fixture(scope="session")
 def experiment_dictconfig(
-    command_line_arguments: list[str], tmp_path_factory: pytest.TempPathFactory
+    command_line_arguments: tuple[str, ...], tmp_path_factory: pytest.TempPathFactory
 ) -> DictConfig:
     """The `omegaconf.DictConfig` that is created by Hydra from the command-line arguments.
 
@@ -237,12 +240,12 @@ def experiment_dictconfig(
 
     tmp_path = tmp_path_factory.mktemp("test")
     if not any("trainer.default_root_dir" in override for override in command_line_arguments):
-        command_line_arguments = command_line_arguments + [
-            f"++trainer.default_root_dir={tmp_path}"
-        ]
+        command_line_arguments = tuple(command_line_arguments) + (
+            f"++trainer.default_root_dir={tmp_path}",
+        )
 
     with _setup_hydra_for_tests_and_compose(
-        all_overrides=command_line_arguments,
+        all_overrides=list(command_line_arguments),
         tmp_path_factory=tmp_path_factory,
     ) as dict_config:
         return dict_config
@@ -287,7 +290,7 @@ def trainer(
     experiment_config: Config,
 ) -> pl.Trainer:
     setup_logging(experiment_config)
-    seed_rng(experiment_config)
+    lightning.seed_everything(experiment_config.seed, workers=True)
     return instantiate_trainer(experiment_config)
 
 
@@ -432,7 +435,7 @@ def _override_param_id(override: Param) -> str:
 
 
 @pytest.fixture(scope="session", ids=_override_param_id)
-def command_line_overrides(request: pytest.FixtureRequest):
+def command_line_overrides(request: pytest.FixtureRequest) -> tuple[str, ...]:
     """Fixture that makes it possible to specify command-line overrides to use in a given test.
 
     Tests that require running an experiment should use the `experiment_config` fixture below.

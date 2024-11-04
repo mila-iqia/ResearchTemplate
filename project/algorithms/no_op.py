@@ -15,6 +15,7 @@ class NoOp(LightningModule):
         self.datamodule = datamodule
         # Set this so PyTorch-Lightning doesn't try to train the model using our 'loss'
         self.automatic_optimization = False
+        self.p = torch.nn.Parameter(torch.tensor(0.0))  # unused.
 
     def training_step(self, batch: Any, batch_index: int):
         return self.shared_step(batch, batch_index, "train")
