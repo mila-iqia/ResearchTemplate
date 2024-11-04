@@ -89,7 +89,7 @@ experiment_commands_to_test = [
         f"trainer/logger=[] "  # disable logging.
         f"trainer.fast_dev_run=True "  # make each job quicker to run
         f"hydra.sweeper.worker.max_trials=1 "  # limit the number of jobs that get launched.
-        f"resources=cpu "
+        f"resources=gpu "
         f"cluster={'current' if SLURM_JOB_ID else 'mila'} ",
         marks=[
             pytest.mark.slow,

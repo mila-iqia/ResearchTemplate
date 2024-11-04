@@ -59,7 +59,7 @@ hydra:
       # TODO: Pack more than one job on a single GPU, and support this with both a
       # patched submitit launcher as well as our remote submitit launcher, as well as by patching the
       # orion sweeper to not drop these other results.
-      ntasks_per_gpu: 1
+      # ntasks_per_gpu: 1
   sweeper:
     params:
       algorithm:
