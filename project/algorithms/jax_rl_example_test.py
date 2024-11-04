@@ -29,7 +29,6 @@ from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.trainers.jax_trainer import JaxTrainer, hparams_to_dict
-from project.utils.testutils import run_for_all_configs_of_type
 
 from .jax_rl_example import (
     EvalMetrics,
@@ -43,7 +42,6 @@ from .jax_rl_example import (
     _actor,
     render_episode,
 )
-from .testsuites.algorithm_tests import LearningAlgorithmTests
 
 logger = getLogger(__name__)
 
@@ -671,10 +669,10 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
 
 
 # TODO: potentially just use the Lightning adapter for unit tests for now?
-@pytest.mark.skip(reason="TODO: ests assume a LightningModule atm (.state_dict()), etc.")
-@run_for_all_configs_of_type("algorithm", JaxRLExample)
-class TestJaxRLExample(LearningAlgorithmTests[JaxRLExample]):  # type: ignore
-    pass
+# @pytest.mark.skip(reason="TODO: ests assume a LightningModule atm (.state_dict()), etc.")
+# @run_for_all_configs_of_type("algorithm", JaxRLExample)
+# class TestJaxRLExample(LearningAlgorithmTests[JaxRLExample]):  # type: ignore
+#     pass
 
 
 @pytest.fixture

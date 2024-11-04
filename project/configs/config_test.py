@@ -1,35 +1,15 @@
 """TODO: Add tests for the configurations?"""
 
-from unittest.mock import Mock
-
 import hydra_zen
 import lightning
 import pytest
 from hydra.core.config_store import ConfigStore
 
-import project
-import project.main
 from project.conftest import algorithm_config
 from project.main import PROJECT_NAME
 from project.utils.env_vars import REPO_ROOTDIR
 
 CONFIG_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
-
-experiment_configs = list((CONFIG_DIR / "experiment").glob("*.yaml"))
-
-
-@pytest.fixture
-def mock_train(monkeypatch: pytest.MonkeyPatch):
-    mock_train_fn = Mock(spec=project.main.train)
-    monkeypatch.setattr(project.main, project.main.train.__name__, mock_train_fn)
-    return mock_train_fn
-
-
-@pytest.fixture
-def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
-    mock_eval_fn = Mock(spec=project.main.evaluation, return_value=("fake", 0.0, {}))
-    monkeypatch.setattr(project.main, project.main.evaluation.__name__, mock_eval_fn)
-    return mock_eval_fn
 
 
 class DummyModule(lightning.LightningModule):

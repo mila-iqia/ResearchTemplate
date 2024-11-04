@@ -18,8 +18,8 @@ from milatools.utils.remote_v2 import is_already_logged_in
 
 import project.main
 import project.utils.remote_launcher_plugin
-from project.configs.config_test import CONFIG_DIR
 from project.main import PROJECT_NAME, main
+from project.main_test import CONFIG_DIR
 from project.utils import remote_launcher_plugin
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.remote_launcher_plugin import RemoteSlurmLauncher
