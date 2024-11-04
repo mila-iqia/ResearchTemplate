@@ -6,10 +6,6 @@ import pytest
 from hydra.core.config_store import ConfigStore
 
 from project.conftest import algorithm_config
-from project.main import PROJECT_NAME
-from project.utils.env_vars import REPO_ROOTDIR
-
-CONFIG_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
 
 
 class DummyModule(lightning.LightningModule):
