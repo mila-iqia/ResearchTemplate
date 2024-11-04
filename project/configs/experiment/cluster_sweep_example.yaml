@@ -66,9 +66,10 @@ hydra:
         optimizer:
           lr: "loguniform(1e-6, 1.0, default_value=3e-4)"
           # weight_decay: "loguniform(1e-6, 1e-2, default_value=0)"
-      trainer:
-        # Let the HPO algorithm allocate more epochs to more promising HP configurations.
-        max_epochs: "fidelity(1, 10, default_value=1)"
+      # todo: setup a fidelity parameter. Seems to not be working right now.
+      # trainer:
+      #   # Let the HPO algorithm allocate more epochs to more promising HP configurations.
+      #   max_epochs: "fidelity(1, 10, default_value=1)"
 
     parametrization: null
     experiment:

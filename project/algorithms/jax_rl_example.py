@@ -106,6 +106,9 @@ class PPOHParams(flax.struct.PyTreeNode):
     num_steps: int = field(default=64)
     num_minibatches: int = field(default=16)
 
+    # ADDED:
+    num_seeds_per_eval: int = field(default=128)
+
     eval_freq: int = field(default=4_096)
 
     normalize_observations: bool = field(default=False)
@@ -390,9 +393,13 @@ class JaxRLExample(
         if rng is None:
             rng = ts.rng
         actor = make_actor(ts=ts, hp=self.hp)
-        max_steps = self.env_params.max_steps_in_episode
         ep_lengths, cum_rewards = evaluate(
-            actor, ts.rng, self.env, self.env_params, 128, max_steps
+            actor,
+            ts.rng,
+            self.env,
+            self.env_params,
+            num_seeds=self.hp.num_seeds_per_eval,
+            max_steps_in_episode=self.env_params.max_steps_in_episode,
         )
         return EvalMetrics(episode_length=ep_lengths, cumulative_reward=cum_rewards)
 

@@ -10,6 +10,9 @@ This does the following:
 
 from __future__ import annotations
 
+import dataclasses
+import functools
+import operator
 import os
 import warnings
 from logging import getLogger as get_logger
@@ -22,10 +25,11 @@ import lightning
 import omegaconf
 import rich
 from hydra_plugins.auto_schema import auto_schema_plugin
-from lightning import Callback, LightningDataModule
+from lightning import Callback
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
+from project.algorithms.jax_rl_example import EvalMetrics
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.experiment import (
@@ -33,7 +37,7 @@ from project.experiment import (
     instantiate_datamodule,
     setup_logging,
 )
-from project.trainers.jax_trainer import JaxModule, JaxTrainer
+from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
@@ -109,17 +113,27 @@ def main(dict_config: DictConfig) -> dict:
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
     # Train the algorithm.
-    train(config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm)
+    train_results = train(
+        config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm
+    )
 
     # Evaluate the algorithm.
-    metric_name, error, _metrics = evaluation(
-        trainer=trainer, datamodule=datamodule, algorithm=algorithm
-    )
+    if isinstance(algorithm, JaxModule):
+        assert isinstance(trainer, JaxTrainer)
+        metric_name, error, _metrics = evaluate_jax_module(
+            algorithm, trainer=trainer, train_results=train_results
+        )
+    else:
+        assert isinstance(trainer, lightning.Trainer)
+        metric_name, error, _metrics = evaluate_lightningmodule(
+            algorithm, datamodule=datamodule, trainer=trainer
+        )
 
     if wandb.run:
         wandb.finish()
 
     assert error is not None
+    # Results are returned like this so that the Orion sweeper can parse the results correctly.
     return dict(name=metric_name, type="objective", value=error)
 
 
@@ -136,12 +150,11 @@ def train(
         # example in RL, where we need to set the actor to use in the environment, as well as
         # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
         datamodule = getattr(algorithm, "datamodule", datamodule)
-        trainer.fit(
+        return trainer.fit(
             algorithm,
             datamodule=datamodule,
             ckpt_path=config.ckpt_path,
         )
-        return
 
     if datamodule is not None:
         raise NotImplementedError(
@@ -159,7 +172,7 @@ def train(
     rng = jax.random.key(config.seed)
     # TODO: Use ckpt_path argument to load the training state and resume the training run.
     assert config.ckpt_path is None
-    trainer.fit(algorithm, rng=rng)
+    return trainer.fit(algorithm, rng=rng)
 
 
 def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
@@ -185,10 +198,10 @@ def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
 MetricName = str
 
 
-def evaluation(
-    trainer: JaxTrainer | lightning.Trainer,
+def evaluate_lightningmodule(
+    algorithm: lightning.LightningModule,
+    trainer: lightning.Trainer,
     datamodule: lightning.LightningDataModule | None,
-    algorithm,
 ) -> tuple[MetricName, float | None, dict]:
     """Evaluates the algorithm and returns the metrics.
 
@@ -196,73 +209,92 @@ def evaluation(
     training error when `trainer.overfit_batches != 0` (e.g. when debugging or testing). Otherwise,
     if `trainer.limit_val_batches == 0`, returns the test error.
     """
-    # TODO Probably log the hydra config with something like this:
+
     # exp.trainer.logger.log_hyperparams()
     # When overfitting on a single batch or only training, we return the train error.
     if (trainer.limit_val_batches == trainer.limit_test_batches == 0) or (
         trainer.overfit_batches == 1  # type: ignore
     ):
         # We want to report the training error.
-        metrics = {
-            **trainer.logged_metrics,
-            **trainer.callback_metrics,
-            **trainer.progress_bar_metrics,
-        }
-        rich.print(metrics)
-        if "train/accuracy" in metrics:
-            train_acc: float = metrics["train/accuracy"]
-            train_error = 1 - train_acc
-            return "1-accuracy", train_error, metrics
-        elif "train/avg_episode_reward" in metrics:
-            average_episode_rewards: float = metrics["train/avg_episode_reward"]
-            train_error = -average_episode_rewards
-            return "-avg_episode_reward", train_error, metrics
-        elif "train/loss" in metrics:
-            return "loss", metrics["train/loss"], metrics
-        else:
-            raise RuntimeError(
-                f"Don't know which metric to use to calculate the 'error' of this run.\n"
-                f"Here are the available metric names:\n"
-                f"{list(metrics.keys())}"
-            )
-    assert isinstance(datamodule, LightningDataModule)
-
-    if trainer.limit_val_batches != 0:
-        results = trainer.validate(model=algorithm, datamodule=datamodule)
+        results_type = "train"
+        results = [
+            {
+                **trainer.logged_metrics,
+                **trainer.callback_metrics,
+                **trainer.progress_bar_metrics,
+            }
+        ]
+    elif trainer.limit_val_batches != 0:
         results_type = "val"
+        results = trainer.validate(model=algorithm, datamodule=datamodule)
     else:
         warnings.warn(RuntimeWarning("About to use the test set for evaluation!"))
-        results = trainer.test(model=algorithm, datamodule=datamodule)
         results_type = "test"
+        results = trainer.test(model=algorithm, datamodule=datamodule)
 
     if results is None:
         rich.print("RUN FAILED!")
         return "fail", None, {}
 
-    returned_results_dict = dict(results[0])
-    results_dict = dict(results[0]).copy()
+    metrics = dict(results[0])
+    for key, value in metrics.items():
+        rich.print(f"{results_type} {key}: ", value)
 
-    loss = results_dict.pop(f"{results_type}/loss")
-
-    if f"{results_type}/accuracy" in results_dict:
-        accuracy: float = results_dict[f"{results_type}/accuracy"]
-        rich.print(f"{results_type} accuracy: {accuracy:.1%}")
-
-        if top5_accuracy := results_dict.get(f"{results_type}/top5_accuracy") is not None:
-            rich.print(f"{results_type} top5 accuracy: {top5_accuracy:.1%}")
+    if (accuracy := metrics.get(f"{results_type}/accuracy")) is not None:
         # NOTE: This is the value that is used for HParam sweeps.
-        error = 1 - accuracy
         metric_name = "1-accuracy"
-    else:
-        logger.warning("Assuming that the objective to minimize is the loss metric.")
+        error = 1 - accuracy
+
+    elif (loss := metrics.get(f"{results_type}/loss")) is not None:
+        logger.info("Assuming that the objective to minimize is the loss metric.")
         # If 'accuracy' isn't in the results, assume that the loss is the metric to use.
         metric_name = "loss"
         error = loss
+    else:
+        raise RuntimeError(
+            f"Don't know which metric to use to calculate the 'error' of this run.\n"
+            f"Here are the available metric names:\n"
+            f"{list(metrics.keys())}"
+        )
 
-    for key, value in results_dict.items():
-        rich.print(f"{results_type} {key}: ", value)
+    return metric_name, error, metrics
 
-    return metric_name, error, returned_results_dict
+
+def evaluate_jax_module(
+    algorithm: JaxModule[Ts, Any, _MetricsT],
+    trainer: JaxTrainer,
+    train_results: tuple[Ts, _MetricsT] | None = None,
+):
+    # todo: there isn't yet a `validate` method on the jax trainer.
+    assert isinstance(trainer, JaxTrainer)
+    assert train_results is not None
+    metrics = train_results[1]
+
+    return get_error_from_metrics(metrics)
+
+
+@functools.singledispatch
+def get_error_from_metrics(metrics: _MetricsT) -> tuple[MetricName, float, dict]:
+    """Returns the main metric name, its value, and the full metrics dictionary."""
+    raise NotImplementedError(
+        f"Don't know how to calculate the error to minimize from metrics {metrics} of type "
+        f"{type(metrics)}! "
+        f"You probably need to register a handler for it."
+    )
+
+
+@get_error_from_metrics.register(EvalMetrics)
+def get_error_from_jax_rl_example_metrics(metrics: EvalMetrics):
+    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
+    assert isinstance(last_epoch_metrics, EvalMetrics)
+    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
+    # vmap).
+    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
+    return (
+        "-avg_cumulative_reward",
+        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
+        dataclasses.asdict(last_epoch_metrics),
+    )
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ from project.conftest import command_line_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.testutils import IN_GITHUB_CI
 
 from .main import PROJECT_NAME, main
 
@@ -55,10 +56,25 @@ def mock_train(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture
-def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
-    mock_eval_fn = Mock(spec=project.main.evaluation, return_value=("fake", 0.0, {}))
-    monkeypatch.setattr(project.main, project.main.evaluation.__name__, mock_eval_fn)
-    return mock_eval_fn
+def mock_evaluate_lightningmodule(monkeypatch: pytest.MonkeyPatch):
+    mock_eval_lightningmodule = Mock(
+        spec=project.main.evaluate_lightningmodule, return_value=("fake", 0.0, {})
+    )
+    monkeypatch.setattr(
+        project.main, project.main.evaluate_lightningmodule.__name__, mock_eval_lightningmodule
+    )
+    return mock_eval_lightningmodule
+
+
+@pytest.fixture
+def mock_evaluate_jax_module(monkeypatch: pytest.MonkeyPatch):
+    mock_eval_jax_module = Mock(
+        spec=project.main.evaluate_jax_module, return_value=("fake", 0.0, {})
+    )
+    monkeypatch.setattr(
+        project.main, project.main.evaluate_jax_module.__name__, mock_eval_jax_module
+    )
+    return mock_eval_jax_module
 
 
 experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
@@ -74,7 +90,10 @@ experiment_commands_to_test = [
         f"trainer.fast_dev_run=True "  # make each job quicker to run
         f"hydra.sweeper.worker.max_trials=1 "  # limit the number of jobs that get launched.
         f"cluster={'current' if SLURM_JOB_ID else 'mila'} ",
-        marks=pytest.mark.slow,
+        marks=[
+            pytest.mark.slow,
+            pytest.mark.skipif(IN_GITHUB_CI, reason="Can't do git push on github CI."),
+        ],
     ),
     pytest.param(
         "experiment=local_sweep_example "
@@ -114,7 +133,10 @@ def test_experiment_config_is_tested(experiment_config: str):
     indirect=True,
 )
 def test_can_load_experiment_configs(
-    experiment_dictconfig: DictConfig, mock_train: Mock, mock_evaluate: Mock
+    experiment_dictconfig: DictConfig,
+    mock_train: Mock,
+    mock_evaluate_lightningmodule: Mock,
+    mock_evaluate_jax_module: Mock,
 ):
     # Mock out some part of the `main` function to not actually run anything.
     if experiment_dictconfig["hydra"]["mode"] == RunMode.MULTIRUN:
@@ -125,7 +147,10 @@ def test_can_load_experiment_configs(
     results = project.main.main(experiment_dictconfig)
     assert results is not None
     mock_train.assert_called_once()
-    mock_evaluate.assert_called_once()
+    # One of them should have been called once.
+    assert (mock_evaluate_lightningmodule.call_count == 1) ^ (
+        mock_evaluate_jax_module.call_count == 1
+    )
 
 
 @pytest.mark.slow
