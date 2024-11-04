@@ -224,7 +224,7 @@ def command_line_arguments(
 
 @pytest.fixture(scope="session")
 def experiment_dictconfig(
-    command_line_arguments: list[str], tmp_path_factory: pytest.TempPathFactory
+    command_line_arguments: tuple[str, ...], tmp_path_factory: pytest.TempPathFactory
 ) -> DictConfig:
     """The `omegaconf.DictConfig` that is created by Hydra from the command-line arguments.
 
@@ -240,12 +240,12 @@ def experiment_dictconfig(
 
     tmp_path = tmp_path_factory.mktemp("test")
     if not any("trainer.default_root_dir" in override for override in command_line_arguments):
-        command_line_arguments = command_line_arguments + [
-            f"++trainer.default_root_dir={tmp_path}"
-        ]
+        command_line_arguments = tuple(command_line_arguments) + (
+            f"++trainer.default_root_dir={tmp_path}",
+        )
 
     with _setup_hydra_for_tests_and_compose(
-        all_overrides=command_line_arguments,
+        all_overrides=list(command_line_arguments),
         tmp_path_factory=tmp_path_factory,
     ) as dict_config:
         return dict_config
