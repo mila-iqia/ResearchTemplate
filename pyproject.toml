@@ -40,7 +40,7 @@ dependencies = [
     "mkdocstrings[python]>=0.26.2",
     "remote-slurm-executor",
     "watchdog>=5.0.3",
-    "hydra-auto-schema>=0.0.3",
+    "hydra-auto-schema>=0.0.4",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
