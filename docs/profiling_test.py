@@ -118,7 +118,7 @@ def test_notebook_commands_dont_cause_errors(experiment_dictconfig: DictConfig):
     config = resolve_dictconfig(experiment_dictconfig)
     # check for any errors when actually instantiating the components.
     # _experiment = _setup_experiment(config)
-    setup_logging(config)
+    setup_logging(log_level=config.log_level)
     lightning.seed_everything(config.seed, workers=True)
     _trainer = instantiate_trainer(config)
     datamodule = instantiate_datamodule(config.datamodule)

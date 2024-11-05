@@ -45,14 +45,15 @@ from project.utils.utils import print_config
 logger = get_logger(__name__)
 
 PROJECT_NAME = Path(__file__).parent.name
-
 add_configs_to_hydra_store()
+setup_logging(log_level="INFO", global_log_level="ERROR")
 
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
     stop_on_error=False,
     quiet=True,
+    verbose=False,
     add_headers=False,  # don't fallback to adding headers if we can't use vscode settings file.
 )
 
@@ -81,12 +82,13 @@ def main(dict_config: DictConfig) -> dict:
     # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
 
-    # Now we instantiate the components.
+    setup_logging(
+        log_level=config.log_level,
+        global_log_level="DEBUG" if config.debug else "INFO" if config.verbose else "WARNING",
+    )
 
     # seed the random number generators, so the weights that are
     # constructed are deterministic and reproducible.
-
-    setup_logging(config)
     lightning.seed_everything(seed=config.seed, workers=True)
 
     # Create the Trainer

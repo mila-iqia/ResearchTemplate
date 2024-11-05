@@ -289,7 +289,7 @@ def algorithm(
 def trainer(
     experiment_config: Config,
 ) -> pl.Trainer:
-    setup_logging(experiment_config)
+    setup_logging(log_level=experiment_config.log_level)
     lightning.seed_everything(experiment_config.seed, workers=True)
     return instantiate_trainer(experiment_config)
 

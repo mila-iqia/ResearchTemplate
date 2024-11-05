@@ -14,7 +14,6 @@ from __future__ import annotations
 import copy
 import functools
 import logging
-import os
 from logging import getLogger as get_logger
 from typing import Any
 
@@ -44,10 +43,11 @@ logger = get_logger(__name__)
 instantiate = hydra_zen.instantiate
 
 
-def setup_logging(experiment_config: Config) -> None:
-    LOGLEVEL = os.environ.get("LOGLEVEL", "info").upper()
+def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
+    from project.main import PROJECT_NAME
+
     logging.basicConfig(
-        level=LOGLEVEL,
+        level=global_log_level.upper(),
         # format="%(asctime)s - %(levelname)s - %(message)s",
         format="%(message)s",
         datefmt="[%X]",
@@ -62,12 +62,8 @@ def setup_logging(experiment_config: Config) -> None:
         ],
     )
 
-    root_logger = logging.getLogger("project")
-
-    if experiment_config.debug:
-        root_logger.setLevel(logging.INFO)
-    elif experiment_config.verbose:
-        root_logger.setLevel(logging.DEBUG)
+    project_logger = logging.getLogger(PROJECT_NAME)
+    project_logger.setLevel(log_level.upper())
 
 
 def instantiate_trainer(experiment_config: Config) -> Trainer:
