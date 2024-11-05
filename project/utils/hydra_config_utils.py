@@ -1,3 +1,4 @@
+import functools
 import importlib
 import inspect
 import typing
@@ -12,15 +13,31 @@ from project.utils.hydra_utils import get_outer_class
 logger = get_logger(__name__)
 
 
+@functools.cache
 def get_config_loader():
     from hydra._internal.config_loader_impl import ConfigLoaderImpl
     from hydra._internal.utils import create_automatic_config_search_path
 
     from project.main import PROJECT_NAME
 
+    # TODO: This (loading a config) is actually taking a long time, in part because this is
+    # triggering the hydra-auto-schema plugin to add schemas to all the yaml files.
+    AutoSchemaPlugin = None
+    backup = None
+    try:
+        from hydra_plugins.hydra_auto_schema.auto_schema_plugin import (  # type: ignore
+            AutoSchemaPlugin,
+        )
+
+        backup = AutoSchemaPlugin._ALREADY_DID
+        AutoSchemaPlugin._ALREADY_DID = True
+    except ImportError:
+        pass
     search_path = create_automatic_config_search_path(
         calling_file=None, calling_module=None, config_path=f"pkg://{PROJECT_NAME}.configs"
     )
+    if AutoSchemaPlugin is not None:
+        AutoSchemaPlugin._ALREADY_DID = backup
     config_loader = ConfigLoaderImpl(config_search_path=search_path)
     return config_loader
 

@@ -48,6 +48,7 @@ PROJECT_NAME = Path(__file__).parent.name
 add_configs_to_hydra_store()
 setup_logging(log_level="INFO", global_log_level="ERROR")
 
+
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
