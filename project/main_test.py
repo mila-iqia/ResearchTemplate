@@ -223,6 +223,10 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     )
 
 
+@pytest.mark.skipif(
+    IN_GITHUB_CI and sys.platform == "darwin",
+    reason="TODO: Getting a 'MPS backend out of memory' error on the Github CI. ",
+)
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     [
