@@ -1,11 +1,10 @@
 # Examples
 
-Here are some examples to get started with the template.
-<!--
-## TODOs:
+This template includes examples that use either Jax, PyTorch, or both!
 
-- [ ] Show examples (that are also to be tested with doctest or similar) of how to add a new algo.
-- [ ] Show examples of how to add a new datamodule.
-- [ ] Add a link to the RL example once [#13](https://github.com/mila-iqia/ResearchTemplate/issues/13) is done.
-- [ ] Add a link to the NLP example once [#14](https://github.com/mila-iqia/ResearchTemplate/issues/14) is done.
-- [ ] Add an example of how to use Jax for the dataset/dataloading: -->
+| Example link                            | Research Area                              | Reference link     | Frameworks      |
+| --------------------------------------- | ------------------------------------------ | ------------------ | --------------- |
+| [ExampleAlgorithm](torch_sl_example.md) | Supervised Learning (image classification) | `ExampleAlgorithm` | Torch + ⚡       |
+| [JaxExample](jax_sl_example.md)         | Supervised Learning (image classification) | `JaxExample`       | Torch + Jax + ⚡ |
+| [HFExample](nlp.md)                     | NLP (text classification)                  | `HFExample`        | Torch + 🤗 + ⚡   |
+| [JaxRLExample](jax_rl_example.md)       | RL                                         | `JaxRLExample`     | Jax             |

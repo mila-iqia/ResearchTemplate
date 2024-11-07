@@ -1,3 +1,5 @@
+<div align="center">
+
 # Research Project Template
 
 [![Build](https://github.com/mila-iqia/ResearchTemplate/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/mila-iqia/ResearchTemplate/actions/workflows/build.yml)
@@ -5,12 +7,15 @@
 [![hydra](https://img.shields.io/badge/Config-Hydra_1.3-89b8cd)](https://hydra.cc/)
 [![license](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/mila-iqia/ResearchTemplate#license)
 
+🚀 Get started on a new research project with a clean, robust and well-tested base that you can count on! 🚀
+
+</div>
+
+This is a project template for ML researchers developed at [Mila](https://www.mila.quebec). Our goal with this is to help you get started with a new research project.
+
+See [this introduction to the project](https://mila-iqia.github.io/ResearchTemplate/intro) for a detailed description of the context and motivations behind this project.
+
 Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
-
-This is a template repository for a research project in machine learning. It is meant to be a starting point for new ML researchers that run jobs on SLURM clusters.
-The main target audience is [Mila](https://mila.quebec/en) researchers and students, but this should still be useful to anyone that uses PyTorch-Lightning with Hydra.
-
-For more context, see [this  introduction to the project.](https://mila-iqia.github.io/ResearchTemplate/intro).
 
 ## Installation
 
@@ -32,19 +37,20 @@ This project makes use of the following libraries:
 - [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
 - [pytest](https://docs.pytest.org/en/stable/) is used for testing.
 
-## Why use this template?
+## Who is this for? Why should you use this template?
 
-Why should you use this template (instead of another)?
+This template comes with [some unique features that can *only* be found here (for now)!](https://mila-iqia.github.io/ResearchTemplate/features/index.md)
 
-Here are some of the advantages to using this template compared to [some of the other templates out there](https://mila-iqia.github.io/ResearchTemplate/related):
+- [Torch and Jax support](https://mila-iqia.github.io/ResearchTemplate/features/jax/)
+- [Rich IDE support for Hydra config files](https://mila-iqia.github.io/ResearchTemplate/features/auto_schema/)
+- [Built-in automated tests (including reproducibility tests), including testing on SLURM clusters!](https://mila-iqia.github.io/ResearchTemplate/features/testing/)
+- And more! (see [this page](https://mila-iqia.github.io/ResearchTemplate/features/))
 
-- ❗Can use both PyTorch and Jax with PyTorch-Lightning ❗
-- Neat Configs thanks to [Auto-Generated YAML schemas](https://mila-iqia.github.io/ResearchTemplate/features/auto_schema)
-- Easy development inside a [Development Container](https://code.visualstudio.com/docs/remote/containers) with [VsCode](https://code.visualstudio.com/)
-- Tailor-made for ML researchers that run their jobs on SLURM clusters (with default configurations for the [Mila](https://docs.mila.quebec) and [DRAC](https://docs.alliancecan.ca) clusters.)
-- Rich typing and documentation of all parts of the source code using Python 3.12's new type annotation syntax
-- A comprehensive suite of automated tests for all algorithms, datasets and networks that are easy to reuse and extend
-- Automatically creates Yaml Schemas for your Hydra config files (as soon as #7 is merged)
+To make the best use of this template, you should ideally already have a good understanding of Python, some experience with PyTorch, and some basic experience with SLURM.
+
+See [this page](https://mila-iqia.github.io/ResearchTemplate/related) for a list of other templates to choose from if this isn't for you.
+
+Please consider making an issue on this repo if you feel like this could be improved, or something is confusing to you. We very much need and appreciate your feedback! 😊
 
 ## Usage
 
@@ -54,7 +60,7 @@ To see all available options:
 python project/main.py --help
 ```
 
-For a detailed list of examples, see the [examples page](https://mila-iqia.github.io/ResearchTemplate/examples/examples).
+For a detailed list of examples, see the [examples page](https://mila-iqia.github.io/ResearchTemplate/examples).
 
 <!-- * `mkdocs new [dir-name]` - Create a new project.
 * `mkdocs serve` - Start the live-reloading docs server.
