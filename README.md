@@ -60,7 +60,7 @@ To see all available options:
 python project/main.py --help
 ```
 
-For a detailed list of examples, see the [examples page](https://mila-iqia.github.io/ResearchTemplate/examples/examples).
+For a detailed list of examples, see the [examples page](https://mila-iqia.github.io/ResearchTemplate/examples).
 
 <!-- * `mkdocs new [dir-name]` - Create a new project.
 * `mkdocs serve` - Start the live-reloading docs server.
