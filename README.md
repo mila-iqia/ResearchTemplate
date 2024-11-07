@@ -12,6 +12,16 @@ The main target audience is [Mila](https://mila.quebec/en) researchers and stude
 
 For more context, see [this  introduction to the project.](https://mila-iqia.github.io/ResearchTemplate/intro).
 
+## Installation
+
+Projects created with this template use [uv](https://docs.astral.sh/uv/) to manage dependencies. Once you have `uv` installed locally, you can install all dependencies with a single command:
+
+```bash
+uv sync  # Creates a virtual environment and installs dependencies in it.
+```
+
+For more detailed instructions, take a look at [this page](https://mila-iqia.github.io/ResearchTemplate/#setting-up-your-environment) of the template docs.
+
 ## Overview
 
 This project makes use of the following libraries:
