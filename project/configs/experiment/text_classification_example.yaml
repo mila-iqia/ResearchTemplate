@@ -6,6 +6,10 @@ defaults:
   - override /algorithm/network: albert-base-v2
   - override /trainer/callbacks: none
 
+datamodule:
+  text_fields:
+    - "sentence"
+
 trainer:
   min_epochs: 1
   max_epochs: 2

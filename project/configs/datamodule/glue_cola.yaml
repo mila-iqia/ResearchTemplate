@@ -1,0 +1,14 @@
+defaults:
+  - huggingface
+hf_dataset_path: glue
+task_name: cola
+tokenizer:
+  _target_: transformers.models.auto.tokenization_auto.AutoTokenizer.from_pretrained
+  use_fast: true
+  pretrained_model_name_or_path: ${/algorithm/network/pretrained_model_name_or_path}
+  cache_dir: ${.data_dir}
+  trust_remote_code: true
+num_classes: 2
+max_seq_length: 128
+train_batch_size: 32
+eval_batch_size: 32

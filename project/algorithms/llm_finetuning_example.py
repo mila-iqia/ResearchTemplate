@@ -1,8 +1,7 @@
 import functools
-from datetime import datetime
 from pathlib import Path
 
-import evaluate
+import datasets
 import torch
 from lightning import LightningModule
 from torch.optim.adamw import AdamW
@@ -14,22 +13,20 @@ from transformers import (
 from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput
 from transformers.models.auto.modeling_auto import AutoModel
 
-from project.datamodules.text.hf_text import HFDataModule
-
 
 def pretrained_network(model_name_or_path: str | Path, **kwargs) -> PreTrainedModel:
     config = AutoConfig.from_pretrained(model_name_or_path, **kwargs)
     return AutoModel.from_pretrained(model_name_or_path, config=config)
 
 
-class HFExample(LightningModule):
+class LLMFinetuningExample(LightningModule):
     """Example of a lightning module used to train a huggingface model."""
 
     def __init__(
         self,
-        datamodule: HFDataModule,
         network: PreTrainedModel | functools.partial[PreTrainedModel],
-        hf_metric_name: str,
+        dataset_path: str,
+        dataset_name: str | None = None,
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
@@ -37,11 +34,9 @@ class HFExample(LightningModule):
         init_seed: int = 42,
     ):
         super().__init__()
-
-        self.num_labels = getattr(datamodule, "num_classes", None)
-        self.task_name = datamodule.task_name
+        self.dataset_path = dataset_path
+        self.dataset_name = dataset_name
         self.init_seed = init_seed
-        self.hf_metric_name = hf_metric_name
         self.learning_rate = learning_rate
         self.adam_epsilon = adam_epsilon
         self.warmup_steps = warmup_steps
@@ -54,16 +49,29 @@ class HFExample(LightningModule):
                 network = network()
             self.network = network
 
-        self.metric = evaluate.load(
-            self.hf_metric_name,
-            self.task_name,
-            # todo: replace with hydra job id perhaps?
-            experiment_id=datetime.now().strftime("%d-%m-%Y_%H-%M-%S"),
-        )
-
         # Small fix for the `device` property in LightningModule, which is CPU by default.
         self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         self.save_hyperparameters(ignore=["network", "datamodule"])
+
+    def prepare_data(self):
+        raw_datasets = datasets.load_dataset(self.dataset_path, self.dataset_name)
+
+        if "validation" not in raw_datasets.keys():
+            raw_datasets["validation"] = datasets.load_dataset(
+                self.dataset_name,
+                self.dataset_config_name,
+                split=f"train[:{self.validation_split_percentage}%]",
+            )
+            raw_datasets["train"] = datasets.load_dataset(
+                self.dataset_name,
+                self.dataset_config_name,
+                split=f"train[{self.validation_split_percentage}%:]",
+            )
+
+    def setup(self, stage: str):
+        self.datasets = datasets.load_dataset(self.dataset_path, self.dataset_name)
+
+    def train_dataloader(self): ...
 
     def forward(self, **inputs: torch.Tensor) -> BaseModelOutput:
         return self.network(**inputs)

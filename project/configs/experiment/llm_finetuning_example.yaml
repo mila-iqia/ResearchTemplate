@@ -1,22 +1,20 @@
 # @package _global_
 
 defaults:
-  - override /algorithm: hf_example
-  - override /datamodule: hf_text
-  # - /algorithm/network: transformers
+  - override /algorithm: nlp_example
+  - override /algorithm/network: opt-1.3b
+  - override /datamodule: huggingface
   - override /trainer/callbacks: none
 
 datamodule:
   hf_dataset_path: Salesforce/wikitext
   task_name: wikitext-2-v1
   tokenizer: facebook/opt-1.3b
+  train_batch_size: 4 # for my puny dev GPU
+  eval_batch_size: 4
 
 algorithm:
-  _recursive_: false
-  network:
-    _target_: transformers.models.auto.modeling_auto.AutoModel.from_pretrained
-    _partial_: true
-    pretrained_model_name_or_path: facebook/opt-1.3b
+  hf_metric_name: perplexity
 
 trainer:
   max_epochs: 1

@@ -1,3 +1,10 @@
+"""Example algorithm that can train a huggingface model.
+
+Also check out this link for more detailed example script:
+
+https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py
+"""
+
 from __future__ import annotations
 
 import shutil
@@ -50,14 +57,18 @@ num_labels = {
 }
 
 
-class HFDataModule(LightningDataModule):  ## to be homogenized with the base text class
-    """Lightning data module for HF text classification datasets."""
+class HFDataModule(LightningDataModule):
+    """Lightning data module for HF text classification datasets.
+
+    This is based on this tutorial:
+    https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/text-transformers.html
+    """
 
     def __init__(
         self,
         hf_dataset_path: str,
         tokenizer: str,
-        task_name: SupportedTask,
+        task_name: str,
         text_fields: list[str] | None = None,
         num_classes: int | None = None,
         data_dir: str | Path = SCRATCH or REPO_ROOTDIR / "data",
@@ -101,7 +112,7 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
 
         if text_fields is None:
             text_fields = task_field_map.get(task_name)
-        self.text_fields = text_fields
+        self.text_fields = text_fields or ["text"]
 
         if num_classes is None:
             num_classes = num_labels.get(task_name)
@@ -129,12 +140,13 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
             self.hf_dataset_path,
             self.task_name,
             cache_dir=str(self.data_dir / ".cache/huggingface/datasets"),
+            save_infos=True,
         )
         # Tokenize and save to $SCRATCH
         tokenized_dataset = dataset.map(
             self.convert_to_features,
             batched=True,
-            remove_columns=["label"],
+            remove_columns=(["label"] if "label" in dataset.column_names else []),
             load_from_cache_file=True,
         )
         logger.debug(f"Saving (overwriting) tokenized dataset at {self.processed_dataset_path}")
@@ -236,9 +248,9 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
             pad_to_max_length=True,
             truncation=True,
         )
-
-        # Rename label to labels to make it easier to pass to model forward
-        features["labels"] = example_batch["label"]
+        if "label" in example_batch and "labels" not in example_batch:
+            # Rename label to labels to make it easier to pass to model forward
+            features["labels"] = example_batch["label"]
 
         return features
 
