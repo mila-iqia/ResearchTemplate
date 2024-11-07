@@ -1,23 +1,25 @@
+import functools
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
+import evaluate
 import torch
-from evaluate import load as load_metric
 from lightning import LightningModule
 from torch.optim.adamw import AdamW
 from transformers import (
     AutoConfig,
-    AutoModelForSequenceClassification,
     PreTrainedModel,
     get_linear_schedule_with_warmup,
 )
+from transformers.models.auto.modeling_auto import AutoModel
 
 from project.datamodules.text.hf_text import HFDataModule
 
 
 def pretrained_network(model_name_or_path: str | Path, **kwargs) -> PreTrainedModel:
     config = AutoConfig.from_pretrained(model_name_or_path, **kwargs)
-    return AutoModelForSequenceClassification.from_pretrained(model_name_or_path, config=config)
+    return AutoModel.from_pretrained(model_name_or_path, config=config)
 
 
 class HFExample(LightningModule):
@@ -26,29 +28,42 @@ class HFExample(LightningModule):
     def __init__(
         self,
         datamodule: HFDataModule,
-        network: PreTrainedModel,
+        network: PreTrainedModel | Callable[..., PreTrainedModel],
         hf_metric_name: str,
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
-        **kwargs,
+        init_seed: int = 42,
     ):
         super().__init__()
 
-        self.save_hyperparameters()
-        self.num_labels = datamodule.num_labels
+        self.num_labels = getattr(datamodule, "num_classes", None)
         self.task_name = datamodule.task_name
-        self.network = network
+        self.init_seed = init_seed
         self.hf_metric_name = hf_metric_name
-        self.metric = load_metric(
+        self.learning_rate = learning_rate
+        self.adam_epsilon = adam_epsilon
+        self.warmup_steps = warmup_steps
+        self.weight_decay = weight_decay
+
+        with torch.random.fork_rng():
+            # deterministic weight initialization
+            torch.manual_seed(self.init_seed)
+            if isinstance(network, functools.partial):
+                network = network()
+            self.network = network
+
+        self.metric = evaluate.load(
             self.hf_metric_name,
             self.task_name,
+            # todo: replace with hydra job id perhaps?
             experiment_id=datetime.now().strftime("%d-%m-%Y_%H-%M-%S"),
         )
 
         # Small fix for the `device` property in LightningModule, which is CPU by default.
         self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
+        self.save_hyperparameters()
 
     def forward(
         self,

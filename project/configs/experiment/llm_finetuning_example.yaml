@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - override /algorithm: hf_example
+  - override /datamodule: hf_text
+  # - /algorithm/network: transformers
+  - override /trainer/callbacks: none
+
+datamodule:
+  hf_dataset_path: Salesforce/wikitext
+  task_name: wikitext-2-v1
+  tokenizer: facebook/opt-1.3b
+
+algorithm:
+  _recursive_: false
+  network:
+    _target_: transformers.models.auto.modeling_auto.AutoModel.from_pretrained
+    _partial_: true
+    pretrained_model_name_or_path: facebook/opt-1.3b
+
+trainer:
+  max_epochs: 1
+  limit_train_batches: 2
+  limit_val_batches: 1
+  num_sanity_val_steps: 0
+  enable_checkpointing: False

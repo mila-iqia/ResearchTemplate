@@ -23,53 +23,43 @@ logger = getLogger(__name__)
 SupportedTask = Literal["cola", "sst2", "mrpc", "qqp", "stsb", "mnli", "qnli", "rte", "wnli", "ax"]
 
 
-def get_task_info(task_name: SupportedTask):
-    task_field_map = {
-        "cola": ["sentence"],
-        "sst2": ["sentence"],
-        "mrpc": ["sentence1", "sentence2"],
-        "qqp": ["question1", "question2"],
-        "stsb": ["sentence1", "sentence2"],
-        "mnli": ["premise", "hypothesis"],
-        "qnli": ["question", "sentence"],
-        "rte": ["sentence1", "sentence2"],
-        "wnli": ["sentence1", "sentence2"],
-        "ax": ["premise", "hypothesis"],
-    }
+task_field_map = {
+    "cola": ["sentence"],
+    "sst2": ["sentence"],
+    "mrpc": ["sentence1", "sentence2"],
+    "qqp": ["question1", "question2"],
+    "stsb": ["sentence1", "sentence2"],
+    "mnli": ["premise", "hypothesis"],
+    "qnli": ["question", "sentence"],
+    "rte": ["sentence1", "sentence2"],
+    "wnli": ["sentence1", "sentence2"],
+    "ax": ["premise", "hypothesis"],
+}
 
-    num_labels = {
-        "cola": 2,
-        "sst2": 2,
-        "mrpc": 2,
-        "qqp": 2,
-        "stsb": 1,
-        "mnli": 3,
-        "qnli": 2,
-        "rte": 2,
-        "wnli": 2,
-        "ax": 3,
-    }
-
-    task_map = task_field_map.get(task_name, None)
-    num_labels = num_labels.get(task_name, None)
-
-    if task_map is None:
-        raise ValueError(f"Task {task_name} task fields currently not supported.")
-
-    if num_labels is None:
-        raise ValueError(f"Task {task_name} labels currently not supported.")
-
-    return task_map, num_labels
+num_labels = {
+    "cola": 2,
+    "sst2": 2,
+    "mrpc": 2,
+    "qqp": 2,
+    "stsb": 1,
+    "mnli": 3,
+    "qnli": 2,
+    "rte": 2,
+    "wnli": 2,
+    "ax": 3,
+}
 
 
 class HFDataModule(LightningDataModule):  ## to be homogenized with the base text class
-    """Lightning data module for HF datasets."""
+    """Lightning data module for HF text classification datasets."""
 
     def __init__(
         self,
         hf_dataset_path: str,
         tokenizer: str,
         task_name: SupportedTask,
+        text_fields: list[str] | None = None,
+        num_classes: int | None = None,
         data_dir: str | Path = SCRATCH or REPO_ROOTDIR / "data",
         loader_columns: list = [
             "datasets_idx",
@@ -108,15 +98,19 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self.processed_dataset_path = (
             self.data_dir / f"{self.hf_dataset_path}_{self.task_name}_dataset"
         )
+
+        if text_fields is None:
+            text_fields = task_field_map.get(task_name)
+        self.text_fields = text_fields
+
+        if num_classes is None:
+            num_classes = num_labels.get(task_name)
+        self.num_classes = num_classes
+
         if SLURM_TMPDIR:
             self.working_path = SLURM_TMPDIR / self.processed_dataset_path.name
         else:
             self.working_path = self.processed_dataset_path
-        # self.dataset_path = self.working_path = self.data_dir / f"{self.task_name}_dataset"
-
-        self.text_fields, self.num_labels = get_task_info(task_name)
-
-        ## potential inconsistency in text_fields and task_map
 
         ## todo: verify authentication method setup. Is trust_remote_code the right play here?
         self.tokenizer = AutoTokenizer.from_pretrained(
