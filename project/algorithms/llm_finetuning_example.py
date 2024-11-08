@@ -1,11 +1,13 @@
+import dataclasses
+import hashlib
 import itertools
 import os
 import shutil
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Concatenate, ParamSpec
+from typing import Concatenate, ParamSpec, TypeVar
 
 import datasets
 import hydra_zen
@@ -27,6 +29,7 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.tokenization_utils_fast import PreTrainedTokenizerBase
 
 from project.utils.env_vars import SCRATCH, SLURM_TMPDIR
+from project.utils.typing_utils import NestedMapping
 from project.utils.utils import default_device
 
 logger = getLogger(__name__)
@@ -36,6 +39,13 @@ def num_cpus_per_task() -> int:
     if hasattr(os, "sched_getaffinity"):
         return len(os.sched_getaffinity(0))
     return torch.multiprocessing.cpu_count()
+
+
+def get_hash_of(config_dataclass) -> str:
+    vals = dataclasses.asdict(config_dataclass)
+    flattened_vals = dict(sorted(flatten_dict(vals).items()))
+    vals_string = ",".join(f"{k}:{v}" for k, v in flattened_vals.items())
+    return hashlib.md5(vals_string.encode()).hexdigest()
 
 
 @hydra_zen.hydrated_dataclass(
@@ -108,6 +118,20 @@ class DatasetConfig:
     overwrite_cache: bool = False
 
 
+V = TypeVar("V")
+
+
+def flatten_dict(d: NestedMapping[str, V]) -> dict[str, V]:
+    # return {k: v for k, v in d.items()}
+    result = {}
+    for k, v in d.items():
+        if isinstance(v, Mapping):
+            result.update({f"{k}.{subk}": subv for subk, subv in flatten_dict(v).items()})
+        else:
+            result[k] = v
+    return result
+
+
 def load_raw_datasets(config: DatasetConfig):
     raw_datasets = datasets.load_dataset(config.dataset_path, config.dataset_name)
     assert isinstance(raw_datasets, DatasetDict)
@@ -149,7 +173,7 @@ def tokenize_datasets(
         batched=True,
         remove_columns=raw_datasets["train"].column_names,
         load_from_cache_file=not config.overwrite_cache,
-        desc="Running tokenizer on dataset",
+        desc="Tokenizing the dataset",
     )
 
 
@@ -172,7 +196,7 @@ def group_text_into_blocks(
         batched=True,
         load_from_cache_file=True,
         num_proc=config.preprocessing_num_workers,
-        desc=f"Grouping texts in chunks of {block_size}",
+        desc=f"Grouping tokens into chunks of size {block_size}",
     )
 
 
@@ -218,7 +242,19 @@ class LLMFinetuningExample(LightningModule):
         self.weight_decay = weight_decay
         self.init_seed = init_seed
 
-        self.save_hyperparameters()
+        # NOTE: have to do this because Lightning doesn't do it automatically for dataclasses...
+        self.save_hyperparameters(
+            dict(
+                network_config=dataclasses.asdict(network_config),
+                tokenizer_config=dataclasses.asdict(tokenizer_config),
+                dataset_config=dataclasses.asdict(dataset_config),
+                learning_rate=learning_rate,
+                adam_epsilon=adam_epsilon,
+                warmup_steps=warmup_steps,
+                weight_decay=weight_decay,
+                init_seed=init_seed,
+            )
+        )
 
         with default_device(), torch.random.fork_rng():
             # deterministic weight initialization
@@ -236,10 +272,9 @@ class LLMFinetuningExample(LightningModule):
         # perhaps we could look into this:
         # https://huggingface.co/docs/datasets/v3.1.0/en/use_with_pytorch#distributed
         self.prepare_data_per_node = True  # Execute `prepare_data` on each node.
-
-        # TODO: probably wrong to use `hash` for this. Perhaps we should be using hashlib of the
-        # strings, or something similar?
-        self.data_configs_id = f"{hash(self.dataset_config)}_{hash(self.tokenizer_config)}"
+        self.data_configs_id = (
+            f"{get_hash_of(self.dataset_config)}_{get_hash_of(self.tokenizer_config)}"
+        )
         logger.info(f"Unique id for our dataset / tokenizer configs: {self.data_configs_id}")
 
         self.scratch_prepared_dataset_dir: Path | None = None
@@ -254,6 +289,10 @@ class LLMFinetuningExample(LightningModule):
         fast_data_dir = (SLURM_TMPDIR or Path.cwd()) / "data" / "prepared_dataset"
         self.fast_prepared_dataset_dir = fast_data_dir / self.data_configs_id
         self.fast_prepared_dataset_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        self.tokenizer: PreTrainedTokenizerBase | None = None
+        self.train_dataset: Dataset | None = None
+        self.valid_dataset: Dataset | None = None
 
     def prepare_data(self):
         # If we've already prepared the dataset on this node, we can just load it.
@@ -350,18 +389,20 @@ class LLMFinetuningExample(LightningModule):
         self.valid_dataset = lm_datasets["validation"]
 
     def train_dataloader(self):
+        assert self.train_dataset is not None
         return DataLoader(
             self.train_dataset,
             shuffle=True,
             collate_fn=default_data_collator,
-            batch_size=self.per_device_train_batch_size,
+            batch_size=self.dataset_config.per_device_train_batch_size,
         )
 
     def val_dataloader(self):
+        assert self.valid_dataset is not None
         return DataLoader(
             self.valid_dataset,
             collate_fn=default_data_collator,
-            batch_size=self.per_device_eval_batch_size,
+            batch_size=self.dataset_config.per_device_eval_batch_size,
         )
 
     def forward(self, **inputs: torch.Tensor) -> BaseModelOutput:

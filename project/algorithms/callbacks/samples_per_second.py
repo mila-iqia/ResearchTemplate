@@ -1,6 +1,8 @@
 import time
 from typing import Any, Literal
 
+import jax
+import torch
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torch.optim import Optimizer
@@ -90,6 +92,12 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
     def get_num_samples(self, batch: BatchType) -> int:
         if is_sequence_of(batch, Tensor):
             return batch[0].shape[0]
+        if isinstance(batch, dict):
+            return next(
+                v.shape[0]
+                for v in jax.tree.leaves(batch)
+                if isinstance(v, torch.Tensor) and v.ndim > 1
+            )
         raise NotImplementedError(
             f"Don't know how many 'samples' there are in batch of type {type(batch)}"
         )
