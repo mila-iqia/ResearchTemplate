@@ -51,7 +51,7 @@ setup_logging(log_level="INFO", global_log_level="ERROR")
 
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
-    regen_schemas=True,
+    regen_schemas=False,
     stop_on_error=False,
     quiet=False,
     verbose=False,

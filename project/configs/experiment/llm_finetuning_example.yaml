@@ -1,20 +1,11 @@
 # @package _global_
 
 defaults:
-  - override /algorithm: nlp_example
+  - override /algorithm: llm_finetuning_example
   - override /algorithm/network: opt-1.3b
-  - override /datamodule: huggingface
   - override /trainer/callbacks: none
 
-datamodule:
-  hf_dataset_path: Salesforce/wikitext
-  task_name: wikitext-2-v1
-  tokenizer: facebook/opt-1.3b
-  train_batch_size: 4 # for my puny dev GPU
-  eval_batch_size: 4
-
-algorithm:
-  hf_metric_name: perplexity
+# algorithm:
 
 trainer:
   max_epochs: 1
