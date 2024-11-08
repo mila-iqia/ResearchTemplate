@@ -406,6 +406,7 @@ class LLMFinetuningExample(LightningModule):
             self.train_dataset,
             shuffle=True,
             collate_fn=default_data_collator,
+            num_workers=self.dataset_config.preprocessing_num_workers,
             batch_size=self.dataset_config.per_device_train_batch_size,
         )
 
@@ -414,6 +415,7 @@ class LLMFinetuningExample(LightningModule):
         return DataLoader(
             self.valid_dataset,
             collate_fn=default_data_collator,
+            num_workers=self.dataset_config.preprocessing_num_workers,
             batch_size=self.dataset_config.per_device_eval_batch_size,
         )
 
