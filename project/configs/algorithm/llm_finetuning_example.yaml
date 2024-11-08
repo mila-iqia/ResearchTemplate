@@ -1,19 +1,28 @@
-defaults:
-  - network: opt-1.3b
+
 _target_: project.algorithms.llm_finetuning_example.LLMFinetuningExample
-dataset_path: wikitext
-dataset_name: wikitext-103-v1
-tokenizer:
-  _target_: transformers.models.auto.tokenization_auto.AutoTokenizer.from_pretrained
-  use_fast: true
+_recursive_: true
+_convert_: object
+network_config:
+  _target_: project.algorithms.llm_finetuning_example.NetworkConfig
+  _recursive_: false
   pretrained_model_name_or_path: facebook/opt-1.3b
-  cache_dir: ${oc.env:SCRATCH,null}
+  # device_map: auto  # use this (and run `uv add accelerate`) for multi-GPU jobs
+tokenizer_config:
+  # _convert_: object
+  _recursive_: false
+  _target_: project.algorithms.llm_finetuning_example.TokenizerConfig
+  pretrained_model_name_or_path: facebook/opt-1.3b
+  use_fast: true
   trust_remote_code: true
+dataset_config:
+  _target_: project.algorithms.llm_finetuning_example.DatasetConfig
+  dataset_path: wikitext
+  dataset_name: wikitext-103-v1
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  block_size: 1024
 learning_rate: 2e-5
 adam_epsilon: 1e-8
 warmup_steps: 0
 weight_decay: 0
-per_device_train_batch_size: 4
-per_device_eval_batch_size: 4
-block_size: 1024
 init_seed: 42

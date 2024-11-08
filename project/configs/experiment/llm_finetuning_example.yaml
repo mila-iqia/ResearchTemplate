@@ -2,8 +2,7 @@
 
 defaults:
   - override /algorithm: llm_finetuning_example
-  - override /algorithm/network: opt-1.3b
-  - override /trainer/callbacks: none
+  - override /trainer/callbacks: default
 
 # algorithm:
 
@@ -12,4 +11,5 @@ trainer:
   limit_train_batches: 2
   limit_val_batches: 1
   num_sanity_val_steps: 0
-  enable_checkpointing: False
+  enable_checkpointing: true
+ckpt_path: last
