@@ -1,16 +1,15 @@
 
 _target_: project.algorithms.llm_finetuning_example.LLMFinetuningExample
-_recursive_: true
-_convert_: object
 network_config:
   _target_: project.algorithms.llm_finetuning_example.NetworkConfig
   _recursive_: false
+  _convert_: object
   pretrained_model_name_or_path: facebook/opt-1.3b
   # device_map: auto  # use this (and run `uv add accelerate`) for multi-GPU jobs
 tokenizer_config:
-  # _convert_: object
-  _recursive_: false
   _target_: project.algorithms.llm_finetuning_example.TokenizerConfig
+  _recursive_: false
+  _convert_: object
   pretrained_model_name_or_path: facebook/opt-1.3b
   use_fast: true
   trust_remote_code: true
