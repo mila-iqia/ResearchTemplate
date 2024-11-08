@@ -1,3 +1,15 @@
+"""Example for fine-tuning an LLM.
+
+Based on https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py#L176
+Which itself is based on a HuggingFace tutorial for fine-tuning an LLM without using the HuggingFace Trainer.
+
+Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...) on a text
+file or a dataset without using HuggingFace Trainer.
+
+Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
+https://huggingface.co/models?filter=text-generation
+"""
+
 import dataclasses
 import hashlib
 import itertools
@@ -219,7 +231,7 @@ def group_texts(examples: dict, block_size: int):
 
 
 class LLMFinetuningExample(LightningModule):
-    """Example of a lightning module used to train a huggingface model."""
+    """Example of a lightning module used to fine-tune a huggingface model."""
 
     def __init__(
         self,
@@ -411,7 +423,7 @@ class LLMFinetuningExample(LightningModule):
     def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int):
         outputs: CausalLMOutput | SequenceClassifierOutput = self(**batch)
         loss = outputs.loss
-        assert isinstance(loss, torch.Tensor), loss
+        assert loss is not None
         # todo: log more stuff!
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
@@ -421,21 +433,9 @@ class LLMFinetuningExample(LightningModule):
     ):
         outputs: CausalLMOutput | SequenceClassifierOutput = self(**batch)
         loss = outputs.loss
-        assert isinstance(loss, torch.Tensor)
-        # todo: log the output of the metric.
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        if isinstance(outputs, SequenceClassifierOutput):
-            metric_value = self.metric.compute(
-                predictions=outputs.logits, references=batch["labels"]
-            )
-            assert False, metric_value
-            self.log(
-                f"train/{self.hf_metric_name}",
-                metric_value,
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-            )
+        assert loss is not None
+        # todo: log more stuff!
+        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
