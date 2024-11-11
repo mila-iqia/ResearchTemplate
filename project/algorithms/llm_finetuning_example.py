@@ -1,6 +1,6 @@
 """Example for fine-tuning an LLM.
 
-Based on https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py#L176
+Based on https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py
 Which itself is based on a HuggingFace tutorial for fine-tuning an LLM without using the HuggingFace Trainer.
 
 Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...) on a text
@@ -53,13 +53,6 @@ def num_cpus_per_task() -> int:
     return torch.multiprocessing.cpu_count()
 
 
-def get_hash_of(config_dataclass) -> str:
-    vals = dataclasses.asdict(config_dataclass)
-    flattened_vals = dict(sorted(flatten_dict(vals).items()))
-    vals_string = ",".join(f"{k}:{v}" for k, v in flattened_vals.items())
-    return hashlib.md5(vals_string.encode()).hexdigest()
-
-
 @hydra_zen.hydrated_dataclass(
     target=AutoModelForCausalLM.from_pretrained,
     frozen=True,
@@ -67,8 +60,16 @@ def get_hash_of(config_dataclass) -> str:
     populate_full_signature=True,
 )
 class NetworkConfig:
+    """Configuration options related to the choice of network.
+
+    When instantiated by Hydra, this calls the `target` function passed to the decorator. In this
+    case, this creates pulls the pretrained network weights from the HuggingFace model hub.
+    """
+
     pretrained_model_name_or_path: str
     trust_remote_code: bool = False
+    torch_dtype: torch.dtype | None = None
+    attn_implementation: str | None = None
     # cache_dir: Path | None = None
     # force_download: bool | None = None
     # local_files_only: bool | None = None
@@ -128,20 +129,6 @@ class DatasetConfig:
     split."""
 
     overwrite_cache: bool = False
-
-
-V = TypeVar("V")
-
-
-def flatten_dict(d: NestedMapping[str, V]) -> dict[str, V]:
-    # return {k: v for k, v in d.items()}
-    result = {}
-    for k, v in d.items():
-        if isinstance(v, Mapping):
-            result.update({f"{k}.{subk}": subv for subk, subv in flatten_dict(v).items()})
-        else:
-            result[k] = v
-    return result
 
 
 def load_raw_datasets(config: DatasetConfig):
@@ -267,7 +254,6 @@ class LLMFinetuningExample(LightningModule):
                 init_seed=init_seed,
             )
         )
-
         with default_device(), torch.random.fork_rng():
             # deterministic weight initialization
             # Initializes the weights on the GPU if we have one, so we don't request lots of RAM
@@ -307,13 +293,10 @@ class LLMFinetuningExample(LightningModule):
         self.valid_dataset: Dataset | None = None
 
     def prepare_data(self):
-        # If we've already prepared the dataset on this node, we can just load it.
-        # TODO: we might need to use a custom file name or pass some args like block size so we can
-        # 'invalidate the cache' when we change the block size or the tokenizer, etc?
-        def copy_dataset_files(src: Path, dest: Path):
-            logger.info(f"Copying dataset from {src} --> {dest}")
-            shutil.copytree(src, dest)
+        # todo: an improvement could be to cache each portion, so that if we just change the block
+        # size, we don't have to re-tokenize the dataset for example.
 
+        # If we've already prepared the dataset on this node, we can just load it.
         if try_to_load_prepared_dataset_from(self.fast_prepared_dataset_dir):
             logger.info(
                 f"Dataset is already prepared on this node at " f"{self.fast_prepared_dataset_dir}"
@@ -388,7 +371,8 @@ class LLMFinetuningExample(LightningModule):
         https://discuss.huggingface.co/t/how-to-save-datasets-as-distributed-with-save-to-disk/25674/2
         """
 
-        # todo: Should we be using the look at https://huggingface.co/docs/datasets/v3.1.0/en/use_with_pytorch#distributed
+        # todo: Should we be using the look at
+        # https://huggingface.co/docs/datasets/v3.1.0/en/use_with_pytorch#distributed
         # Load the tokenizer (again).
 
         self.tokenizer = load_tokenizer(self.tokenizer_config)
@@ -475,6 +459,31 @@ class LLMFinetuningExample(LightningModule):
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
         return [optimizer], [scheduler]
+
+
+def copy_dataset_files(src: Path, dest: Path):
+    logger.info(f"Copying dataset from {src} --> {dest}")
+    shutil.copytree(src, dest)
+
+
+def get_hash_of(config_dataclass) -> str:
+    vals = dataclasses.asdict(config_dataclass)
+    flattened_vals = dict(sorted(flatten_dict(vals).items()))
+    vals_string = ",".join(f"{k}:{v}" for k, v in flattened_vals.items())
+    return hashlib.md5(vals_string.encode()).hexdigest()
+
+
+V = TypeVar("V")
+
+
+def flatten_dict(d: NestedMapping[str, V]) -> dict[str, V]:
+    result = {}
+    for k, v in d.items():
+        if isinstance(v, Mapping):
+            result.update({f"{k}.{subk}": subv for subk, subv in flatten_dict(v).items()})
+        else:
+            result[k] = v
+    return result
 
 
 P = ParamSpec("P")

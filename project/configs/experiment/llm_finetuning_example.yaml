@@ -4,12 +4,20 @@ defaults:
   - override /algorithm: llm_finetuning_example
   - override /trainer/callbacks: default
 
-# algorithm:
+algorithm:
+  dataset_config:
+    per_device_eval_batch_size: 4
+    per_device_train_batch_size: 16
+    block_size: 256
+    preprocessing_num_workers: 20
+    validation_split_percentage: 10
+    overwrite_cache: false
 
 trainer:
-  max_epochs: 1
-  limit_train_batches: 2
+  max_epochs: 10
+  devices: auto
   limit_val_batches: 1
   num_sanity_val_steps: 0
   enable_checkpointing: true
+  detect_anomaly: true
 ckpt_path: last
