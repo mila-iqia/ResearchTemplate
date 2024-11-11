@@ -21,11 +21,17 @@ trainer:
     sharding_strategy: "FULL_SHARD"
   limit_val_batches: 1
   num_sanity_val_steps: 0
+  val_check_interval: 50
   enable_checkpointing: true
   detect_anomaly: false # recommended to turn this on when debugging nans with fp16 training.
   callbacks:
     model_checkpoint:
       verbose: true
-      every_n_train_steps: 1000 # todo: debug restarting from a checkpoint in this case.
+      # every_n_train_steps: 1000 # todo: restarting from a within-epoch checkpoint doesn't seem to work!
 
+hydra:
+  run:
+    # output directory, generated dynamically on each run
+    dir: logs/${name}
+name: llm_finetuning_example
 ckpt_path: last

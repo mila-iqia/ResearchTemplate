@@ -119,6 +119,8 @@ class DatasetConfig:
     For example, to load "wikitext/wikitext-103-v1", this would be "wikitext-103-v1".
     """
 
+    # Don't include those fields when computign the 'id' of the config, which we use to determine
+    # if we've already prepared the dataset or not.
     per_device_eval_batch_size: int = dataclasses.field(
         default=8, metadata={"include_in_id": False}
     )
@@ -157,6 +159,8 @@ def load_raw_datasets(config: DatasetConfig):
 def prepare_datasets(
     dataset_config: DatasetConfig, tokenizer_config: TokenizerConfig
 ) -> DatasetDict:
+    # todo: an improvement could be to cache each portion, so that if we just change the block
+    # size, we don't have to re-tokenize the dataset for example.
     raw_datasets = load_raw_datasets(dataset_config)
     tokenizer = load_tokenizer(tokenizer_config)
     tokenized_datasets = tokenize_datasets(raw_datasets, tokenizer, dataset_config)
@@ -268,7 +272,7 @@ class LLMFinetuningExample(LightningModule):
         # https://huggingface.co/docs/datasets/v3.1.0/en/use_with_pytorch#distributed
         self.prepare_data_per_node = True  # Execute `prepare_data` on each node.
         self.data_configs_id = (
-            f"{get_hash_of(self.dataset_config)}_{get_hash_of(self.tokenizer_config)}"
+            f"{get_hash_of(self.dataset_config)[:8]}_{get_hash_of(self.tokenizer_config)[:8]}"
         )
         logger.info(f"Unique id for our dataset / tokenizer configs: {self.data_configs_id}")
 
@@ -288,7 +292,6 @@ class LLMFinetuningExample(LightningModule):
         self.tokenizer: PreTrainedTokenizerBase | None = None
         self.train_dataset: Dataset | None = None
         self.valid_dataset: Dataset | None = None
-
         self.network: AutoModelForCausalLM | None = None
 
     def configure_model(self) -> None:
@@ -304,75 +307,79 @@ class LLMFinetuningExample(LightningModule):
             self.network = hydra_zen.instantiate(self.network_config)
 
     def prepare_data(self):
-        # todo: an improvement could be to cache each portion, so that if we just change the block
-        # size, we don't have to re-tokenize the dataset for example.
-
+        # This gets called on every node in a distrituted training setup.
+        # See the Lightning docs for this method for more information.
+        #
         # If we've already prepared the dataset on this node, we can just load it.
+        # If we're on a SLURM cluster and we've already prepared it in $SCRATCH, then copy it to
+        # the local fast directory.
+        # Otherwise do the tokenization and grouping and save it to the local fast directory, then
+        # copy it to the $SCRATCH directory for future use.
         if try_to_load_prepared_dataset_from(self.fast_prepared_dataset_dir):
             logger.info(
-                f"Dataset is already prepared on this node at " f"{self.fast_prepared_dataset_dir}"
+                f"Dataset is already prepared on this node at {self.fast_prepared_dataset_dir}"
             )
             return
         logger.debug("Dataset hasn't been prepared on this node yet.")
 
-        if self.scratch_prepared_dataset_dir:
-            if try_to_load_prepared_dataset_from(self.scratch_prepared_dataset_dir):
-                logger.info(
-                    f"Dataset is already prepared on the shared filesystem at "
-                    f"{self.scratch_prepared_dataset_dir}"
-                )
-                copy_dataset_files(
-                    self.scratch_prepared_dataset_dir, self.fast_prepared_dataset_dir
-                )
-                return
-            logger.debug(
-                f"Dataset has not yet been prepared in the shared filesystem at {self.scratch_prepared_dataset_dir}"
-            )
-
-        # Otherwise do the tokenization and grouping and save to a file so we can just load it in
-        # `setup`.
-
-        if not torch.distributed.is_initialized():
-            logger.debug("Non-distributed training job. Preparing dataset on this node.")
-            lm_datasets = prepare_datasets(self.dataset_config, self.tokenizer_config)
-            lm_datasets.save_to_disk(self.fast_prepared_dataset_dir)
-            logger.info(f"Saved processed dataset to {self.fast_prepared_dataset_dir}")
-            if self.scratch_prepared_dataset_dir:
-                copy_dataset_files(
-                    self.fast_prepared_dataset_dir, self.scratch_prepared_dataset_dir
-                )
-            return
-
         if not self.scratch_prepared_dataset_dir:
+            # Let's assume that you're using SLURM for multi-node jobs for now.
+            # SCRATCH isn't set --> not on a SLURM cluster.
+            assert self.trainer.num_nodes == 1
+            logger.info(f"Preparing dataset at {self.fast_prepared_dataset_dir}.")
             lm_datasets = prepare_datasets(self.dataset_config, self.tokenizer_config)
             lm_datasets.save_to_disk(self.fast_prepared_dataset_dir)
             return
 
-        global_rank = int(os.environ.get("SLURM_PROCID", "0"))
-
-        if global_rank == 0:
+        if try_to_load_prepared_dataset_from(self.scratch_prepared_dataset_dir):
             logger.info(
-                "Task 0: Preparing the dataset in $SLURM_TMPDIR and copying it to $SCRATCH."
+                f"Dataset is already prepared on the shared filesystem at "
+                f"{self.scratch_prepared_dataset_dir}"
             )
-            # TODO: This might cause some timeouts if the dataset preprocessing takes a while to do, no?
+            copy_dataset_files(self.scratch_prepared_dataset_dir, self.fast_prepared_dataset_dir)
+            return
+
+        logger.debug("Dataset has not yet been prepared with this config yet.")
+
+        if self.trainer.num_nodes == 1:
+            logger.debug("Single-node training. Preparing the dataset.")
             lm_datasets = prepare_datasets(self.dataset_config, self.tokenizer_config)
             lm_datasets.save_to_disk(self.fast_prepared_dataset_dir)
             logger.info(f"Saved processed dataset to {self.fast_prepared_dataset_dir}")
             copy_dataset_files(self.fast_prepared_dataset_dir, self.scratch_prepared_dataset_dir)
+            return
+
+        # NOTE: There might be a way to distribute the preprocessing across nodes, I'm not sure.
+        # todo: Would be even better to add an `srun` step before this with `ntasks_per_node=1` to
+        # speed up the preprocessing!
+        _barrier_name = "prepare_data"
+        if self.global_rank == 0:
+            logger.info(
+                f"Task {self.global_rank}: Preparing the dataset in $SLURM_TMPDIR and copying it to $SCRATCH."
+            )
+            # TODO: This might cause some timeouts if the dataset preprocessing takes a while to do, no?
+            # TODO:
+            lm_datasets = prepare_datasets(self.dataset_config, self.tokenizer_config)
+            lm_datasets.save_to_disk(self.fast_prepared_dataset_dir)
+            logger.info(f"Saved processed dataset to {self.fast_prepared_dataset_dir}")
+            copy_dataset_files(self.fast_prepared_dataset_dir, self.scratch_prepared_dataset_dir)
+            logger.info(f"Task {self.global_rank}: Done preparing the dataset.")
             # wait (i.e. join the other tasks that are already waiting)
-            torch.distributed.barrier()
+            self.trainer.strategy.barrier(_barrier_name)
         else:
             logger.info(
-                f"Task {global_rank}: Waiting for the first task on the first node to prepare the dataset."
+                f"Task {self.global_rank}: Waiting for the first task on the first node to finish preparing the dataset."
             )
             # Wait for the first task to get to the barrier (i.e. wait for the first task to finish
             # preprocessing the dataset).
-            torch.distributed.barrier()
+            self.trainer.strategy.barrier(_barrier_name)
+
             assert self.scratch_prepared_dataset_dir.exists()
             logger.info(
                 f"Copying the dataset files prepared by the first node at {self.scratch_prepared_dataset_dir}"
             )
             copy_dataset_files(self.scratch_prepared_dataset_dir, self.fast_prepared_dataset_dir)
+
         logger.info(f"Done preparing the datasets at {self.fast_prepared_dataset_dir}.")
 
     def setup(self, stage: str):
@@ -384,7 +391,7 @@ class LLMFinetuningExample(LightningModule):
         # https://huggingface.co/docs/datasets/v3.1.0/en/use_with_pytorch#distributed
         # Load the tokenizer (again).
         self.tokenizer = load_tokenizer(self.tokenizer_config)
-        lm_datasets = load_from_disk(self.fast_prepared_dataset_dir)
+        lm_datasets = datasets.load_from_disk(self.fast_prepared_dataset_dir)
 
         # This is done here again because in distributed training jobs, `prepare_data` is only
         # called in the first task on each node, while `setup` is called in every task.
@@ -414,6 +421,7 @@ class LLMFinetuningExample(LightningModule):
 
     def val_dataloader(self):
         assert self.valid_dataset is not None
+
         return DataLoader(
             self.valid_dataset,
             collate_fn=default_data_collator,
@@ -430,7 +438,7 @@ class LLMFinetuningExample(LightningModule):
         loss = outputs.loss
         assert loss is not None
         # todo: log more stuff!
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
         return loss
 
     def validation_step(
@@ -440,7 +448,7 @@ class LLMFinetuningExample(LightningModule):
         loss = outputs.loss
         assert loss is not None
         # todo: log more stuff!
-        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
 
     def configure_optimizers(self):
@@ -537,13 +545,15 @@ def try_to_load_prepared_dataset_from(
         return datasets
 
 
-def _field(
+def field(
     _field_fn: Callable[P, dataclasses.Field] = dataclasses.field,
     include_in_id: bool = True,
     metadata: Mapping[Any, Any] | None = None,
     *args: P.args,
     **kwargs: P.kwargs,
 ):
+    """Simple wrapper around `dataclasses.field` used to include or not include a field in the 'id'
+    of the config."""
     if metadata:
         metadata = dict(metadata)
         metadata["include_in_id"] = include_in_id
