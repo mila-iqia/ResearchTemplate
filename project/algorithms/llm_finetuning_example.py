@@ -15,11 +15,11 @@ import hashlib
 import itertools
 import os
 import shutil
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 import datasets
 import datasets.distributed
@@ -119,8 +119,12 @@ class DatasetConfig:
     For example, to load "wikitext/wikitext-103-v1", this would be "wikitext-103-v1".
     """
 
-    per_device_eval_batch_size: int = dataclasses.field(default=8, hash=False)
-    per_device_train_batch_size: int = dataclasses.field(default=8, hash=False)
+    per_device_eval_batch_size: int = dataclasses.field(
+        default=8, metadata={"include_in_id": False}
+    )
+    per_device_train_batch_size: int = dataclasses.field(
+        default=8, metadata={"include_in_id": False}
+    )
 
     block_size: int = 1024
 
@@ -391,12 +395,12 @@ class LLMFinetuningExample(LightningModule):
 
         # todo: Should we be using `datasets.distributed.split_dataset_by_node` here? Or do we let
         # PyTorch-Lightning setup the distributed sampler for us?
-        self.train_dataset = datasets.distributed.split_dataset_by_node(
-            self.train_dataset, rank=self.global_rank, world_size=self.trainer.world_size
-        )
-        self.valid_dataset = datasets.distributed.split_dataset_by_node(
-            self.valid_dataset, rank=self.global_rank, world_size=self.trainer.world_size
-        )
+        # self.train_dataset = datasets.distributed.split_dataset_by_node(
+        #     self.train_dataset, rank=self.global_rank, world_size=self.trainer.world_size
+        # )
+        # self.valid_dataset = datasets.distributed.split_dataset_by_node(
+        #     self.valid_dataset, rank=self.global_rank, world_size=self.trainer.world_size
+        # )
 
     def train_dataloader(self):
         assert self.train_dataset is not None
@@ -485,11 +489,12 @@ def copy_dataset_files(src: Path, dest: Path):
     shutil.copytree(src, dest)
 
 
-def get_hash_of(config_dataclass, exclude_keys: Iterable[str] = ()) -> str:
+def get_hash_of(config_dataclass) -> str:
     # IDEA: don't include fields if they have `hash=False` in the "hash".
     vals = dataclasses.asdict(config_dataclass)
     for field in dataclasses.fields(config_dataclass):
-        if not field.hash:
+        if not _include_field_in_id(field):
+            logger.debug(f"Ignoring field {field.name} when computing the ID.")
             vals.pop(field.name)
 
     flattened_vals = dict(sorted(flatten_dict(vals).items()))
@@ -530,3 +535,22 @@ def try_to_load_prepared_dataset_from(
         logger.debug(f"Dataset is already prepared at {dataset_path}")
         assert isinstance(datasets, DatasetDict)
         return datasets
+
+
+def _field(
+    _field_fn: Callable[P, dataclasses.Field] = dataclasses.field,
+    include_in_id: bool = True,
+    metadata: Mapping[Any, Any] | None = None,
+    *args: P.args,
+    **kwargs: P.kwargs,
+):
+    if metadata:
+        metadata = dict(metadata)
+        metadata["include_in_id"] = include_in_id
+    else:
+        metadata = {"include_in_id": include_in_id}
+    return _field_fn(*args, **kwargs, metadata=metadata)  # type: ignore
+
+
+def _include_field_in_id(field: dataclasses.Field) -> bool:
+    return field.metadata.get("include_in_id", True)

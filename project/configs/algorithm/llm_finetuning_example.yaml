@@ -20,9 +20,9 @@ tokenizer_config:
 dataset_config:
   _target_: project.algorithms.llm_finetuning_example.DatasetConfig
   dataset_path: wikitext
-  dataset_name: wikitext-103-v1
-  per_device_train_batch_size: 2
-  per_device_eval_batch_size: 4
+  dataset_name: wikitext-2-v1 # Small dataset for this demo. `wikitext-103-v1` is larger.
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
   block_size: 256
 learning_rate: 2e-5
 adam_epsilon: 1e-8
