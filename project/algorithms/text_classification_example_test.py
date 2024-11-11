@@ -50,7 +50,7 @@ def total_vram_gb() -> float:
 @run_for_all_configs_of_type("algorithm", TextClassificationExample)
 @run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", PreTrainedModel)
-class TestHFTextClassificationExample(LearningAlgorithmTests[TextClassificationExample]):
+class TestTextClassificationExample(LearningAlgorithmTests[TextClassificationExample]):
     """Tests for the HF example."""
 
     @pytest.mark.xfail(

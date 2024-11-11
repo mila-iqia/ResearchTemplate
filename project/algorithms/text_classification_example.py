@@ -14,7 +14,7 @@ from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput, Seque
 from project.datamodules.text.text_classification import TextClassificationDataModule
 
 
-class HFTextClassificationExample(LightningModule):
+class TextClassificationExample(LightningModule):
     """Example of a lightning module used to train a huggingface model for text classification."""
 
     def __init__(

@@ -1,13 +1,7 @@
-"""Example for fine-tuning an LLM.
+"""Example: fine-tuning a language model (GPT, GPT-2, CTRL, OPT, etc.) on a text dataset.
 
 Based on https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py
 Which itself is based on a HuggingFace tutorial for fine-tuning an LLM without using the HuggingFace Trainer.
-
-Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...) on a text
-file or a dataset without using HuggingFace Trainer.
-
-Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
-https://huggingface.co/models?filter=text-generation
 """
 
 import dataclasses

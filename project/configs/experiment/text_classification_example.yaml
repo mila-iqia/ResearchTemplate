@@ -1,14 +1,8 @@
 # @package _global_
 
 defaults:
-  - override /datamodule: hf_text
   - override /algorithm: hf_example
-  - override /algorithm/network: albert-base-v2
   - override /trainer/callbacks: none
-
-datamodule:
-  text_fields:
-    - "sentence"
 
 trainer:
   min_epochs: 1

@@ -13,12 +13,14 @@ additional_python_references:
 
 This template includes examples that use either Jax, PyTorch, or both!
 
-| Example link                                      | Reference          | Framework   | Lightning?   |
-| ------------------------------------------------- | ------------------ | ----------- | ------------ |
-| [ExampleAlgorithm](../examples/jax_sl_example.md) | `ExampleAlgorithm` | Torch       | yes          |
-| [JaxExample](../examples/jax_sl_example.md)       | `JaxExample`       | Torch + Jax | yes          |
-| [HFExample](../examples/nlp.md)                   | `HFExample`        | Torch + 🤗   | yes          |
-| [JaxRLExample](../examples/jax_rl_example.md)     | `JaxRLExample`     | Jax         | no (almost!) |
+<!-- TODO: De-duplicate: This is a bit like a duplicate of the table from the examples/index.md -->
+
+| Example link                                                    | Reference                   | Framework   | Lightning?   |
+| --------------------------------------------------------------- | --------------------------- | ----------- | ------------ |
+| [ExampleAlgorithm](../examples/jax_sl_example.md)               | `ExampleAlgorithm`          | Torch       | yes          |
+| [JaxExample](../examples/jax_sl_example.md)                     | `JaxExample`                | Torch + Jax | yes          |
+| [TextClassificationExample](../examples/text_classification.md) | `TextClassificationExample` | Torch + 🤗   | yes          |
+| [JaxRLExample](../examples/jax_rl_example.md)                   | `JaxRLExample`              | Jax         | no (almost!) |
 
 
 In fact, here you can mix and match both Jax and Torch code. For example, you can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.

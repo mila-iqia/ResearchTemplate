@@ -1,3 +1,3 @@
-from .hf_text import HFDataModule
+from .text_classification import TextClassificationDataModule
 
-__all__ = ["HFDataModule"]
+__all__ = ["TextClassificationDataModule"]

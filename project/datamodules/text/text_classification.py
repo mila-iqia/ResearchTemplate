@@ -57,7 +57,7 @@ num_labels = {
 }
 
 
-class HFDataModule(LightningDataModule):
+class TextClassificationDataModule(LightningDataModule):
     """Lightning data module for HF text classification datasets.
 
     This is based on this tutorial:

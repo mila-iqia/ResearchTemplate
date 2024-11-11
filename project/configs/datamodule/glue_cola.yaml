@@ -1,7 +1,9 @@
-defaults:
-  - huggingface
+_target_: project.datamodules.text.TextClassificationDataModule
+data_dir: ${oc.env:SCRATCH,/}/data
 hf_dataset_path: glue
 task_name: cola
+text_fields:
+  - "sentence"
 tokenizer:
   _target_: transformers.models.auto.tokenization_auto.AutoTokenizer.from_pretrained
   use_fast: true
