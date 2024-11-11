@@ -15,13 +15,14 @@ import hashlib
 import itertools
 import os
 import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 from typing import Concatenate, ParamSpec, TypeVar
 
 import datasets
+import datasets.distributed
 import hydra_zen
 import torch
 import torch.distributed
@@ -42,7 +43,6 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerBase
 
 from project.utils.env_vars import SCRATCH, SLURM_TMPDIR
 from project.utils.typing_utils import NestedMapping
-from project.utils.utils import default_device
 
 logger = getLogger(__name__)
 
@@ -87,6 +87,8 @@ class NetworkConfig:
     populate_full_signature=True,
 )
 class TokenizerConfig:
+    """Configuration options for the tokenizer."""
+
     pretrained_model_name_or_path: str
     cache_dir: Path | None = None  # use standard cache by default.
     force_download: bool = False
@@ -103,7 +105,7 @@ class TokenizerConfig:
 
 @dataclass(frozen=True, unsafe_hash=True)
 class DatasetConfig:
-    """Configuration options related to the choice of dataset."""
+    """Configuration options related to the dataset preparation."""
 
     dataset_path: str
     """Name of the dataset "family"?
@@ -117,8 +119,8 @@ class DatasetConfig:
     For example, to load "wikitext/wikitext-103-v1", this would be "wikitext-103-v1".
     """
 
-    per_device_eval_batch_size: int = 4
-    per_device_train_batch_size: int = 2
+    per_device_eval_batch_size: int = dataclasses.field(default=8, hash=False)
+    per_device_train_batch_size: int = dataclasses.field(default=8, hash=False)
 
     block_size: int = 1024
 
@@ -254,15 +256,6 @@ class LLMFinetuningExample(LightningModule):
                 init_seed=init_seed,
             )
         )
-        with default_device(), torch.random.fork_rng():
-            # deterministic weight initialization
-            # Initializes the weights on the GPU if we have one, so we don't request lots of RAM
-            # just to load up the model weights and then not use it.
-            torch.manual_seed(self.init_seed)
-            self.network = hydra_zen.instantiate(self.network_config)
-
-        # Small fix for the `device` property in LightningModule, which is CPU by default.
-        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
 
         # We will prepare the dataset only on the first task of the first node node for multi-node
         # jobs.
@@ -291,6 +284,20 @@ class LLMFinetuningExample(LightningModule):
         self.tokenizer: PreTrainedTokenizerBase | None = None
         self.train_dataset: Dataset | None = None
         self.valid_dataset: Dataset | None = None
+
+        self.network: AutoModelForCausalLM | None = None
+
+    def configure_model(self) -> None:
+        # https://lightning.ai/docs/pytorch/stable/advanced/model_parallel/fsdp.html#speed-up-model-initialization
+        # Initialize the weights on the GPU if we have one, so we don't
+        # request lots of RAM just to load up the model weights and then not use it.
+        if self.network is not None:
+            return
+        logger.info(f"Rank {self.local_rank}: {self.device=}")
+        with torch.random.fork_rng(devices=[self.device]):
+            # deterministic weight initialization
+            torch.manual_seed(self.init_seed)
+            self.network = hydra_zen.instantiate(self.network_config)
 
     def prepare_data(self):
         # todo: an improvement could be to cache each portion, so that if we just change the block
@@ -370,19 +377,26 @@ class LLMFinetuningExample(LightningModule):
         TODO: Later perhaps we could do the preprocessing in a distributed manner like this:
         https://discuss.huggingface.co/t/how-to-save-datasets-as-distributed-with-save-to-disk/25674/2
         """
-
-        # todo: Should we be using the look at
         # https://huggingface.co/docs/datasets/v3.1.0/en/use_with_pytorch#distributed
         # Load the tokenizer (again).
-
         self.tokenizer = load_tokenizer(self.tokenizer_config)
         lm_datasets = load_from_disk(self.fast_prepared_dataset_dir)
+
         # This is done here again because in distributed training jobs, `prepare_data` is only
         # called in the first task on each node, while `setup` is called in every task.
         logger.info(f"Loading processed dataset from {self.fast_prepared_dataset_dir}")
         assert isinstance(lm_datasets, DatasetDict)
         self.train_dataset = lm_datasets["train"]
         self.valid_dataset = lm_datasets["validation"]
+
+        # todo: Should we be using `datasets.distributed.split_dataset_by_node` here? Or do we let
+        # PyTorch-Lightning setup the distributed sampler for us?
+        self.train_dataset = datasets.distributed.split_dataset_by_node(
+            self.train_dataset, rank=self.global_rank, world_size=self.trainer.world_size
+        )
+        self.valid_dataset = datasets.distributed.split_dataset_by_node(
+            self.valid_dataset, rank=self.global_rank, world_size=self.trainer.world_size
+        )
 
     def train_dataloader(self):
         assert self.train_dataset is not None
@@ -404,6 +418,7 @@ class LLMFinetuningExample(LightningModule):
         )
 
     def forward(self, **inputs: torch.Tensor) -> BaseModelOutput:
+        assert self.network is not None
         return self.network(**inputs)
 
     def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int):
@@ -426,7 +441,11 @@ class LLMFinetuningExample(LightningModule):
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)"""
-        model = self.network
+        # Not sure if necessary, but trying to follow this recommendation for when using FSDP:
+        # https://github.com/ashleve/lightning-hydra-template/pull/604
+        model = self.trainer.model or self
+        assert model is not None
+
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
@@ -435,7 +454,7 @@ class LLMFinetuningExample(LightningModule):
                     for n, p in model.named_parameters()
                     if not any(nd_param in n for nd_param in no_decay)
                 ],
-                "weight_decay": self.hparams.weight_decay,
+                "weight_decay": self.weight_decay,
             },
             {
                 "params": [
@@ -458,7 +477,7 @@ class LLMFinetuningExample(LightningModule):
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
-        return [optimizer], [scheduler]
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
 
 def copy_dataset_files(src: Path, dest: Path):
@@ -466,8 +485,13 @@ def copy_dataset_files(src: Path, dest: Path):
     shutil.copytree(src, dest)
 
 
-def get_hash_of(config_dataclass) -> str:
+def get_hash_of(config_dataclass, exclude_keys: Iterable[str] = ()) -> str:
+    # IDEA: don't include fields if they have `hash=False` in the "hash".
     vals = dataclasses.asdict(config_dataclass)
+    for field in dataclasses.fields(config_dataclass):
+        if not field.hash:
+            vals.pop(field.name)
+
     flattened_vals = dict(sorted(flatten_dict(vals).items()))
     vals_string = ",".join(f"{k}:{v}" for k, v in flattened_vals.items())
     return hashlib.md5(vals_string.encode()).hexdigest()

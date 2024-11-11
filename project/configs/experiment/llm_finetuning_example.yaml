@@ -7,17 +7,25 @@ defaults:
 algorithm:
   dataset_config:
     per_device_eval_batch_size: 4
-    per_device_train_batch_size: 16
+    per_device_train_batch_size: 4
     block_size: 256
-    preprocessing_num_workers: 20
     validation_split_percentage: 10
     overwrite_cache: false
 
 trainer:
   max_epochs: 10
   devices: auto
+  strategy:
+    _target_: lightning.pytorch.strategies.FSDPStrategy
+    # https://lightning.ai/docs/pytorch/stable/advanced/model_parallel/fsdp.html#optimize-the-sharding-strategy
+    sharding_strategy: "FULL_SHARD"
   limit_val_batches: 1
   num_sanity_val_steps: 0
   enable_checkpointing: true
-  detect_anomaly: true
+  detect_anomaly: false # recommended to turn this on when debugging nans with fp16 training.
+  callbacks:
+    model_checkpoint:
+      verbose: true
+      every_n_train_steps: 1000 # todo: debug restarting from a checkpoint in this case.
+
 ckpt_path: last
