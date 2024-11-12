@@ -12,12 +12,14 @@ from logging import getLogger
 from pathlib import Path
 from typing import Literal
 
+import hydra_zen
 import numpy as np
 import torch
 from datasets import DatasetDict, load_dataset
 from lightning import LightningDataModule
+from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from project.utils.env_vars import REPO_ROOTDIR, SCRATCH, SLURM_TMPDIR
 
@@ -67,7 +69,7 @@ class TextClassificationDataModule(LightningDataModule):
     def __init__(
         self,
         hf_dataset_path: str,
-        tokenizer: str,
+        tokenizer: DictConfig,
         task_name: str,
         text_fields: list[str] | None = None,
         num_classes: int | None = None,
@@ -92,7 +94,7 @@ class TextClassificationDataModule(LightningDataModule):
         dataset_fraction: float | None = None,
     ):
         super().__init__()
-        self.tokenizer = tokenizer
+        self.tokenizer: PreTrainedTokenizerBase = hydra_zen.instantiate(tokenizer)
         self.task_name = task_name
         self.loader_columns = loader_columns
         self.seed = seed
@@ -124,10 +126,6 @@ class TextClassificationDataModule(LightningDataModule):
             self.working_path = self.processed_dataset_path
 
         ## todo: verify authentication method setup. Is trust_remote_code the right play here?
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.tokenizer, use_fast=True, cache_dir=self.data_dir, trust_remote_code=True
-        )
-
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
         self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
         self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
