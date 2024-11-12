@@ -74,6 +74,14 @@ class NetworkConfig:
     # token: str | bool | None = None
 
 
+# BUG: Hydra-zen includes the doc of the target, so doctest complains here.
+NetworkConfig.__doc__ = """Configuration options related to the choice of network.
+
+When instantiated by Hydra, this calls the `target` function passed to the decorator. In this
+case, this creates pulls the pretrained network weights from the HuggingFace model hub.
+"""
+
+
 @hydra_zen.hydrated_dataclass(
     target=AutoTokenizer.from_pretrained,
     frozen=True,
@@ -95,6 +103,10 @@ class TokenizerConfig:
     subfolder: str = ""
     tokenizer_type: str | None = None
     trust_remote_code: bool = False
+
+
+# BUG: Hydra-zen includes the doc of the target, so doctest complains here.
+TokenizerConfig.__doc__ = """Configuration options for the tokenizer."""
 
 
 @dataclass(frozen=True, unsafe_hash=True)
