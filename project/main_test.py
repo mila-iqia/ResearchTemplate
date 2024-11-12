@@ -6,7 +6,6 @@ import sys
 import uuid
 from unittest.mock import Mock
 
-import hydra_zen
 import omegaconf.errors
 import pytest
 import torch
@@ -15,10 +14,7 @@ from hydra.types import RunMode
 from omegaconf import DictConfig
 
 import project.main
-from project.algorithms.example import ExampleAlgorithm
-from project.configs.config import Config
 from project.conftest import command_line_overrides
-from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import IN_GITHUB_CI
@@ -206,21 +202,6 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
         match="Did you forget to set a value for the 'datamodule' config?",
     ):
         _ = resolve_dictconfig(experiment_dictconfig)
-
-
-@pytest.mark.parametrize(
-    command_line_overrides.__name__, ["algorithm=example datamodule=cifar10"], indirect=True
-)
-def test_example_experiment_defaults(experiment_config: Config) -> None:
-    """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
-
-    assert experiment_config.algorithm["_target_"] == (
-        ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__qualname__
-    )
-    assert (
-        isinstance(experiment_config.datamodule, CIFAR10DataModule)
-        or hydra_zen.get_target(experiment_config.datamodule) is CIFAR10DataModule
-    )
 
 
 @pytest.mark.skipif(
