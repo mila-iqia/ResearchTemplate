@@ -118,13 +118,13 @@ experiment_commands_to_test = [
         "trainer.fast_dev_run=True ",  # make each job quicker to run
         marks=pytest.mark.slow,
     ),
-    pytest.param(
-        "experiment=profiling "
-        "algorithm=no_op "
+    (
+        "experiment=profiling algorithm=no_op "
         "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
         "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
         "trainer.fast_dev_run=True "  # make each job quicker to run
     ),
+    "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/callbacks=none",
 ]
 
 
