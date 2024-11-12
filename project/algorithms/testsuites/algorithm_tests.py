@@ -148,6 +148,12 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
             algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+
+            if isinstance(algorithm, LightningModule):
+                # todo: Should probably use the `lightning.Trainer.init_module()` context manager
+                # here.
+                algorithm.configure_model()
+
         tensor_regression.check(
             algorithm.state_dict(),
             # Save the regression files on a different subfolder for each device (cpu / cuda)

@@ -92,6 +92,7 @@ from project.experiment import (
     setup_logging,
 )
 from project.main import PROJECT_NAME
+from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.seeding import seeded_rng
@@ -284,22 +285,33 @@ def algorithm(
     # todo: Use the `with device` block only for `configure_model` to replicate the same conditions
     # as when we're using the PyTorch-Lightning Trainer.
     with device:
-        return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        if isinstance(algorithm, lightning.LightningModule):
+            algorithm.configure_model()
+    return algorithm
 
 
 @pytest.fixture(scope="function")
 def trainer(
     experiment_config: Config,
-) -> pl.Trainer:
+) -> pl.Trainer | JaxTrainer:
     setup_logging(log_level=experiment_config.log_level)
     lightning.seed_everything(experiment_config.seed, workers=True)
     return instantiate_trainer(experiment_config)
 
 
 @pytest.fixture(scope="session")
-def train_dataloader(datamodule: DataModule) -> DataLoader:
+def train_dataloader(
+    datamodule: lightning.LightningDataModule | None, request: pytest.FixtureRequest
+) -> DataLoader:
     if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
         datamodule.num_workers = 0  # type: ignore
+    if datamodule is None:
+        raise NotImplementedError(
+            "This test is trying to use `train_dataloader` directly or indirectly but the "
+            "algorithm that is being tested does not use a datamodule (or the test was not "
+            "configured properly)! Consider overwriting this fixture in your test class."
+        )
     datamodule.prepare_data()
     datamodule.setup("fit")
     train_dataloader = datamodule.train_dataloader()
@@ -326,7 +338,7 @@ def training_batch(
     return jax.tree.map(operator.methodcaller("to", device=device), batch)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="function")
 def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
     """Fixture that seeds everything for reproducibility and yields the random seed used."""
     random_seed = getattr(request, "param", DEFAULT_SEED)

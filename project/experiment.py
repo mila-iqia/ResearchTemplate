@@ -27,7 +27,7 @@ from hydra_zen.typing import Builds
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 
 from project.configs.config import Config
-from project.trainers.jax_trainer import JaxModule
+from project.trainers.jax_trainer import JaxModule, JaxTrainer
 from project.utils.typing_utils.protocols import DataModule
 from project.utils.utils import validate_datamodule
 
@@ -66,7 +66,7 @@ def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
     project_logger.setLevel(log_level.upper())
 
 
-def instantiate_trainer(experiment_config: Config) -> Trainer:
+def instantiate_trainer(experiment_config: Config) -> Trainer | JaxTrainer:
     # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
     # fields have the right type.
 
