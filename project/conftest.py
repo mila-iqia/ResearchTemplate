@@ -251,7 +251,7 @@ def experiment_dictconfig(
         return dict_config
 
 
-@pytest.fixture()
+@pytest.fixture(scope="function")
 def experiment_config(
     experiment_dictconfig: DictConfig,
 ) -> Config:
@@ -281,6 +281,8 @@ def algorithm(
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
+    # todo: Use the `with device` block only for `configure_model` to replicate the same conditions
+    # as when we're using the PyTorch-Lightning Trainer.
     with device:
         return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
 

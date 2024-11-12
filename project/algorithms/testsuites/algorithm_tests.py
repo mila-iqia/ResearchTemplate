@@ -29,14 +29,6 @@ logger = get_logger(__name__)
 AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 
-def forward_pass(algorithm: LightningModule, input: PyTree[torch.Tensor]):
-    """Performs the forward pass with the lightningmodule, unpacking the inputs if necessary."""
-    if len(inspect.signature(algorithm.forward).parameters) == 1:
-        return algorithm(input)
-    assert isinstance(input, dict)
-    return algorithm(**input)
-
-
 @pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """Suite of unit tests for an "Algorithm" (LightningModule).
@@ -48,6 +40,18 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """
 
     # algorithm_config: ParametrizedFixture[str]
+
+    def forward_pass(self, algorithm: LightningModule, input: PyTree[torch.Tensor]):
+        """Performs the forward pass with the lightningmodule, unpacking the inputs if necessary.
+
+        Overwrite this if your algorithm's forward method is more complicated.
+        """
+        signature = inspect.signature(algorithm.forward)
+        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in signature.parameters.values()):
+            return algorithm(*input)
+        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values()):
+            return algorithm(**input)
+        return algorithm(input)
 
     def test_initialization_is_deterministic(
         self,
@@ -75,10 +79,10 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
-            out1 = forward_pass(algorithm, forward_pass_input)
+            out1 = self.forward_pass(algorithm, forward_pass_input)
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
-            out2 = forward_pass(algorithm, forward_pass_input)
+            out2 = self.forward_pass(algorithm, forward_pass_input)
 
         torch.testing.assert_close(out1, out2)
 
@@ -161,7 +165,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         """Check that the forward pass is reproducible given the same input and random seed."""
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
-            out = forward_pass(algorithm, forward_pass_input)
+            out = self.forward_pass(algorithm, forward_pass_input)
 
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},

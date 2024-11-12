@@ -57,7 +57,7 @@ class TextClassificationExample(LightningModule):
         self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         self.save_hyperparameters(ignore=["network", "datamodule"])
 
-    def forward(self, **inputs: torch.Tensor) -> BaseModelOutput:
+    def forward(self, inputs: dict[str, torch.Tensor]) -> BaseModelOutput:
         return self.network(**inputs)
 
     def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int):
