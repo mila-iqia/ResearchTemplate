@@ -12,12 +12,10 @@ from logging import getLogger
 from pathlib import Path
 from typing import Literal
 
-import hydra_zen
 import numpy as np
 import torch
 from datasets import DatasetDict, load_dataset
 from lightning import LightningDataModule
-from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizerBase
 
@@ -69,7 +67,7 @@ class TextClassificationDataModule(LightningDataModule):
     def __init__(
         self,
         hf_dataset_path: str,
-        tokenizer: DictConfig,
+        tokenizer: PreTrainedTokenizerBase,
         task_name: str,
         text_fields: list[str] | None = None,
         num_classes: int | None = None,
@@ -94,7 +92,7 @@ class TextClassificationDataModule(LightningDataModule):
         dataset_fraction: float | None = None,
     ):
         super().__init__()
-        self.tokenizer: PreTrainedTokenizerBase = hydra_zen.instantiate(tokenizer)
+        self.tokenizer = tokenizer
         self.task_name = task_name
         self.loader_columns = loader_columns
         self.seed = seed

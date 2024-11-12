@@ -2,6 +2,7 @@
 
 defaults:
   - override /algorithm: hf_example
+  - override /datamodule: glue_cola
   - override /trainer/callbacks: none
 
 trainer:
