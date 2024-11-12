@@ -3,7 +3,7 @@ additional_python_references:
   - project.algorithms.jax_rl_example
   - project.algorithms.example
   - project.algorithms.jax_example
-  - project.algorithms.hf_example
+  - project.algorithms.text_classification_example
   - project.trainers.jax_trainer
 ---
 
