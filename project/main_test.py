@@ -81,7 +81,7 @@ experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")
 
 experiment_commands_to_test = [
     "experiment=example trainer.fast_dev_run=True",
-    "experiment=hf_example trainer.fast_dev_run=True",
+    "experiment=text_classification_example trainer.fast_dev_run=True",
     # "experiment=jax_example trainer.fast_dev_run=True",
     "experiment=jax_rl_example trainer.max_epochs=1",
     pytest.param(
@@ -124,7 +124,7 @@ experiment_commands_to_test = [
         "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
         "trainer.fast_dev_run=True "  # make each job quicker to run
     ),
-    "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/callbacks=none",
+    "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/logger=[]",
 ]
 
 

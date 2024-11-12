@@ -4,16 +4,7 @@ network:
   _target_: transformers.models.auto.modeling_auto.AutoModelForSequenceClassification.from_pretrained
   _recursive_: false
   pretrained_model_name_or_path: albert-base-v2
-task_name: cola
-text_fields:
-  - "sentence"
-tokenizer:
-  _target_: transformers.models.auto.tokenization_auto.AutoTokenizer.from_pretrained
-  use_fast: true
-  pretrained_model_name_or_path: ${/algorithm/network/pretrained_model_name_or_path}
-  cache_dir: ${.data_dir}
-  trust_remote_code: true
-num_classes: 2
+
 # NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
 # that will accept the datamodule and network and return the algo.
 _partial_: true
