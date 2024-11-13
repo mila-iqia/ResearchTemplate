@@ -14,7 +14,7 @@ from __future__ import annotations
 import copy
 import functools
 import logging
-from logging import getLogger as get_logger
+import typing
 from typing import Any
 
 import hydra
@@ -23,15 +23,15 @@ import hydra_zen
 import rich.console
 import rich.logging
 import rich.traceback
-from hydra_zen.typing import Builds
-from lightning import Callback, LightningDataModule, LightningModule, Trainer
 
-from project.configs.config import Config
-from project.trainers.jax_trainer import JaxModule, JaxTrainer
-from project.utils.typing_utils.protocols import DataModule
-from project.utils.utils import validate_datamodule
+if typing.TYPE_CHECKING:
+    from hydra_zen.typing import Builds
+    from lightning import Callback, LightningDataModule, LightningModule, Trainer
 
-logger = get_logger(__name__)
+    from project.configs.config import Config
+    from project.trainers.jax_trainer import JaxModule, JaxTrainer
+
+logger = logging.getLogger(__name__)
 
 
 # BUG: Always using the pydantic parser when instantiating things would be nice, but it currently
@@ -109,7 +109,9 @@ def instantiate_datamodule(
     """
     if not datamodule_config:
         return None
-    if isinstance(datamodule_config, DataModule):
+    import lightning
+
+    if isinstance(datamodule_config, lightning.LightningDataModule):
         logger.info(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
             f"{datamodule_config=}"
@@ -119,12 +121,14 @@ def instantiate_datamodule(
         logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
         datamodule = instantiate(datamodule_config)
 
+    from project.utils.utils import validate_datamodule
+
     datamodule = validate_datamodule(datamodule)
     return datamodule
 
 
 def instantiate_algorithm(
-    algorithm_config: Config, datamodule: DataModule | None
+    algorithm_config: Config, datamodule: LightningDataModule | None
 ) -> LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
@@ -138,8 +142,9 @@ def instantiate_algorithm(
     # directly on the default device (GPU).
     # Create the algorithm
     algo_config = algorithm_config
+    import lightning
 
-    if isinstance(algo_config, LightningModule):
+    if isinstance(algo_config, lightning.LightningModule):
         logger.info(
             f"Algorithm was already instantiated (probably to interpolate a field value)."
             f"{algo_config=}"
@@ -162,8 +167,9 @@ def instantiate_algorithm(
         #     f"not recommended (since we can't pass the datamodule to the constructor)."
         # )
         algorithm = algo_or_algo_partial
+    from project.trainers.jax_trainer import JaxModule
 
-    if not isinstance(algorithm, LightningModule | JaxModule):
+    if not isinstance(algorithm, lightning.LightningModule | JaxModule):
         logger.warning(
             UserWarning(
                 f"Your algorithm ({algorithm}) is not a LightningModule. Beware that this isn't "

@@ -54,9 +54,8 @@ def validate_datamodule(datamodule: DM) -> DM:
 
     if isinstance(datamodule, ImageClassificationDataModule) and not datamodule.normalize:
         _remove_normalization_from_transforms(datamodule)
-    else:
+        return datamodule
         # todo: maybe check that the normalization transform is present everywhere?
-        pass
     return datamodule
 
 

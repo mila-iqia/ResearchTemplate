@@ -10,45 +10,40 @@ This does the following:
 
 from __future__ import annotations
 
-import dataclasses
 import functools
-import operator
+import logging
 import os
+import typing
 import warnings
-from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any
 
 import hydra
-import jax.random
-import lightning
+import lightning.pytorch
+import lightning.pytorch.loggers
 import omegaconf
 import rich
 from hydra_plugins.auto_schema import auto_schema_plugin
-from lightning import Callback
-from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
 
-from project.algorithms.jax_rl_example import EvalMetrics
 from project.configs import add_configs_to_hydra_store
-from project.configs.config import Config
-from project.experiment import (
-    instantiate_algorithm,
-    instantiate_datamodule,
-    setup_logging,
-)
-from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
-from project.utils.env_vars import REPO_ROOTDIR
-from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.utils import print_config
+from project.experiment import setup_logging
 
-logger = get_logger(__name__)
+if typing.TYPE_CHECKING:
+    # Do the typing imports here to make it faster to import (for auto-completion on the CLI).
+    from typing import Any
+
+    import lightning
+    from omegaconf import DictConfig
+
+    from project.configs.config import Config
+    from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
+
+logger = logging.getLogger(__name__)
 
 PROJECT_NAME = Path(__file__).parent.name
-add_configs_to_hydra_store()
+# add_configs_to_hydra_store()
 setup_logging(log_level="INFO", global_log_level="ERROR")
 
-
+REPO_ROOTDIR = Path(__file__).parent.parent
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
@@ -57,6 +52,9 @@ auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     verbose=False,
     add_headers=False,  # don't fallback to adding headers if we can't use vscode settings file.
 )
+
+
+add_configs_to_hydra_store()
 
 
 @hydra.main(
@@ -78,7 +76,18 @@ def main(dict_config: DictConfig) -> dict:
     3. Calls `evaluation` to evaluate the model
     4. Returns the evaluation metrics.
     """
+    import wandb
+
+    from project.utils.utils import print_config
+
     print_config(dict_config, resolve=False)
+
+    from project.experiment import (
+        instantiate_algorithm,
+        instantiate_datamodule,
+        setup_logging,
+    )
+    from project.utils.hydra_utils import resolve_dictconfig
 
     # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
@@ -94,8 +103,12 @@ def main(dict_config: DictConfig) -> dict:
 
     # Create the Trainer
     trainer_config = config.trainer.copy()  # Avoid mutating the config if possible.
-    callbacks: list[Callback] | None = instantiate_values(trainer_config.pop("callbacks", None))
-    logger: list[Logger] | None = instantiate_values(trainer_config.pop("logger", None))
+    callbacks: list[lightning.Callback] | None = instantiate_values(
+        trainer_config.pop("callbacks", None)
+    )
+    logger: list[lightning.pytorch.loggers.Logger] | None = instantiate_values(
+        trainer_config.pop("logger", None)
+    )
     trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
         trainer_config, callbacks=callbacks, logger=logger
     )
@@ -108,8 +121,6 @@ def main(dict_config: DictConfig) -> dict:
         config.algorithm, datamodule=datamodule
     )
 
-    import wandb
-
     if wandb.run:
         wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
         wandb.run.config.update(
@@ -119,17 +130,19 @@ def main(dict_config: DictConfig) -> dict:
     train_results = train(
         config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm
     )
-
     # Evaluate the algorithm.
-    if isinstance(algorithm, JaxModule):
-        assert isinstance(trainer, JaxTrainer)
-        metric_name, error, _metrics = evaluate_jax_module(
-            algorithm, trainer=trainer, train_results=train_results
-        )
-    else:
-        assert isinstance(trainer, lightning.Trainer)
+    if isinstance(trainer, lightning.Trainer):
+        assert isinstance(algorithm, lightning.LightningModule)
         metric_name, error, _metrics = evaluate_lightningmodule(
             algorithm, datamodule=datamodule, trainer=trainer
+        )
+    else:
+        from project.trainers.jax_trainer import JaxModule, JaxTrainer
+
+        assert isinstance(trainer, JaxTrainer)
+        assert isinstance(algorithm, JaxModule)
+        metric_name, error, _metrics = evaluate_jax_module(
+            algorithm, trainer=trainer, train_results=train_results
         )
 
     if wandb.run:
@@ -172,6 +185,8 @@ def train(
             f"a {JaxModule.__name__}, so it can't be used with the `{JaxTrainer.__name__}`. "
             f"Try to subclass {JaxModule.__name__} and implement the missing methods."
         )
+    import jax
+
     rng = jax.random.key(config.seed)
     # TODO: Use ckpt_path argument to load the training state and resume the training run.
     assert config.ckpt_path is None
@@ -283,20 +298,6 @@ def get_error_from_metrics(metrics: _MetricsT) -> tuple[MetricName, float, dict]
         f"Don't know how to calculate the error to minimize from metrics {metrics} of type "
         f"{type(metrics)}! "
         f"You probably need to register a handler for it."
-    )
-
-
-@get_error_from_metrics.register(EvalMetrics)
-def get_error_from_jax_rl_example_metrics(metrics: EvalMetrics):
-    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
-    assert isinstance(last_epoch_metrics, EvalMetrics)
-    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
-    # vmap).
-    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
-    return (
-        "-avg_cumulative_reward",
-        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
-        dataclasses.asdict(last_epoch_metrics),
     )
 
 

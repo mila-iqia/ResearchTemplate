@@ -2,13 +2,12 @@
 # https://github.com/facebookresearch/hydra/blob/main/examples/plugins/example_launcher_plugin/hydra_plugins/example_launcher_plugin/example_launcher.py
 
 import dataclasses
-import functools
 import logging
 import os
 import warnings
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import hydra_zen
 from hydra.core.config_store import ConfigStore
@@ -16,6 +15,7 @@ from hydra.core.plugins import Plugins
 from hydra.core.singleton import Singleton
 from hydra.core.utils import JobReturn, filter_overrides
 from hydra.plugins.plugin import Plugin
+from hydra.types import HydraContext, TaskFunction
 from hydra.utils import instantiate
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import BaseSubmititLauncher
 from omegaconf import DictConfig
@@ -60,8 +60,16 @@ def _instantiate(self: Plugins, config: DictConfig) -> Plugin:
 Plugins._instantiate = _instantiate
 
 
+@dataclasses.dataclass(init=False)
 class RemoteSlurmLauncher(BaseSubmititLauncher):
-    _EXECUTOR = "remoteslurm"
+    _EXECUTOR: ClassVar[str] = "remoteslurm"
+
+    params: dict[str, Any]
+    config: DictConfig | None = None
+    task_function: TaskFunction | None = None
+    sweep_configs: TaskFunction | None = None
+    hydra_context: HydraContext | None = None
+    executor: RemoteSlurmExecutor
 
     def __init__(
         self,
@@ -127,7 +135,8 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         if tasks_per_node is not None:
             assert ntasks_per_node is None, "can't use both tasks_per_node and ntasks_per_node"
             ntasks_per_node = tasks_per_node
-
+        if ntasks_per_node is not None:
+            additional_parameters["ntasks-per-node"] = ntasks_per_node
         super().__init__(
             account=account,
             array_parallelism=array_parallelism,
@@ -209,8 +218,24 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         # for different seeds, or something similar!
         return [j.results()[0] for j in jobs]
 
+    def __call__(
+        self,
+        sweep_overrides: list[str],
+        job_dir_key: str,
+        job_num: int,
+        job_id: str,
+        singleton_state: dict[type, Singleton],
+    ) -> JobReturn:
+        return super().__call__(
+            sweep_overrides=sweep_overrides,
+            job_dir_key=job_dir_key,
+            job_num=job_num,
+            job_id=job_id,
+            singleton_state=singleton_state,
+        )
 
-@functools.cache
+
+# @functools.cache
 def get_slurm_accounts(cluster: str) -> list[str]:
     """Gets the SLURM accounts of the user using sacctmgr on the slurm cluster."""
     logger.debug(f"Fetching the list of SLURM accounts available on the {cluster} cluster.")
