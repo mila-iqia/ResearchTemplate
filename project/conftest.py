@@ -278,15 +278,16 @@ def datamodule(experiment_dictconfig: DictConfig) -> DataModule | None:
 
 @pytest.fixture(scope="function")
 def algorithm(
-    experiment_config: Config, datamodule: DataModule | None, device: torch.device, seed: int
+    experiment_config: Config,
+    datamodule: lightning.LightningDataModule | None,
+    trainer: lightning.Trainer | JaxTrainer,
+    seed: int,
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    # todo: Use the `with device` block only for `configure_model` to replicate the same conditions
-    # as when we're using the PyTorch-Lightning Trainer.
-    with device:
-        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
-        if isinstance(algorithm, lightning.LightningModule):
+    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+    if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
+        with trainer.init_module():
             algorithm.configure_model()
     return algorithm
 

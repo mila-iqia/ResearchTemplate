@@ -29,6 +29,7 @@ logger = get_logger(__name__)
 AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 
+# todo: rename to `LightningModuleTests`.
 @pytest.mark.incremental
 class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     """Suite of unit tests for an "Algorithm" (LightningModule).
@@ -56,18 +57,27 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
     def test_initialization_is_deterministic(
         self,
         experiment_config: Config,
-        datamodule: DataModule,
+        datamodule: lightning.LightningDataModule | None,
         seed: int,
+        trainer: lightning.Trainer,
     ):
         """Checks that the weights initialization is consistent given the a random seed."""
 
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
             algorithm_1 = instantiate_algorithm(experiment_config.algorithm, datamodule)
+            assert isinstance(algorithm_1, lightning.LightningModule)
+
+            with trainer.init_module():
+                algorithm_1.configure_model()
 
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
             algorithm_2 = instantiate_algorithm(experiment_config.algorithm, datamodule)
+            assert isinstance(algorithm_2, lightning.LightningModule)
+
+            with trainer.init_module():
+                algorithm_2.configure_model()
 
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
 
@@ -149,12 +159,9 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
             algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
-
-            if isinstance(algorithm, LightningModule):
-                # Using `init_module` so the weights are on the right device and with the right
-                # precision.
-                with trainer.init_module():
-                    algorithm.configure_model()
+            assert isinstance(algorithm, lightning.LightningModule)
+            with trainer.init_module():
+                algorithm.configure_model()
 
         tensor_regression.check(
             algorithm.state_dict(),
