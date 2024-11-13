@@ -143,6 +143,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
         datamodule: DataModule,
         seed: int,
         tensor_regression: TensorRegressionFixture,
+        trainer: lightning.Trainer,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
@@ -150,9 +151,10 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
             algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
 
             if isinstance(algorithm, LightningModule):
-                # todo: Should probably use the `lightning.Trainer.init_module()` context manager
-                # here.
-                algorithm.configure_model()
+                # Using `init_module` so the weights are on the right device and with the right
+                # precision.
+                with trainer.init_module():
+                    algorithm.configure_model()
 
         tensor_regression.check(
             algorithm.state_dict(),

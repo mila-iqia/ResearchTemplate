@@ -649,25 +649,9 @@ def pytest_configure(config: pytest.Config):
     )
 
 
-# import numpy as np
-# def fixed_hash_fn(v: jax.Array | np.ndarray | torch.Tensor) -> int:
-#     if isinstance(v, torch.Tensor):
-#         return hash(tuple(v.detach().cpu().contiguous().numpy().flatten().tolist()))
-#     if isinstance(v, jax.Array | np.ndarray):
-#         return hash(tuple(v.flatten().tolist()))
-#     raise NotImplementedError(f"Don't know how to hash value {v} of type {type(v)}.")
-
-# tensor_regression.stats._hash = fixed_hash_fn
-
-
-def _patched_simple_attributes(v, precision: int | None):
-    stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
-    stats.pop("hash", None)
-    return stats
-
-
+# TODO: remove these, add this fix to the tensor_regression package instead.
 @pytest.fixture(autouse=True)
-def dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
+def _dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
     """Temporarily remove the hash of tensors from the regression files."""
 
     monkeypatch.setattr(
@@ -675,3 +659,9 @@ def dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
         tensor_regression.fixture.get_simple_attributes.__name__,  # type: ignore
         _patched_simple_attributes,
     )
+
+
+def _patched_simple_attributes(v, precision: int | None):
+    stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
+    stats.pop("hash", None)
+    return stats

@@ -1,20 +1,50 @@
 """Unit tests for the llm finetuning example."""
 
+import copy
 import operator
 
 import jax
+import lightning
 import pytest
 import torch
+from tensor_regression import TensorRegressionFixture
+from tensor_regression.stats import get_simple_attributes
 from torch.utils.data import DataLoader
 
+from project.algorithms.hf_llm_finetuning_example import DatasetConfig
 from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
+from project.configs.config import Config
 from project.utils.testutils import run_for_all_configs_of_type
 from project.utils.typing_utils import PyTree
+from project.utils.typing_utils.protocols import DataModule
 
-from .llm_finetuning_example import LLMFinetuningExample
+from .llm_finetuning_example import LLMFinetuningExample, get_hash_of
 
 
-def test_get_hash_of(): ...
+def test_get_hash_of():
+    d1 = DatasetConfig(dataset_path="wikitext", dataset_name="wikitext-2-v1")
+    d2 = DatasetConfig(dataset_path="wikitext", dataset_name="wikitext-103-v1")
+    assert get_hash_of(d1) == get_hash_of(d1)
+    assert get_hash_of(d1) == get_hash_of(copy.deepcopy(d1))
+    assert get_hash_of(d1) != get_hash_of(d2)
+
+
+@get_simple_attributes.register(tuple)
+def _get_tuple_attributes(value: tuple, precision: int | None):
+    # This is called to get some simple stats to store in regression files during tests, in
+    # particular for tuples (since there isn't already a handler for it in the tensor_regression
+    # package.)
+    # Note: This information about this output is not very descriptive.
+    # not this is called only for the `out.past_key_values` entry in the `CausalLMOutputWithPast`
+    # that is returned from the forward pass output.
+    num_items_to_include = 5  # only show the stats of some of the items.
+    return {
+        "length": len(value),
+        **{
+            f"{i}": get_simple_attributes(item, precision=precision)
+            for i, item in enumerate(value[:num_items_to_include])
+        },
+    }
 
 
 @run_for_all_configs_of_type("algorithm", LLMFinetuningExample)
@@ -59,3 +89,21 @@ class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
         """
         assert isinstance(training_batch, dict)
         return training_batch
+
+    # Checking all the weights against the 900mb reference .npz file is a bit slow.
+    @pytest.mark.slow
+    def test_initialization_is_reproducible(
+        self,
+        experiment_config: Config,
+        datamodule: DataModule,
+        seed: int,
+        tensor_regression: TensorRegressionFixture,
+        trainer: lightning.Trainer,
+    ):
+        super().test_initialization_is_reproducible(
+            experiment_config=experiment_config,
+            datamodule=datamodule,
+            seed=seed,
+            tensor_regression=tensor_regression,
+            trainer=trainer,
+        )
