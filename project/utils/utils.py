@@ -33,11 +33,9 @@ def get_log_dir(trainer: Trainer | None) -> Path:
             return Path(trainer.log_dir)
     base = Path(trainer.default_root_dir) if trainer else Path.cwd() / "logs"
     log_dir = base / "default"
-    logger.warning(
-        RuntimeWarning(
-            f"Using the default log directory of {log_dir} because the trainer.log_dir is None. "
-            f"Consider using a logger (e.g. with 'trainer.logger=wandb' on the command-line)."
-        )
+    logger.info(
+        f"Using the default log directory of {log_dir} because a logger isn't being used."
+        # f"Consider using a logger (e.g. with 'trainer.logger=wandb' on the command-line)."
     )
     return log_dir
 

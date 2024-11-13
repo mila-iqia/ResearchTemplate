@@ -7,12 +7,13 @@ python project/main.py algorithm=example
 ```
 """
 
+import functools
 from collections.abc import Sequence
 from logging import getLogger
 from typing import Literal, TypeVar
 
 import torch
-from hydra_zen.typing import Builds, PartialBuilds
+from hydra_zen.typing import Builds
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch.core import LightningModule
 from torch import Tensor
@@ -20,19 +21,15 @@ from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.configs.algorithm.optimizer import AdamConfig
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.experiment import instantiate
 
 logger = getLogger(__name__)
 
-
-# NOTE: These are just type hints. Don't worry about it. It's just to make the code more readable.
 T = TypeVar("T")
-# Config that returns the object of type T when instantiated.
-_Config = Builds[type[T]]
-# Config that returns a function that creates the object of type T when instantiated.
-_PartialConfig = PartialBuilds[type[T]]
+# A shortcut to make the type hints simpler, don't worry about it.
+HydraConfigFor = Builds[type[T]]
+"""Type annotation to say "a hydra config that returns an object of type T when instantiated"."""
 
 
 class ExampleAlgorithm(LightningModule):
@@ -41,8 +38,8 @@ class ExampleAlgorithm(LightningModule):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: _Config[torch.nn.Module],
-        optimizer: _PartialConfig[Optimizer] = AdamConfig(lr=3e-4),
+        network: HydraConfigFor[torch.nn.Module],
+        optimizer: HydraConfigFor[functools.partial[Optimizer]],
         init_seed: int = 42,
     ):
         """Create a new instance of the algorithm.
@@ -71,14 +68,13 @@ class ExampleAlgorithm(LightningModule):
                 "init_seed": init_seed,
             }
         )
-
-        # Small fix for the `device` property in LightningModule, which is CPU by default.
-        self._device = next((p.device for p in self.parameters()), torch.device("cpu"))
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device
         )
+        self.network: torch.nn.Module | None = None
 
+    def configure_model(self):
         with torch.random.fork_rng():
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
@@ -91,6 +87,7 @@ class ExampleAlgorithm(LightningModule):
 
     def forward(self, input: Tensor) -> Tensor:
         """Forward pass of the network."""
+        assert self.network is not None
         logits = self.network(input)
         return logits
 
