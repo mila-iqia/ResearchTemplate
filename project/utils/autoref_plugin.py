@@ -155,7 +155,10 @@ def _expand(obj: types.ModuleType | object) -> list[object]:
         return [
             v
             for v in objects_in_global_scope
-            if not (inspect.ismodule(v) and inspect.getsourcefile(v) != source_file)
+            if not (
+                (inspect.ismodule(v) and getattr(v, "__file__", None) is None)  # built-in module.
+                or (inspect.ismodule(v) and inspect.getsourcefile(v) != source_file)
+            )
         ]
 
 
