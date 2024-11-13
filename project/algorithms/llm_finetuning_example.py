@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Concatenate, ParamSpec, TypeVar
+from typing import Concatenate, ParamSpec, TypeVar
 
 import datasets
 import datasets.distributed
@@ -327,7 +327,7 @@ class LLMFinetuningExample(LightningModule):
         # the local fast directory.
         # Otherwise do the tokenization and grouping and save it to the local fast directory, then
         # copy it to the $SCRATCH directory for future use.
-        if try_to_load_prepared_dataset_from(self.fast_prepared_dataset_dir):
+        if _try_to_load_prepared_dataset_from(self.fast_prepared_dataset_dir):
             logger.info(
                 f"Dataset is already prepared on this node at {self.fast_prepared_dataset_dir}"
             )
@@ -343,7 +343,7 @@ class LLMFinetuningExample(LightningModule):
             lm_datasets.save_to_disk(self.fast_prepared_dataset_dir)
             return
 
-        if try_to_load_prepared_dataset_from(self.scratch_prepared_dataset_dir):
+        if _try_to_load_prepared_dataset_from(self.scratch_prepared_dataset_dir):
             logger.info(
                 f"Dataset is already prepared on the shared filesystem at "
                 f"{self.scratch_prepared_dataset_dir}"
@@ -538,7 +538,7 @@ def flatten_dict(d: NestedMapping[str, V]) -> dict[str, V]:
 P = ParamSpec("P")
 
 
-def try_to_load_prepared_dataset_from(
+def _try_to_load_prepared_dataset_from(
     dataset_path: Path,
     _load_from_disk_fn: Callable[Concatenate[Path, P], Dataset | DatasetDict] = load_from_disk,
     *_load_from_disk_args: P.args,
@@ -555,23 +555,6 @@ def try_to_load_prepared_dataset_from(
         logger.debug(f"Dataset is already prepared at {dataset_path}")
         assert isinstance(datasets, DatasetDict)
         return datasets
-
-
-def field(
-    _field_fn: Callable[P, dataclasses.Field] = dataclasses.field,
-    include_in_id: bool = True,
-    metadata: Mapping[Any, Any] | None = None,
-    *args: P.args,
-    **kwargs: P.kwargs,
-):
-    """Simple wrapper around `dataclasses.field` used to include or not include a field in the 'id'
-    of the config."""
-    if metadata:
-        metadata = dict(metadata)
-        metadata["include_in_id"] = include_in_id
-    else:
-        metadata = {"include_in_id": include_in_id}
-    return _field_fn(*args, **kwargs, metadata=metadata)  # type: ignore
 
 
 def _include_field_in_id(field: dataclasses.Field) -> bool:
