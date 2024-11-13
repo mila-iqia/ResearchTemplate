@@ -1,8 +1,8 @@
 # Config for the Text classification example algorithm
 _target_: project.algorithms.text_classification_example.TextClassificationExample
+_recursive_: false
 network:
   _target_: transformers.models.auto.modeling_auto.AutoModelForSequenceClassification.from_pretrained
-  _recursive_: false
   pretrained_model_name_or_path: albert-base-v2
 
 # NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
