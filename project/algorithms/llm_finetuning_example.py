@@ -1,7 +1,8 @@
 """Example: fine-tuning a language model (GPT, GPT-2, CTRL, OPT, etc.) on a text dataset.
 
-Based on https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py
-Which itself is based on a HuggingFace tutorial for fine-tuning an LLM without using the HuggingFace Trainer.
+Large chunks of the code here are taken from [this example script in the transformers GitHub repository](https://github.com/huggingface/transformers/blob/main/examples/pytorch/language-modeling/run_clm_no_trainer.py).
+
+If you haven't already, you should definitely check out [this walkthrough of that script from the HuggingFace docs.](https://huggingface.co/docs/transformers/en/tasks/language_modeling)
 """
 
 import dataclasses
