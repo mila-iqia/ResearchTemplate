@@ -40,9 +40,11 @@ from project.utils.typing_utils.protocols import DataModule
     ],
 )
 def test_get_hash_of(c1, c2):
-    assert get_hash_of(c1) == get_hash_of(c2)
-    assert get_hash_of(c1) == get_hash_of(copy.deepcopy(c1))
+    assert get_hash_of(c1) == get_hash_of(c1)
+    assert get_hash_of(c2) == get_hash_of(c2)
     assert get_hash_of(c1) != get_hash_of(c2)
+    assert get_hash_of(c1) == get_hash_of(copy.deepcopy(c1))
+    assert get_hash_of(c2) == get_hash_of(copy.deepcopy(c2))
 
 
 @get_simple_attributes.register(tuple)
