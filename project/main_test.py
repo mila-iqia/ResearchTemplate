@@ -120,7 +120,12 @@ experiment_commands_to_test = [
         "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
         "trainer.fast_dev_run=True "  # make each job quicker to run
     ),
-    "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/logger=[]",
+    pytest.param(
+        "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/logger=[]",
+        marks=pytest.mark.skipif(
+            SLURM_JOB_ID is None, reason="Can only be run on a slurm cluster."
+        ),
+    ),
 ]
 
 
