@@ -5,28 +5,44 @@ import operator
 
 import jax
 import lightning
+import numpy as np
 import pytest
 import torch
 from tensor_regression import TensorRegressionFixture
 from tensor_regression.stats import get_simple_attributes
+from tensor_regression.to_array import to_ndarray
 from torch.utils.data import DataLoader
 
-from project.algorithms.hf_llm_finetuning_example import DatasetConfig
+from project.algorithms.llm_finetuning_example import (
+    DatasetConfig,
+    LLMFinetuningExample,
+    TokenizerConfig,
+    get_hash_of,
+)
 from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.configs.config import Config
 from project.utils.testutils import run_for_all_configs_of_type
 from project.utils.typing_utils import PyTree
 from project.utils.typing_utils.protocols import DataModule
 
-from .llm_finetuning_example import LLMFinetuningExample, get_hash_of
 
-
-def test_get_hash_of():
-    d1 = DatasetConfig(dataset_path="wikitext", dataset_name="wikitext-2-v1")
-    d2 = DatasetConfig(dataset_path="wikitext", dataset_name="wikitext-103-v1")
-    assert get_hash_of(d1) == get_hash_of(d1)
-    assert get_hash_of(d1) == get_hash_of(copy.deepcopy(d1))
-    assert get_hash_of(d1) != get_hash_of(d2)
+@pytest.mark.parametrize(
+    ("c1", "c2"),
+    [
+        (
+            DatasetConfig(dataset_path="wikitext", dataset_name="wikitext-2-v1"),
+            DatasetConfig(dataset_path="wikitext", dataset_name="wikitext-103-v1"),
+        ),
+        (
+            TokenizerConfig(pretrained_model_name_or_path="gpt2"),
+            TokenizerConfig(pretrained_model_name_or_path="bert-base-uncased"),
+        ),
+    ],
+)
+def test_get_hash_of(c1, c2):
+    assert get_hash_of(c1) == get_hash_of(c2)
+    assert get_hash_of(c1) == get_hash_of(copy.deepcopy(c1))
+    assert get_hash_of(c1) != get_hash_of(c2)
 
 
 @get_simple_attributes.register(tuple)
@@ -47,14 +63,28 @@ def _get_tuple_attributes(value: tuple, precision: int | None):
     }
 
 
+@to_ndarray.register(tuple)
+def _tuple_to_ndarray(v: tuple) -> np.ndarray:
+    """Convert a tuple of values to a numpy array to be stored in a regression file."""
+    # This could get a bit tricky because the items might not have the same shape and so on.
+    # However it seems like the ndarrays_regression fixture (which is what tensor_regression uses
+    # under the hood) is not complaining about us returning a list here, so we'll leave it at that
+    # for now.
+    return [to_ndarray(v_i) for v_i in v]  # type: ignore
+
+
 @run_for_all_configs_of_type("algorithm", LLMFinetuningExample)
 class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
-    # TODO: annoying that we need to redefine this here and change its scope, since we get the
-    # dataloader from the module and not from a datamodule (since this example does not use a datamodule).
     @pytest.fixture(scope="function")
     def train_dataloader(
         self, algorithm: LLMFinetuningExample, request: pytest.FixtureRequest
     ) -> DataLoader:
+        """Fixture that creates and returns the training dataloader.
+
+        NOTE: Here we're purpusefully redefining the `project.conftest.train_dataloader` fixture
+        because it assumes that the algorithm uses a datamodule.
+        Here we change the fixture scope.
+        """
         algorithm.prepare_data()
         algorithm.setup("fit")
 
