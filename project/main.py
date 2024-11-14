@@ -16,6 +16,7 @@ import os
 import typing
 import warnings
 from pathlib import Path
+from typing import Any
 
 import hydra
 import lightning.pytorch
@@ -23,16 +24,15 @@ import lightning.pytorch.loggers
 import omegaconf
 import rich
 from hydra_plugins.auto_schema import auto_schema_plugin
+from omegaconf import DictConfig
 
 from project.configs import add_configs_to_hydra_store
 from project.experiment import setup_logging
 
 if typing.TYPE_CHECKING:
     # Do the typing imports here to make it faster to import (for auto-completion on the CLI).
-    from typing import Any
 
     import lightning
-    from omegaconf import DictConfig
 
     from project.configs.config import Config
     from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
@@ -209,6 +209,7 @@ def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
     objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
     if objects_dict is None:
         return None
+
     assert isinstance(objects_dict, dict | DictConfig)
     return [v for v in objects_dict.values() if v is not None]
 
