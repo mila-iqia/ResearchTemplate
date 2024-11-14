@@ -1,5 +1,7 @@
 """Example showing how the test suite can be used to add tests for a new algorithm."""
 
+import sys
+
 import pytest
 import torch
 from transformers import PreTrainedModel
@@ -11,7 +13,7 @@ from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.testutils import run_for_all_configs_of_type
+from project.utils.testutils import IN_GITHUB_CI, run_for_all_configs_of_type
 
 from .example import ExampleAlgorithm
 
@@ -29,6 +31,11 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
 
 
+@pytest.mark.xfail(
+    sys.platform == "darwin" and IN_GITHUB_CI,
+    raises=RuntimeError,
+    reason="Raises 'MPS backend out of memory' error on MacOS in Github CI.",
+)
 @run_for_all_configs_of_type("algorithm", ExampleAlgorithm)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)
