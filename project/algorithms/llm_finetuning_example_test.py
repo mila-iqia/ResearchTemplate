@@ -86,7 +86,10 @@ def _tuple_to_ndarray(v: tuple) -> np.ndarray:
 class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
     @pytest.fixture(scope="function")
     def train_dataloader(
-        self, algorithm: LLMFinetuningExample, request: pytest.FixtureRequest
+        self,
+        algorithm: LLMFinetuningExample,
+        request: pytest.FixtureRequest,
+        trainer: lightning.Trainer,
     ) -> DataLoader:
         """Fixture that creates and returns the training dataloader.
 
@@ -94,6 +97,8 @@ class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
         because it assumes that the algorithm uses a datamodule.
         Here we change the fixture scope.
         """
+        # a bit hacky: Set the trainer on the lightningmodule.
+        algorithm._trainer = trainer
         algorithm.prepare_data()
         algorithm.setup("fit")
 
