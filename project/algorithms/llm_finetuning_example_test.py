@@ -21,6 +21,8 @@ from project.algorithms.llm_finetuning_example import (
 )
 from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.configs.config import Config
+from project.conftest import command_line_overrides
+from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type
 from project.utils.typing_utils import PyTree
 from project.utils.typing_utils.protocols import DataModule
@@ -75,6 +77,11 @@ def _tuple_to_ndarray(v: tuple) -> np.ndarray:
     return [to_ndarray(v_i) for v_i in v]  # type: ignore
 
 
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    ["trainer.strategy=auto" if SLURM_JOB_ID is None else ""],
+    indirect=True,
+)
 @run_for_all_configs_of_type("algorithm", LLMFinetuningExample)
 class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
     @pytest.fixture(scope="function")
