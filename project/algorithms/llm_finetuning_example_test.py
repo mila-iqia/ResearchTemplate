@@ -23,7 +23,7 @@ from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
 from project.configs.config import Config
 from project.conftest import command_line_overrides
 from project.utils.env_vars import SLURM_JOB_ID
-from project.utils.testutils import run_for_all_configs_of_type
+from project.utils.testutils import IN_GITHUB_COULD_CI, run_for_all_configs_of_type
 from project.utils.typing_utils import PyTree
 from project.utils.typing_utils.protocols import DataModule
 
@@ -77,6 +77,9 @@ def _tuple_to_ndarray(v: tuple) -> np.ndarray:
     return [to_ndarray(v_i) for v_i in v]  # type: ignore
 
 
+@pytest.mark.skipif(
+    IN_GITHUB_COULD_CI, reason="This test is too resource-intensive to run on the GitHub CI."
+)
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     ["trainer.strategy=auto" if SLURM_JOB_ID is None else ""],
