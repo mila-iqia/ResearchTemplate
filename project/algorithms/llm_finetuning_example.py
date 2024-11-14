@@ -314,7 +314,7 @@ class LLMFinetuningExample(LightningModule):
         if self.network is not None:
             return
         logger.info(f"Rank {self.local_rank}: {self.device=}")
-        with torch.random.fork_rng(devices=[self.device]):
+        with torch.random.fork_rng(devices=[self.device] if self.device.type == "cuda" else []):
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
             self.network = hydra_zen.instantiate(self.network_config)
