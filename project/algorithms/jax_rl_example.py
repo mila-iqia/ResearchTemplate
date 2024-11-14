@@ -7,9 +7,7 @@ See the `JaxRLExample` class for a description of the differences w.r.t. `rejax.
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import functools
-import operator
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -806,23 +804,6 @@ def render_episode(
     with contextlib.redirect_stderr(None):
         vis.animate(str(gif_path))
     plt.close(vis.fig)
-
-
-from project.main import get_error_from_metrics  # noqa
-
-
-@get_error_from_metrics.register(EvalMetrics)
-def get_error_from_jax_rl_example_metrics(metrics: EvalMetrics):
-    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
-    assert isinstance(last_epoch_metrics, EvalMetrics)
-    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
-    # vmap).
-    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
-    return (
-        "-avg_cumulative_reward",
-        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
-        dataclasses.asdict(last_epoch_metrics),
-    )
 
 
 class RenderEpisodesCallback(JaxCallback):

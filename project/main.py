@@ -10,40 +10,42 @@ This does the following:
 
 from __future__ import annotations
 
-import functools
+import dataclasses
 import logging
+import operator
 import os
-import typing
 import warnings
 from pathlib import Path
 from typing import Any
 
 import hydra
+import jax
+import lightning
 import lightning.pytorch
 import lightning.pytorch.loggers
 import omegaconf
 import rich
+import wandb
 from hydra_plugins.auto_schema import auto_schema_plugin
 from omegaconf import DictConfig
 
+from project.algorithms.jax_rl_example import EvalMetrics
 from project.configs import add_configs_to_hydra_store
-from project.experiment import setup_logging
-
-if typing.TYPE_CHECKING:
-    # Do the typing imports here to make it faster to import (for auto-completion on the CLI).
-
-    import lightning
-
-    from project.configs.config import Config
-    from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
-
-logger = logging.getLogger(__name__)
+from project.configs.config import Config
+from project.experiment import (
+    instantiate_algorithm,
+    instantiate_datamodule,
+    setup_logging,
+)
+from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
+from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.utils import print_config
 
 PROJECT_NAME = Path(__file__).parent.name
-# add_configs_to_hydra_store()
+REPO_ROOTDIR = Path(__file__).parent.parent
+
 setup_logging(log_level="INFO", global_log_level="ERROR")
 
-REPO_ROOTDIR = Path(__file__).parent.parent
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
@@ -52,7 +54,6 @@ auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     verbose=False,
     add_headers=False,  # don't fallback to adding headers if we can't use vscode settings file.
 )
-
 
 add_configs_to_hydra_store()
 
@@ -76,19 +77,9 @@ def main(dict_config: DictConfig) -> dict:
     3. Calls `evaluation` to evaluate the model
     4. Returns the evaluation metrics.
     """
-    import wandb
-
-    from project.utils.utils import print_config
-
+    print(dict_config)
     print_config(dict_config, resolve=False)
-
-    from project.experiment import (
-        instantiate_algorithm,
-        instantiate_datamodule,
-        setup_logging,
-    )
-    from project.utils.hydra_utils import resolve_dictconfig
-
+    # assert False, "this shouldn't even be run."
     # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
 
@@ -126,10 +117,12 @@ def main(dict_config: DictConfig) -> dict:
         wandb.run.config.update(
             omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
         )
+
     # Train the algorithm.
     train_results = train(
         config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm
     )
+
     # Evaluate the algorithm.
     if isinstance(trainer, lightning.Trainer):
         assert isinstance(algorithm, lightning.LightningModule)
@@ -137,8 +130,6 @@ def main(dict_config: DictConfig) -> dict:
             algorithm, datamodule=datamodule, trainer=trainer
         )
     else:
-        from project.trainers.jax_trainer import JaxModule, JaxTrainer
-
         assert isinstance(trainer, JaxTrainer)
         assert isinstance(algorithm, JaxModule)
         metric_name, error, _metrics = evaluate_jax_module(
@@ -259,6 +250,8 @@ def evaluate_lightningmodule(
     for key, value in metrics.items():
         rich.print(f"{results_type} {key}: ", value)
 
+    logger = logging.getLogger(__name__)
+
     if (accuracy := metrics.get(f"{results_type}/accuracy")) is not None:
         # NOTE: This is the value that is used for HParam sweeps.
         metric_name = "1-accuracy"
@@ -292,13 +285,30 @@ def evaluate_jax_module(
     return get_error_from_metrics(metrics)
 
 
-@functools.singledispatch
-def get_error_from_metrics(metrics: _MetricsT) -> tuple[MetricName, float, dict]:
+# BUG: ULTRA weird bug happens with cloudpickle if we use a singledispatch function here!
+# @functools.singledispatch
+def get_error_from_metrics(metrics: _MetricsT) -> tuple[str, float, dict]:
     """Returns the main metric name, its value, and the full metrics dictionary."""
+    if isinstance(metrics, EvalMetrics):
+        return get_error_from_jax_rl_example_metrics(metrics)
     raise NotImplementedError(
         f"Don't know how to calculate the error to minimize from metrics {metrics} of type "
         f"{type(metrics)}! "
         f"You probably need to register a handler for it."
+    )
+
+
+# @get_error_from_metrics.register(EvalMetrics)
+def get_error_from_jax_rl_example_metrics(metrics: EvalMetrics):
+    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
+    assert isinstance(last_epoch_metrics, EvalMetrics)
+    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
+    # vmap).
+    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
+    return (
+        "-avg_cumulative_reward",
+        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
+        dataclasses.asdict(last_epoch_metrics),
     )
 
 
