@@ -1,5 +1,5 @@
 _target_: project.datamodules.text.TextClassificationDataModule
-data_dir: ${oc.env:SCRATCH,/}/data
+data_dir: ${oc.env:SCRATCH,.}/data
 hf_dataset_path: glue
 task_name: cola
 text_fields:
