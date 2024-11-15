@@ -1,6 +1,6 @@
 ---
 additional_python_references:
-  - project.algorithms.llm_finetuning_example
+  - project.algorithms.llm_finetuning
 ---
 # Fine-tuning LLMs
 
