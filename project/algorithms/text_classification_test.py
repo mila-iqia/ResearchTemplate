@@ -36,9 +36,6 @@ class RecordTrainingLossCb(lightning.Callback):
         self.losses.append(loss.detach())
 
 
-# TODO: There's a failing test here only on SLURM?
-
-
 @pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
 @run_for_all_configs_of_type("algorithm", TextClassificationExample)
 @run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
