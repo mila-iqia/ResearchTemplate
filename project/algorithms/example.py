@@ -79,7 +79,7 @@ class ExampleAlgorithm(LightningModule):
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
             self.network = instantiate(self.network_config)
-
+            self.example_input_array = self.example_input_array.to(self.device)  # type: ignore
             if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
                 # Do a forward pass to initialize any lazy weights. This is necessary for
                 # distributed training and to infer shapes.
