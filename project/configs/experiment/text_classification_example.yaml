@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /algorithm: text_classification_example
+  - override /algorithm: text_classification
   - override /datamodule: glue_cola
   - override /trainer/callbacks: none
 

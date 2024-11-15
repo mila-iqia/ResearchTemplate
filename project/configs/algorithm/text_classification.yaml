@@ -1,5 +1,5 @@
 # Config for the Text classification example algorithm
-_target_: project.algorithms.text_classification_example.TextClassificationExample
+_target_: project.algorithms.text_classification.TextClassificationExample
 _recursive_: false
 network:
   _target_: transformers.models.auto.modeling_auto.AutoModelForSequenceClassification.from_pretrained
