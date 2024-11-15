@@ -11,8 +11,8 @@ from torch import Tensor
 from transformers import PreTrainedModel
 from typing_extensions import override
 
-from project.algorithms.hf_example import HFExample
-from project.datamodules.text.hf_text import HFDataModule
+from project.algorithms.text_classification_example import TextClassificationExample
+from project.datamodules.text.text_classification import TextClassificationDataModule
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type
 
@@ -47,10 +47,10 @@ def total_vram_gb() -> float:
 
 
 @pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
-@run_for_all_configs_of_type("algorithm", HFExample)
-@run_for_all_configs_of_type("datamodule", HFDataModule)
+@run_for_all_configs_of_type("algorithm", TextClassificationExample)
+@run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", PreTrainedModel)
-class TestHFExample(LearningAlgorithmTests[HFExample]):
+class TestTextClassificationExample(LearningAlgorithmTests[TextClassificationExample]):
     """Tests for the HF example."""
 
     @pytest.mark.xfail(
@@ -60,8 +60,8 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
     )
     def test_backward_pass_is_reproducible(  # type: ignore
         self,
-        datamodule: HFDataModule,
-        algorithm: HFExample,
+        datamodule: TextClassificationDataModule,
+        algorithm: TextClassificationExample,
         seed: int,
         accelerator: str,
         devices: int | list[int],
@@ -82,8 +82,8 @@ class TestHFExample(LearningAlgorithmTests[HFExample]):
     @pytest.mark.slow
     def test_overfit_batch(
         self,
-        algorithm: HFExample,
-        datamodule: HFDataModule,
+        algorithm: TextClassificationExample,
+        datamodule: TextClassificationDataModule,
         tmp_path: Path,
         num_steps: int = 3,
     ):

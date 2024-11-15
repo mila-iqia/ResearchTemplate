@@ -53,7 +53,7 @@ auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
     stop_on_error=False,
-    quiet=True,
+    quiet=False,
     verbose=False,
     add_headers=False,  # don't fallback to adding headers if we can't use vscode settings file.
 )

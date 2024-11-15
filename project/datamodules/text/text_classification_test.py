@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from omegaconf import DictConfig
 
-from project.datamodules.text.hf_text import HFDataModule
+from project.datamodules.text.text_classification import TextClassificationDataModule
 from project.experiment import (
     instantiate_datamodule,
 )
@@ -38,7 +38,7 @@ def datamodule(
 
 @pytest.fixture()
 def prepared_datamodule(
-    datamodule: HFDataModule,
+    datamodule: TextClassificationDataModule,
     tmp_path_factory: pytest.TempPathFactory,
 ):
     tmp_path = tmp_path_factory.mktemp("data")
@@ -64,9 +64,9 @@ def prepared_datamodule(
     datamodule.working_path = _slurm_tmpdir_before
 
 
-@run_for_all_configs_of_type("datamodule", HFDataModule)
+@run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
 def test_dataset_location(
-    prepared_datamodule: HFDataModule,
+    prepared_datamodule: TextClassificationDataModule,
 ):
     """Test that the dataset is downloaded to the correct location."""
     datamodule = prepared_datamodule
@@ -81,10 +81,10 @@ def test_dataset_location(
         assert file_path.exists(), f"Expected file: {file_name} not found at {file_path}."
 
 
-@run_for_all_configs_of_type("datamodule", HFDataModule)
+@run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
 @pytest.mark.skip(reason="Not implemented")
 def test_pretrained_weight_location(
-    prepared_datamodule: HFDataModule,
+    prepared_datamodule: TextClassificationDataModule,
 ):
     """Test that the pretrained weights are downloaded to the correct location."""
     # datamodule = prepared_datamodule

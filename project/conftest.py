@@ -92,6 +92,7 @@ from project.experiment import (
     setup_logging,
 )
 from project.main import PROJECT_NAME
+from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.seeding import seeded_rng
@@ -251,7 +252,7 @@ def experiment_dictconfig(
         return dict_config
 
 
-@pytest.fixture()
+@pytest.fixture(scope="function")
 def experiment_config(
     experiment_dictconfig: DictConfig,
 ) -> Config:
@@ -281,23 +282,36 @@ def algorithm(
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
+    # todo: Use the `with device` block only for `configure_model` to replicate the same conditions
+    # as when we're using the PyTorch-Lightning Trainer.
     with device:
-        return instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        if isinstance(algorithm, lightning.LightningModule):
+            algorithm.configure_model()
+    return algorithm
 
 
 @pytest.fixture(scope="function")
 def trainer(
     experiment_config: Config,
-) -> pl.Trainer:
+) -> pl.Trainer | JaxTrainer:
     setup_logging(log_level=experiment_config.log_level)
     lightning.seed_everything(experiment_config.seed, workers=True)
     return instantiate_trainer(experiment_config)
 
 
 @pytest.fixture(scope="session")
-def train_dataloader(datamodule: DataModule) -> DataLoader:
+def train_dataloader(
+    datamodule: lightning.LightningDataModule | None, request: pytest.FixtureRequest
+) -> DataLoader:
     if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
         datamodule.num_workers = 0  # type: ignore
+    if datamodule is None:
+        raise NotImplementedError(
+            "This test is trying to use `train_dataloader` directly or indirectly but the "
+            "algorithm that is being tested does not use a datamodule (or the test was not "
+            "configured properly)! Consider overwriting this fixture in your test class."
+        )
     datamodule.prepare_data()
     datamodule.setup("fit")
     train_dataloader = datamodule.train_dataloader()
@@ -324,7 +338,7 @@ def training_batch(
     return jax.tree.map(operator.methodcaller("to", device=device), batch)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="function")
 def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
     """Fixture that seeds everything for reproducibility and yields the random seed used."""
     random_seed = getattr(request, "param", DEFAULT_SEED)
@@ -635,25 +649,9 @@ def pytest_configure(config: pytest.Config):
     )
 
 
-# import numpy as np
-# def fixed_hash_fn(v: jax.Array | np.ndarray | torch.Tensor) -> int:
-#     if isinstance(v, torch.Tensor):
-#         return hash(tuple(v.detach().cpu().contiguous().numpy().flatten().tolist()))
-#     if isinstance(v, jax.Array | np.ndarray):
-#         return hash(tuple(v.flatten().tolist()))
-#     raise NotImplementedError(f"Don't know how to hash value {v} of type {type(v)}.")
-
-# tensor_regression.stats._hash = fixed_hash_fn
-
-
-def _patched_simple_attributes(v, precision: int | None):
-    stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
-    stats.pop("hash", None)
-    return stats
-
-
+# TODO: remove these, add this fix to the tensor_regression package instead.
 @pytest.fixture(autouse=True)
-def dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
+def _dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
     """Temporarily remove the hash of tensors from the regression files."""
 
     monkeypatch.setattr(
@@ -661,3 +659,9 @@ def dont_use_tensor_hashes_in_regression_files(monkeypatch: pytest.MonkeyPatch):
         tensor_regression.fixture.get_simple_attributes.__name__,  # type: ignore
         _patched_simple_attributes,
     )
+
+
+def _patched_simple_attributes(v, precision: int | None):
+    stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
+    stats.pop("hash", None)
+    return stats

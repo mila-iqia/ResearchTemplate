@@ -1,9 +1,7 @@
 # @package _global_
-
 defaults:
-  - override /datamodule: hf_text
-  - override /algorithm: hf_example
-  - override /algorithm/network: albert-base-v2
+  - override /algorithm: text_classification_example
+  - override /datamodule: glue_cola
   - override /trainer/callbacks: none
 
 trainer:

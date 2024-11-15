@@ -1,3 +1,10 @@
+"""Example algorithm that can train a huggingface model.
+
+Also check out this link for more detailed example script:
+
+https://github.com/lebrice/mila-docs/blob/llm_training/docs/examples/distributed/LLM_training/main.py
+"""
+
 from __future__ import annotations
 
 import shutil
@@ -10,7 +17,7 @@ import torch
 from datasets import DatasetDict, load_dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from project.utils.env_vars import REPO_ROOTDIR, SCRATCH, SLURM_TMPDIR
 
@@ -23,53 +30,47 @@ logger = getLogger(__name__)
 SupportedTask = Literal["cola", "sst2", "mrpc", "qqp", "stsb", "mnli", "qnli", "rte", "wnli", "ax"]
 
 
-def get_task_info(task_name: SupportedTask):
-    task_field_map = {
-        "cola": ["sentence"],
-        "sst2": ["sentence"],
-        "mrpc": ["sentence1", "sentence2"],
-        "qqp": ["question1", "question2"],
-        "stsb": ["sentence1", "sentence2"],
-        "mnli": ["premise", "hypothesis"],
-        "qnli": ["question", "sentence"],
-        "rte": ["sentence1", "sentence2"],
-        "wnli": ["sentence1", "sentence2"],
-        "ax": ["premise", "hypothesis"],
-    }
+task_field_map = {
+    "cola": ["sentence"],
+    "sst2": ["sentence"],
+    "mrpc": ["sentence1", "sentence2"],
+    "qqp": ["question1", "question2"],
+    "stsb": ["sentence1", "sentence2"],
+    "mnli": ["premise", "hypothesis"],
+    "qnli": ["question", "sentence"],
+    "rte": ["sentence1", "sentence2"],
+    "wnli": ["sentence1", "sentence2"],
+    "ax": ["premise", "hypothesis"],
+}
 
-    num_labels = {
-        "cola": 2,
-        "sst2": 2,
-        "mrpc": 2,
-        "qqp": 2,
-        "stsb": 1,
-        "mnli": 3,
-        "qnli": 2,
-        "rte": 2,
-        "wnli": 2,
-        "ax": 3,
-    }
-
-    task_map = task_field_map.get(task_name, None)
-    num_labels = num_labels.get(task_name, None)
-
-    if task_map is None:
-        raise ValueError(f"Task {task_name} task fields currently not supported.")
-
-    if num_labels is None:
-        raise ValueError(f"Task {task_name} labels currently not supported.")
-
-    return task_map, num_labels
+num_labels = {
+    "cola": 2,
+    "sst2": 2,
+    "mrpc": 2,
+    "qqp": 2,
+    "stsb": 1,
+    "mnli": 3,
+    "qnli": 2,
+    "rte": 2,
+    "wnli": 2,
+    "ax": 3,
+}
 
 
-class HFDataModule(LightningDataModule):  ## to be homogenized with the base text class
-    """Lightning data module for HF datasets."""
+class TextClassificationDataModule(LightningDataModule):
+    """Lightning data module for HF text classification datasets.
+
+    This is based on this tutorial:
+    https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/text-transformers.html
+    """
 
     def __init__(
         self,
         hf_dataset_path: str,
-        tokenizer: str,
-        task_name: SupportedTask,
+        tokenizer: PreTrainedTokenizerBase,
+        task_name: str,
+        text_fields: list[str] | None = None,
+        num_classes: int | None = None,
         data_dir: str | Path = SCRATCH or REPO_ROOTDIR / "data",
         loader_columns: list = [
             "datasets_idx",
@@ -108,21 +109,21 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
         self.processed_dataset_path = (
             self.data_dir / f"{self.hf_dataset_path}_{self.task_name}_dataset"
         )
+
+        if text_fields is None:
+            text_fields = task_field_map.get(task_name)
+        self.text_fields = text_fields or ["text"]
+
+        if num_classes is None:
+            num_classes = num_labels.get(task_name)
+        self.num_classes = num_classes
+
         if SLURM_TMPDIR:
             self.working_path = SLURM_TMPDIR / self.processed_dataset_path.name
         else:
             self.working_path = self.processed_dataset_path
-        # self.dataset_path = self.working_path = self.data_dir / f"{self.task_name}_dataset"
-
-        self.text_fields, self.num_labels = get_task_info(task_name)
-
-        ## potential inconsistency in text_fields and task_map
 
         ## todo: verify authentication method setup. Is trust_remote_code the right play here?
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.tokenizer, use_fast=True, cache_dir=self.data_dir, trust_remote_code=True
-        )
-
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
         self.train_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
         self.val_dl_rng_seed = int(torch.randint(0, int(1e6), (1,), generator=_rng).item())
@@ -135,12 +136,13 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
             self.hf_dataset_path,
             self.task_name,
             cache_dir=str(self.data_dir / ".cache/huggingface/datasets"),
+            save_infos=True,
         )
         # Tokenize and save to $SCRATCH
         tokenized_dataset = dataset.map(
             self.convert_to_features,
             batched=True,
-            remove_columns=["label"],
+            remove_columns=(["label"] if "label" in dataset.column_names else []),
             load_from_cache_file=True,
         )
         logger.debug(f"Saving (overwriting) tokenized dataset at {self.processed_dataset_path}")
@@ -242,9 +244,9 @@ class HFDataModule(LightningDataModule):  ## to be homogenized with the base tex
             pad_to_max_length=True,
             truncation=True,
         )
-
-        # Rename label to labels to make it easier to pass to model forward
-        features["labels"] = example_batch["label"]
+        if "label" in example_batch and "labels" not in example_batch:
+            # Rename label to labels to make it easier to pass to model forward
+            features["labels"] = example_batch["label"]
 
         return features
 

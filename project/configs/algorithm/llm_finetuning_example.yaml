@@ -1,0 +1,31 @@
+_target_: project.algorithms.llm_finetuning.LLMFinetuningExample
+network_config:
+  _target_: project.algorithms.llm_finetuning.NetworkConfig
+  _recursive_: false
+  _convert_: object
+  pretrained_model_name_or_path: facebook/opt-350m
+  # Uncomment to use fp16 for training. Beware of nans!
+  # torch_dtype:
+  #   _target_: hydra.utils.get_object
+  #   path: torch.float16
+  # attn_implementation: "flash_attention_2"
+tokenizer_config:
+  _target_: project.algorithms.llm_finetuning.TokenizerConfig
+  _recursive_: false
+  _convert_: object
+  # Use the same key as in the network config. Avoids having to duplicate the value.
+  pretrained_model_name_or_path: ${..network_config.pretrained_model_name_or_path}
+  use_fast: true
+  trust_remote_code: true
+dataset_config:
+  _target_: project.algorithms.llm_finetuning.DatasetConfig
+  dataset_path: wikitext
+  dataset_name: wikitext-2-v1 # Small dataset for this demo. `wikitext-103-v1` is larger.
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  block_size: 256
+learning_rate: 2e-5
+adam_epsilon: 1e-8
+warmup_steps: 0
+weight_decay: 0
+init_seed: 42

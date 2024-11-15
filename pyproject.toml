@@ -60,9 +60,7 @@ docs = [
     "mkdocs-section-index>=0.3.9",
     "mkdocs-macros-plugin>=1.0.5",
 ]
-gpu = [
-    "jax[cuda12]>=0.4.31"
-]
+gpu = ["jax[cuda12]>=0.4.31"]
 
 [build-system]
 requires = ["hatchling"]

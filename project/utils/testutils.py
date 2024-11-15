@@ -23,6 +23,7 @@ logger = get_logger(__name__)
 
 IN_GITHUB_CI = "GITHUB_ACTIONS" in os.environ
 IN_SELF_HOSTED_GITHUB_CI = IN_GITHUB_CI and "self-hosted" in os.environ.get("RUNNER_LABELS", "")
+IN_GITHUB_COULD_CI = IN_GITHUB_CI and not IN_SELF_HOSTED_GITHUB_CI
 PARAM_WHEN_USED_MARK_NAME = "parametrize_when_used"
 
 
