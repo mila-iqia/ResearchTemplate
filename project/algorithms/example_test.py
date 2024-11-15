@@ -2,6 +2,7 @@
 
 import sys
 
+import hydra.errors
 import pytest
 import torch
 from transformers import PreTrainedModel
@@ -33,7 +34,7 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
 
 @pytest.mark.xfail(
     sys.platform == "darwin" and IN_GITHUB_CI,
-    raises=RuntimeError,
+    raises=(RuntimeError, hydra.errors.InstantiationException),
     reason="Raises 'MPS backend out of memory' error on MacOS in Github CI.",
 )
 @run_for_all_configs_of_type("algorithm", ExampleAlgorithm)
