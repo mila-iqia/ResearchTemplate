@@ -649,7 +649,7 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         self,
         name: str,
         value: Any,
-        module: JaxRLExample,
+        module: lightning.LightningModule,
         trainer: lightning.Trainer | JaxTrainer,
         **kwargs,
     ):
