@@ -19,7 +19,7 @@ from project.algorithms.llm_finetuning import (
     TokenizerConfig,
     get_hash_of,
 )
-from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
+from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs.config import Config
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 from project.utils.typing_utils import PyTree
@@ -77,7 +77,7 @@ def _tuple_to_ndarray(v: tuple) -> np.ndarray:
 
 @pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
 @run_for_all_configs_of_type("algorithm", LLMFinetuningExample)
-class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
+class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     @pytest.fixture(scope="function")
     def train_dataloader(
         self,

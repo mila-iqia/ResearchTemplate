@@ -1,4 +1,4 @@
-"""Suite of tests for an "algorithm".
+"""Suite of tests for an a `LightningModule`.
 
 See the [project.algorithms.example_test][] module for an example of how to use this.
 """
@@ -25,14 +25,12 @@ from project.utils.typing_utils.protocols import DataModule
 
 logger = get_logger(__name__)
 
-# todo: potentially use an Algorithm protocol once the Example algo is type-checking OK against it.
 AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 
-# todo: rename to `LightningModuleTests`.
 @pytest.mark.incremental
-class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
-    """Suite of unit tests for an "Algorithm" (LightningModule).
+class LightningModuleTests(Generic[AlgorithmType], ABC):
+    """Suite of generic tests for a LightningModule.
 
     Simply inherit from this class and decorate the class with the appropriate markers to get a set
     of decent unit tests that should apply to any LightningModule.
@@ -329,7 +327,7 @@ class LearningAlgorithmTests(Generic[AlgorithmType], ABC):
 
 
 def _get_algorithm_class_from_generic_arg(
-    cls: type[LearningAlgorithmTests[AlgorithmType]],
+    cls: type[LightningModuleTests[AlgorithmType]],
 ) -> type[AlgorithmType]:
     """Retrieves the class under test from the class definition (without having to set a class
     attribute."""

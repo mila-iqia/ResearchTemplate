@@ -16,7 +16,7 @@ from project.datamodules.text.text_classification import TextClassificationDataM
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 
-from .testsuites.algorithm_tests import LearningAlgorithmTests
+from .testsuites.algorithm_tests import LightningModuleTests
 
 
 class RecordTrainingLossCb(lightning.Callback):
@@ -43,7 +43,7 @@ class RecordTrainingLossCb(lightning.Callback):
 @run_for_all_configs_of_type("algorithm", TextClassificationExample)
 @run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", PreTrainedModel)
-class TestTextClassificationExample(LearningAlgorithmTests[TextClassificationExample]):
+class TestTextClassificationExample(LightningModuleTests[TextClassificationExample]):
     """Tests for the HF example."""
 
     @pytest.mark.xfail(

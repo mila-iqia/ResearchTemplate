@@ -669,10 +669,8 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         # )
 
 
-# TODO: potentially just use the Lightning adapter for unit tests for now?
-# @pytest.mark.skip(reason="TODO: ests assume a LightningModule atm (.state_dict()), etc.")
-# @run_for_all_configs_of_type("algorithm", JaxRLExample)
-# class TestJaxRLExample(LearningAlgorithmTests[JaxRLExample]):  # type: ignore
+# TODO: potentially reuse our test suite by testing the lightning wrapper around the jax algo?
+# class TestJaxRLExample(LightningModuleTests[PPOLightningModule]):  # type: ignore
 #     pass
 
 

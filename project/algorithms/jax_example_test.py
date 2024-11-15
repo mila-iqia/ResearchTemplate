@@ -7,13 +7,13 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.utils.testutils import run_for_all_configs_of_type
 
-from .testsuites.algorithm_tests import LearningAlgorithmTests
+from .testsuites.lightning_module_tests import LightningModuleTests
 
 
 @run_for_all_configs_of_type("algorithm", JaxExample)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 @run_for_all_configs_of_type("network", flax.linen.Module)
-class TestJaxExample(LearningAlgorithmTests[JaxExample]):
+class TestJaxExample(LightningModuleTests[JaxExample]):
     """Tests for the Jax example algorithm.
 
     This simply reuses all the tests in the base test suite, specifying that the `datamodule`

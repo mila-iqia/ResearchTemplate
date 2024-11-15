@@ -7,7 +7,7 @@ import pytest
 import torch
 from transformers import PreTrainedModel
 
-from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
+from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs import Config
 from project.conftest import command_line_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
@@ -35,12 +35,12 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
 @pytest.mark.xfail(
     sys.platform == "darwin" and IN_GITHUB_CI,
     raises=(RuntimeError, hydra.errors.InstantiationException),
-    reason="Raises 'MPS backend out of memory' error on MacOS in Github CI.",
+    reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
 )
 @run_for_all_configs_of_type("algorithm", ExampleAlgorithm)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)
-class TestExampleAlgo(LearningAlgorithmTests[ExampleAlgorithm]):
+class TestExampleAlgo(LightningModuleTests[ExampleAlgorithm]):
     """Tests for the `ExampleAlgorithm`.
 
     This runs all the tests included in the base class, with the given parametrizations:
@@ -51,6 +51,5 @@ class TestExampleAlgo(LearningAlgorithmTests[ExampleAlgorithm]):
         - These are all the configs whose target is an `ImageClassificationDataModule`.
     - Similarly, `network_config` will be parametrized by the names of all configs which produce an nn.Module.
 
-    Take a look at the [LearningAlgorithmTests class][project.algorithms.testsuites.algorithm_tests.LearningAlgorithmTests]
-    if you want to see the actual test code.
+    Take a look at the `LightningModuleTests` class if you want to see the actual test code.
     """
