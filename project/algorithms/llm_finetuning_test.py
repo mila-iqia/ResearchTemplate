@@ -13,7 +13,7 @@ from tensor_regression.stats import get_simple_attributes
 from tensor_regression.to_array import to_ndarray
 from torch.utils.data import DataLoader
 
-from project.algorithms.llm_finetuning_example import (
+from project.algorithms.llm_finetuning import (
     DatasetConfig,
     LLMFinetuningExample,
     TokenizerConfig,
