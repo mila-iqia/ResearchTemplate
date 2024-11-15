@@ -288,6 +288,9 @@ def algorithm(
     algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
         with trainer.init_module():
+            # A bit hacky, but we have to do this because the lightningmodule isn't associated
+            # with a Trainer.
+            algorithm._device = torch.get_default_device()
             algorithm.configure_model()
     return algorithm
 
