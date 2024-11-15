@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from logging import getLogger as get_logger
 
 import pytest
+import torch
 import torchvision.models
 
 from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
@@ -206,4 +207,17 @@ def run_for_all_configs_in_group(
             for config_name, marks in config_name_to_marks.items()
         ],
         indirect=True,
+    )
+
+
+def total_vram_gb() -> float:
+    """Returns the total VRAM in GB."""
+    if not torch.cuda.is_available():
+        return 0.0
+    return (
+        sum(
+            torch.cuda.get_device_properties(i).total_memory
+            for i in range(torch.cuda.device_count())
+        )
+        / 1024**3
     )
