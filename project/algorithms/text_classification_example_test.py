@@ -14,7 +14,7 @@ from typing_extensions import override
 from project.algorithms.text_classification_example import TextClassificationExample
 from project.datamodules.text.text_classification import TextClassificationDataModule
 from project.utils.env_vars import SLURM_JOB_ID
-from project.utils.testutils import run_for_all_configs_of_type
+from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 
 from .testsuites.algorithm_tests import LearningAlgorithmTests
 
@@ -34,13 +34,6 @@ class RecordTrainingLossCb(lightning.Callback):
     ):
         assert isinstance(outputs, dict) and isinstance(loss := outputs.get("loss"), Tensor)
         self.losses.append(loss.detach())
-
-
-def total_vram_gb() -> float:
-    """Returns the total VRAM in GB."""
-    if not torch.cuda.is_available():
-        return 0.0
-    return torch.cuda.get_device_properties(0).total_memory / 1024**3
 
 
 # TODO: There's a failing test here only on SLURM?
