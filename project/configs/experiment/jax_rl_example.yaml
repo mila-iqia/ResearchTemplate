@@ -2,7 +2,7 @@
 
 defaults:
   - override /algorithm: jax_ppo
-  - override /trainer: jax
+  - override /trainer: jax_trainer
   - override /trainer/callbacks: rich_progress_bar
   - override /datamodule: null
   # - /trainer/logger: tensorboard
