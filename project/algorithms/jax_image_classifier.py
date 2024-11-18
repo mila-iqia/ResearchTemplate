@@ -100,7 +100,7 @@ class JaxImageClassifier(LightningModule):
             device=self.device,
         )
         # Initialize the jax parameters with a forward pass.
-        params = self.jax_network.init(jax.random.key(self.hp.seed), x=torch_to_jax(example_input))
+        params = self.jax_network.init(jax.random.key(self.hp.seed), torch_to_jax(example_input))
         # Wrap the jax network into a nn.Module:
         self.network = WrappedJaxFunction(
             jax_function=jax.jit(self.jax_network.apply)
@@ -136,6 +136,7 @@ class JaxImageClassifier(LightningModule):
     ):
         x, y = batch
         assert not x.requires_grad
+        assert self.network is not None
         logits = self.network(x)
         assert isinstance(logits, torch.Tensor)
         # In this example we use a jax "encoder" network and a PyTorch loss function, but we could
