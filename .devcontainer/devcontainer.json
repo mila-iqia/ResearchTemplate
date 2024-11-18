@@ -85,7 +85,6 @@
 	"containerEnv": {
 		"SCRATCH": "/home/vscode/scratch",
 		"SLURM_TMPDIR": "/tmp",
-		"NETWORK_DIR": "/network",
 		"UV_LINK_MODE": "symlink",
 		"UV_CACHE_DIR": "/home/vscode/.uv_cache"
 	},
