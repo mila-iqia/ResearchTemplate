@@ -91,27 +91,31 @@ class JaxImageClassifier(LightningModule):
 
         self.datamodule = datamodule
         self.hp = hp or self.HParams()
+        self.jax_network = network
+        self.network: torch.nn.Module | None = None
 
+    def configure_model(self):
         example_input = torch.zeros(
-            (datamodule.batch_size, *datamodule.dims),
+            (self.datamodule.batch_size, *self.datamodule.dims),
             device=self.device,
         )
         # Initialize the jax parameters with a forward pass.
-        params = network.init(jax.random.key(self.hp.seed), x=torch_to_jax(example_input))
-
+        params = self.jax_network.init(jax.random.key(self.hp.seed), x=torch_to_jax(example_input))
         # Wrap the jax network into a nn.Module:
         self.network = WrappedJaxFunction(
-            jax_function=jax.jit(network.apply) if not self.hp.debug else network.apply,
+            jax_function=jax.jit(self.jax_network.apply)
+            if not self.hp.debug
+            else self.jax_network.apply,
             jax_params=params,
             # Need to call .clone() when doing distributed training, otherwise we get a RuntimeError:
             # Invalid device pointer when trying to share the CUDA tensors that come from jax.
             clone_params=True,
             has_aux=False,
         )
-
         self.example_input_array = example_input
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
+        assert self.network is not None
         logits = self.network(input)
         return logits
 

@@ -11,12 +11,12 @@ from .testsuites.lightning_module_tests import LightningModuleTests
 
 
 @run_for_all_configs_of_type("algorithm", JaxImageClassifier)
+@run_for_all_configs_of_type("algorithm/network", flax.linen.Module)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
-@run_for_all_configs_of_type("network", flax.linen.Module)
 class TestJaxImageClassifier(LightningModuleTests[JaxImageClassifier]):
     """Tests for the Jax image classification algorithm.
 
     This simply reuses all the tests in the base test suite, specifying that the `datamodule`
-    passed to the ``JaxImageClassifier`` should be for image classification and the `network` should be a
+    passed to the `JaxImageClassifier` should be for image classification and the `network` should be a
     `flax.linen.Module`.
     """
