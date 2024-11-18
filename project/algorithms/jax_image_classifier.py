@@ -216,7 +216,7 @@ def to_channels_last(x: jax.Array) -> jax.Array:
     return x.transpose(0, 2, 3, 1)
 
 
-def demo():
+def demo(**trainer_kwargs):
     logging.basicConfig(
         level=logging.INFO, format="%(message)s", handlers=[rich.logging.RichHandler()]
     )
@@ -224,18 +224,17 @@ def demo():
 
     os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     trainer = Trainer(
-        devices="auto",
-        max_epochs=1,
+        **trainer_kwargs,
         accelerator="auto",
         callbacks=[RichProgressBar()],
     )
     datamodule = MNISTDataModule(num_workers=4, batch_size=64)
     network = JaxCNN(num_classes=datamodule.num_classes)
-
+    optimizer = functools.partial(torch.optim.SGD, lr=0.01)
     model = JaxImageClassifier(
         datamodule=datamodule,
         network=hydra_zen.just(network),
-        optimizer=hydra_zen.builds(torch.optim.SGD, lr=0.01, zen_partial=True),
+        optimizer=hydra_zen.just(optimizer),
     )
     trainer.fit(model, datamodule=datamodule)
 
