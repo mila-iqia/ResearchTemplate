@@ -2,9 +2,12 @@
 
 IDEA: Tweak the AutoRefsPlugin so that text in backticks like `this` (more IDE-friendly) are
 considered refs when possible.
+
+TODO: Move to a separate package?
 """
 
 import functools
+import importlib
 import inspect
 import re
 import types
@@ -16,8 +19,6 @@ from mkdocs.plugins import BasePlugin, get_plugin_logger
 from mkdocs.structure.files import Files
 from mkdocs.structure.pages import Page
 from mkdocs_autorefs.plugin import AutorefsPlugin  # noqa
-
-from project.utils.hydra_config_utils import import_object
 
 # Same as in the mkdocs_autorefs plugin.
 logger = get_plugin_logger(__name__)
@@ -159,6 +160,38 @@ def _expand(obj: types.ModuleType | object) -> list[object]:
                 or (inspect.ismodule(v) and inspect.getsourcefile(v) != source_file)
             )
         ]
+
+
+def import_object(target_path: str):
+    """Imports the object at the given path."""
+
+    # todo: what is the difference between this here and `hydra.utils.get_object` ?
+    assert not target_path.endswith(
+        ".py"
+    ), "expect a valid python path like 'module.submodule.object'"
+    if "." not in target_path:
+        return importlib.import_module(target_path)
+
+    parts = target_path.split(".")
+    try:
+        return importlib.import_module(name=f".{parts[-1]}", package=".".join(parts[:-1]))
+    except (ModuleNotFoundError, AttributeError):
+        pass
+    exc = None
+    for i in range(1, len(parts)):
+        module_name = ".".join(parts[:i])
+        obj_path = parts[i:]
+        try:
+            module = importlib.import_module(module_name)
+            obj = getattr(module, obj_path[0])
+            for part in obj_path[1:]:
+                obj = getattr(obj, part)
+            return obj
+        except (ModuleNotFoundError, AttributeError) as _exc:
+            exc = _exc
+            continue
+    assert exc is not None
+    raise ModuleNotFoundError(f"Unable to import the {target_path=}!") from exc
 
 
 def _get_referencable_objects_from_doc_page_header(doc_page_references: list[str]):

@@ -1,10 +1,10 @@
 import functools
-import importlib
 import inspect
 import typing
 from collections.abc import Callable
 from logging import getLogger as get_logger
 
+import hydra.utils
 import hydra_zen
 from hydra.core.config_store import ConfigStore
 
@@ -93,9 +93,8 @@ def get_target_of_config(
             ) from error_yaml
 
     if "_target_" in config_node.node:
-        # BUG: This won't work for nested classes! "module.class.class"
         target: str = config_node.node["_target_"]
-        return import_object(target)
+        return hydra.utils.get_object(target)
         # module_name, _, class_name = target.rpartition(".")
         # module = importlib.import_module(module_name)
         # target = getattr(module, class_name)
@@ -114,36 +113,6 @@ def get_target_of_config(
     hparam_type = config_node.node._metadata.object_type
     target_type = get_outer_class(hparam_type)
     return target_type
-
-
-def import_object(target_path: str):
-    """Imports the object at the given path."""
-    assert not target_path.endswith(
-        ".py"
-    ), "expect a valid python path like 'module.submodule.object'"
-    if "." not in target_path:
-        return importlib.import_module(target_path)
-
-    parts = target_path.split(".")
-    try:
-        return importlib.import_module(name=f".{parts[-1]}", package=".".join(parts[:-1]))
-    except (ModuleNotFoundError, AttributeError):
-        pass
-    exc = None
-    for i in range(1, len(parts)):
-        module_name = ".".join(parts[:i])
-        obj_path = parts[i:]
-        try:
-            module = importlib.import_module(module_name)
-            obj = getattr(module, obj_path[0])
-            for part in obj_path[1:]:
-                obj = getattr(obj, part)
-            return obj
-        except (ModuleNotFoundError, AttributeError) as _exc:
-            exc = _exc
-            continue
-    assert exc is not None
-    raise ModuleNotFoundError(f"Unable to import the {target_path=}!") from exc
 
 
 def get_all_configs_in_group_of_type(
