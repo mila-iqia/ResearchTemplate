@@ -71,14 +71,12 @@ def test_ref_using_additional_python_references():
         ),
         config=mkdocs_config,
     )
-    page.meta = {"additional_python_references": ["project.algorithms.image_classification"]}
+    page.meta = {"additional_python_references": ["project.algorithms.image_classifier"]}
 
     result = plugin.on_page_markdown(
-        "`ExampleAlgorithm`",
+        "`ImageClassifier`",
         page=page,
         config=mkdocs_config,
         files=Files([]),
     )
-    assert (
-        result == "[`ExampleAlgorithm`][project.algorithms.image_classification.ExampleAlgorithm]"
-    )
+    assert result == "[`ImageClassifier`][project.algorithms.image_classifier.ImageClassifier]"
