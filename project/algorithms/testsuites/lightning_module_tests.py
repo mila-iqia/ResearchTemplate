@@ -21,7 +21,6 @@ from tensor_regression import TensorRegressionFixture
 from project.configs.config import Config
 from project.experiment import instantiate_algorithm
 from project.utils.typing_utils import PyTree, is_sequence_of
-from project.utils.typing_utils.protocols import DataModule
 
 logger = get_logger(__name__)
 
@@ -154,7 +153,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     def test_initialization_is_reproducible(
         self,
         experiment_config: Config,
-        datamodule: DataModule,
+        datamodule: lightning.LightningDataModule,
         seed: int,
         tensor_regression: TensorRegressionFixture,
         trainer: lightning.Trainer,
