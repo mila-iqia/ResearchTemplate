@@ -1,3 +1,8 @@
+"""Small typing helpers for Jax.
+
+This makes `jax.jit` preserve the signature of the wrapped callable.
+"""
+
 from __future__ import annotations
 
 import dataclasses
