@@ -1,4 +1,3 @@
-import importlib
 import os
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -82,29 +81,6 @@ if (
     and _torchvision_dir.is_dir()
 ):
     torchvision_dir = _torchvision_dir
-
-
-def get_constant(*names: str):
-    """Resolver for Hydra to get the value of a constant in this file."""
-    assert names
-    for name in names:
-        if name in globals():
-            obj = globals()[name]
-            if obj is None:
-                logger.debug(f"Value of {name} is None, moving on to the next value.")
-                continue
-            return obj
-        parts = name.split(".")
-        obj = importlib.import_module(parts[0])
-        for part in parts[1:]:
-            obj = getattr(obj, part)
-        if obj is not None:
-            return obj
-        logger.debug(f"Value of {name} is None, moving on to the next value.")
-
-    if len(names) == 1:
-        raise RuntimeError(f"Could not find non-None value for name {names[0]}")
-    raise RuntimeError(f"Could not find non-None value for names {names}")
 
 
 NUM_WORKERS = int(
