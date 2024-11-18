@@ -69,7 +69,9 @@ from typing import Literal
 
 import jax
 import lightning
+import lightning.pytorch
 import lightning.pytorch as pl
+import lightning.pytorch.utilities
 import pytest
 import tensor_regression.stats
 import torch
@@ -95,7 +97,6 @@ from project.main import PROJECT_NAME
 from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
@@ -348,7 +349,8 @@ def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
     random_seed = getattr(request, "param", DEFAULT_SEED)
     assert isinstance(random_seed, int) or random_seed is None
 
-    with seeded_rng(random_seed):
+    with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+        lightning.seed_everything(random_seed, workers=True)
         yield random_seed
 
 
