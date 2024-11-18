@@ -77,9 +77,8 @@ def main(dict_config: DictConfig) -> dict:
     3. Calls `evaluation` to evaluate the model
     4. Returns the evaluation metrics.
     """
-    print(dict_config)
     print_config(dict_config, resolve=False)
-    # assert False, "this shouldn't even be run."
+
     # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
 
