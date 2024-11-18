@@ -26,3 +26,11 @@ class TestJaxImageClassifier(LightningModuleTests[JaxImageClassifier]):
     passed to the `JaxImageClassifier` should be for image classification and the `network` should be a
     `flax.linen.Module`.
     """
+
+
+@pytest.mark.slow
+def test_demo():
+    """Test the demo at the bottom of the module."""
+    from .jax_image_classifier import demo
+
+    demo()
