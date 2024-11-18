@@ -56,13 +56,7 @@ class ImageClassifier(LightningModule):
         self.init_seed = init_seed
 
         # Save hyper-parameters.
-        self.save_hyperparameters(
-            {
-                "network_config": self.network_config,
-                "optimizer_config": self.optimizer_config,
-                "init_seed": init_seed,
-            }
-        )
+        self.save_hyperparameters(ignore=["datamodule"])
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
         self.example_input_array = torch.zeros(
             (datamodule.batch_size, *datamodule.dims), device=self.device

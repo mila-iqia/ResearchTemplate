@@ -1,5 +1,5 @@
 # This is an example of how you can use a config file to configure a LightningModule.
-# In this case we configure the example algorithm.
+# In this case we configure the image classifier algorithm.
 defaults:
   - network: resnet18
   - optimizer: Adam

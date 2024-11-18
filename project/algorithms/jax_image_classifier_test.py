@@ -3,7 +3,6 @@ import flax.linen
 import pytest
 
 from project.algorithms.jax_image_classifier import JaxImageClassifier
-from project.conftest import make_torch_deterministic
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
@@ -12,9 +11,11 @@ from project.utils.testutils import run_for_all_configs_of_type
 from .testsuites.lightning_module_tests import LightningModuleTests
 
 
-# todo: Getting a "RuntimeError: nll_loss2d_forward_out_cuda_template does not have a deterministic
-# implementation" if we set deterministic_mode to "error".
-@pytest.mark.parametrize(make_torch_deterministic.__name__, ["warn"], indirect=True)
+@pytest.fixture(autouse=True)
+def prevent_jax_from_reserving_all_the_vram(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+
+
 @run_for_all_configs_of_type("algorithm", JaxImageClassifier)
 @run_for_all_configs_of_type("algorithm/network", flax.linen.Module)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)

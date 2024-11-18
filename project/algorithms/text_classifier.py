@@ -1,10 +1,8 @@
 from datetime import datetime
-from typing import TypeVar
 
 import evaluate
 import hydra_zen
 import torch
-from hydra_zen.typing import Builds
 from lightning import LightningModule
 from torch.optim.adamw import AdamW
 from transformers import (
@@ -14,10 +12,7 @@ from transformers import (
 from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput
 
 from project.datamodules.text.text_classification import TextClassificationDataModule
-
-T = TypeVar("T")
-# Config that returns the object of type T when instantiated.
-ConfigFor = Builds[type[T]]
+from project.utils.typing_utils import HydraConfigFor
 
 
 class TextClassifier(LightningModule):
@@ -26,7 +21,7 @@ class TextClassifier(LightningModule):
     def __init__(
         self,
         datamodule: TextClassificationDataModule,
-        network: ConfigFor[PreTrainedModel],
+        network: HydraConfigFor[PreTrainedModel],
         hf_metric_name: str,
         learning_rate: float = 2e-5,
         adam_epsilon: float = 1e-8,
@@ -36,7 +31,7 @@ class TextClassifier(LightningModule):
     ):
         super().__init__()
         self.network_config = network
-        self.num_labels = getattr(datamodule, "num_classes", None)
+        self.num_labels = datamodule.num_classes
         self.task_name = datamodule.task_name
         self.init_seed = init_seed
         self.hf_metric_name = hf_metric_name
@@ -52,7 +47,7 @@ class TextClassifier(LightningModule):
             experiment_id=datetime.now().strftime("%d-%m-%Y_%H-%M-%S"),
         )
 
-        self.save_hyperparameters(ignore=["network", "datamodule"])
+        self.save_hyperparameters(ignore=["datamodule"])
 
     def configure_model(self) -> None:
         with torch.random.fork_rng(devices=[self.device]):

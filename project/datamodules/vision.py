@@ -115,7 +115,9 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             self.test_kwargs["train"] = False
 
         self.batch_size_per_device: int = batch_size
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(
+            logger=False, ignore=["train_transforms", "val_transforms", "test_transforms"]
+        )
 
     def prepare_data(self) -> None:
         """Saves files to data_dir."""

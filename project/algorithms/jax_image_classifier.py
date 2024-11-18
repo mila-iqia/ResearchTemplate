@@ -1,16 +1,17 @@
-import dataclasses
+import functools
 import logging
-import os
 from typing import Literal
 
-import chex
 import flax.linen
+import hydra_zen
 import jax
 import rich
 import rich.logging
 import torch
 import torch.distributed
 from lightning import Callback, LightningModule, Trainer
+from torch.nn import functional as F
+from torch.optim.optimizer import Optimizer
 from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
@@ -19,14 +20,14 @@ from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.datamodules.image_classification.mnist import MNISTDataModule
-from project.utils.typing_utils.protocols import ClassificationDataModule
+from project.utils.typing_utils import HydraConfigFor
 
 
 def flatten(x: jax.Array) -> jax.Array:
     return x.reshape((x.shape[0], -1))
 
 
-class CNN(flax.linen.Module):
+class JaxCNN(flax.linen.Module):
     """A simple CNN model.
 
     Taken from https://flax.readthedocs.io/en/latest/quick_start.html#define-network
@@ -56,8 +57,8 @@ class JaxFcNet(flax.linen.Module):
     num_features: int = 256
 
     @flax.linen.compact
-    def __call__(self, x: jax.Array, forward_rng: chex.PRNGKey | None = None):
-        # x = flatten(x)
+    def __call__(self, x: jax.Array):
+        x = flatten(x)
         x = flax.linen.Dense(features=self.num_features)(x)
         x = flax.linen.relu(x)
         x = flax.linen.Dense(features=self.num_classes)(x)
@@ -71,48 +72,54 @@ class JaxImageClassifier(LightningModule):
     written in Jax, and the loss function is in pytorch.
     """
 
-    @dataclasses.dataclass(frozen=True)
-    class HParams:
-        """Hyper-parameters of the algo."""
-
-        lr: float = 1e-3
-        seed: int = 123
-        debug: bool = True
-
     def __init__(
         self,
-        *,
-        network: flax.linen.Module,
         datamodule: ImageClassificationDataModule,
-        hp: HParams = HParams(),
+        network: HydraConfigFor[flax.linen.Module],
+        optimizer: HydraConfigFor[functools.partial[Optimizer]],
+        init_seed: int = 123,
+        debug: bool = True,
     ):
         super().__init__()
-        os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-
         self.datamodule = datamodule
-        self.hp = hp or self.HParams()
-        self.jax_network = network
+        self.network_config = network
+        self.optimizer_config = optimizer
+        self.init_seed = init_seed
+        self.debug = debug
+
+        # Create the jax network (safe to do even on CPU here).
+        self.jax_network: flax.linen.Module = hydra_zen.instantiate(self.network_config)
+        # We'll instantiate the parameters and the torch wrapper around the jax network in
+        # `configure_model` so the weights are directly on the GPU.
         self.network: torch.nn.Module | None = None
+        self.save_hyperparameters(ignore=["datamodule"])
 
     def configure_model(self):
         example_input = torch.zeros(
             (self.datamodule.batch_size, *self.datamodule.dims),
             device=self.device,
         )
+        # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
+        self.example_input_array = example_input
+
         # Initialize the jax parameters with a forward pass.
-        params = self.jax_network.init(jax.random.key(self.hp.seed), torch_to_jax(example_input))
+        jax_params = self.jax_network.init(
+            jax.random.key(self.init_seed), torch_to_jax(example_input)
+        )
+
+        jax_network_forward = self.jax_network.apply
+        if not self.debug:
+            jax_network_forward = jax.jit(jax_network_forward)
+
         # Wrap the jax network into a nn.Module:
         self.network = WrappedJaxFunction(
-            jax_function=jax.jit(self.jax_network.apply)
-            if not self.hp.debug
-            else self.jax_network.apply,
-            jax_params=params,
+            jax_function=jax_network_forward,
+            jax_params=jax_params,
             # Need to call .clone() when doing distributed training, otherwise we get a RuntimeError:
             # Invalid device pointer when trying to share the CUDA tensors that come from jax.
             clone_params=True,
             has_aux=False,
         )
-        self.example_input_array = example_input
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         assert self.network is not None
@@ -134,6 +141,7 @@ class JaxImageClassifier(LightningModule):
         batch_index: int,
         phase: Literal["train", "val", "test"],
     ):
+        # This is the same thing as the `ImageClassifier.shared_step`!
         x, y = batch
         assert not x.requires_grad
         assert self.network is not None
@@ -141,17 +149,26 @@ class JaxImageClassifier(LightningModule):
         assert isinstance(logits, torch.Tensor)
         # In this example we use a jax "encoder" network and a PyTorch loss function, but we could
         # also just as easily have done the whole forward and backward pass in jax if we wanted to.
-        loss = torch.nn.functional.cross_entropy(logits, target=y, reduction="mean")
+        loss = F.cross_entropy(logits, y, reduction="mean")
         acc = logits.argmax(-1).eq(y).float().mean()
         self.log(f"{phase}/loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{phase}/acc", acc, prog_bar=True, sync_dist=True)
         return {"loss": loss, "logits": logits, "y": y}
 
     def configure_optimizers(self):
-        return torch.optim.SGD(self.parameters(), lr=self.hp.lr)
+        """Creates the optimizers.
+
+        See [`lightning.pytorch.core.LightningModule.configure_optimizers`][] for more information.
+        """
+        # Instantiate the optimizer config into a functools.partial object.
+        optimizer_partial = hydra_zen.instantiate(self.optimizer_config)
+        # Call the functools.partial object, passing the parameters as an argument.
+        optimizer = optimizer_partial(self.parameters())
+        # This then returns the optimizer.
+        return optimizer
 
     def configure_callbacks(self) -> list[Callback]:
-        assert isinstance(self.datamodule, ClassificationDataModule)
+        assert isinstance(self.datamodule, ImageClassificationDataModule)
         return [
             MeasureSamplesPerSecondCallback(),
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes),
@@ -211,7 +228,7 @@ def main():
         callbacks=[RichProgressBar()],
     )
     datamodule = MNISTDataModule(num_workers=4, batch_size=512)
-    network = CNN(num_classes=datamodule.num_classes)
+    network = JaxCNN(num_classes=datamodule.num_classes)
 
     model = JaxImageClassifier(network=network, datamodule=datamodule)
     trainer.fit(model, datamodule=datamodule)
