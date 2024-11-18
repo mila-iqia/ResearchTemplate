@@ -23,6 +23,7 @@ from project.experiment import (
 from project.utils.hydra_utils import resolve_dictconfig
 
 
+# NTOE: could also run these commands with the `resources` group and `cluster=mila`
 @pytest.mark.skipif(not shutil.which("sbatch"), reason="Needs to be run on a SLURM cluster")
 @pytest.mark.parametrize(
     "command_line_arguments",
