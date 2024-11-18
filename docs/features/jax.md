@@ -32,12 +32,12 @@ training loop as usual, you can!
 
 The [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer] will not be able to tell that you're using Jax!
 
-**Take a look at [this image classification example that uses a Jax network](../examples/jax_sl_example.md).**
+**Take a look at [this image classification example that uses a Jax network](../examples/jax_image_classification.md).**
 
 
 ## End-to-end training in Jax: the `JaxTrainer`
 
-The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl_example.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s, which are a simplified, jax-based look-alike of `lightning.LightningModule`s.
+The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s, which are a simplified, jax-based look-alike of `lightning.LightningModule`s.
 
 
 The "algorithm" needs to match the `JaxModule` protocol:

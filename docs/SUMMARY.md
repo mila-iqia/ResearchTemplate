@@ -7,11 +7,11 @@
     * [Thorough automated testing on SLURM clusters](features/testing.md)
     * features/*.md
   * [Examples 🧪](examples/index.md)
-    * [Image Classification (⚡)](examples/torch_sl_example.md)
-    * [Image Classification (jax+⚡)](examples/jax_sl_example.md)
+    * [Image Classification (⚡)](examples/image_classification.md)
+    * [Image Classification (jax+⚡)](examples/jax_image_classification.md)
     * [Text Classification (🤗+⚡)](examples/text_classification.md)
     * [Fine-tuning an LLM (🤗+⚡)](examples/llm_finetuning.md)
-    * [RL (jax)](examples/jax_rl_example.md)
+    * [Reinforcement Learning (jax)](examples/jax_rl.md)
     * [Running sweeps](examples/sweeps.md)
     * [Profiling your code📎](examples/profiling.md)
     * examples/*.md

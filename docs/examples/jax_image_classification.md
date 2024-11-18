@@ -22,11 +22,11 @@ pass uses Jax to calculate the gradients, and the weights are updated by a PyTor
 
 !!! question "What about end-to-end training in Jax?"
 
-    See the [Jax RL Example](../examples/jax_rl_example.md)! :smile:
+    See the [Jax RL Example](../examples/jax_rl.md)! :smile:
 
 ### Jax Network
 
-{{ inline('project.algorithms.jax_image_classifier.CNN') }}
+{{ inline('project.algorithms.jax_image_classifier.JaxCNN') }}
 
 ### Jax Algorithm
 
