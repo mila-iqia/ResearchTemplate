@@ -195,7 +195,9 @@ def test_can_run_experiment(
     project.main.main()
 
 
-@pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)
+@pytest.mark.parametrize(
+    command_line_overrides.__name__, ["algorithm=image_classifier"], indirect=True
+)
 def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
     """Test to check that the datamodule is required (even when just the example algorithm is set).
 
