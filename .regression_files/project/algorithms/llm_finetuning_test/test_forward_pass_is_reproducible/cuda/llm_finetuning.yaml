@@ -1,0 +1,176 @@
+input.attention_mask:
+  device: cuda:0
+  max: 1
+  mean: '1.e+00'
+  min: 1
+  shape:
+  - 8
+  - 256
+  sum: 2048
+input.input_ids:
+  device: cuda:0
+  max: 50118
+  mean: '5.447e+03'
+  min: 2
+  shape:
+  - 8
+  - 256
+  sum: 11154886
+input.labels:
+  device: cuda:0
+  max: 50118
+  mean: '5.447e+03'
+  min: 2
+  shape:
+  - 8
+  - 256
+  sum: 11154886
+out.logits:
+  device: cuda:0
+  max: '3.537e+01'
+  mean: '-4.715e+00'
+  min: '-3.336e+01'
+  shape:
+  - 8
+  - 256
+  - 50272
+  sum: '-4.855e+08'
+out.loss:
+  device: cuda:0
+  max: '4.05e+00'
+  mean: '4.05e+00'
+  min: '4.05e+00'
+  shape: []
+  sum: '4.05e+00'
+out.past_key_values:
+  '0':
+    '0':
+      device: cuda:0
+      hash: -5597283837606595630
+      max: '1.824e+00'
+      mean: '-3.677e-03'
+      min: '-2.004e+00'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '-7.711e+03'
+    '1':
+      device: cuda:0
+      hash: -5038052215002921505
+      max: '1.91e-01'
+      mean: '6.668e-05'
+      min: '-1.719e-01'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '1.398e+02'
+    length: 2
+  '1':
+    '0':
+      device: cuda:0
+      hash: 1296227023590222554
+      max: '1.150e+01'
+      mean: '5.521e-03'
+      min: '-1.144e+01'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '1.158e+04'
+    '1':
+      device: cuda:0
+      hash: 7673183268564812739
+      max: '4.35e+00'
+      mean: '2.593e-03'
+      min: '-4.527e+00'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '5.439e+03'
+    length: 2
+  '2':
+    '0':
+      device: cuda:0
+      hash: 8593970087358618549
+      max: '1.074e+01'
+      mean: '6.862e-02'
+      min: '-1.063e+01'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '1.439e+05'
+    '1':
+      device: cuda:0
+      hash: -4879008825285192049
+      max: '4.396e+00'
+      mean: '2.223e-03'
+      min: '-4.462e+00'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '4.662e+03'
+    length: 2
+  '3':
+    '0':
+      device: cuda:0
+      hash: -4641278451346103211
+      max: '1.142e+01'
+      mean: '4.512e-02'
+      min: '-1.147e+01'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '9.462e+04'
+    '1':
+      device: cuda:0
+      hash: -1495399951870456760
+      max: '4.416e+00'
+      mean: '-3.978e-04'
+      min: '-4.476e+00'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '-8.342e+02'
+    length: 2
+  '4':
+    '0':
+      device: cuda:0
+      hash: -3802337921208132183
+      max: '1.193e+01'
+      mean: '-3.041e-02'
+      min: '-1.091e+01'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '-6.377e+04'
+    '1':
+      device: cuda:0
+      hash: 9041939600569860586
+      max: '4.839e+00'
+      mean: '-4.185e-04'
+      min: '-5.120e+00'
+      shape:
+      - 8
+      - 16
+      - 256
+      - 64
+      sum: '-8.776e+02'
+    length: 2
+  length: 24
