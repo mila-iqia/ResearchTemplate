@@ -109,7 +109,7 @@ in_github_CI = os.environ.get("GITHUB_ACTIONS") == "true"
     "argv",
     [
         [
-            "algorithm=image_classification",
+            "algorithm=image_classifier",
             "datamodule=cifar10",
             # TODO: The ordering is important here, we can't use `cluster` before `resources`,
             # otherwise it will use the local launcher!
