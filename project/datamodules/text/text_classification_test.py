@@ -79,21 +79,3 @@ def test_dataset_location(
     for file_name in expected_files:
         file_path = datamodule.working_path / file_name
         assert file_path.exists(), f"Expected file: {file_name} not found at {file_path}."
-
-
-@run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
-@pytest.mark.skip(reason="Not implemented")
-def test_pretrained_weight_location(
-    prepared_datamodule: TextClassificationDataModule,
-):
-    """Test that the pretrained weights are downloaded to the correct location."""
-    # datamodule = prepared_datamodule
-    pass
-
-
-## mismatched tasks
-# datamodule = HFDataModule(
-#    tokenizer="EleutherAI/gpt-neo-125M",
-#    hf_dataset_path="roneneldan/TinyStories",
-#    dataset_path=SLURM_TMPDIR,
-# )
