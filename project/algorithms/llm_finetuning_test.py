@@ -23,7 +23,6 @@ from project.algorithms.testsuites.lightning_module_tests import LightningModule
 from project.configs.config import Config
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 from project.utils.typing_utils import PyTree
-from project.utils.typing_utils.protocols import DataModule
 
 
 @pytest.mark.parametrize(
@@ -133,7 +132,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     def test_initialization_is_reproducible(
         self,
         experiment_config: Config,
-        datamodule: DataModule,
+        datamodule: lightning.LightningDataModule,
         seed: int,
         tensor_regression: TensorRegressionFixture,
         trainer: lightning.Trainer,

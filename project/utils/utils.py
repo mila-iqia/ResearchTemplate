@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing
 from collections.abc import Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -12,7 +11,6 @@ import rich.tree
 import torch
 from lightning import LightningDataModule, Trainer
 from omegaconf import DictConfig, OmegaConf
-from torchvision import transforms
 
 from project.utils.typing_utils.protocols import (
     DataModule,
@@ -43,53 +41,9 @@ def get_log_dir(trainer: Trainer | None) -> Path:
 DM = TypeVar("DM", bound=DataModule | LightningDataModule)
 
 
-def validate_datamodule(datamodule: DM) -> DM:
-    """Checks that the transforms / things are setup correctly.
-
-    Returns the same datamodule.
-    """
-    from project.datamodules.image_classification.image_classification import (
-        ImageClassificationDataModule,
-    )
-
-    if isinstance(datamodule, ImageClassificationDataModule) and not datamodule.normalize:
-        _remove_normalization_from_transforms(datamodule)
-        return datamodule
-        # todo: maybe check that the normalization transform is present everywhere?
-    return datamodule
-
-
-if typing.TYPE_CHECKING:
-    from project.datamodules.image_classification.image_classification import (
-        ImageClassificationDataModule,
-    )
-
-
 # todo: shouldn't be here, should be done in `VisionDataModule` or in the configs:
 # If `normalize=False`, and there is a normalization transform in the train transforms, then an
 # error should be raised.
-def _remove_normalization_from_transforms(
-    datamodule: ImageClassificationDataModule,
-) -> None:
-    transform_properties = (
-        datamodule.train_transforms,
-        datamodule.val_transforms,
-        datamodule.test_transforms,
-    )
-    for transform_list in transform_properties:
-        if transform_list is None:
-            continue
-        assert isinstance(transform_list, transforms.Compose)
-        if isinstance(transform_list.transforms[-1], transforms.Normalize):
-            t = transform_list.transforms.pop(-1)
-            logger.info(f"Removed normalization transform {t} since datamodule.normalize=False")
-        if any(isinstance(t, transforms.Normalize) for t in transform_list.transforms):
-            raise RuntimeError(
-                f"Unable to remove all the normalization transforms from datamodule {datamodule}: "
-                f"{transform_list}"
-            )
-
-
 # from lightning.utilities.rank_zero import rank_zero_only
 
 

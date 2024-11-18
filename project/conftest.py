@@ -103,7 +103,6 @@ from project.utils.testutils import (
     default_marks_for_config_name,
 )
 from project.utils.typing_utils import is_sequence_of
-from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
@@ -271,7 +270,7 @@ def experiment_config(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_dictconfig: DictConfig) -> DataModule | None:
+def datamodule(experiment_dictconfig: DictConfig) -> lightning.LightningDataModule | None:
     """Fixture that creates the datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
     return instantiate_datamodule(experiment_dictconfig["datamodule"])

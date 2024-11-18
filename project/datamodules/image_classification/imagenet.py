@@ -24,7 +24,6 @@ from torchvision.transforms import v2 as transform_lib
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
 from project.utils.typing_utils import C, H, W
-from project.utils.typing_utils.protocols import Module
 
 logger = get_logger(__name__)
 
@@ -187,10 +186,10 @@ class ImageNetDataModule(VisionDataModule):
                 f" make sure the folder contains a subfolder named {split}"
             )
 
-    def default_transforms(self) -> Module[[torch.Tensor], torch.Tensor]:
+    def default_transforms(self) -> torch.nn.Module:
         return ResNet152_Weights.IMAGENET1K_V1.transforms
 
-    def train_transform(self) -> Module[[torch.Tensor], torch.Tensor]:
+    def train_transform(self) -> torch.nn.Module:
         """The standard imagenet transforms.
 
         .. code-block:: python

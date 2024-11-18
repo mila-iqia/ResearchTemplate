@@ -121,9 +121,6 @@ def instantiate_datamodule(
         logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
         datamodule = instantiate(datamodule_config)
 
-    from project.utils.utils import validate_datamodule
-
-    datamodule = validate_datamodule(datamodule)
     return datamodule
 
 
