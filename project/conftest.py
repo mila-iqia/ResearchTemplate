@@ -7,7 +7,7 @@ by tests.
 
 Our goal here is to make sure that the way we create networks/datasets/algorithms during tests match
 as closely as possible how they are created normally in a real run.
-For example, when running `python project/main.py algorithm=example`.
+For example, when running `python project/main.py algorithm=image_classification`.
 
 We achieve this like so: All the components of an experiment are created using fixtures.
 The first fixtures to be invoked are the ones that would correspond to command-line arguments.
@@ -140,7 +140,7 @@ def algorithm_config(request: pytest.FixtureRequest) -> str | None:
     """The algorithm config to use in the experiment, as if `algorithm=<value>` was passed.
 
     This is parametrized with all the configurations for a given algorithm type when using the
-    included tests, for example as is done in [project.algorithms.example_test][].
+    included tests, for example as is done in [project.algorithms.image_classifier_test][].
     """
     algorithm_config_name = getattr(request, "param", None)
     if algorithm_config_name:

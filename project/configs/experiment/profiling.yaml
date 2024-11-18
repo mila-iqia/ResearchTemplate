@@ -2,7 +2,7 @@
 
 defaults:
   - override /datamodule: imagenet
-  - override /algorithm: example
+  - override /algorithm: image_classifier
   - override /trainer/logger: wandb
 
 trainer:

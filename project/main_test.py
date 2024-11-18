@@ -216,7 +216,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     [
-        "algorithm=example datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
+        "algorithm=image_classification datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
     ],
     indirect=True,
 )

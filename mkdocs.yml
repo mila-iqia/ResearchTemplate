@@ -1,4 +1,4 @@
-site_name: Research Project Template
+site_name: Research Project Template (preview)
 site_description: Template for a ML Research project.
 # TODO: Need to make sure that the repo URL and site URL are updated correctly in downstream
 # projects, otherwise they will either get a 403 error, or change the docs of the template!

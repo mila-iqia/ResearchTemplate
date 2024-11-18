@@ -1,8 +1,8 @@
-# Config for the JaxExample algorithm
+# Config for the JaxImageClassifier algorithm
 defaults:
   - network: jax_cnn
 
-_target_: project.algorithms.jax_example.JaxExample
+_target_: project.algorithms.jax_image_classifier.JaxImageClassifier
 # NOTE: Why _partial_ here? Because the config doesn't create the algo directly.
 # The datamodule is instantiated first and then passed to the algorithm.
 _partial_: true

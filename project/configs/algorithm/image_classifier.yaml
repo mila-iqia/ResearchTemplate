@@ -5,7 +5,7 @@ defaults:
   - optimizer: Adam
   - _self_
 
-_target_: project.algorithms.example.ExampleAlgorithm
+_target_: project.algorithms.image_classifier.ImageClassifier
 # Note: Why _partial_ here? Because the config doesn't create the algo directly:
 # the datamodule is instantiated first and then passed to the algorithm.
 _partial_: true

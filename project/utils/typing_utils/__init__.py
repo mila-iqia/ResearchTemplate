@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, NewType, TypeGuard
 
+from hydra_zen.typing import Builds
 from typing_extensions import TypeVar
 
 from .protocols import DataModule, Module
@@ -18,6 +19,10 @@ W = NewType("W", int)
 T = TypeVar("T")
 K = TypeVar("K")
 V = TypeVar("V")
+
+HydraConfigFor = Builds[type[T]]
+"""Type annotation to say "a hydra config that returns an object of type T when instantiated"."""
+
 
 NestedMapping = Mapping[K, V | "NestedMapping[K, V]"]
 PyTree = T | Iterable["PyTree[T]"] | Mapping[Any, "PyTree[T]"]

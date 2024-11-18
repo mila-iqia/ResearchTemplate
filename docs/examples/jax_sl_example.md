@@ -1,8 +1,14 @@
+---
+additional_python_references:
+  - project.algorithms.jax_image_classifier
+  - project.trainers.jax_trainer
+---
+
 # Jax + PyTorch-Lightning ⚡
 
-## `JaxExample`: a LightningModule that trains a Jax network
+## A LightningModule that trains a Jax network
 
-The [JaxExample][project.algorithms.jax_example.JaxExample] algorithm uses a network which is a [flax.linen.Module](https://flax.readthedocs.io/en/latest/).
+The `JaxImageClassifier` algorithm uses a network which is a [flax.linen.Module](https://flax.readthedocs.io/en/latest/).
 The network is wrapped with `torch_jax_interop.JaxFunction`, so that it can accept torch tensors as inputs, produces torch tensors as outputs, and the parameters are saved as as `torch.nn.Parameter`s (which use the same underlying memory as the jax arrays).
 In this example, the loss function and optimizers are in PyTorch, while the network forward and backward passes are written in Jax.
 
@@ -20,20 +26,20 @@ pass uses Jax to calculate the gradients, and the weights are updated by a PyTor
 
 ### Jax Network
 
-{{ inline('project.algorithms.jax_example.CNN') }}
+{{ inline('project.algorithms.jax_image_classifier.CNN') }}
 
 ### Jax Algorithm
 
-{{ inline('project.algorithms.jax_example.JaxExample') }}
+{{ inline('project.algorithms.jax_image_classifier.JaxImageClassifier') }}
 
 ### Configs
 
-#### JaxExample algorithm config
+#### LightningModule config
 
-{{ inline('project/configs/algorithm/jax_example.yaml') }}
+{{ inline('project/configs/algorithm/jax_image_classifier.yaml') }}
 
 ## Running the example
 
 ```console
-$ python project/main.py algorithm=jax_example network=jax_cnn datamodule=cifar10
+$ python project/main.py algorithm=jax_image_classifier network=jax_cnn datamodule=cifar10
 ```

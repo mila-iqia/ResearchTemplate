@@ -1,6 +1,6 @@
 """Suite of tests for an a `LightningModule`.
 
-See the [project.algorithms.example_test][] module for an example of how to use this.
+See the [project.algorithms.image_classifier_test][] module for an example of how to use this.
 """
 
 import copy
@@ -35,7 +35,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     Simply inherit from this class and decorate the class with the appropriate markers to get a set
     of decent unit tests that should apply to any LightningModule.
 
-    See the [project.algorithms.example_test][] module for an example.
+    See the [project.algorithms.image_classifier_test][] module for an example.
     """
 
     # algorithm_config: ParametrizedFixture[str]

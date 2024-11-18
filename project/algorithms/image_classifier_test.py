@@ -16,17 +16,19 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.utils.testutils import IN_GITHUB_CI, run_for_all_configs_of_type
 
-from .example import ExampleAlgorithm
+from .image_classifier import ImageClassifier
 
 
 @pytest.mark.parametrize(
-    command_line_overrides.__name__, ["algorithm=example datamodule=cifar10"], indirect=True
+    command_line_overrides.__name__,
+    ["algorithm=image_classifier datamodule=cifar10"],
+    indirect=True,
 )
 def test_example_experiment_defaults(experiment_config: Config) -> None:
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
 
     assert experiment_config.algorithm["_target_"] == (
-        ExampleAlgorithm.__module__ + "." + ExampleAlgorithm.__qualname__
+        ImageClassifier.__module__ + "." + ImageClassifier.__qualname__
     )
 
     assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
@@ -37,19 +39,22 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     raises=(RuntimeError, hydra.errors.InstantiationException),
     reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
 )
-@run_for_all_configs_of_type("algorithm", ExampleAlgorithm)
+@run_for_all_configs_of_type("algorithm", ImageClassifier)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)
-class TestExampleAlgo(LightningModuleTests[ExampleAlgorithm]):
-    """Tests for the `ExampleAlgorithm`.
+class TestImageClassifier(LightningModuleTests[ImageClassifier]):
+    """Tests for the `ImageClassifier`.
 
     This runs all the tests included in the base class, with the given parametrizations:
 
-    - `algorithm_config` will take the value `"example"`
-        - This is because there is an `example.yaml` config file whose `_target_` is the ``ExampleAlgorithm``.
+    - `algorithm_config` will take the value `"image_classifier"`
+        - This is because there is an `image_classifier.yaml` config file in project/configs/algorithms
+          whose `_target_` is the `ImageClassifier`.
     - `datamodule_config` will take these values: `['cifar10', 'fashion_mnist', 'imagenet', 'imagenet32', 'inaturalist', 'mnist']`
         - These are all the configs whose target is an `ImageClassificationDataModule`.
-    - Similarly, `network_config` will be parametrized by the names of all configs which produce an nn.Module.
+    - Similarly, `network_config` will be parametrized by the names of all configs which produce an nn.Module,
+      except those that would create a `PreTrainedModel` from HuggingFace.
+        - This is currently the easiest way for us to say "any network for image classification.
 
     Take a look at the `LightningModuleTests` class if you want to see the actual test code.
     """

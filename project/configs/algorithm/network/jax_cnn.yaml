@@ -1,2 +1,2 @@
-_target_: project.algorithms.jax_example.CNN
+_target_: project.algorithms.jax_image_classifier.CNN
 num_classes: ${instance_attr:datamodule.num_classes}

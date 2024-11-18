@@ -1,13 +1,13 @@
-from .example import ExampleAlgorithm
-from .jax_example import JaxExample
-from .jax_rl_example import JaxRLExample
+from .image_classifier import ImageClassifier
+from .jax_image_classifier import JaxImageClassifier
+from .jax_ppo import JaxRLExample
 from .no_op import NoOp
-from .text_classification import TextClassificationExample
+from .text_classifier import TextClassifier
 
 __all__ = [
-    "ExampleAlgorithm",
-    "JaxExample",
+    "ImageClassifier",
+    "JaxImageClassifier",
     "NoOp",
-    "TextClassificationExample",
+    "TextClassifier",
     "JaxRLExample",
 ]

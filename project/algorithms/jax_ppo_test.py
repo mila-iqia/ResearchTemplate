@@ -30,7 +30,7 @@ from typing_extensions import override
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.trainers.jax_trainer import JaxTrainer, hparams_to_dict
 
-from .jax_rl_example import (
+from .jax_ppo import (
     EvalMetrics,
     JaxRLExample,
     PPOHParams,
@@ -439,8 +439,7 @@ def jax_trainer(algo: JaxRLExample, max_epochs: int, tmp_path: Path):
 
 
 class PPOLightningModule(lightning.LightningModule):
-    """Uses the same code as [project.algorithms.jax_rl_example.JaxRLExample][], but the training
-    loop is run with pytorch-lightning.
+    """Uses the same code as `JaxRLExample`, but the training loop is run with pytorch-lightning.
 
     This is currently only meant to be used to compare the difference fully-jitted training loop
     and lightning.

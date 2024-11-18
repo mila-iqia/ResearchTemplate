@@ -64,7 +64,7 @@ class JaxFcNet(flax.linen.Module):
         return x
 
 
-class JaxExample(LightningModule):
+class JaxImageClassifier(LightningModule):
     """Example of a learning algorithm (`LightningModule`) that uses Jax.
 
     In this case, the network is a flax.linen.Module, and its forward and backward passes are
@@ -208,7 +208,7 @@ def main():
     datamodule = MNISTDataModule(num_workers=4, batch_size=512)
     network = CNN(num_classes=datamodule.num_classes)
 
-    model = JaxExample(network=network, datamodule=datamodule)
+    model = JaxImageClassifier(network=network, datamodule=datamodule)
     trainer.fit(model, datamodule=datamodule)
 
     ...

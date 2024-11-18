@@ -1,9 +1,21 @@
+---
+additional_python_references:
+  - project.algorithms.image_classifier
+  - lightning.pytorch.core.module
+---
+
 # Supervised Learning (PyTorch)
 
-The [ExampleAlgorithm][project.algorithms.ExampleAlgorithm] is a simple [LightningModule][lightning.pytorch.core.module.LightningModule] for image classification.
 
-??? note "Click to show the code for ExampleAlgorithm"
-    {{ inline('project.algorithms.example.ExampleAlgorithm', 4) }}
+## ImageClassifier
+
+The `ImageClassifier` is a simple `LightningModule` for image classification.
+It accepts a vision datamodule as input.
+
+??? note "Click to show the code of the ImageClassifier class."
+    {{ inline('project.algorithms.image_classifier.ImageClassifier', 4) }}
+
+## Running the example
 
 Here is a configuration file that you can use to launch a simple experiment:
 

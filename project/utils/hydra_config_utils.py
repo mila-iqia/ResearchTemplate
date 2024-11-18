@@ -117,14 +117,7 @@ def get_target_of_config(
 
 
 def import_object(target_path: str):
-    """Imports the object at the given path.
-
-    ## Examples
-
-    ```python
-    assert False
-    ```
-    """
+    """Imports the object at the given path."""
     assert not target_path.endswith(
         ".py"
     ), "expect a valid python path like 'module.submodule.object'"
@@ -136,7 +129,7 @@ def import_object(target_path: str):
         return importlib.import_module(name=f".{parts[-1]}", package=".".join(parts[:-1]))
     except (ModuleNotFoundError, AttributeError):
         pass
-
+    exc = None
     for i in range(1, len(parts)):
         module_name = ".".join(parts[:i])
         obj_path = parts[i:]
@@ -146,9 +139,11 @@ def import_object(target_path: str):
             for part in obj_path[1:]:
                 obj = getattr(obj, part)
             return obj
-        except (ModuleNotFoundError, AttributeError):
+        except (ModuleNotFoundError, AttributeError) as _exc:
+            exc = _exc
             continue
-    raise ModuleNotFoundError(f"Unable to import the {target_path=}!")
+    assert exc is not None
+    raise ModuleNotFoundError(f"Unable to import the {target_path=}!") from exc
 
 
 def get_all_configs_in_group_of_type(

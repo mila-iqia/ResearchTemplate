@@ -11,7 +11,7 @@ from torch import Tensor
 from transformers import PreTrainedModel
 from typing_extensions import override
 
-from project.algorithms.text_classification import TextClassificationExample
+from project.algorithms.text_classifier import TextClassifier
 from project.datamodules.text.text_classification import TextClassificationDataModule
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
@@ -37,10 +37,10 @@ class RecordTrainingLossCb(lightning.Callback):
 
 
 @pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
-@run_for_all_configs_of_type("algorithm", TextClassificationExample)
+@run_for_all_configs_of_type("algorithm", TextClassifier)
 @run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", PreTrainedModel)
-class TestTextClassificationExample(LightningModuleTests[TextClassificationExample]):
+class TestTextClassifier(LightningModuleTests[TextClassifier]):
     """Tests for the HF example."""
 
     @pytest.mark.xfail(
@@ -51,7 +51,7 @@ class TestTextClassificationExample(LightningModuleTests[TextClassificationExamp
     def test_backward_pass_is_reproducible(  # type: ignore
         self,
         datamodule: TextClassificationDataModule,
-        algorithm: TextClassificationExample,
+        algorithm: TextClassifier,
         seed: int,
         accelerator: str,
         devices: int | list[int],
@@ -72,7 +72,7 @@ class TestTextClassificationExample(LightningModuleTests[TextClassificationExamp
     @pytest.mark.slow
     def test_overfit_batch(
         self,
-        algorithm: TextClassificationExample,
+        algorithm: TextClassifier,
         datamodule: TextClassificationDataModule,
         tmp_path: Path,
         num_steps: int = 3,

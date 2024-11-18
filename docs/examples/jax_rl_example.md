@@ -1,6 +1,6 @@
 ---
 additional_python_references:
-  - project.algorithms.jax_rl_example
+  - project.algorithms.jax_ppo
   - project.trainers.jax_trainer
 ---
 
@@ -31,7 +31,7 @@ It follows the structure of a `JaxModule`, and is trained with a `JaxTrainer`.
 
 
 ??? note "Click to show the code for JaxRLExample"
-    {{ inline('project.algorithms.jax_rl_example.JaxRLExample', 4) }}
+    {{ inline('project.algorithms.jax_ppo.JaxRLExample', 4) }}
 
 
 ## JaxModule

@@ -1,10 +1,10 @@
 # Config for the Jax RL Example (PPO).
 # To run this, use the following command:
 # ```
-# python project/main.py algorithm=jax_rl_example trainer=jax
+# python project/main.py algorithm=jax_ppo trainer=jax
 # ```
 
-_target_: project.algorithms.jax_rl_example.JaxRLExample.create
+_target_: project.algorithms.jax_ppo.JaxRLExample.create
 env:
   _target_: gymnax.environments.classic_control.pendulum.Pendulum
 env_params:
@@ -17,7 +17,7 @@ env_params:
   max_steps_in_episode: 200
   max_torque: 2.0
 hp:
-  _target_: project.algorithms.jax_rl_example.PPOHParams
+  _target_: project.algorithms.jax_ppo.PPOHParams
   clip_eps: 0.20000000298023224
   debug: false
   ent_coef: 0.0

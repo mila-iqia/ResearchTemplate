@@ -20,7 +20,7 @@ T = TypeVar("T")
 ConfigFor = Builds[type[T]]
 
 
-class TextClassificationExample(LightningModule):
+class TextClassifier(LightningModule):
     """Example of a lightning module used to train a huggingface model for text classification."""
 
     def __init__(

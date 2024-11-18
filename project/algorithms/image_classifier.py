@@ -3,17 +3,17 @@
 This can be run from the command-line like so:
 
 ```console
-python project/main.py algorithm=example
+python project/main.py algorithm=image_classification datamodule=cifar10
 ```
 """
 
 import functools
 from collections.abc import Sequence
 from logging import getLogger
-from typing import Literal, TypeVar
+from typing import Literal
 
+import hydra_zen
 import torch
-from hydra_zen.typing import Builds
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch.core import LightningModule
 from torch import Tensor
@@ -22,17 +22,12 @@ from torch.optim.optimizer import Optimizer
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.datamodules.image_classification import ImageClassificationDataModule
-from project.experiment import instantiate
+from project.utils.typing_utils import HydraConfigFor
 
 logger = getLogger(__name__)
 
-T = TypeVar("T")
-# A shortcut to make the type hints simpler, don't worry about it.
-HydraConfigFor = Builds[type[T]]
-"""Type annotation to say "a hydra config that returns an object of type T when instantiated"."""
 
-
-class ExampleAlgorithm(LightningModule):
+class ImageClassifier(LightningModule):
     """Example learning algorithm for image classification."""
 
     def __init__(
@@ -78,7 +73,7 @@ class ExampleAlgorithm(LightningModule):
         with torch.random.fork_rng():
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
-            self.network = instantiate(self.network_config)
+            self.network = hydra_zen.instantiate(self.network_config)
             self.example_input_array = self.example_input_array.to(self.device)  # type: ignore
             if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
                 # Do a forward pass to initialize any lazy weights. This is necessary for
@@ -120,7 +115,7 @@ class ExampleAlgorithm(LightningModule):
         See [`lightning.pytorch.core.LightningModule.configure_optimizers`][] for more information.
         """
         # Instantiate the optimizer config into a functools.partial object.
-        optimizer_partial = instantiate(self.optimizer_config)
+        optimizer_partial = hydra_zen.instantiate(self.optimizer_config)
         # Call the functools.partial object, passing the parameters as an argument.
         optimizer = optimizer_partial(self.parameters())
         # This then returns the optimizer.

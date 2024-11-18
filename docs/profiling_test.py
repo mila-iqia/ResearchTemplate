@@ -30,7 +30,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Instrumenting your code -baseline
         """
         experiment=profiling \
-        algorithm=example \
+        algorithm=image_classification \
         trainer.logger.wandb.name="Baseline" \
         trainer.logger.wandb.tags=["Training","Baseline comparison","CPU/GPU comparison"]
         """,
@@ -77,7 +77,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Identifying potential bottlenecks - fcnet mnist
         """
         experiment=profiling \
-        algorithm=example \
+        algorithm=image_classification \
         algorithm/network=fcnet \
         datamodule=mnist \
         trainer.logger.wandb.name="FcNet/MNIST baseline with training" \
@@ -86,7 +86,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Throughput across GPU types
         """
         experiment=profiling \
-        algorithm=example \
+        algorithm=image_classification \
         resources=gpu \
         hydra.launcher.gres='gpu:a100:1' \
         hydra.launcher.cpus_per_task=4 \
@@ -98,7 +98,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         pytest.param(
             """
         -m experiment=profiling \
-        algorithm=example \
+        algorithm=image_classification \
         datamodule.num_workers=8 \
         datamodule.batch_size=32,64,128,256 \
         trainer.logger.wandb.tags=["Batch size comparison"]\

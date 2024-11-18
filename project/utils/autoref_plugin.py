@@ -1,4 +1,6 @@
-"""IDEA: Tweak the AutoRefsPlugin so that text in backticks like `this` (more IDE-friendly) are
+"""A plugin for the mkdocs documentation engine to provide better support for IDE-friendly links.
+
+IDEA: Tweak the AutoRefsPlugin so that text in backticks like `this` (more IDE-friendly) are
 considered refs when possible.
 """
 
@@ -10,10 +12,7 @@ import types
 import lightning
 import torch
 from mkdocs.config.defaults import MkDocsConfig
-from mkdocs.plugins import (
-    BasePlugin,
-    get_plugin_logger,
-)
+from mkdocs.plugins import BasePlugin, get_plugin_logger
 from mkdocs.structure.files import Files
 from mkdocs.structure.pages import Page
 from mkdocs_autorefs.plugin import AutorefsPlugin  # noqa

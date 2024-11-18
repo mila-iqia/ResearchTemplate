@@ -8,7 +8,7 @@ from project.utils.typing_utils.protocols import DataModule
 
 
 class NoOp(LightningModule):
-    """No-op algorithm that does no learning and is used to benchmark the dataloading speed."""
+    """Algorithm that does no learning and is used to benchmark the dataloading speed."""
 
     def __init__(self, datamodule: DataModule):
         super().__init__()
