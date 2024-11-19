@@ -1,5 +1,5 @@
 batch.0:
-  device: cpu
+  device: cuda:0
   max: '2.126e+00'
   mean: '-6.179e-03'
   min: '-1.989e+00'
@@ -10,7 +10,7 @@ batch.0:
   - 32
   sum: '-2.43e+03'
 batch.1:
-  device: cpu
+  device: cuda:0
   max: 9
   mean: '4.555e+00'
   min: 0
@@ -18,7 +18,7 @@ batch.1:
   - 128
   sum: 583
 grads.network.params.0:
-  device: cpu
+  device: cuda:0
   max: '1.552e-02'
   mean: '8.602e-04'
   min: '-9.862e-03'
@@ -26,7 +26,7 @@ grads.network.params.0:
   - 256
   sum: '2.202e-01'
 grads.network.params.1:
-  device: cpu
+  device: cuda:0
   max: '2.677e-02'
   mean: '1.968e-05'
   min: '-2.576e-02'
@@ -35,7 +35,7 @@ grads.network.params.1:
   - 256
   sum: '1.548e+01'
 grads.network.params.2:
-  device: cpu
+  device: cuda:0
   max: '6.868e-02'
   mean: '0.e+00'
   min: '-3.458e-02'
@@ -43,16 +43,16 @@ grads.network.params.2:
   - 10
   sum: '0.e+00'
 grads.network.params.3:
-  device: cpu
+  device: cuda:0
   max: '1.497e-01'
-  mean: '-3.725e-10'
+  mean: '-2.445e-10'
   min: '-1.415e-01'
   shape:
   - 256
   - 10
-  sum: '-9.537e-07'
+  sum: '-6.258e-07'
 outputs.logits:
-  device: cpu
+  device: cuda:0
   max: '2.380e+00'
   mean: '5.809e-02'
   min: '-3.135e+00'
@@ -61,14 +61,14 @@ outputs.logits:
   - 10
   sum: '7.436e+01'
 outputs.loss:
-  device: cpu
+  device: cuda:0
   max: '2.466e+00'
   mean: '2.466e+00'
   min: '2.466e+00'
   shape: []
   sum: '2.466e+00'
 outputs.y:
-  device: cpu
+  device: cuda:0
   max: 9
   mean: '4.555e+00'
   min: 0

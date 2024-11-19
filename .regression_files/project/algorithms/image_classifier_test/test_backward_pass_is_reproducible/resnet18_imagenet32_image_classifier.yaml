@@ -1,5 +1,5 @@
 batch.0:
-  device: cpu
+  device: cuda:0
   max: '2.640e+00'
   mean: '3.701e-03'
   min: '-2.118e+00'
@@ -10,7 +10,7 @@ batch.0:
   - 32
   sum: '7.277e+02'
 batch.1:
-  device: cpu
+  device: cuda:0
   max: 993
   mean: '4.871e+02'
   min: 1
@@ -18,7 +18,7 @@ batch.1:
   - 64
   sum: 31176
 grads.network.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '7.770e-02'
   mean: '4.219e-03'
   min: '-5.700e-02'
@@ -26,7 +26,7 @@ grads.network.bn1.bias:
   - 64
   sum: '2.700e-01'
 grads.network.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '1.589e-01'
   mean: '4.662e-03'
   min: '-8.929e-02'
@@ -34,7 +34,7 @@ grads.network.bn1.weight:
   - 64
   sum: '2.984e-01'
 grads.network.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '7.927e-01'
   mean: '-3.290e-02'
   min: '-1.044e+00'
@@ -45,24 +45,24 @@ grads.network.conv1.weight:
   - 7
   sum: '-3.095e+02'
 grads.network.fc.bias:
-  device: cpu
+  device: cuda:0
   max: '3.927e-03'
-  mean: '-2.235e-11'
+  mean: '-2.421e-11'
   min: '-1.533e-02'
   shape:
   - 1000
-  sum: '-2.235e-08'
+  sum: '-2.421e-08'
 grads.network.fc.weight:
-  device: cpu
+  device: cuda:0
   max: '8.284e-03'
-  mean: '-7.451e-12'
+  mean: '-1.863e-11'
   min: '-1.551e-01'
   shape:
   - 1000
   - 512
-  sum: '-3.815e-06'
+  sum: '-9.537e-06'
 grads.network.layer1.0.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '8.193e-02'
   mean: '-9.041e-04'
   min: '-5.379e-02'
@@ -70,15 +70,15 @@ grads.network.layer1.0.bn1.bias:
   - 64
   sum: '-5.786e-02'
 grads.network.layer1.0.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '6.638e-02'
-  mean: '-1.746e-08'
+  mean: '-1.729e-08'
   min: '-9.591e-02'
   shape:
   - 64
-  sum: '-1.118e-06'
+  sum: '-1.106e-06'
 grads.network.layer1.0.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '3.855e-02'
   mean: '1.665e-03'
   min: '-4.132e-02'
@@ -86,7 +86,7 @@ grads.network.layer1.0.bn2.bias:
   - 64
   sum: '1.065e-01'
 grads.network.layer1.0.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '6.68e-02'
   mean: '-5.234e-04'
   min: '-8.005e-02'
@@ -94,7 +94,7 @@ grads.network.layer1.0.bn2.weight:
   - 64
   sum: '-3.35e-02'
 grads.network.layer1.0.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '1.476e-01'
   mean: '-1.974e-04'
   min: '-1.582e-01'
@@ -105,7 +105,7 @@ grads.network.layer1.0.conv1.weight:
   - 3
   sum: '-7.277e+00'
 grads.network.layer1.0.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '1.091e-01'
   mean: '-9.767e-04'
   min: '-1.213e-01'
@@ -116,7 +116,7 @@ grads.network.layer1.0.conv2.weight:
   - 3
   sum: '-3.600e+01'
 grads.network.layer1.1.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '4.718e-02'
   mean: '6.176e-04'
   min: '-6.439e-02'
@@ -124,15 +124,15 @@ grads.network.layer1.1.bn1.bias:
   - 64
   sum: '3.953e-02'
 grads.network.layer1.1.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '4.521e-02'
-  mean: '-5.402e-08'
+  mean: '-5.384e-08'
   min: '-6.375e-02'
   shape:
   - 64
-  sum: '-3.457e-06'
+  sum: '-3.446e-06'
 grads.network.layer1.1.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '2.740e-02'
   mean: '-1.643e-03'
   min: '-3.003e-02'
@@ -140,7 +140,7 @@ grads.network.layer1.1.bn2.bias:
   - 64
   sum: '-1.052e-01'
 grads.network.layer1.1.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '7.744e-02'
   mean: '-4.139e-03'
   min: '-5.448e-02'
@@ -148,7 +148,7 @@ grads.network.layer1.1.bn2.weight:
   - 64
   sum: '-2.649e-01'
 grads.network.layer1.1.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '9.845e-02'
   mean: '-1.768e-03'
   min: '-1.07e-01'
@@ -159,7 +159,7 @@ grads.network.layer1.1.conv1.weight:
   - 3
   sum: '-6.519e+01'
 grads.network.layer1.1.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '7.791e-02'
   mean: '-1.813e-04'
   min: '-8.557e-02'
@@ -170,7 +170,7 @@ grads.network.layer1.1.conv2.weight:
   - 3
   sum: '-6.685e+00'
 grads.network.layer2.0.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '3.352e-02'
   mean: '-1.351e-03'
   min: '-4.908e-02'
@@ -178,7 +178,7 @@ grads.network.layer2.0.bn1.bias:
   - 128
   sum: '-1.729e-01'
 grads.network.layer2.0.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '5.702e-02'
   mean: '1.601e-08'
   min: '-4.858e-02'
@@ -186,7 +186,7 @@ grads.network.layer2.0.bn1.weight:
   - 128
   sum: '2.049e-06'
 grads.network.layer2.0.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '3.357e-02'
   mean: '3.898e-04'
   min: '-2.813e-02'
@@ -194,7 +194,7 @@ grads.network.layer2.0.bn2.bias:
   - 128
   sum: '4.99e-02'
 grads.network.layer2.0.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '5.346e-02'
   mean: '8.151e-04'
   min: '-5.071e-02'
@@ -202,7 +202,7 @@ grads.network.layer2.0.bn2.weight:
   - 128
   sum: '1.043e-01'
 grads.network.layer2.0.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '9.664e-02'
   mean: '-1.597e-04'
   min: '-9.497e-02'
@@ -213,7 +213,7 @@ grads.network.layer2.0.conv1.weight:
   - 3
   sum: '-1.178e+01'
 grads.network.layer2.0.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '7.28e-02'
   mean: '1.055e-04'
   min: '-6.683e-02'
@@ -224,7 +224,7 @@ grads.network.layer2.0.conv2.weight:
   - 3
   sum: '1.555e+01'
 grads.network.layer2.0.downsample.0.weight:
-  device: cpu
+  device: cuda:0
   max: '7.444e-02'
   mean: '7.023e-04'
   min: '-8.798e-02'
@@ -235,7 +235,7 @@ grads.network.layer2.0.downsample.0.weight:
   - 1
   sum: '5.754e+00'
 grads.network.layer2.0.downsample.1.bias:
-  device: cpu
+  device: cuda:0
   max: '3.357e-02'
   mean: '3.898e-04'
   min: '-2.813e-02'
@@ -243,7 +243,7 @@ grads.network.layer2.0.downsample.1.bias:
   - 128
   sum: '4.99e-02'
 grads.network.layer2.0.downsample.1.weight:
-  device: cpu
+  device: cuda:0
   max: '3.398e-02'
   mean: '-9.515e-04'
   min: '-3.442e-02'
@@ -251,7 +251,7 @@ grads.network.layer2.0.downsample.1.weight:
   - 128
   sum: '-1.218e-01'
 grads.network.layer2.1.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '3.031e-02'
   mean: '6.676e-04'
   min: '-3.914e-02'
@@ -259,15 +259,15 @@ grads.network.layer2.1.bn1.bias:
   - 128
   sum: '8.545e-02'
 grads.network.layer2.1.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '2.827e-02'
-  mean: '8.338e-09'
+  mean: '8.295e-09'
   min: '-4.277e-02'
   shape:
   - 128
-  sum: '1.067e-06'
+  sum: '1.062e-06'
 grads.network.layer2.1.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '1.778e-02'
   mean: '-4.722e-04'
   min: '-1.967e-02'
@@ -275,7 +275,7 @@ grads.network.layer2.1.bn2.bias:
   - 128
   sum: '-6.044e-02'
 grads.network.layer2.1.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '2.779e-02'
   mean: '1.364e-04'
   min: '-2.807e-02'
@@ -283,7 +283,7 @@ grads.network.layer2.1.bn2.weight:
   - 128
   sum: '1.746e-02'
 grads.network.layer2.1.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '6.548e-02'
   mean: '-1.443e-04'
   min: '-5.666e-02'
@@ -294,7 +294,7 @@ grads.network.layer2.1.conv1.weight:
   - 3
   sum: '-2.127e+01'
 grads.network.layer2.1.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '5.056e-02'
   mean: '1.11e-04'
   min: '-5.308e-02'
@@ -305,7 +305,7 @@ grads.network.layer2.1.conv2.weight:
   - 3
   sum: '1.637e+01'
 grads.network.layer3.0.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '1.82e-02'
   mean: '2.348e-04'
   min: '-2.261e-02'
@@ -313,15 +313,15 @@ grads.network.layer3.0.bn1.bias:
   - 256
   sum: '6.012e-02'
 grads.network.layer3.0.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '2.642e-02'
-  mean: '5.53e-10'
+  mean: '5.384e-10'
   min: '-2.051e-02'
   shape:
   - 256
-  sum: '1.416e-07'
+  sum: '1.378e-07'
 grads.network.layer3.0.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '2.001e-02'
   mean: '7.253e-05'
   min: '-1.643e-02'
@@ -329,7 +329,7 @@ grads.network.layer3.0.bn2.bias:
   - 256
   sum: '1.857e-02'
 grads.network.layer3.0.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '2.092e-02'
   mean: '-7.756e-05'
   min: '-2.422e-02'
@@ -337,7 +337,7 @@ grads.network.layer3.0.bn2.weight:
   - 256
   sum: '-1.986e-02'
 grads.network.layer3.0.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '6.222e-02'
   mean: '1.206e-04'
   min: '-6.830e-02'
@@ -348,7 +348,7 @@ grads.network.layer3.0.conv1.weight:
   - 3
   sum: '3.557e+01'
 grads.network.layer3.0.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '4.972e-02'
   mean: '1.354e-05'
   min: '-4.675e-02'
@@ -359,7 +359,7 @@ grads.network.layer3.0.conv2.weight:
   - 3
   sum: '7.988e+00'
 grads.network.layer3.0.downsample.0.weight:
-  device: cpu
+  device: cuda:0
   max: '4.685e-02'
   mean: '1.905e-04'
   min: '-4.266e-02'
@@ -370,7 +370,7 @@ grads.network.layer3.0.downsample.0.weight:
   - 1
   sum: '6.244e+00'
 grads.network.layer3.0.downsample.1.bias:
-  device: cpu
+  device: cuda:0
   max: '2.001e-02'
   mean: '7.253e-05'
   min: '-1.643e-02'
@@ -378,7 +378,7 @@ grads.network.layer3.0.downsample.1.bias:
   - 256
   sum: '1.857e-02'
 grads.network.layer3.0.downsample.1.weight:
-  device: cpu
+  device: cuda:0
   max: '2.192e-02'
   mean: '-9.524e-05'
   min: '-2.475e-02'
@@ -386,7 +386,7 @@ grads.network.layer3.0.downsample.1.weight:
   - 256
   sum: '-2.438e-02'
 grads.network.layer3.1.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '1.469e-02'
   mean: '-2.926e-04'
   min: '-1.633e-02'
@@ -394,15 +394,15 @@ grads.network.layer3.1.bn1.bias:
   - 256
   sum: '-7.491e-02'
 grads.network.layer3.1.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '1.885e-02'
-  mean: '5.835e-09'
+  mean: '5.784e-09'
   min: '-1.786e-02'
   shape:
   - 256
-  sum: '1.494e-06'
+  sum: '1.481e-06'
 grads.network.layer3.1.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '1.157e-02'
   mean: '1.097e-04'
   min: '-1.093e-02'
@@ -410,7 +410,7 @@ grads.network.layer3.1.bn2.bias:
   - 256
   sum: '2.808e-02'
 grads.network.layer3.1.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '1.357e-02'
   mean: '1.728e-04'
   min: '-1.450e-02'
@@ -418,7 +418,7 @@ grads.network.layer3.1.bn2.weight:
   - 256
   sum: '4.424e-02'
 grads.network.layer3.1.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '3.956e-02'
   mean: '2.665e-05'
   min: '-4.185e-02'
@@ -429,7 +429,7 @@ grads.network.layer3.1.conv1.weight:
   - 3
   sum: '1.572e+01'
 grads.network.layer3.1.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '4.081e-02'
   mean: '5.147e-05'
   min: '-4.531e-02'
@@ -440,7 +440,7 @@ grads.network.layer3.1.conv2.weight:
   - 3
   sum: '3.036e+01'
 grads.network.layer4.0.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '8.348e-03'
   mean: '-5.725e-05'
   min: '-8.672e-03'
@@ -448,15 +448,15 @@ grads.network.layer4.0.bn1.bias:
   - 512
   sum: '-2.931e-02'
 grads.network.layer4.0.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '1.111e-02'
-  mean: '5.154e-08'
+  mean: '5.152e-08'
   min: '-9.164e-03'
   shape:
   - 512
-  sum: '2.639e-05'
+  sum: '2.638e-05'
 grads.network.layer4.0.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '8.562e-03'
   mean: '4.768e-04'
   min: '-8.205e-03'
@@ -464,7 +464,7 @@ grads.network.layer4.0.bn2.bias:
   - 512
   sum: '2.441e-01'
 grads.network.layer4.0.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '8.677e-03'
   mean: '3.391e-04'
   min: '-1.025e-02'
@@ -472,7 +472,7 @@ grads.network.layer4.0.bn2.weight:
   - 512
   sum: '1.736e-01'
 grads.network.layer4.0.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '4.811e-02'
   mean: '6.278e-06'
   min: '-5.318e-02'
@@ -483,7 +483,7 @@ grads.network.layer4.0.conv1.weight:
   - 3
   sum: '7.406e+00'
 grads.network.layer4.0.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '4.085e-02'
   mean: '3.79e-06'
   min: '-3.903e-02'
@@ -494,7 +494,7 @@ grads.network.layer4.0.conv2.weight:
   - 3
   sum: '8.941e+00'
 grads.network.layer4.0.downsample.0.weight:
-  device: cpu
+  device: cuda:0
   max: '2.332e-02'
   mean: '1.580e-05'
   min: '-2.206e-02'
@@ -505,7 +505,7 @@ grads.network.layer4.0.downsample.0.weight:
   - 1
   sum: '2.071e+00'
 grads.network.layer4.0.downsample.1.bias:
-  device: cpu
+  device: cuda:0
   max: '8.562e-03'
   mean: '4.768e-04'
   min: '-8.205e-03'
@@ -513,7 +513,7 @@ grads.network.layer4.0.downsample.1.bias:
   - 512
   sum: '2.441e-01'
 grads.network.layer4.0.downsample.1.weight:
-  device: cpu
+  device: cuda:0
   max: '1.077e-02'
   mean: '3.158e-04'
   min: '-1.026e-02'
@@ -521,7 +521,7 @@ grads.network.layer4.0.downsample.1.weight:
   - 512
   sum: '1.617e-01'
 grads.network.layer4.1.bn1.bias:
-  device: cpu
+  device: cuda:0
   max: '6.032e-03'
   mean: '-8.638e-05'
   min: '-6.019e-03'
@@ -529,15 +529,15 @@ grads.network.layer4.1.bn1.bias:
   - 512
   sum: '-4.423e-02'
 grads.network.layer4.1.bn1.weight:
-  device: cpu
+  device: cuda:0
   max: '8.179e-03'
-  mean: '6.061e-08'
+  mean: '6.060e-08'
   min: '-7.875e-03'
   shape:
   - 512
   sum: '3.103e-05'
 grads.network.layer4.1.bn2.bias:
-  device: cpu
+  device: cuda:0
   max: '7.384e-03'
   mean: '5.452e-04'
   min: '-7.423e-03'
@@ -545,7 +545,7 @@ grads.network.layer4.1.bn2.bias:
   - 512
   sum: '2.791e-01'
 grads.network.layer4.1.bn2.weight:
-  device: cpu
+  device: cuda:0
   max: '7.653e-03'
   mean: '4.285e-04'
   min: '-7.773e-03'
@@ -553,7 +553,7 @@ grads.network.layer4.1.bn2.weight:
   - 512
   sum: '2.194e-01'
 grads.network.layer4.1.conv1.weight:
-  device: cpu
+  device: cuda:0
   max: '4.824e-02'
   mean: '2.304e-06'
   min: '-4.064e-02'
@@ -564,7 +564,7 @@ grads.network.layer4.1.conv1.weight:
   - 3
   sum: '5.435e+00'
 grads.network.layer4.1.conv2.weight:
-  device: cpu
+  device: cuda:0
   max: '2.755e-02'
   mean: '6.368e-06'
   min: '-3.208e-02'
@@ -575,7 +575,7 @@ grads.network.layer4.1.conv2.weight:
   - 3
   sum: '1.502e+01'
 outputs.logits:
-  device: cpu
+  device: cuda:0
   max: '4.277e+00'
   mean: '1.973e-04'
   min: '-4.542e+00'
@@ -584,14 +584,14 @@ outputs.logits:
   - 1000
   sum: '1.263e+01'
 outputs.loss:
-  device: cpu
+  device: cuda:0
   max: '7.190e+00'
   mean: '7.190e+00'
   min: '7.190e+00'
   shape: []
   sum: '7.190e+00'
 outputs.y:
-  device: cpu
+  device: cuda:0
   max: 993
   mean: '4.871e+02'
   min: 1
