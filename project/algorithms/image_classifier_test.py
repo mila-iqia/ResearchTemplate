@@ -2,7 +2,6 @@
 
 import sys
 
-import hydra.errors
 import pytest
 import torch
 from transformers import PreTrainedModel
@@ -34,9 +33,9 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
 
 
-@pytest.mark.xfail(
+@pytest.mark.skipif(
     sys.platform == "darwin" and IN_GITHUB_CI,
-    raises=(RuntimeError, hydra.errors.InstantiationException),
+    # raises=(RuntimeError, hydra.errors.InstantiationException),
     reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
 )
 @run_for_all_configs_of_type("algorithm", ImageClassifier)
