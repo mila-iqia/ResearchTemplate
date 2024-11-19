@@ -87,7 +87,7 @@ jobs:
   local_integration_tests:
     needs: [unit_tests, check_docs]
     runs-on: self-hosted
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       max-parallel: 1
       matrix:
