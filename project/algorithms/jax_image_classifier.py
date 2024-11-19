@@ -98,7 +98,6 @@ class JaxImageClassifier(LightningModule):
     def configure_model(self):
         example_input = torch.zeros(
             (self.datamodule.batch_size, *self.datamodule.dims),
-            device=self.device,
         )
         # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
         self.example_input_array = example_input

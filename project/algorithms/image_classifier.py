@@ -58,17 +58,16 @@ class ImageClassifier(LightningModule):
         # Save hyper-parameters.
         self.save_hyperparameters(ignore=["datamodule"])
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
-        self.example_input_array = torch.zeros(
-            (datamodule.batch_size, *datamodule.dims), device=self.device
-        )
+
         self.network: torch.nn.Module | None = None
 
     def configure_model(self):
+        # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
+        self.example_input_array = torch.zeros((self.datamodule.batch_size, *self.datamodule.dims))
         with torch.random.fork_rng():
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)
             self.network = hydra_zen.instantiate(self.network_config)
-            self.example_input_array = self.example_input_array.to(self.device)  # type: ignore
             if any(torch.nn.parameter.is_lazy(p) for p in self.network.parameters()):
                 # Do a forward pass to initialize any lazy weights. This is necessary for
                 # distributed training and to infer shapes.
