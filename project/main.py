@@ -26,9 +26,9 @@ import lightning.pytorch.loggers
 import omegaconf
 import rich
 import wandb
-from hydra_plugins.auto_schema import auto_schema_plugin
 from omegaconf import DictConfig
 
+from hydra_plugins.auto_schema import auto_schema_plugin
 from project.algorithms.jax_ppo import EvalMetrics
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config

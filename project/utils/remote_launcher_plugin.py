@@ -17,10 +17,11 @@ from hydra.core.utils import JobReturn, filter_overrides
 from hydra.plugins.plugin import Plugin
 from hydra.types import HydraContext, TaskFunction
 from hydra.utils import instantiate
-from hydra_plugins.hydra_submitit_launcher.submitit_launcher import BaseSubmititLauncher
 from omegaconf import DictConfig
 from remote_slurm_executor.slurm_remote import RemoteSlurmExecutor
 from remote_slurm_executor.utils import LoginNode
+
+from hydra_plugins.hydra_submitit_launcher.submitit_launcher import BaseSubmititLauncher
 
 logger = logging.getLogger(__name__)
 
