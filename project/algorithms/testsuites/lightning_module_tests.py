@@ -224,26 +224,18 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         assert isinstance(gradients_callback.grads, dict)
         assert isinstance(gradients_callback.outputs, dict)
         batch = gradients_callback.batch
+        # todo: make tensor-regression more flexible so it can handle tuples in the nested dict.
         if isinstance(batch, list | tuple):
-            cpu_batch = {str(i): t.cpu() for i, t in enumerate(batch)}
-        else:
-            assert isinstance(batch, dict) and all(
-                isinstance(v, torch.Tensor) for v in batch.values()
-            )
-            cpu_batch = {k: v.cpu() for k, v in batch.items()}
+            batch = {str(i): v for i, v in enumerate(batch)}
         tensor_regression.check(
             {
-                # FIXME: This is ugly, and specific to the image classification example.
-                "batch": cpu_batch,
-                "grads": {
-                    k: v.cpu() if v is not None else None
-                    for k, v in gradients_callback.grads.items()
-                },
-                "outputs": {k: v.cpu() for k, v in gradients_callback.outputs.items()},
+                "batch": batch,
+                "grads": gradients_callback.grads,
+                "outputs": gradients_callback.outputs,
             },
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
-            additional_label=next(algorithm.parameters()).device.type,
+            additional_label=accelerator if accelerator not in ["auto", "gpu"] else None,
             include_gpu_name_in_stats=False,
         )
 

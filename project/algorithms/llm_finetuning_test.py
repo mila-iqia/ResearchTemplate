@@ -5,12 +5,9 @@ import operator
 
 import jax
 import lightning
-import numpy as np
 import pytest
 import torch
 from tensor_regression import TensorRegressionFixture
-from tensor_regression.stats import get_simple_attributes
-from tensor_regression.to_array import to_ndarray
 from torch.utils.data import DataLoader
 
 from project.algorithms.llm_finetuning import (
@@ -44,34 +41,6 @@ def test_get_hash_of(c1, c2):
     assert get_hash_of(c1) != get_hash_of(c2)
     assert get_hash_of(c1) == get_hash_of(copy.deepcopy(c1))
     assert get_hash_of(c2) == get_hash_of(copy.deepcopy(c2))
-
-
-@get_simple_attributes.register(tuple)
-def _get_tuple_attributes(value: tuple, precision: int | None):
-    # This is called to get some simple stats to store in regression files during tests, in
-    # particular for tuples (since there isn't already a handler for it in the tensor_regression
-    # package.)
-    # Note: This information about this output is not very descriptive.
-    # not this is called only for the `out.past_key_values` entry in the `CausalLMOutputWithPast`
-    # that is returned from the forward pass output.
-    num_items_to_include = 5  # only show the stats of some of the items.
-    return {
-        "length": len(value),
-        **{
-            f"{i}": get_simple_attributes(item, precision=precision)
-            for i, item in enumerate(value[:num_items_to_include])
-        },
-    }
-
-
-@to_ndarray.register(tuple)
-def _tuple_to_ndarray(v: tuple) -> np.ndarray:
-    """Convert a tuple of values to a numpy array to be stored in a regression file."""
-    # This could get a bit tricky because the items might not have the same shape and so on.
-    # However it seems like the ndarrays_regression fixture (which is what tensor_regression uses
-    # under the hood) is not complaining about us returning a list here, so we'll leave it at that
-    # for now.
-    return [to_ndarray(v_i) for v_i in v]  # type: ignore
 
 
 @pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
