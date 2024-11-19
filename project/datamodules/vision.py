@@ -93,8 +93,10 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             ]
         )
         self.test_transforms = test_transforms or torchvision.transforms.v2.Compose(
-            torchvision.transforms.v2.ToImage(),
-            torchvision.transforms.v2.ToDtype(torch.float32, scale=True),
+            [
+                torchvision.transforms.v2.ToImage(),
+                torchvision.transforms.v2.ToDtype(torch.float32, scale=True),
+            ]
         )
         if (
             not normalize
