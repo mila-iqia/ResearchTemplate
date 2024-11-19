@@ -171,15 +171,23 @@ def get_all_configs_in_group_of_type(
             )
         }
 
-    return [
-        name
-        for name, object_type in names_to_types.items()
-        if (
-            issubclass(object_type, config_target_type)
-            if include_subclasses
-            else object_type in config_target_type
-        )
-    ]
+    def _matches_protocol(object: type, protocol: type) -> bool:
+        return isinstance(object, protocol)  # todo: weird!
+
+    compatible_config_names = []
+    for name, object_type in names_to_types.items():
+        if not include_subclasses:
+            if object_type in config_target_type:
+                compatible_config_names.append(name)
+            continue
+        for t in config_target_type:
+            if (
+                issubclass(t, typing.Protocol) and _matches_protocol(object_type, t)
+            ) or issubclass(object_type, t):
+                compatible_config_names.append(name)
+                break
+
+    return compatible_config_names
 
 
 def get_all_configs_in_group_with_target(group_name: str, some_type: type) -> list[str]:

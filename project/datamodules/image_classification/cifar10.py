@@ -7,7 +7,6 @@ from torchvision.transforms import v2 as transforms
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision import VisionDataModule
 from project.utils.typing_utils import C, H, W
 
 
@@ -40,7 +39,7 @@ def cifar10_unnormalization(x: torch.Tensor) -> torch.Tensor:
     return (x * std) + mean
 
 
-class CIFAR10DataModule(ImageClassificationDataModule, VisionDataModule):
+class CIFAR10DataModule(ImageClassificationDataModule):
     """
     .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/wp-content/uploads/2019/01/
         Plot-of-a-Subset-of-Images-from-the-CIFAR-10-Dataset.png

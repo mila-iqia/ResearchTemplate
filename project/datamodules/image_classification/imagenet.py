@@ -21,7 +21,9 @@ from torchvision.datasets import ImageNet
 from torchvision.models.resnet import ResNet152_Weights
 from torchvision.transforms import v2 as transforms
 
-from project.datamodules.vision import VisionDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
 from project.utils.typing_utils import C, H, W
 
@@ -36,7 +38,7 @@ ClassIndex = NewType("ClassIndex", int)
 ImageIndex = NewType("ImageIndex", int)
 
 
-class ImageNetDataModule(VisionDataModule):
+class ImageNetDataModule(ImageClassificationDataModule):
     """ImageNet datamodule.
 
     Extracted from https://github.com/Lightning-Universe/lightning-bolts/blob/master/src/pl_bolts/datamodules/imagenet_datamodule.py

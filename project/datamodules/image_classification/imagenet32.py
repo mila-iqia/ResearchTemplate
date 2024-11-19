@@ -17,7 +17,9 @@ from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import v2 as transforms
 
-from project.datamodules.vision import VisionDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.env_vars import DATA_DIR, SCRATCH
 from project.utils.typing_utils import C, H, W
 
@@ -167,7 +169,7 @@ class ImageNet32Dataset(VisionDataset):
         self._data_loaded = True
 
 
-class ImageNet32DataModule(VisionDataModule):
+class ImageNet32DataModule(ImageClassificationDataModule):
     """TODO: Add a `val_split` argument, that supports a value of `0`."""
 
     name: ClassVar[str] = "imagenet32"

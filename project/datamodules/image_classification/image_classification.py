@@ -12,10 +12,17 @@ from project.utils.typing_utils.protocols import ClassificationDataModule
 ImageBatchType = TypeVar("ImageBatchType", bound=tuple[Image, Tensor])
 
 
+# todo: this should probably be a protocol. The only issue with that is that we do `issubclass` in
+# tests to determine which datamodule configs are for image classification, so we can't do that
+# with a Protocol.
+
+
 class ImageClassificationDataModule(
     VisionDataModule[ImageBatchType], ClassificationDataModule[ImageBatchType]
 ):
     """Lightning data modules for image classification."""
+
+    # This just adds the `num_classes` property to `VisionDataModule`.
 
     num_classes: int
     """Number of classes in the dataset."""
