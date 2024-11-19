@@ -35,4 +35,4 @@ def test_demo(tmp_path: Path):
     """Test the demo at the bottom of the module."""
     from .jax_image_classifier import demo
 
-    demo(devices=1, overfit_batches=0.1, max_epochs=1, default_log_dir=tmp_path / "logs")
+    demo(devices=1, overfit_batches=0.1, max_epochs=1, default_root_dir=tmp_path / "logs")
