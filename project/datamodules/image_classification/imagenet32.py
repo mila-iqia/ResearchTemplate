@@ -278,8 +278,8 @@ class ImageNet32DataModule(VisionDataModule):
             [
                 transforms.ToImage(),
                 transforms.ToDtype(torch.float32, scale=True),
+                *([imagenet32_normalization()] if self.normalize else []),
             ]
-            + ([imagenet32_normalization()] if self.normalize else [])
         )
 
     def train_dataloader(self) -> DataLoader:

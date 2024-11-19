@@ -19,7 +19,7 @@ import torch.utils.data
 import tqdm
 from torchvision.datasets import ImageNet
 from torchvision.models.resnet import ResNet152_Weights
-from torchvision.transforms import v2 as transform_lib
+from torchvision.transforms import v2 as transforms
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
@@ -29,7 +29,7 @@ logger = get_logger(__name__)
 
 
 def imagenet_normalization():
-    return transform_lib.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
 ClassIndex = NewType("ClassIndex", int)
@@ -192,50 +192,50 @@ class ImageNetDataModule(VisionDataModule):
     def train_transform(self) -> torch.nn.Module:
         """The standard imagenet transforms.
 
-        .. code-block:: python
-
-            transform_lib.Compose([
-                transform_lib.RandomResizedCrop(self.image_size),
-                transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToTensor(),
-                transform_lib.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225]
-                ),
-            ])
+        ```python
+        transforms.Compose([
+            transforms.RandomResizedCrop(self.image_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            ),
+        ])
+        ```
         """
-        return transform_lib.Compose(
+        return transforms.Compose(
             [
-                transform_lib.RandomResizedCrop(self.image_size),
-                transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToImage(),
-                transform_lib.ToDtype(torch.float32, scale=True),
+                transforms.RandomResizedCrop(self.image_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToImage(),
+                transforms.ToDtype(torch.float32, scale=True),
                 imagenet_normalization(),
             ]
         )
 
-    def val_transform(self) -> Callable:
+    def val_transform(self) -> transforms.Compose:
         """The standard imagenet transforms for validation.
 
         .. code-block:: python
 
-            transform_lib.Compose([
-                transform_lib.Resize(self.image_size + 32),
-                transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToTensor(),
-                transform_lib.Normalize(
+            transforms.Compose([
+                transforms.Resize(self.image_size + 32),
+                transforms.CenterCrop(self.image_size),
+                transforms.ToTensor(),
+                transforms.Normalize(
                     mean=[0.485, 0.456, 0.406],
                     std=[0.229, 0.224, 0.225]
                 ),
             ])
         """
 
-        return transform_lib.Compose(
+        return transforms.Compose(
             [
-                transform_lib.Resize(self.image_size + 32),
-                transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToImage(),
-                transform_lib.ToDtype(torch.float32, scale=True),
+                transforms.Resize(self.image_size + 32),
+                transforms.CenterCrop(self.image_size),
+                transforms.ToImage(),
+                transforms.ToDtype(torch.float32, scale=True),
                 imagenet_normalization(),
             ]
         )
