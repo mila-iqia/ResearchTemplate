@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, TypeVar
+from typing import TypeVar
 
 from torch import Tensor
 from torchvision.tv_tensors import Image
@@ -27,7 +27,7 @@ class ImageClassificationDataModule(
     num_classes: int
     """Number of classes in the dataset."""
 
-    dims: ClassVar[tuple[C, H, W]]
+    dims: tuple[C, H, W]
     """A tuple describing the shape of the data."""
 
     def __init__(self, *args, **kwargs) -> None:

@@ -809,7 +809,7 @@ def render_episode(
 class RenderEpisodesCallback(JaxCallback):
     on_every_epoch: bool = False
 
-    def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
+    def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
         if not self.on_every_epoch:
             return
         log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
@@ -818,7 +818,7 @@ class RenderEpisodesCallback(JaxCallback):
         module.visualize(ts=ts, gif_path=gif_path)
         jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
 
-    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):
+    def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
         if not self.on_every_epoch:
             return
         log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir

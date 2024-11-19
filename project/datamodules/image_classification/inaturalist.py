@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 import torchvision.transforms as T
-from torchvision.datasets import INaturalist
+from torchvision.datasets import INaturalist, VisionDataset
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS, SLURM_TMPDIR
@@ -36,7 +36,7 @@ class INaturalistDataModule(VisionDataModule):
     name: ClassVar[str] = "inaturalist"
     """Dataset name."""
 
-    dataset_cls: ClassVar[type[INaturalist]] = INaturalist
+    dataset_cls: ClassVar[type[VisionDataset]] = INaturalist
     """Dataset class to use."""
 
     dims: tuple[C, H, W] = (C(3), H(224), W(224))

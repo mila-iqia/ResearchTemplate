@@ -230,11 +230,11 @@ def demo(**trainer_kwargs):
     )
     datamodule = MNISTDataModule(num_workers=4, batch_size=64)
     network = JaxCNN(num_classes=datamodule.num_classes)
-    optimizer = functools.partial(torch.optim.SGD, lr=0.01)
+    optimizer = functools.partial(torch.optim.SGD, lr=0.01)  # type: ignore
     model = JaxImageClassifier(
         datamodule=datamodule,
-        network=hydra_zen.just(network),
-        optimizer=hydra_zen.just(optimizer),
+        network=hydra_zen.just(network),  # type: ignore
+        optimizer=hydra_zen.just(optimizer),  # type: ignore
     )
     trainer.fit(model, datamodule=datamodule)
 

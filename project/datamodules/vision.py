@@ -33,13 +33,13 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
     (Taken from pl_bolts which is not very well maintained.)
     """
 
-    name: ClassVar[str] = ""
+    name: str | None = ""
     """Dataset name."""
 
     dataset_cls: ClassVar[type[VisionDataset]]
     """Dataset class to use."""
 
-    dims: ClassVar[tuple[C, H, W]]
+    dims: tuple[C, H, W]
     """A tuple describing the shape of the data."""
 
     def __init__(

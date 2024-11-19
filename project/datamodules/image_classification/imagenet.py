@@ -16,6 +16,7 @@ import rich
 import rich.logging
 import torch
 import torch.utils.data
+import torchvision
 import tqdm
 from torchvision.datasets import ImageNet
 from torchvision.models.resnet import ResNet152_Weights
@@ -56,7 +57,7 @@ class ImageNetDataModule(ImageClassificationDataModule):
     name: ClassVar[str] = "imagenet"
     """Dataset name."""
 
-    dataset_cls: ClassVar[type[ImageNet]] = ImageNet
+    dataset_cls: ClassVar[type[torchvision.datasets.VisionDataset]] = ImageNet
     """Dataset class to use."""
 
     dims: tuple[C, H, W] = (C(3), H(224), W(224))
@@ -147,10 +148,13 @@ class ImageNetDataModule(ImageClassificationDataModule):
         logger.debug(f"Setup ImageNet datamodule for {stage=}")
         super().setup(stage)
 
-    def _split_dataset(self, dataset: ImageNet, train: bool = True) -> torch.utils.data.Dataset:
+    def _split_dataset(
+        self, dataset: torchvision.datasets.VisionDataset, train: bool = True
+    ) -> torch.utils.data.Dataset:
+        assert isinstance(dataset, ImageNet)
         class_item_indices: dict[ClassIndex, list[ImageIndex]] = defaultdict(list)
         for dataset_index, y in enumerate(dataset.targets):
-            class_item_indices[y].append(dataset_index)
+            class_item_indices[ClassIndex(y)].append(ImageIndex(dataset_index))
 
         train_val_split_seed = self.seed
         gen = torch.Generator().manual_seed(train_val_split_seed)
