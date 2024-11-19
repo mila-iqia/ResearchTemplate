@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import typing
-from collections.abc import Iterable
 from typing import Literal, ParamSpec, Protocol, TypeVar, runtime_checkable
 
-from torch import nn
+if typing.TYPE_CHECKING:
+    from torch import nn
+    from torch.utils.data import DataLoader
 
 P = ParamSpec("P")
 OutT = TypeVar("OutT", covariant=True)
@@ -48,7 +49,7 @@ class DataModule(Protocol[BatchType]):
 
     def setup(self, stage: Literal["fit", "validate", "test", "predict"]) -> None: ...
 
-    def train_dataloader(self) -> Iterable[BatchType]: ...
+    def train_dataloader(self) -> DataLoader[BatchType]: ...
 
 
 @runtime_checkable

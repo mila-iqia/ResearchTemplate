@@ -33,7 +33,7 @@ def inat_dataset_dir() -> Path:
 
 
 class INaturalistDataModule(VisionDataModule):
-    name: ClassVar[str] = "inaturalist"
+    name: str | None = "inaturalist"
     """Dataset name."""
 
     dataset_cls: ClassVar[type[VisionDataset]] = INaturalist

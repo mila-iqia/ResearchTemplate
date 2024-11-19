@@ -172,10 +172,10 @@ class ImageNet32Dataset(VisionDataset):
 class ImageNet32DataModule(ImageClassificationDataModule):
     """TODO: Add a `val_split` argument, that supports a value of `0`."""
 
-    name: ClassVar[str] = "imagenet32"
-    dataset_cls: ClassVar[type[ImageNet32Dataset]] = ImageNet32Dataset
-    dims: ClassVar[tuple[C, H, W]] = (C(3), H(32), W(32))
-    num_classes: ClassVar[int] = 1000
+    name: str | None = "imagenet32"
+    dataset_cls: ClassVar[type[ImageNet32Dataset]] = ImageNet32Dataset  # type: ignore
+    dims: tuple[C, H, W] = (C(3), H(32), W(32))
+    num_classes: int = 1000
 
     def __init__(
         self,
@@ -265,12 +265,12 @@ class ImageNet32DataModule(ImageClassificationDataModule):
                 self.dataset_train = Subset(base_dataset_train, train_indices)
                 self.dataset_val = Subset(base_dataset_valid, val_indices)
             else:
-                self.dataset_train = self._split_dataset(base_dataset_train, train=True)
-                self.dataset_val = self._split_dataset(base_dataset_valid, train=False)
+                self.dataset_train = self._split_dataset(base_dataset_train, train=True)  # type: ignore
+                self.dataset_val = self._split_dataset(base_dataset_valid, train=False)  # type: ignore
 
         if stage in ["test", "predict", None]:
             test_transforms = self.test_transforms or self.default_transforms()
-            self.dataset_test = self.dataset_cls(
+            self.dataset_test = self.dataset_cls(  # type: ignore
                 self.data_dir, train=False, transform=test_transforms, **self.EXTRA_ARGS
             )
 

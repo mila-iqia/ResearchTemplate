@@ -54,7 +54,7 @@ class ImageNetDataModule(ImageClassificationDataModule):
         - TODO: need to pass num_imgs_per_class=-1 for test dataset and split="test".
     """
 
-    name: ClassVar[str] = "imagenet"
+    name: str | None = "imagenet"
     """Dataset name."""
 
     dataset_cls: ClassVar[type[torchvision.datasets.VisionDataset]] = ImageNet
@@ -63,7 +63,7 @@ class ImageNetDataModule(ImageClassificationDataModule):
     dims: tuple[C, H, W] = (C(3), H(224), W(224))
     """A tuple describing the shape of the data."""
 
-    num_classes: ClassVar[int] = 1000
+    num_classes: int = 1000
 
     def __init__(
         self,

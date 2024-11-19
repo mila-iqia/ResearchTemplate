@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import TypeVar
-
 from torch import Tensor
 from torchvision.tv_tensors import Image
+from typing_extensions import TypeVar
 
 from project.datamodules.vision import VisionDataModule
 from project.utils.typing_utils import C, H, W
 from project.utils.typing_utils.protocols import ClassificationDataModule
 
-ImageBatchType = TypeVar("ImageBatchType", bound=tuple[Image, Tensor])
+ImageBatchType = TypeVar(
+    "ImageBatchType", bound=tuple[Image, Tensor], default=tuple[Image, Tensor]
+)
 
 
 # todo: this should probably be a protocol. The only issue with that is that we do `issubclass` in
