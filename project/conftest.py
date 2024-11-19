@@ -55,6 +55,7 @@ algorithm & datamodule -- is used by --> some_other_test
 from __future__ import annotations
 
 import copy
+import functools
 import operator
 import os
 import shlex
@@ -81,6 +82,8 @@ from _pytest.runner import CallInfo
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
+from hydra_plugins.auto_schema import auto_schema_plugin
+from hydra_plugins.auto_schema.auto_schema_plugin import add_schemas_to_all_hydra_configs
 from omegaconf import DictConfig, open_dict
 from torch import Tensor
 from torch.utils.data import DataLoader
@@ -114,6 +117,11 @@ logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
+
+# Note: Here we attempt to make this happen only once.
+auto_schema_plugin.add_schemas_to_all_hydra_configs = functools.cache(
+    add_schemas_to_all_hydra_configs
+)
 
 
 @pytest.fixture(autouse=True)
