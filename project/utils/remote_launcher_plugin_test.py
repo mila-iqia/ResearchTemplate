@@ -12,12 +12,12 @@ import hydra.utils
 import omegaconf
 import pytest
 from hydra import initialize_config_module
+from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
+from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLauncher
 from milatools.utils.remote_v2 import is_already_logged_in
 
 import project.main
 import project.utils.remote_launcher_plugin
-from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
-from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLauncher
 from project.main import PROJECT_NAME, main
 from project.main_test import CONFIG_DIR
 from project.utils import remote_launcher_plugin
