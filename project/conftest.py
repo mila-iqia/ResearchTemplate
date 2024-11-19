@@ -7,7 +7,7 @@ by tests.
 
 Our goal here is to make sure that the way we create networks/datasets/algorithms during tests match
 as closely as possible how they are created normally in a real run.
-For example, when running `python project/main.py algorithm=image_classification`.
+For example, when running `python project/main.py algorithm=image_classifier`.
 
 We achieve this like so: All the components of an experiment are created using fixtures.
 The first fixtures to be invoked are the ones that would correspond to command-line arguments.
