@@ -1,4 +1,4 @@
-batch.0:
+batch.list_index_0:
   device: cuda:0
   max: '2.126e+00'
   mean: '-6.179e-03'
@@ -9,7 +9,7 @@ batch.0:
   - 32
   - 32
   sum: '-2.43e+03'
-batch.1:
+batch.list_index_1:
   device: cuda:0
   max: 9
   mean: '4.555e+00'
@@ -75,20 +75,20 @@ grads.network.params.5:
 grads.network.params.6:
   device: cuda:0
   max: '2.984e-02'
-  mean: '-5.588e-10'
+  mean: '-1.211e-09'
   min: '-2.597e-02'
   shape:
   - 10
-  sum: '-5.588e-09'
+  sum: '-1.211e-08'
 grads.network.params.7:
   device: cuda:0
   max: '4.361e-02'
-  mean: '-2.154e-10'
+  mean: '-3.26e-10'
   min: '-4.662e-02'
   shape:
   - 256
   - 10
-  sum: '-5.513e-07'
+  sum: '-8.345e-07'
 outputs.logits:
   device: cuda:0
   max: '9.608e-01'

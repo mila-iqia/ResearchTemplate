@@ -1,4 +1,4 @@
-batch.0:
+batch.list_index_0:
   device: cuda:0
   max: '2.821e+00'
   mean: '4.822e-01'
@@ -9,7 +9,7 @@ batch.0:
   - 28
   - 28
   sum: '4.839e+04'
-batch.1:
+batch.list_index_1:
   device: cuda:0
   max: 9
   mean: '4.555e+00'
