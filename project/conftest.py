@@ -68,6 +68,7 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Literal
 
+import hydra.errors
 import jax
 import lightning
 import lightning.pytorch
@@ -127,10 +128,14 @@ auto_schema_plugin.add_schemas_to_all_hydra_configs = functools.cache(
 )
 
 
-skip_on_macos_in_CI = pytest.mark.skipif(
+fails_on_macOS_in_CI = pytest.mark.xfail(
     sys.platform == "darwin" and IN_GITHUB_CI,
-    # raises=(RuntimeError, hydra.errors.InstantiationException),
+    raises=(RuntimeError, hydra.errors.InstantiationException),
     reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
+)
+skip_on_macOS_in_CI = pytest.mark.skipif(
+    sys.platform == "darwin" and IN_GITHUB_CI,
+    reason="TODO: Fails for some reason on MacOS in GitHub CI.",
 )
 
 

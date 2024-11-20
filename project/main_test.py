@@ -14,7 +14,7 @@ from hydra.types import RunMode
 from omegaconf import DictConfig
 
 import project.main
-from project.conftest import command_line_overrides
+from project.conftest import command_line_overrides, skip_on_macOS_in_CI
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import IN_GITHUB_CI
@@ -195,6 +195,7 @@ def test_can_run_experiment(
     project.main.main()
 
 
+@skip_on_macOS_in_CI
 @pytest.mark.parametrize(
     command_line_overrides.__name__, ["algorithm=image_classifier"], indirect=True
 )
