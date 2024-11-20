@@ -369,17 +369,16 @@ def convert_list_and_tuples_to_dicts(value: Any) -> Any:
     """Converts all lists and tuples in a nested structure to dictionaries.
 
     >>> convert_list_and_tuples_to_dicts([1, 2, 3])
-    {'list_index_0': 1, 'list_index_1': 2, 'list_index_2': 3}
+    {'0': 1, '1': 2, '2': 3}
     >>> convert_list_and_tuples_to_dicts((1, 2, 3))
-    {'tuple_index_0': 1, 'tuple_index_1': 2, 'tuple_index_2': 3}
+    {'0': 1, '1': 2, '2': 3}
     >>> convert_list_and_tuples_to_dicts({"a": [1, 2, 3], "b": (4, 5, 6)})
-    {'a': {'list_index_0': 1, 'list_index_1': 2, 'list_index_2': 3}, 'b': {'tuple_index_0': 4, 'tuple_index_1': 5, 'tuple_index_2': 6}}
+    {'a': {'0': 1, '1': 2, '2': 3}, 'b': {'0': 4, '1': 5, '2': 6}}
     """
     if isinstance(value, Mapping):
         return {k: convert_list_and_tuples_to_dicts(v) for k, v in value.items()}
     if isinstance(value, list | tuple):
-        return {
-            f"{type(value).__name__}_index_{i}": convert_list_and_tuples_to_dicts(v)
-            for i, v in enumerate(value)
-        }
+        # NOTE: Here we won't be able to distinguish between {"0": "bob"} and ["bob"]!
+        # But that's not too bad.
+        return {f"{i}": convert_list_and_tuples_to_dicts(v) for i, v in enumerate(value)}
     return value
