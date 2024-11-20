@@ -187,7 +187,9 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
             out = self.forward_pass(algorithm, forward_pass_input)
-
+        # todo: make tensor-regression more flexible so it can handle tuples in the nested dict.
+        forward_pass_input = convert_list_and_tuples_to_dicts(forward_pass_input)
+        out = convert_list_and_tuples_to_dicts(out)
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
@@ -223,15 +225,14 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         # BUG: Fix issue in tensor_regression calling .numpy() on cuda tensors.
         assert isinstance(gradients_callback.grads, dict)
         assert isinstance(gradients_callback.outputs, dict)
-        batch = gradients_callback.batch
-        # todo: make tensor-regression more flexible so it can handle tuples in the nested dict.
-        if isinstance(batch, list | tuple):
-            batch = {str(i): v for i, v in enumerate(batch)}
+        # todo: make tensor-regression more flexible so it can handle tuples and lists in the dict.
+        batch = convert_list_and_tuples_to_dicts(gradients_callback.batch)
+        outputs = convert_list_and_tuples_to_dicts(gradients_callback.outputs)
         tensor_regression.check(
             {
                 "batch": batch,
                 "grads": gradients_callback.grads,
-                "outputs": gradients_callback.outputs,
+                "outputs": outputs,
             },
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for the jax example.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
@@ -362,3 +363,23 @@ class GetStuffFromFirstTrainingStep(lightning.Callback):
 
         for name, param in pl_module.named_parameters():
             self.grads[name] = copy.deepcopy(param.grad)
+
+
+def convert_list_and_tuples_to_dicts(value: Any) -> Any:
+    """Converts all lists and tuples in a nested structure to dictionaries.
+
+    >>> convert_list_and_tuples_to_dicts([1, 2, 3])
+    {'list_index_0': 1, 'list_index_1': 2, 'list_index_2': 3}
+    >>> convert_list_and_tuples_to_dicts((1, 2, 3))
+    {'tuple_index_0': 1, 'tuple_index_1': 2, 'tuple_index_2': 3}
+    >>> convert_list_and_tuples_to_dicts({"a": [1, 2, 3], "b": (4, 5, 6)})
+    {'a': {'list_index_0': 1, 'list_index_1': 2, 'list_index_2': 3}, 'b': {'tuple_index_0': 4, 'tuple_index_1': 5, 'tuple_index_2': 6}}
+    """
+    if isinstance(value, Mapping):
+        return {k: convert_list_and_tuples_to_dicts(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return {
+            f"{type(value).__name__}_index_{i}": convert_list_and_tuples_to_dicts(v)
+            for i, v in enumerate(value)
+        }
+    return value
