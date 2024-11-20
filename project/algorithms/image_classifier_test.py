@@ -6,7 +6,7 @@ from transformers import PreTrainedModel
 
 from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs import Config
-from project.conftest import command_line_overrides, fails_on_macOS_in_CI
+from project.conftest import command_line_overrides, skip_on_macOS_in_CI
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
@@ -31,7 +31,7 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
 
 
-@fails_on_macOS_in_CI
+@skip_on_macOS_in_CI
 @run_for_all_configs_of_type("algorithm", ImageClassifier)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)
