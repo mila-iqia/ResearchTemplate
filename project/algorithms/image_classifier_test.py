@@ -1,19 +1,17 @@
 """Example showing how the test suite can be used to add tests for a new algorithm."""
 
-import sys
-
 import pytest
 import torch
 from transformers import PreTrainedModel
 
 from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs import Config
-from project.conftest import command_line_overrides
+from project.conftest import command_line_overrides, skip_on_macos_in_CI
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.testutils import IN_GITHUB_CI, run_for_all_configs_of_type
+from project.utils.testutils import run_for_all_configs_of_type
 
 from .image_classifier import ImageClassifier
 
@@ -33,11 +31,7 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin" and IN_GITHUB_CI,
-    # raises=(RuntimeError, hydra.errors.InstantiationException),
-    reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
-)
+@skip_on_macos_in_CI
 @run_for_all_configs_of_type("algorithm", ImageClassifier)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
 @run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)

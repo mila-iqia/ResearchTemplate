@@ -103,6 +103,7 @@ from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
+    IN_GITHUB_CI,
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
@@ -123,6 +124,13 @@ DEFAULT_SEED = 42
 # Note: Here we attempt to make this happen only once.
 auto_schema_plugin.add_schemas_to_all_hydra_configs = functools.cache(
     add_schemas_to_all_hydra_configs
+)
+
+
+skip_on_macos_in_CI = pytest.mark.skipif(
+    sys.platform == "darwin" and IN_GITHUB_CI,
+    # raises=(RuntimeError, hydra.errors.InstantiationException),
+    reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
 )
 
 
