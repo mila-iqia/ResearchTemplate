@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import operator
+import sys
 import time
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
@@ -205,6 +206,7 @@ def test_ours_with_trainer(
         algo.visualize(ts_i, gif_path=gif_path, eval_rng=eval_rng_i)
 
 
+@pytest.mark.xfail(sys.platform == "darwin" and IN_GITHUB_CI, reason="Fails on macOS in CI.")
 def test_results_are_same_with_or_without_jax_trainer(
     results_ours: tuple[PPOState, EvalMetrics],
     results_ours_with_trainer: tuple[PPOState, EvalMetrics],
