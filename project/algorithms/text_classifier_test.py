@@ -45,7 +45,7 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
 
     @pytest.mark.xfail(
         SLURM_JOB_ID is not None,
-        reason="Weird reproducibility issue with HuggingFace model/dataset on the cluster?",
+        reason="Weird reproducibility issue with HuggingFace model/dataset?",
         raises=AssertionError,
     )
     def test_backward_pass_is_reproducible(  # type: ignore
