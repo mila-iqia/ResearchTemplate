@@ -143,7 +143,7 @@ def get_all_configs_in_group_of_type(
         ):
             # Resolve generic aliases if present.
             return_type = typing.get_origin(return_type) or return_type
-            logger.info(
+            logger.debug(
                 f"Assuming that the function {target} creates objects of type {return_type} based "
                 f"on its return type annotation."
             )
