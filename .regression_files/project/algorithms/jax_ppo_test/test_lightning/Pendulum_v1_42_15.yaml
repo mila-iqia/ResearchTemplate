@@ -5,8 +5,8 @@ val/episode_lengths:
   shape: []
   sum: '2.e+02'
 val/rewards:
-  max: '-1.222e+03'
-  mean: '-1.222e+03'
-  min: '-1.222e+03'
+  max: '-9.099e+02'
+  mean: '-9.099e+02'
+  min: '-9.099e+02'
   shape: []
-  sum: '-1.222e+03'
+  sum: '-9.099e+02'
