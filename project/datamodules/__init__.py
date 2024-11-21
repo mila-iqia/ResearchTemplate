@@ -7,7 +7,6 @@ from .image_classification import ImageClassificationDataModule
 from .image_classification.cifar10 import CIFAR10DataModule, cifar10_normalization
 from .image_classification.fashion_mnist import FashionMNISTDataModule
 from .image_classification.imagenet import ImageNetDataModule
-from .image_classification.imagenet32 import ImageNet32DataModule, imagenet32_normalization
 from .image_classification.inaturalist import INaturalistDataModule
 from .image_classification.mnist import MNISTDataModule
 from .text.text_classification import TextClassificationDataModule
@@ -19,8 +18,6 @@ __all__ = [
     "FashionMNISTDataModule",
     "INaturalistDataModule",
     "ImageClassificationDataModule",
-    "imagenet32_normalization",
-    "ImageNet32DataModule",
     "ImageNetDataModule",
     "MNISTDataModule",
     "VisionDataModule",

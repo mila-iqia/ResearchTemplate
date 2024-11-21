@@ -29,7 +29,6 @@ PARAM_WHEN_USED_MARK_NAME = "parametrize_when_used"
 
 
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
-    "imagenet32": [pytest.mark.slow],
     "inaturalist": [
         pytest.mark.slow,
         pytest.mark.skipif(

@@ -43,7 +43,7 @@ class TestImageClassifier(LightningModuleTests[ImageClassifier]):
     - `algorithm_config` will take the value `"image_classifier"`
         - This is because there is an `image_classifier.yaml` config file in project/configs/algorithms
           whose `_target_` is the `ImageClassifier`.
-    - `datamodule_config` will take these values: `['cifar10', 'fashion_mnist', 'imagenet', 'imagenet32', 'inaturalist', 'mnist']`
+    - `datamodule_config` will take these values: `['cifar10', 'fashion_mnist', 'imagenet', 'inaturalist', 'mnist']`
         - These are all the configs whose target is an `ImageClassificationDataModule`.
     - Similarly, `network_config` will be parametrized by the names of all configs which produce an nn.Module,
       except those that would create a `PreTrainedModel` from HuggingFace.
