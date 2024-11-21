@@ -186,6 +186,7 @@ def test_rejax(
     tensor_regression: TensorRegressionFixture,
     original_datadir: Path,
     n_agents: int | None,
+    seed: int,
 ):
     """Train `rejax.PPO` with the same parameters."""
 
