@@ -4,7 +4,7 @@ import dataclasses
 import functools
 import operator
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
 from pathlib import Path
 from typing import Any
@@ -29,6 +29,7 @@ from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.trainers.jax_trainer import JaxTrainer, hparams_to_dict
+from project.utils.testutils import IN_GITHUB_CI
 
 from .jax_ppo import (
     EvalMetrics,
@@ -46,62 +47,76 @@ from .jax_ppo import (
 logger = getLogger(__name__)
 
 
-@pytest.fixture(scope="session", params=[123])
-def seed(request: pytest.FixtureRequest) -> int:
-    seed = getattr(request, "param", 123)
+@pytest.fixture(scope="session", params=[[42, 123]], ids=str)
+def seed(request: pytest.FixtureRequest) -> int | list[int]:
+    seed = getattr(request, "param", 42)
     return seed
 
 
 @pytest.fixture(scope="session")
 def rng(seed: int) -> chex.PRNGKey:
-    return jax.random.key(seed)
+    if isinstance(seed, int):
+        return jax.random.key(seed)
+    else:
+        # multiple seeds
+        return jax.vmap(jax.random.key)(jnp.asarray(seed))
 
 
 @pytest.fixture(scope="session")
-def n_agents(request: pytest.FixtureRequest) -> int | None:
-    return getattr(request, "param", None)
+def n_agents(seed: int | Sequence[int]) -> int | None:
+    if isinstance(seed, int):
+        return None
+    return len(seed)
 
 
 @pytest.fixture(scope="session")
-def results_ours(
-    algo: JaxRLExample,
-    rng: chex.PRNGKey,
-    n_agents: int | None,
-):
+def results_ours(algo: JaxRLExample, rng: chex.PRNGKey, seed: int | Sequence[int]):
     train_fn = algo.train
 
-    if n_agents is not None:
+    if not isinstance(seed, int):
         train_fn = jax.vmap(train_fn)
-        rng = jax.random.split(rng, n_agents)
-
+        # rng should already be an array.
+        # rng = jax.random.split(rng, n_agents)
+    _start = time.perf_counter()
     train_fn = jax.jit(train_fn).lower(rng).compile()
+    print(f"Our tweaked rejax.PPO: Compiled in {time.perf_counter() - _start:.1f} seconds.")
+
     _start = time.perf_counter()
     train_states_ours, evals_ours = train_fn(rng)
     jax.block_until_ready((train_states_ours, evals_ours))
-    print(f"Our tweaked rejax.PPO: {time.perf_counter() - _start:.1f} seconds.")
+    print(f"Our tweaked rejax.PPO: trained in {time.perf_counter() - _start:.1f} seconds.")
     return train_states_ours, evals_ours
 
 
 @pytest.fixture
 def results_ours_with_trainer(
     algo: JaxRLExample,
+    seed: int | Sequence[int],
     rng: chex.PRNGKey,
-    n_agents: int,
     jax_trainer: JaxTrainer,
 ):
     train_fn = jax_trainer.fit
 
-    if n_agents is not None:
+    if not isinstance(seed, int):
+        # Drop callbacks if we want to use vmap.
         jax_trainer = jax_trainer.replace(callbacks=())
         train_fn = jax_trainer.fit
         train_fn = jax.vmap(train_fn, in_axes=(None, 0))
-        rng = jax.random.split(rng, n_agents)
+        # rng is already a key array.
+        # rng = jax.random.split(rng, n_agents)
+    _start = time.perf_counter()
 
     train_fn_with_trainer = jax.jit(train_fn).lower(algo, rng).compile()
+    print(
+        f"Our tweaked rejax.PPO with JaxTrainer: Compiled in {time.perf_counter() - _start:.1f} seconds."
+    )
+
     _start = time.perf_counter()
     _train_states_ours_with_trainer, evals_ours_with_trainer = train_fn_with_trainer(algo, rng)
     jax.block_until_ready((_train_states_ours_with_trainer, evals_ours_with_trainer))
-    print(f"Our tweaked rejax.PPO with JaxTrainer: {time.perf_counter() - _start:.1f} seconds.")
+    print(
+        f"Our tweaked rejax.PPO with JaxTrainer: Trained in {time.perf_counter() - _start:.1f} seconds."
+    )
     return _train_states_ours_with_trainer, evals_ours_with_trainer
 
 
@@ -109,75 +124,97 @@ def results_ours_with_trainer(
 def results_rejax(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
-    n_agents: int,
+    n_agents: int | None,
 ):
-    # _start = time.perf_counter()
     _rejax_ppo, train_states_rejax, evals_rejax = _train_rejax(
         env=algo.env, env_params=algo.env_params, hp=algo.hp, rng=rng, n_agents=n_agents
     )
-    # jax.block_until_ready((train_states_rejax, evals_rejax))
-    # print(f"rejax.PPO: {time.perf_counter() - _start:.1f} seconds.")
     return _rejax_ppo, train_states_rejax, evals_rejax
 
 
-@pytest.mark.xfail(strict=False, reason="TODO: test is flaky!")
+def _should_skip_making_gif(gif_path: Path) -> bool:
+    if gif_path.exists():
+        print(f"Skipping visualization, {gif_path} already exists.")
+        return True
+    return IN_GITHUB_CI
+
+
+# @pytest.mark.xfail(strict=False, reason="TODO: test is flaky!")
 def test_ours(
     algo: JaxRLExample,
     results_ours: tuple[PPOState, EvalMetrics],
     tensor_regression: TensorRegressionFixture,
-    seed: int,
+    seed: int | Sequence[int],
     rng: chex.PRNGKey,
     n_agents: int | None,
     original_datadir: Path,
 ):
-    evaluations = results_ours[1]
-    tensor_regression.check(jax.tree.map(lambda v: v.__array__(), dataclasses.asdict(evaluations)))
+    ts, evaluations = results_ours
+    tensor_regression.check(
+        jax.tree.map(operator.methodcaller("__array__"), dataclasses.asdict(evaluations))
+    )
 
     eval_rng = rng
-    if n_agents is None:
+    if isinstance(seed, int):
         gif_path = original_datadir / f"ours_{seed=}.gif"
-        algo.visualize(results_ours[0], gif_path=gif_path, eval_rng=eval_rng)
-    else:
-        gif_path = original_datadir / f"ours_{n_agents=}_{seed=}_first.gif"
-        fn = functools.partial(jax.tree.map, operator.itemgetter(0))
-        algo.visualize(fn(results_ours[0]), gif_path=gif_path, eval_rng=eval_rng)
+        if not _should_skip_making_gif(gif_path):
+            algo.visualize(ts, gif_path=gif_path, eval_rng=eval_rng)
+        return
+
+    for i, seed_i in enumerate(seed):
+        gif_path = original_datadir / f"ours_seed={seed_i}.gif"
+
+        if _should_skip_making_gif(gif_path):
+            continue
+
+        get_slice = functools.partial(jax.tree.map, operator.itemgetter(i))
+        ts_i = get_slice(ts)
+        eval_rng_i = get_slice(eval_rng)
+        algo.visualize(ts_i, gif_path=gif_path, eval_rng=eval_rng_i)
 
 
 def test_ours_with_trainer(
     algo: JaxRLExample,
     results_ours_with_trainer: tuple[PPOState, EvalMetrics],
     tensor_regression: TensorRegressionFixture,
-    tmp_path: Path,
     seed: int,
     rng: chex.PRNGKey,
     n_agents: int | None,
     original_datadir: Path,
 ):
     ts, evaluations = results_ours_with_trainer
-    tensor_regression.check(jax.tree.map(lambda v: v.__array__(), dataclasses.asdict(evaluations)))
+    tensor_regression.check(
+        jax.tree.map(operator.methodcaller("__array__"), dataclasses.asdict(evaluations))
+    )
 
     eval_rng = rng
     if n_agents is None:
         gif_path = original_datadir / f"ours_with_trainer_{seed=}.gif"
-        algo.visualize(ts, gif_path=gif_path, eval_rng=eval_rng)
-    else:
-        gif_path = original_datadir / f"ours_with_trainer_{n_agents=}_{seed=}_first.gif"
-        fn = functools.partial(jax.tree.map, operator.itemgetter(0))
-        algo.visualize(fn(ts), gif_path=gif_path, eval_rng=eval_rng)
+        if not _should_skip_making_gif(gif_path):
+            algo.visualize(ts, gif_path=gif_path, eval_rng=eval_rng)
+        return
+    assert isinstance(seed, list)
+    for i, seed_i in enumerate(seed):
+        gif_path = original_datadir / f"ours_with_trainer_seed={seed_i}.gif"
+        if _should_skip_making_gif(gif_path):
+            continue
+
+        get_slice = functools.partial(jax.tree.map, operator.itemgetter(i))
+        ts_i = get_slice(ts)
+        eval_rng_i = get_slice(eval_rng)
+        algo.visualize(ts_i, gif_path=gif_path, eval_rng=eval_rng_i)
 
 
 def test_results_are_same_with_or_without_jax_trainer(
     results_ours: tuple[PPOState, EvalMetrics],
     results_ours_with_trainer: tuple[PPOState, EvalMetrics],
 ):
-    np.testing.assert_allclose(
-        results_ours[1].cumulative_reward, results_ours_with_trainer[1].cumulative_reward
-    )
-    # jax.tree.map(
-    #     np.testing.assert_allclose,
-    #     jax.tree.leaves(results_ours),
-    #     jax.tree.leaves(results_ours_with_trainer),
+    # np.testing.assert_allclose(
+    #     results_ours[1].cumulative_reward, results_ours_with_trainer[1].cumulative_reward
     # )
+    # This should also be correct, but we can't use `assert_allclose` between `PRNGKeyArray`s.
+    # jax.tree.map(np.testing.assert_allclose, results_ours, results_ours_with_trainer)
+    jax.tree.map(np.testing.assert_allclose, results_ours[1], results_ours_with_trainer[1])
 
 
 def test_rejax(
@@ -185,25 +222,38 @@ def test_rejax(
     results_rejax: tuple[rejax.PPO, Any, EvalMetrics],
     tensor_regression: TensorRegressionFixture,
     original_datadir: Path,
-    n_agents: int | None,
-    seed: int,
+    seed: int | Sequence[int],
 ):
     """Train `rejax.PPO` with the same parameters."""
 
-    _algo, ts, evaluations = results_rejax
-    tensor_regression.check(jax.tree.map(lambda v: v.__array__(), dataclasses.asdict(evaluations)))
-    eval_rng = rng
+    rejax_algo, ts, evaluations = results_rejax
+    tensor_regression.check(
+        jax.tree.map(operator.methodcaller("__array__"), dataclasses.asdict(evaluations))
+    )
 
-    if n_agents is None:
+    if isinstance(seed, int):
+        eval_rng = rng
         gif_path = original_datadir / f"rejax_{seed=}.gif"
-        _visualize_rejax(rejax_algo=_algo, rejax_ts=ts, eval_rng=rng, gif_path=gif_path)
-    else:
-        fn = functools.partial(jax.tree.map, operator.itemgetter(0))
+        if not _should_skip_making_gif(gif_path):
+            _visualize_rejax(
+                rejax_algo=rejax_algo, rejax_ts=ts, eval_rng=eval_rng, gif_path=gif_path
+            )
+        return
+
+    for i, seed_i in enumerate(seed):
+        gif_path = original_datadir / f"rejax_seed={seed_i}.gif"
+        if _should_skip_making_gif(gif_path):
+            continue
+
+        get_slice = functools.partial(jax.tree.map, operator.itemgetter(i))
+        rejax_ts_i = get_slice(ts)
+        eval_rng_i = get_slice(rng)
+
         _visualize_rejax(
-            rejax_algo=results_rejax[0],
-            rejax_ts=fn(results_rejax[1]),
-            eval_rng=eval_rng,
-            gif_path=original_datadir / f"rejax_{n_agents=}_{seed=}_first.gif.gif",
+            rejax_algo=rejax_algo,
+            rejax_ts=rejax_ts_i,
+            eval_rng=eval_rng_i,
+            gif_path=original_datadir / f"rejax_seed={seed_i}.gif",
         )
 
 
@@ -221,7 +271,15 @@ def get_slicing_fn(eval: EvalMetrics, get_index_fn: Callable[[EvalMetrics], int]
     return functools.partial(jax.tree.map, operator.itemgetter(index))
 
 
-@pytest.mark.parametrize("n_agents", [pytest.param(100, marks=pytest.mark.slow)], indirect=True)
+@pytest.mark.skip(reason="Saving some time since we're not interpreting the result yet anyway.")
+@pytest.mark.parametrize(
+    "seed",
+    [
+        # Run with 100 different seeds, check that results are statistically equivalent.
+        pytest.param(np.arange(100), marks=pytest.mark.slow),
+    ],
+    indirect=True,
+)
 def test_algos_are_equivalent(
     algo: JaxRLExample,
     n_agents: int | None,
@@ -289,10 +347,11 @@ def _train_rejax(
     start = time.perf_counter()
 
     train_fn = algo.train
-    if n_agents:
+    if n_agents is not None:
         # Vmap training function over n_agents initial seeds
         train_fn = jax.vmap(train_fn)
-        rng = jax.random.split(rng, n_agents)
+        # `rng` should already be an array of seeds.
+        # rng = jax.random.split(rng, n_agents)
 
     train_fn = jax.jit(train_fn).lower(rng).compile()
     print(f"Compiled in {time.perf_counter() - start} seconds.")
@@ -310,13 +369,15 @@ def train_lightning(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
     trainer: lightning.Trainer,
+    n_agents: int | None,
 ):
+    assert n_agents is None, "can't train multiple agents with Lightning (would be too long!)"
     # Fit with pytorch-lightning.
     print("Lightning")
 
     module = PPOLightningModule(
         learner=algo,
-        ts=algo.init_train_state(rng),
+        ts=jax.jit(algo.init_train_state)(rng),
     )
 
     start = time.perf_counter()
@@ -458,6 +519,14 @@ class PPOLightningModule(lightning.LightningModule):
         self.ts = ts
 
         self.save_hyperparameters(hparams_to_dict(learner))
+        self.automatic_optimization = False
+        iteration_steps = self.learner.hp.num_envs * self.learner.hp.num_steps
+        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
+        self.num_train_iterations = np.ceil(self.learner.hp.eval_freq / iteration_steps).astype(
+            int
+        )
+
+    def configure_model(self):
         self.actor_params = torch.nn.ParameterList(
             jax.tree.leaves(
                 jax.tree.map(
@@ -474,28 +543,39 @@ class PPOLightningModule(lightning.LightningModule):
                 )
             )
         )
-
-        self.automatic_optimization = False
-
-        iteration_steps = self.learner.hp.num_envs * self.learner.hp.num_steps
-        # number of "iterations" (collecting batches of episodes in the environment) per epoch.
-        self.num_train_iterations = np.ceil(self.learner.hp.eval_freq / iteration_steps).astype(
-            int
+        self.fused_training_step = jax.jit(
+            self.learner._fused_training_step,
         )
 
     @override
     def training_step(self, batch: torch.Tensor, batch_idx: int):
         start = time.perf_counter()
-        with jax.disable_jit(self.learner.hp.debug):
-            algo_struct = self.learner
-            self.ts, train_metrics = algo_struct.fused_training_step(batch_idx, self.ts)
+        assert not self.learner.hp.debug  # for now.
+        # IDEA: Trying to use `donate_argnames='ts'` so Jax reuses the same memory for the parameters,
+        # with the hope that our `torch.nn.Parameters` still magically point to the same memory
+        # (the new param value).
+        # note: Should be using static_argnums=["iteration"], but the value ends up not being used
+        # anyway at the moment.
+        new_ts, train_metrics = self.fused_training_step(batch_idx, self.ts)
+        assert isinstance(new_ts, PPOState)
+        self.ts = new_ts
 
         duration = time.perf_counter() - start
         logger.debug(f"Training step took {duration:.1f} seconds.")
         actor_losses = train_metrics.actor_losses
         critic_losses = train_metrics.critic_losses
-        self.log("train/actor_loss", actor_losses.mean().item(), logger=True, prog_bar=True)
-        self.log("train/critic_loss", critic_losses.mean().item(), logger=True, prog_bar=True)
+        self.log(
+            "train/actor_loss",
+            torch_jax_interop.jax_to_torch(actor_losses.mean()),
+            logger=True,
+            prog_bar=True,
+        )
+        self.log(
+            "train/critic_loss",
+            torch_jax_interop.jax_to_torch(critic_losses.mean()),
+            logger=True,
+            prog_bar=True,
+        )
 
         updates_per_second = (
             self.learner.hp.num_epochs * self.learner.hp.num_minibatches
@@ -512,14 +592,17 @@ class PPOLightningModule(lightning.LightningModule):
             prog_bar=True,
             on_step=True,
         )
-
+        # We could also update the views on the parameters here, but that's pointless since we're
+        # just updating `self.ts`.
+        # Perhaps we could update the "reference" of the nn.Parameters so they point to the new jax
+        # arrays?
         # for jax_param, torch_param in zip(
-        #     jax.tree.leaves(self.train_state.actor_ts.params), self.actor_params
+        #     jax.tree.leaves(self.ts.actor_ts.params), self.actor_params
         # ):
         #     torch_param.set_(torch_jax_interop.to_torch.jax_to_torch_tensor(jax_param))
 
         # for jax_param, torch_param in zip(
-        #     jax.tree.leaves(self.train_state.critic_ts.params), self.critic_params
+        #     jax.tree.leaves(self.ts.critic_ts.params), self.critic_params
         # ):
         #     torch_param.set_(torch_jax_interop.to_torch.jax_to_torch_tensor(jax_param))
 
@@ -696,28 +779,36 @@ def lightning_trainer(max_epochs: int, tmp_path: Path):
     )
 
 
-# reducing the max_epochs from 75 down to 10 because it's just wayyy too slow.
-@pytest.mark.xfail(reason="Seems to not be completely reproducible")
+# reducing the max_epochs from 75 down to 10 because it's just wayyy too slow otherwise.
+# @pytest.mark.xfail(reason="Seems to not be completely reproducible")
 @pytest.mark.slow
 # @pytest.mark.timeout(80)
 @pytest.mark.parametrize("max_epochs", [15], indirect=True)
+@pytest.mark.parametrize("seed", [42], indirect=True)  # only do one seed to save time.
 def test_lightning(
     algo: JaxRLExample,
     rng: chex.PRNGKey,
     lightning_trainer: lightning.Trainer,
     tensor_regression: TensorRegressionFixture,
     original_datadir: Path,
+    n_agents: int | None,
+    seed: int | Sequence[int],
 ):
     # todo: save a gif and some metrics?
     train_state, evaluations = train_lightning(
         algo,
         rng=rng,
         trainer=lightning_trainer,
+        n_agents=n_agents,
     )
-    gif_path = original_datadir / "lightning.gif"
-    algo.visualize(train_state, gif_path=gif_path)
-    # file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")
-    assert len(evaluations) == 1
     # floats in regression files are saved with full precision, and the last few digits are
     # different for some reason.
     tensor_regression.check(jax.tree.map(np.asarray, evaluations[0]))
+    assert len(evaluations) == 1
+
+    gif_path = original_datadir / f"lightning_{seed=}.gif"
+    if _should_skip_making_gif(gif_path):
+        return
+
+    algo.visualize(train_state, gif_path=gif_path)
+    # file_regression.check(gif_path.read_bytes(), binary=True, extension=".gif")

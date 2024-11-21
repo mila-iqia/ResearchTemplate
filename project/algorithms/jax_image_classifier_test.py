@@ -14,11 +14,6 @@ from project.utils.testutils import run_for_all_configs_of_type
 from .testsuites.lightning_module_tests import LightningModuleTests
 
 
-@pytest.fixture(autouse=True)
-def prevent_jax_from_reserving_all_the_vram(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
-
-
 @fails_on_macOS_in_CI
 @run_for_all_configs_of_type("algorithm", JaxImageClassifier)
 @run_for_all_configs_of_type("algorithm/network", flax.linen.Module)

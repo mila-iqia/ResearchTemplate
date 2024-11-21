@@ -40,7 +40,6 @@ from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer
 from project.utils.typing_utils.jax_typing_utils import field, jit
 
 logger = get_logger(__name__)
-# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 TEnvParams = TypeVar("TEnvParams", bound=gymnax.EnvParams, default=gymnax.EnvParams)
 """Type variable for the env params (`gymnax.EnvParams`)."""
@@ -549,7 +548,7 @@ class JaxRLExample(
 
         num_evals = np.ceil(self.hp.total_timesteps / self.hp.eval_freq).astype(int)
         ts, evaluation = jax.lax.scan(
-            self.training_epoch,
+            self._training_epoch,
             init=ts,
             xs=None,
             length=num_evals,
@@ -567,7 +566,7 @@ class JaxRLExample(
         return ts, evaluation
 
     # @jit
-    def training_epoch(
+    def _training_epoch(
         self, ts: PPOState[TEnvState], epoch: int
     ) -> tuple[PPOState[TEnvState], EvalMetrics]:
         # Run a few training iterations
@@ -577,17 +576,18 @@ class JaxRLExample(
             0,
             num_iterations,
             # drop metrics for now
-            lambda i, train_state_i: self.fused_training_step(i, train_state_i)[0],
+            lambda i, train_state_i: self._fused_training_step(i, train_state_i)[0],
             ts,
         )
         # Run evaluation
         return ts, self.eval_callback(ts)
 
     # @jit
-    def fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
+    def _fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
         """Fused training step in jax (joined data collection + training).
 
-        *MUCH* faster than using pytorch-lightning, but you lose the callbacks and such.
+        This is the equivalent of the training step from rejax.PPO. It is only used in tests to
+        verify the correctness of the training step.
         """
 
         data_collection_state, trajectories = self.collect_trajectories(

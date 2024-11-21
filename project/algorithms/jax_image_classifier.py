@@ -1,6 +1,5 @@
 import functools
 import logging
-import os
 from typing import Literal
 
 import flax.linen
@@ -221,7 +220,6 @@ def demo(**trainer_kwargs):
     )
     from lightning.pytorch.callbacks import RichProgressBar
 
-    os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     trainer = Trainer(
         **trainer_kwargs,
         accelerator="auto",

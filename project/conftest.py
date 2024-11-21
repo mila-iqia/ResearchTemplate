@@ -139,6 +139,17 @@ skip_on_macOS_in_CI = pytest.mark.skipif(
 )
 
 
+@pytest.fixture(autouse=True, scope="session")
+def prevent_jax_from_reserving_all_the_vram():
+    # note; not using monkeypatch because we want this to be session-scoped.
+    val_before = os.environ.get("XLA_PYTHON_CLIENT_PREALLOCATE")
+    os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+    if val_before is None:
+        os.environ.pop("XLA_PYTHON_CLIENT_PREALLOCATE")
+    else:
+        os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = val_before
+
+
 @pytest.fixture(autouse=True)
 def original_datadir(original_datadir: Path):
     """Overwrite the original_datadir fixture value to change where regression files are created.
