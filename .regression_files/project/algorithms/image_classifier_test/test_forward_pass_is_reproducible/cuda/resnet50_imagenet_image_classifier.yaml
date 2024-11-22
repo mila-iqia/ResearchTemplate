@@ -11,10 +11,10 @@ input:
   sum: '-6.419e+05'
 out:
   device: cuda:0
-  max: '6.429e+00'
-  mean: '5.057e-04'
-  min: '-5.682e+00'
+  max: '4.058e+00'
+  mean: '1.188e-02'
+  min: '-4.237e+00'
   shape:
   - 64
   - 1000
-  sum: '3.237e+01'
+  sum: '7.600e+02'
