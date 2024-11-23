@@ -27,80 +27,80 @@ batch.labels:
   sum: 10781837
 grads.network.model.decoder.embed_positions.weight:
   device: cuda:0
-  max: '2.624e-02'
-  mean: '1.183e-07'
+  max: '2.625e-02'
+  mean: '1.182e-07'
   min: '-2.448e-02'
   shape:
   - 2050
   - 1024
-  sum: '2.483e-01'
+  sum: '2.482e-01'
 grads.network.model.decoder.embed_tokens.weight:
   device: cuda:0
   max: '7.352e-01'
-  mean: '-1.86e-07'
-  min: '-9.013e-01'
+  mean: '-1.859e-07'
+  min: '-9.014e-01'
   shape:
   - 50272
   - 512
-  sum: '-4.787e+00'
+  sum: '-4.786e+00'
 grads.network.model.decoder.layers.0.fc1.bias:
   device: cuda:0
   max: '2.674e-03'
-  mean: '2.358e-07'
+  mean: '2.379e-07'
   min: '-6.869e-03'
   shape:
   - 4096
-  sum: '9.658e-04'
+  sum: '9.743e-04'
 grads.network.model.decoder.layers.0.fc1.weight:
   device: cuda:0
   max: '9.024e-02'
-  mean: '-4.787e-10'
+  mean: '-4.828e-10'
   min: '-1.327e-01'
   shape:
   - 4096
   - 1024
-  sum: '-2.008e-03'
+  sum: '-2.025e-03'
 grads.network.model.decoder.layers.0.fc2.bias:
   device: cuda:0
-  max: '8.251e-03'
-  mean: '2.183e-11'
+  max: '8.25e-03'
+  mean: '1.455e-11'
   min: '-8.836e-03'
   shape:
   - 1024
-  sum: '2.235e-08'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.0.fc2.weight:
   device: cuda:0
-  max: '1.27e-02'
-  mean: '1.137e-13'
+  max: '1.270e-02'
+  mean: '5.684e-14'
   min: '-1.145e-02'
   shape:
   - 1024
   - 4096
-  sum: '4.768e-07'
+  sum: '2.384e-07'
 grads.network.model.decoder.layers.0.final_layer_norm.bias:
   device: cuda:0
-  max: '8.876e-03'
-  mean: '-1.693e-06'
+  max: '8.875e-03'
+  mean: '-1.687e-06'
   min: '-9.341e-03'
   shape:
   - 1024
-  sum: '-1.733e-03'
+  sum: '-1.728e-03'
 grads.network.model.decoder.layers.0.final_layer_norm.weight:
   device: cuda:0
-  max: '1.645e-02'
-  mean: '-9.447e-06'
+  max: '1.644e-02'
+  mean: '-9.44e-06'
   min: '-9.016e-03'
   shape:
   - 1024
-  sum: '-9.674e-03'
+  sum: '-9.666e-03'
 grads.network.model.decoder.layers.0.self_attn.k_proj.bias:
   device: cuda:0
-  max: '7.094e-11'
-  mean: '-5.429e-13'
-  min: '-7.003e-11'
+  max: '6.366e-11'
+  mean: '2.163e-13'
+  min: '-8.458e-11'
   shape:
   - 1024
-  sum: '-5.559e-10'
+  sum: '2.215e-10'
 grads.network.model.decoder.layers.0.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.611e-04'
@@ -112,58 +112,58 @@ grads.network.model.decoder.layers.0.self_attn.k_proj.weight:
   sum: '4.448e-03'
 grads.network.model.decoder.layers.0.self_attn.out_proj.bias:
   device: cuda:0
-  max: '1.968e-01'
-  mean: '-3.492e-10'
+  max: '1.969e-01'
+  mean: '1.164e-10'
   min: '-2.229e-01'
   shape:
   - 1024
-  sum: '-3.576e-07'
+  sum: '1.192e-07'
 grads.network.model.decoder.layers.0.self_attn.out_proj.weight:
   device: cuda:0
   max: '8.329e-03'
-  mean: '8.882e-14'
-  min: '-7.266e-03'
+  mean: '-6.750e-14'
+  min: '-7.267e-03'
   shape:
   - 1024
   - 1024
-  sum: '9.313e-08'
+  sum: '-7.078e-08'
 grads.network.model.decoder.layers.0.self_attn.q_proj.bias:
   device: cuda:0
-  max: '3.654e-04'
-  mean: '1.503e-07'
-  min: '-4.035e-04'
+  max: '3.655e-04'
+  mean: '1.504e-07'
+  min: '-4.036e-04'
   shape:
   - 1024
-  sum: '1.539e-04'
+  sum: '1.54e-04'
 grads.network.model.decoder.layers.0.self_attn.q_proj.weight:
   device: cuda:0
-  max: '3.659e-04'
-  mean: '4.722e-09'
-  min: '-3.943e-04'
+  max: '3.66e-04'
+  mean: '4.723e-09'
+  min: '-3.944e-04'
   shape:
   - 1024
   - 1024
-  sum: '4.952e-03'
+  sum: '4.953e-03'
 grads.network.model.decoder.layers.0.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.332e-01'
   mean: '6.213e-04'
-  min: '-1.299e-01'
+  min: '-1.3e-01'
   shape:
   - 1024
   sum: '6.362e-01'
 grads.network.model.decoder.layers.0.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.111e-01'
-  mean: '3.643e-07'
-  min: '-7.993e-02'
+  mean: '3.644e-07'
+  min: '-7.994e-02'
   shape:
   - 1024
   - 1024
-  sum: '3.820e-01'
+  sum: '3.821e-01'
 grads.network.model.decoder.layers.0.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '8.889e-03'
+  max: '8.891e-03'
   mean: '-1.263e-05'
   min: '-1.024e-02'
   shape:
@@ -172,11 +172,11 @@ grads.network.model.decoder.layers.0.self_attn_layer_norm.bias:
 grads.network.model.decoder.layers.0.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.566e-02'
-  mean: '3.93e-06'
-  min: '-9.345e-03'
+  mean: '3.934e-06'
+  min: '-9.343e-03'
   shape:
   - 1024
-  sum: '4.024e-03'
+  sum: '4.028e-03'
 grads.network.model.decoder.layers.1.fc1.bias:
   device: cuda:0
   max: '3.689e-03'
@@ -197,99 +197,99 @@ grads.network.model.decoder.layers.1.fc1.weight:
 grads.network.model.decoder.layers.1.fc2.bias:
   device: cuda:0
   max: '9.095e-03'
-  mean: '2.183e-11'
+  mean: '1.455e-11'
   min: '-9.3e-03'
   shape:
   - 1024
-  sum: '2.235e-08'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.1.fc2.weight:
   device: cuda:0
   max: '1.008e-02'
-  mean: '0.e+00'
-  min: '-8.903e-03'
+  mean: '2.274e-13'
+  min: '-8.904e-03'
   shape:
   - 1024
   - 4096
-  sum: '0.e+00'
+  sum: '9.537e-07'
 grads.network.model.decoder.layers.1.final_layer_norm.bias:
   device: cuda:0
   max: '1.036e-02'
-  mean: '-5.955e-05'
+  mean: '-5.957e-05'
   min: '-1.051e-02'
   shape:
   - 1024
-  sum: '-6.098e-02'
+  sum: '-6.100e-02'
 grads.network.model.decoder.layers.1.final_layer_norm.weight:
   device: cuda:0
   max: '1.518e-02'
-  mean: '7.309e-06'
-  min: '-8.498e-03'
+  mean: '7.308e-06'
+  min: '-8.499e-03'
   shape:
   - 1024
   sum: '7.484e-03'
 grads.network.model.decoder.layers.1.self_attn.k_proj.bias:
   device: cuda:0
-  max: '6.985e-10'
-  mean: '2.01e-12'
-  min: '-5.457e-10'
+  max: '4.657e-10'
+  mean: '-2.025e-12'
+  min: '-4.657e-10'
   shape:
   - 1024
-  sum: '2.058e-09'
+  sum: '-2.074e-09'
 grads.network.model.decoder.layers.1.self_attn.k_proj.weight:
   device: cuda:0
   max: '2.842e-02'
-  mean: '5.318e-14'
+  mean: '-1.398e-13'
   min: '-2.796e-02'
   shape:
   - 1024
   - 1024
-  sum: '5.576e-08'
+  sum: '-1.466e-07'
 grads.network.model.decoder.layers.1.self_attn.out_proj.bias:
   device: cuda:0
-  max: '8.427e-03'
-  mean: '7.276e-12'
+  max: '8.429e-03'
+  mean: '-1.819e-11'
   min: '-8.021e-03'
   shape:
   - 1024
-  sum: '7.451e-09'
+  sum: '-1.863e-08'
 grads.network.model.decoder.layers.1.self_attn.out_proj.weight:
   device: cuda:0
-  max: '9.248e-03'
-  mean: '2.132e-14'
-  min: '-7.667e-03'
+  max: '9.25e-03'
+  mean: '-1.705e-13'
+  min: '-7.668e-03'
   shape:
   - 1024
   - 1024
-  sum: '2.235e-08'
+  sum: '-1.788e-07'
 grads.network.model.decoder.layers.1.self_attn.q_proj.bias:
   device: cuda:0
   max: '1.053e-03'
-  mean: '2.241e-06'
+  mean: '2.244e-06'
   min: '-1.048e-03'
   shape:
   - 1024
-  sum: '2.295e-03'
+  sum: '2.298e-03'
 grads.network.model.decoder.layers.1.self_attn.q_proj.weight:
   device: cuda:0
   max: '1.471e-02'
-  mean: '1.572e-08'
+  mean: '1.574e-08'
   min: '-2.064e-02'
   shape:
   - 1024
   - 1024
-  sum: '1.648e-02'
+  sum: '1.651e-02'
 grads.network.model.decoder.layers.1.self_attn.v_proj.bias:
   device: cuda:0
-  max: '6.921e-03'
-  mean: '7.231e-05'
+  max: '6.922e-03'
+  mean: '7.232e-05'
   min: '-5.205e-03'
   shape:
   - 1024
-  sum: '7.404e-02'
+  sum: '7.405e-02'
 grads.network.model.decoder.layers.1.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.085e-01'
-  mean: '5.072e-07'
+  mean: '5.073e-07'
   min: '-7.548e-02'
   shape:
   - 1024
@@ -297,8 +297,8 @@ grads.network.model.decoder.layers.1.self_attn.v_proj.weight:
   sum: '5.319e-01'
 grads.network.model.decoder.layers.1.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '8.594e-03'
-  mean: '-3.699e-05'
+  max: '8.596e-03'
+  mean: '-3.698e-05'
   min: '-8.267e-03'
   shape:
   - 1024
@@ -306,95 +306,95 @@ grads.network.model.decoder.layers.1.self_attn_layer_norm.bias:
 grads.network.model.decoder.layers.1.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.314e-02'
-  mean: '3.396e-06'
-  min: '-8.471e-03'
+  mean: '3.398e-06'
+  min: '-8.47e-03'
   shape:
   - 1024
-  sum: '3.478e-03'
+  sum: '3.48e-03'
 grads.network.model.decoder.layers.10.fc1.bias:
   device: cuda:0
-  max: '7.669e-03'
-  mean: '-8.026e-06'
+  max: '7.667e-03'
+  mean: '-8.035e-06'
   min: '-4.570e-03'
   shape:
   - 4096
-  sum: '-3.287e-02'
+  sum: '-3.291e-02'
 grads.network.model.decoder.layers.10.fc1.weight:
   device: cuda:0
   max: '1.337e-01'
-  mean: '-9.536e-09'
-  min: '-1.269e-01'
+  mean: '-9.547e-09'
+  min: '-1.268e-01'
   shape:
   - 4096
   - 1024
-  sum: '-4.e-02'
+  sum: '-4.004e-02'
 grads.network.model.decoder.layers.10.fc2.bias:
   device: cuda:0
   max: '1.046e-02'
-  mean: '-7.276e-12'
-  min: '-8.284e-03'
+  mean: '1.455e-11'
+  min: '-8.283e-03'
   shape:
   - 1024
-  sum: '-7.451e-09'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.10.fc2.weight:
   device: cuda:0
-  max: '2.364e-02'
-  mean: '-2.842e-13'
+  max: '2.365e-02'
+  mean: '7.39e-13'
   min: '-2.015e-02'
   shape:
   - 1024
   - 4096
-  sum: '-1.192e-06'
+  sum: '3.099e-06'
 grads.network.model.decoder.layers.10.final_layer_norm.bias:
   device: cuda:0
   max: '1.175e-02'
-  mean: '3.318e-05'
-  min: '-9.409e-03'
+  mean: '3.312e-05'
+  min: '-9.410e-03'
   shape:
   - 1024
-  sum: '3.398e-02'
+  sum: '3.392e-02'
 grads.network.model.decoder.layers.10.final_layer_norm.weight:
   device: cuda:0
   max: '1.716e-02'
   mean: '1.21e-05'
-  min: '-2.541e-02'
+  min: '-2.542e-02'
   shape:
   - 1024
   sum: '1.239e-02'
 grads.network.model.decoder.layers.10.self_attn.k_proj.bias:
   device: cuda:0
-  max: '6.985e-10'
-  mean: '-1.077e-12'
+  max: '1.339e-09'
+  mean: '1.047e-12'
   min: '-1.048e-09'
   shape:
   - 1024
-  sum: '-1.103e-09'
+  sum: '1.072e-09'
 grads.network.model.decoder.layers.10.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.012e-01'
-  mean: '-4.63e-14'
+  mean: '-4.586e-13'
   min: '-1.059e-01'
   shape:
   - 1024
   - 1024
-  sum: '-4.855e-08'
+  sum: '-4.809e-07'
 grads.network.model.decoder.layers.10.self_attn.out_proj.bias:
   device: cuda:0
-  max: '9.375e-03'
-  mean: '-1.455e-11'
-  min: '-7.983e-03'
+  max: '9.373e-03'
+  mean: '-3.638e-12'
+  min: '-7.985e-03'
   shape:
   - 1024
-  sum: '-1.490e-08'
+  sum: '-3.725e-09'
 grads.network.model.decoder.layers.10.self_attn.out_proj.weight:
   device: cuda:0
-  max: '6.621e-03'
-  mean: '7.816e-14'
-  min: '-7.379e-03'
+  max: '6.620e-03'
+  mean: '-1.421e-14'
+  min: '-7.378e-03'
   shape:
   - 1024
   - 1024
-  sum: '8.196e-08'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.10.self_attn.q_proj.bias:
   device: cuda:0
   max: '4.476e-03'
@@ -402,12 +402,12 @@ grads.network.model.decoder.layers.10.self_attn.q_proj.bias:
   min: '-4.059e-03'
   shape:
   - 1024
-  sum: '-1.312e-02'
+  sum: '-1.311e-02'
 grads.network.model.decoder.layers.10.self_attn.q_proj.weight:
   device: cuda:0
   max: '3.848e-02'
   mean: '1.029e-07'
-  min: '-3.877e-02'
+  min: '-3.876e-02'
   shape:
   - 1024
   - 1024
@@ -415,78 +415,78 @@ grads.network.model.decoder.layers.10.self_attn.q_proj.weight:
 grads.network.model.decoder.layers.10.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.095e-02'
-  mean: '-4.350e-05'
+  mean: '-4.351e-05'
   min: '-1.044e-02'
   shape:
   - 1024
-  sum: '-4.455e-02'
+  sum: '-4.456e-02'
 grads.network.model.decoder.layers.10.self_attn.v_proj.weight:
   device: cuda:0
   max: '3.115e-01'
-  mean: '3.495e-07'
+  mean: '3.496e-07'
   min: '-3.515e-01'
   shape:
   - 1024
   - 1024
-  sum: '3.665e-01'
+  sum: '3.666e-01'
 grads.network.model.decoder.layers.10.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '9.664e-03'
-  mean: '-1.71e-05'
-  min: '-8.241e-03'
+  max: '9.663e-03'
+  mean: '-1.711e-05'
+  min: '-8.243e-03'
   shape:
   - 1024
-  sum: '-1.751e-02'
+  sum: '-1.752e-02'
 grads.network.model.decoder.layers.10.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.521e-02'
-  mean: '9.654e-06'
+  mean: '9.650e-06'
   min: '-3.063e-02'
   shape:
   - 1024
-  sum: '9.885e-03'
+  sum: '9.882e-03'
 grads.network.model.decoder.layers.11.fc1.bias:
   device: cuda:0
   max: '8.889e-03'
   mean: '-1.153e-05'
-  min: '-5.869e-03'
+  min: '-5.87e-03'
   shape:
   - 4096
-  sum: '-4.723e-02'
+  sum: '-4.722e-02'
 grads.network.model.decoder.layers.11.fc1.weight:
   device: cuda:0
   max: '1.453e-01'
-  mean: '-4.739e-08'
+  mean: '-4.738e-08'
   min: '-1.045e-01'
   shape:
   - 4096
   - 1024
-  sum: '-1.988e-01'
+  sum: '-1.987e-01'
 grads.network.model.decoder.layers.11.fc2.bias:
   device: cuda:0
   max: '1.02e-02'
-  mean: '1.455e-11'
+  mean: '2.183e-11'
   min: '-1.248e-02'
   shape:
   - 1024
-  sum: '1.490e-08'
+  sum: '2.235e-08'
 grads.network.model.decoder.layers.11.fc2.weight:
   device: cuda:0
   max: '2.754e-02'
-  mean: '5.684e-14'
+  mean: '2.842e-14'
   min: '-3.209e-02'
   shape:
   - 1024
   - 4096
-  sum: '2.384e-07'
+  sum: '1.192e-07'
 grads.network.model.decoder.layers.11.final_layer_norm.bias:
   device: cuda:0
   max: '1.19e-02'
-  mean: '-1.715e-04'
-  min: '-1.403e-02'
+  mean: '-1.716e-04'
+  min: '-1.404e-02'
   shape:
   - 1024
-  sum: '-1.756e-01'
+  sum: '-1.757e-01'
 grads.network.model.decoder.layers.11.final_layer_norm.weight:
   device: cuda:0
   max: '5.003e-02'
@@ -497,63 +497,63 @@ grads.network.model.decoder.layers.11.final_layer_norm.weight:
   sum: '-2.105e-02'
 grads.network.model.decoder.layers.11.self_attn.k_proj.bias:
   device: cuda:0
-  max: '2.619e-10'
-  mean: '-1.618e-12'
-  min: '-5.384e-10'
+  max: '3.856e-10'
+  mean: '-5.496e-13'
+  min: '-4.620e-10'
   shape:
   - 1024
-  sum: '-1.656e-09'
+  sum: '-5.627e-10'
 grads.network.model.decoder.layers.11.self_attn.k_proj.weight:
   device: cuda:0
   max: '3.321e-02'
-  mean: '7.139e-14'
-  min: '-4.013e-02'
+  mean: '4.019e-14'
+  min: '-4.012e-02'
   shape:
   - 1024
   - 1024
-  sum: '7.486e-08'
+  sum: '4.214e-08'
 grads.network.model.decoder.layers.11.self_attn.out_proj.bias:
   device: cuda:0
-  max: '1.008e-02'
-  mean: '1.455e-11'
+  max: '1.007e-02'
+  mean: '2.910e-11'
   min: '-1.045e-02'
   shape:
   - 1024
-  sum: '1.490e-08'
+  sum: '2.980e-08'
 grads.network.model.decoder.layers.11.self_attn.out_proj.weight:
   device: cuda:0
   max: '4.290e-03'
-  mean: '-2.238e-13'
+  mean: '-1.776e-14'
   min: '-3.304e-03'
   shape:
   - 1024
   - 1024
-  sum: '-2.347e-07'
+  sum: '-1.863e-08'
 grads.network.model.decoder.layers.11.self_attn.q_proj.bias:
   device: cuda:0
-  max: '2.270e-03'
-  mean: '-1.108e-05'
-  min: '-1.758e-03'
+  max: '2.271e-03'
+  mean: '-1.107e-05'
+  min: '-1.759e-03'
   shape:
   - 1024
   sum: '-1.134e-02'
 grads.network.model.decoder.layers.11.self_attn.q_proj.weight:
   device: cuda:0
-  max: '1.854e-02'
+  max: '1.855e-02'
   mean: '1.038e-07'
   min: '-1.807e-02'
   shape:
   - 1024
   - 1024
-  sum: '1.089e-01'
+  sum: '1.088e-01'
 grads.network.model.decoder.layers.11.self_attn.v_proj.bias:
   device: cuda:0
-  max: '7.479e-03'
+  max: '7.478e-03'
   mean: '-6.482e-05'
   min: '-1.279e-02'
   shape:
   - 1024
-  sum: '-6.638e-02'
+  sum: '-6.637e-02'
 grads.network.model.decoder.layers.11.self_attn.v_proj.weight:
   device: cuda:0
   max: '3.206e-01'
@@ -562,57 +562,57 @@ grads.network.model.decoder.layers.11.self_attn.v_proj.weight:
   shape:
   - 1024
   - 1024
-  sum: '6.372e-01'
+  sum: '6.371e-01'
 grads.network.model.decoder.layers.11.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.059e-02'
-  mean: '9.681e-05'
+  mean: '9.679e-05'
   min: '-1.073e-02'
   shape:
   - 1024
-  sum: '9.913e-02'
+  sum: '9.911e-02'
 grads.network.model.decoder.layers.11.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.392e-02'
-  mean: '1.068e-05'
+  mean: '1.069e-05'
   min: '-3.023e-02'
   shape:
   - 1024
   sum: '1.094e-02'
 grads.network.model.decoder.layers.12.fc1.bias:
   device: cuda:0
-  max: '4.562e-03'
+  max: '4.561e-03'
   mean: '-1.190e-05'
   min: '-4.822e-03'
   shape:
   - 4096
-  sum: '-4.875e-02'
+  sum: '-4.876e-02'
 grads.network.model.decoder.layers.12.fc1.weight:
   device: cuda:0
   max: '1.229e-01'
-  mean: '-5.227e-08'
+  mean: '-5.228e-08'
   min: '-1.465e-01'
   shape:
   - 4096
   - 1024
-  sum: '-2.192e-01'
+  sum: '-2.193e-01'
 grads.network.model.decoder.layers.12.fc2.bias:
   device: cuda:0
   max: '1.037e-02'
-  mean: '-7.276e-12'
-  min: '-9.051e-03'
+  mean: '-1.455e-11'
+  min: '-9.052e-03'
   shape:
   - 1024
-  sum: '-7.451e-09'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.12.fc2.weight:
   device: cuda:0
   max: '1.393e-02'
-  mean: '-1.705e-13'
-  min: '-1.540e-02'
+  mean: '6.821e-13'
+  min: '-1.541e-02'
   shape:
   - 1024
   - 4096
-  sum: '-7.153e-07'
+  sum: '2.861e-06'
 grads.network.model.decoder.layers.12.final_layer_norm.bias:
   device: cuda:0
   max: '1.185e-02'
@@ -623,68 +623,68 @@ grads.network.model.decoder.layers.12.final_layer_norm.bias:
   sum: '-1.436e-01'
 grads.network.model.decoder.layers.12.final_layer_norm.weight:
   device: cuda:0
-  max: '2.752e-02'
-  mean: '8.052e-06'
-  min: '-2.95e-02'
+  max: '2.753e-02'
+  mean: '8.06e-06'
+  min: '-2.950e-02'
   shape:
   - 1024
-  sum: '8.246e-03'
+  sum: '8.253e-03'
 grads.network.model.decoder.layers.12.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.657e-10'
-  mean: '-1.537e-12'
-  min: '-1.164e-09'
+  max: '1.048e-09'
+  mean: '-1.202e-12'
+  min: '-5.821e-10'
   shape:
   - 1024
-  sum: '-1.574e-09'
+  sum: '-1.231e-09'
 grads.network.model.decoder.layers.12.self_attn.k_proj.weight:
   device: cuda:0
   max: '7.339e-02'
-  mean: '-6.969e-14'
+  mean: '4.055e-13'
   min: '-1.12e-01'
   shape:
   - 1024
   - 1024
-  sum: '-7.308e-08'
+  sum: '4.252e-07'
 grads.network.model.decoder.layers.12.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.012e-02'
-  mean: '-2.183e-11'
-  min: '-9.194e-03'
+  mean: '-1.455e-11'
+  min: '-9.195e-03'
   shape:
   - 1024
-  sum: '-2.235e-08'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.12.self_attn.out_proj.weight:
   device: cuda:0
   max: '2.358e-03'
-  mean: '-4.263e-14'
-  min: '-2.491e-03'
+  mean: '2.132e-14'
+  min: '-2.490e-03'
   shape:
   - 1024
   - 1024
-  sum: '-4.470e-08'
+  sum: '2.235e-08'
 grads.network.model.decoder.layers.12.self_attn.q_proj.bias:
   device: cuda:0
-  max: '4.275e-03'
-  mean: '3.083e-05'
-  min: '-2.644e-03'
+  max: '4.276e-03'
+  mean: '3.084e-05'
+  min: '-2.643e-03'
   shape:
   - 1024
-  sum: '3.157e-02'
+  sum: '3.158e-02'
 grads.network.model.decoder.layers.12.self_attn.q_proj.weight:
   device: cuda:0
-  max: '3.562e-02'
-  mean: '-4.484e-07'
-  min: '-3.288e-02'
+  max: '3.563e-02'
+  mean: '-4.485e-07'
+  min: '-3.289e-02'
   shape:
   - 1024
   - 1024
-  sum: '-4.702e-01'
+  sum: '-4.703e-01'
 grads.network.model.decoder.layers.12.self_attn.v_proj.bias:
   device: cuda:0
   max: '8.738e-03'
-  mean: '1.153e-04'
-  min: '-8.844e-03'
+  mean: '1.154e-04'
+  min: '-8.845e-03'
   shape:
   - 1024
   sum: '1.181e-01'
@@ -696,36 +696,36 @@ grads.network.model.decoder.layers.12.self_attn.v_proj.weight:
   shape:
   - 1024
   - 1024
-  sum: '-1.759e+00'
+  sum: '-1.76e+00'
 grads.network.model.decoder.layers.12.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.051e-02'
-  mean: '3.205e-05'
-  min: '-9.446e-03'
+  mean: '3.206e-05'
+  min: '-9.447e-03'
   shape:
   - 1024
-  sum: '3.282e-02'
+  sum: '3.283e-02'
 grads.network.model.decoder.layers.12.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.615e-02'
-  mean: '1.069e-06'
+  mean: '1.067e-06'
   min: '-2.743e-02'
   shape:
   - 1024
-  sum: '1.095e-03'
+  sum: '1.093e-03'
 grads.network.model.decoder.layers.13.fc1.bias:
   device: cuda:0
   max: '4.401e-03'
-  mean: '-9.964e-06'
+  mean: '-9.962e-06'
   min: '-3.711e-03'
   shape:
   - 4096
-  sum: '-4.081e-02'
+  sum: '-4.080e-02'
 grads.network.model.decoder.layers.13.fc1.weight:
   device: cuda:0
   max: '9.876e-02'
   mean: '-3.052e-08'
-  min: '-8.943e-02'
+  min: '-8.944e-02'
   shape:
   - 4096
   - 1024
@@ -733,11 +733,11 @@ grads.network.model.decoder.layers.13.fc1.weight:
 grads.network.model.decoder.layers.13.fc2.bias:
   device: cuda:0
   max: '9.355e-03'
-  mean: '3.638e-12'
-  min: '-9.440e-03'
+  mean: '1.455e-11'
+  min: '-9.44e-03'
   shape:
   - 1024
-  sum: '3.725e-09'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.13.fc2.weight:
   device: cuda:0
   max: '8.875e-03'
@@ -750,44 +750,44 @@ grads.network.model.decoder.layers.13.fc2.weight:
 grads.network.model.decoder.layers.13.final_layer_norm.bias:
   device: cuda:0
   max: '1.149e-02'
-  mean: '7.668e-05'
+  mean: '7.673e-05'
   min: '-1.144e-02'
   shape:
   - 1024
-  sum: '7.852e-02'
+  sum: '7.857e-02'
 grads.network.model.decoder.layers.13.final_layer_norm.weight:
   device: cuda:0
-  max: '4.017e-02'
-  mean: '2.042e-05'
+  max: '4.016e-02'
+  mean: '2.041e-05'
   min: '-2.390e-02'
   shape:
   - 1024
-  sum: '2.091e-02'
+  sum: '2.09e-02'
 grads.network.model.decoder.layers.13.self_attn.k_proj.bias:
   device: cuda:0
-  max: '2.910e-10'
-  mean: '-3.005e-12'
-  min: '-3.492e-10'
+  max: '3.492e-10'
+  mean: '1.113e-12'
+  min: '-3.129e-10'
   shape:
   - 1024
-  sum: '-3.077e-09'
+  sum: '1.140e-09'
 grads.network.model.decoder.layers.13.self_attn.k_proj.weight:
   device: cuda:0
   max: '2.291e-02'
-  mean: '-3.941e-14'
-  min: '-3.282e-02'
+  mean: '1.439e-13'
+  min: '-3.283e-02'
   shape:
   - 1024
   - 1024
-  sum: '-4.133e-08'
+  sum: '1.509e-07'
 grads.network.model.decoder.layers.13.self_attn.out_proj.bias:
   device: cuda:0
-  max: '8.136e-03'
-  mean: '-7.276e-12'
+  max: '8.137e-03'
+  mean: '1.455e-11'
   min: '-7.886e-03'
   shape:
   - 1024
-  sum: '-7.451e-09'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.13.self_attn.out_proj.weight:
   device: cuda:0
   max: '2.711e-03'
@@ -800,53 +800,53 @@ grads.network.model.decoder.layers.13.self_attn.out_proj.weight:
 grads.network.model.decoder.layers.13.self_attn.q_proj.bias:
   device: cuda:0
   max: '2.952e-03'
-  mean: '2.08e-05'
+  mean: '2.080e-05'
   min: '-1.742e-03'
   shape:
   - 1024
-  sum: '2.129e-02'
+  sum: '2.13e-02'
 grads.network.model.decoder.layers.13.self_attn.q_proj.weight:
   device: cuda:0
   max: '2.432e-02'
-  mean: '-3.181e-07'
+  mean: '-3.182e-07'
   min: '-2.134e-02'
   shape:
   - 1024
   - 1024
-  sum: '-3.335e-01'
+  sum: '-3.336e-01'
 grads.network.model.decoder.layers.13.self_attn.v_proj.bias:
   device: cuda:0
   max: '7.585e-03'
-  mean: '-2.3e-05'
+  mean: '-2.298e-05'
   min: '-7.604e-03'
   shape:
   - 1024
-  sum: '-2.355e-02'
+  sum: '-2.354e-02'
 grads.network.model.decoder.layers.13.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.814e-01'
-  mean: '3.518e-07'
+  mean: '3.516e-07'
   min: '-2.040e-01'
   shape:
   - 1024
   - 1024
-  sum: '3.689e-01'
+  sum: '3.687e-01'
 grads.network.model.decoder.layers.13.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '8.6e-03'
+  max: '8.601e-03'
   mean: '4.474e-05'
   min: '-8.111e-03'
   shape:
   - 1024
-  sum: '4.581e-02'
+  sum: '4.582e-02'
 grads.network.model.decoder.layers.13.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.692e-02'
-  mean: '2.717e-06'
+  mean: '2.716e-06'
   min: '-2.945e-02'
   shape:
   - 1024
-  sum: '2.782e-03'
+  sum: '2.781e-03'
 grads.network.model.decoder.layers.14.fc1.bias:
   device: cuda:0
   max: '4.022e-03'
@@ -858,7 +858,7 @@ grads.network.model.decoder.layers.14.fc1.bias:
 grads.network.model.decoder.layers.14.fc1.weight:
   device: cuda:0
   max: '1.062e-01'
-  mean: '-3.093e-09'
+  mean: '-3.092e-09'
   min: '-8.975e-02'
   shape:
   - 4096
@@ -867,25 +867,25 @@ grads.network.model.decoder.layers.14.fc1.weight:
 grads.network.model.decoder.layers.14.fc2.bias:
   device: cuda:0
   max: '9.839e-03'
-  mean: '3.638e-12'
-  min: '-8.349e-03'
+  mean: '1.455e-11'
+  min: '-8.348e-03'
   shape:
   - 1024
-  sum: '3.725e-09'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.14.fc2.weight:
   device: cuda:0
   max: '1.501e-02'
-  mean: '0.e+00'
+  mean: '4.547e-13'
   min: '-1.745e-02'
   shape:
   - 1024
   - 4096
-  sum: '0.e+00'
+  sum: '1.907e-06'
 grads.network.model.decoder.layers.14.final_layer_norm.bias:
   device: cuda:0
   max: '1.123e-02'
-  mean: '-4.263e-05'
-  min: '-9.991e-03'
+  mean: '-4.262e-05'
+  min: '-9.990e-03'
   shape:
   - 1024
   sum: '-4.365e-02'
@@ -899,63 +899,63 @@ grads.network.model.decoder.layers.14.final_layer_norm.weight:
   sum: '1.809e-02'
 grads.network.model.decoder.layers.14.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.075e-10'
-  mean: '-1.193e-12'
-  min: '-5.239e-10'
+  max: '3.638e-10'
+  mean: '1.328e-13'
+  min: '-4.220e-10'
   shape:
   - 1024
-  sum: '-1.222e-09'
+  sum: '1.36e-10'
 grads.network.model.decoder.layers.14.self_attn.k_proj.weight:
   device: cuda:0
-  max: '6.980e-02'
-  mean: '-4.785e-14'
-  min: '-4.249e-02'
+  max: '6.98e-02'
+  mean: '-4.363e-14'
+  min: '-4.248e-02'
   shape:
   - 1024
   - 1024
-  sum: '-5.018e-08'
+  sum: '-4.575e-08'
 grads.network.model.decoder.layers.14.self_attn.out_proj.bias:
   device: cuda:0
-  max: '8.644e-03'
-  mean: '1.819e-12'
+  max: '8.645e-03'
+  mean: '0.e+00'
   min: '-7.605e-03'
   shape:
   - 1024
-  sum: '1.863e-09'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.14.self_attn.out_proj.weight:
   device: cuda:0
   max: '2.700e-03'
-  mean: '2.842e-13'
+  mean: '-1.137e-13'
   min: '-2.869e-03'
   shape:
   - 1024
   - 1024
-  sum: '2.980e-07'
+  sum: '-1.192e-07'
 grads.network.model.decoder.layers.14.self_attn.q_proj.bias:
   device: cuda:0
   max: '2.104e-03'
-  mean: '-8.397e-06'
+  mean: '-8.403e-06'
   min: '-5.177e-03'
   shape:
   - 1024
-  sum: '-8.598e-03'
+  sum: '-8.605e-03'
 grads.network.model.decoder.layers.14.self_attn.q_proj.weight:
   device: cuda:0
   max: '3.976e-02'
-  mean: '1.965e-07'
+  mean: '1.967e-07'
   min: '-2.941e-02'
   shape:
   - 1024
   - 1024
-  sum: '2.061e-01'
+  sum: '2.062e-01'
 grads.network.model.decoder.layers.14.self_attn.v_proj.bias:
   device: cuda:0
-  max: '8.856e-03'
-  mean: '7.678e-05'
-  min: '-9.020e-03'
+  max: '8.858e-03'
+  mean: '7.677e-05'
+  min: '-9.02e-03'
   shape:
   - 1024
-  sum: '7.862e-02'
+  sum: '7.861e-02'
 grads.network.model.decoder.layers.14.self_attn.v_proj.weight:
   device: cuda:0
   max: '2.243e-01'
@@ -967,116 +967,116 @@ grads.network.model.decoder.layers.14.self_attn.v_proj.weight:
   sum: '-1.884e+00'
 grads.network.model.decoder.layers.14.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '8.951e-03'
-  mean: '2.586e-05'
-  min: '-8.004e-03'
+  max: '8.952e-03'
+  mean: '2.587e-05'
+  min: '-8.003e-03'
   shape:
   - 1024
-  sum: '2.648e-02'
+  sum: '2.649e-02'
 grads.network.model.decoder.layers.14.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '1.823e-02'
-  mean: '5.428e-06'
+  max: '1.824e-02'
+  mean: '5.427e-06'
   min: '-3.480e-02'
   shape:
   - 1024
-  sum: '5.559e-03'
+  sum: '5.557e-03'
 grads.network.model.decoder.layers.15.fc1.bias:
   device: cuda:0
   max: '6.084e-03'
-  mean: '-8.486e-06'
-  min: '-3.798e-03'
+  mean: '-8.483e-06'
+  min: '-3.799e-03'
   shape:
   - 4096
-  sum: '-3.476e-02'
+  sum: '-3.475e-02'
 grads.network.model.decoder.layers.15.fc1.weight:
   device: cuda:0
   max: '8.858e-02'
-  mean: '-8.767e-09'
+  mean: '-8.764e-09'
   min: '-1.116e-01'
   shape:
   - 4096
   - 1024
-  sum: '-3.677e-02'
+  sum: '-3.676e-02'
 grads.network.model.decoder.layers.15.fc2.bias:
   device: cuda:0
   max: '1.051e-02'
-  mean: '7.276e-12'
+  mean: '1.455e-11'
   min: '-1.089e-02'
   shape:
   - 1024
-  sum: '7.451e-09'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.15.fc2.weight:
   device: cuda:0
   max: '1.521e-02'
-  mean: '2.274e-13'
+  mean: '4.547e-13'
   min: '-1.284e-02'
   shape:
   - 1024
   - 4096
-  sum: '9.537e-07'
+  sum: '1.907e-06'
 grads.network.model.decoder.layers.15.final_layer_norm.bias:
   device: cuda:0
   max: '1.172e-02'
-  mean: '-6.647e-05'
+  mean: '-6.644e-05'
   min: '-1.335e-02'
   shape:
   - 1024
-  sum: '-6.806e-02'
+  sum: '-6.804e-02'
 grads.network.model.decoder.layers.15.final_layer_norm.weight:
   device: cuda:0
   max: '2.24e-02'
-  mean: '-2.676e-06'
-  min: '-3.527e-02'
+  mean: '-2.669e-06'
+  min: '-3.526e-02'
   shape:
   - 1024
-  sum: '-2.741e-03'
+  sum: '-2.733e-03'
 grads.network.model.decoder.layers.15.self_attn.k_proj.bias:
   device: cuda:0
-  max: '3.492e-10'
-  mean: '-4.849e-13'
-  min: '-2.328e-10'
+  max: '1.055e-09'
+  mean: '7.491e-13'
+  min: '-4.802e-10'
   shape:
   - 1024
-  sum: '-4.966e-10'
+  sum: '7.670e-10'
 grads.network.model.decoder.layers.15.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.531e-02'
-  mean: '3.475e-14'
+  mean: '-8.044e-14'
   min: '-1.541e-02'
   shape:
   - 1024
   - 1024
-  sum: '3.644e-08'
+  sum: '-8.434e-08'
 grads.network.model.decoder.layers.15.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.033e-02'
-  mean: '-1.455e-11'
+  mean: '1.091e-11'
   min: '-8.666e-03'
   shape:
   - 1024
-  sum: '-1.490e-08'
+  sum: '1.118e-08'
 grads.network.model.decoder.layers.15.self_attn.out_proj.weight:
   device: cuda:0
   max: '4.471e-03'
-  mean: '-1.386e-13'
-  min: '-5.653e-03'
+  mean: '3.055e-13'
+  min: '-5.652e-03'
   shape:
   - 1024
   - 1024
-  sum: '-1.453e-07'
+  sum: '3.204e-07'
 grads.network.model.decoder.layers.15.self_attn.q_proj.bias:
   device: cuda:0
-  max: '9.628e-04'
-  mean: '7.165e-06'
-  min: '-1.422e-03'
+  max: '9.621e-04'
+  mean: '7.166e-06'
+  min: '-1.421e-03'
   shape:
   - 1024
-  sum: '7.337e-03'
+  sum: '7.338e-03'
 grads.network.model.decoder.layers.15.self_attn.q_proj.weight:
   device: cuda:0
   max: '1.186e-02'
-  mean: '-1.555e-07'
+  mean: '-1.556e-07'
   min: '-1.624e-02'
   shape:
   - 1024
@@ -1086,7 +1086,7 @@ grads.network.model.decoder.layers.15.self_attn.v_proj.bias:
   device: cuda:0
   max: '7.926e-03'
   mean: '-1.794e-04'
-  min: '-8.627e-03'
+  min: '-8.628e-03'
   shape:
   - 1024
   sum: '-1.837e-01'
@@ -1118,37 +1118,37 @@ grads.network.model.decoder.layers.15.self_attn_layer_norm.weight:
 grads.network.model.decoder.layers.16.fc1.bias:
   device: cuda:0
   max: '4.387e-03'
-  mean: '-1.176e-06'
-  min: '-4.595e-03'
+  mean: '-1.177e-06'
+  min: '-4.594e-03'
   shape:
   - 4096
-  sum: '-4.819e-03'
+  sum: '-4.820e-03'
 grads.network.model.decoder.layers.16.fc1.weight:
   device: cuda:0
-  max: '9.726e-02'
+  max: '9.725e-02'
   mean: '-1.358e-09'
   min: '-1.095e-01'
   shape:
   - 4096
   - 1024
-  sum: '-5.696e-03'
+  sum: '-5.697e-03'
 grads.network.model.decoder.layers.16.fc2.bias:
   device: cuda:0
   max: '1.269e-02'
-  mean: '1.455e-11'
+  mean: '-2.183e-11'
   min: '-1.081e-02'
   shape:
   - 1024
-  sum: '1.490e-08'
+  sum: '-2.235e-08'
 grads.network.model.decoder.layers.16.fc2.weight:
   device: cuda:0
-  max: '3.338e-02'
-  mean: '-1.137e-13'
-  min: '-2.25e-02'
+  max: '3.339e-02'
+  mean: '-9.095e-13'
+  min: '-2.250e-02'
   shape:
   - 1024
   - 4096
-  sum: '-4.768e-07'
+  sum: '-3.815e-06'
 grads.network.model.decoder.layers.16.final_layer_norm.bias:
   device: cuda:0
   max: '1.527e-02'
@@ -1167,55 +1167,55 @@ grads.network.model.decoder.layers.16.final_layer_norm.weight:
   sum: '-1.572e-02'
 grads.network.model.decoder.layers.16.self_attn.k_proj.bias:
   device: cuda:0
-  max: '2.619e-10'
-  mean: '-5.822e-13'
-  min: '-3.492e-10'
+  max: '3.492e-10'
+  mean: '-1.085e-12'
+  min: '-3.783e-10'
   shape:
   - 1024
-  sum: '-5.962e-10'
+  sum: '-1.111e-09'
 grads.network.model.decoder.layers.16.self_attn.k_proj.weight:
   device: cuda:0
   max: '2.069e-02'
-  mean: '5.573e-14'
+  mean: '-1.421e-14'
   min: '-2.927e-02'
   shape:
   - 1024
   - 1024
-  sum: '5.844e-08'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.16.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.110e-02'
-  mean: '-1.091e-11'
+  mean: '2.183e-11'
   min: '-1.106e-02'
   shape:
   - 1024
-  sum: '-1.118e-08'
+  sum: '2.235e-08'
 grads.network.model.decoder.layers.16.self_attn.out_proj.weight:
   device: cuda:0
   max: '3.313e-03'
-  mean: '7.816e-14'
+  mean: '1.208e-13'
   min: '-3.429e-03'
   shape:
   - 1024
   - 1024
-  sum: '8.196e-08'
+  sum: '1.267e-07'
 grads.network.model.decoder.layers.16.self_attn.q_proj.bias:
   device: cuda:0
-  max: '1.951e-03'
-  mean: '-1.95e-06'
-  min: '-1.79e-03'
+  max: '1.952e-03'
+  mean: '-1.946e-06'
+  min: '-1.790e-03'
   shape:
   - 1024
-  sum: '-1.996e-03'
+  sum: '-1.993e-03'
 grads.network.model.decoder.layers.16.self_attn.q_proj.weight:
   device: cuda:0
   max: '1.804e-02'
-  mean: '4.074e-08'
+  mean: '4.067e-08'
   min: '-1.849e-02'
   shape:
   - 1024
   - 1024
-  sum: '4.272e-02'
+  sum: '4.264e-02'
 grads.network.model.decoder.layers.16.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.061e-02'
@@ -1232,15 +1232,15 @@ grads.network.model.decoder.layers.16.self_attn.v_proj.weight:
   shape:
   - 1024
   - 1024
-  sum: '2.899e+00'
+  sum: '2.898e+00'
 grads.network.model.decoder.layers.16.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.140e-02'
-  mean: '-7.849e-05'
+  mean: '-7.85e-05'
   min: '-1.185e-02'
   shape:
   - 1024
-  sum: '-8.037e-02'
+  sum: '-8.038e-02'
 grads.network.model.decoder.layers.16.self_attn_layer_norm.weight:
   device: cuda:0
   max: '2.204e-02'
@@ -1248,41 +1248,41 @@ grads.network.model.decoder.layers.16.self_attn_layer_norm.weight:
   min: '-3.184e-02'
   shape:
   - 1024
-  sum: '7.06e-03'
+  sum: '7.059e-03'
 grads.network.model.decoder.layers.17.fc1.bias:
   device: cuda:0
   max: '6.26e-03'
-  mean: '2.309e-06'
+  mean: '2.31e-06'
   min: '-5.628e-03'
   shape:
   - 4096
-  sum: '9.458e-03'
+  sum: '9.461e-03'
 grads.network.model.decoder.layers.17.fc1.weight:
   device: cuda:0
   max: '1.350e-01'
-  mean: '4.018e-10'
+  mean: '4.019e-10'
   min: '-1.688e-01'
   shape:
   - 4096
   - 1024
-  sum: '1.685e-03'
+  sum: '1.686e-03'
 grads.network.model.decoder.layers.17.fc2.bias:
   device: cuda:0
   max: '1.649e-02'
-  mean: '0.e+00'
+  mean: '-2.183e-11'
   min: '-1.481e-02'
   shape:
   - 1024
-  sum: '0.e+00'
+  sum: '-2.235e-08'
 grads.network.model.decoder.layers.17.fc2.weight:
   device: cuda:0
   max: '3.401e-02'
-  mean: '0.e+00'
+  mean: '-9.095e-13'
   min: '-2.889e-02'
   shape:
   - 1024
   - 4096
-  sum: '0.e+00'
+  sum: '-3.815e-06'
 grads.network.model.decoder.layers.17.final_layer_norm.bias:
   device: cuda:0
   max: '1.855e-02'
@@ -1301,49 +1301,49 @@ grads.network.model.decoder.layers.17.final_layer_norm.weight:
   sum: '4.779e-02'
 grads.network.model.decoder.layers.17.self_attn.k_proj.bias:
   device: cuda:0
-  max: '1.892e-10'
-  mean: '-1.053e-12'
-  min: '-1.892e-10'
+  max: '2.401e-10'
+  mean: '1.044e-12'
+  min: '-2.037e-10'
   shape:
   - 1024
-  sum: '-1.078e-09'
+  sum: '1.069e-09'
 grads.network.model.decoder.layers.17.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.855e-02'
-  mean: '6.528e-14'
+  mean: '-1.524e-13'
   min: '-1.911e-02'
   shape:
   - 1024
   - 1024
-  sum: '6.845e-08'
+  sum: '-1.598e-07'
 grads.network.model.decoder.layers.17.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.518e-02'
-  mean: '-7.276e-12'
+  mean: '-1.455e-11'
   min: '-1.354e-02'
   shape:
   - 1024
-  sum: '-7.451e-09'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.17.self_attn.out_proj.weight:
   device: cuda:0
   max: '4.101e-03'
-  mean: '1.776e-14'
+  mean: '1.812e-13'
   min: '-4.541e-03'
   shape:
   - 1024
   - 1024
-  sum: '1.863e-08'
+  sum: '1.9e-07'
 grads.network.model.decoder.layers.17.self_attn.q_proj.bias:
   device: cuda:0
   max: '1.11e-03'
-  mean: '6.053e-06'
+  mean: '6.052e-06'
   min: '-2.488e-03'
   shape:
   - 1024
-  sum: '6.198e-03'
+  sum: '6.197e-03'
 grads.network.model.decoder.layers.17.self_attn.q_proj.weight:
   device: cuda:0
-  max: '3.156e-02'
+  max: '3.155e-02'
   mean: '-1.032e-07'
   min: '-1.135e-02'
   shape:
@@ -1353,7 +1353,7 @@ grads.network.model.decoder.layers.17.self_attn.q_proj.weight:
 grads.network.model.decoder.layers.17.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.409e-02'
-  mean: '-2.353e-05'
+  mean: '-2.352e-05'
   min: '-1.076e-02'
   shape:
   - 1024
@@ -1361,62 +1361,62 @@ grads.network.model.decoder.layers.17.self_attn.v_proj.bias:
 grads.network.model.decoder.layers.17.self_attn.v_proj.weight:
   device: cuda:0
   max: '2.998e-01'
-  mean: '4.010e-07'
+  mean: '4.009e-07'
   min: '-3.809e-01'
   shape:
   - 1024
   - 1024
-  sum: '4.205e-01'
+  sum: '4.204e-01'
 grads.network.model.decoder.layers.17.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.61e-02'
-  mean: '-1.564e-05'
+  mean: '-1.565e-05'
   min: '-1.437e-02'
   shape:
   - 1024
-  sum: '-1.601e-02'
+  sum: '-1.603e-02'
 grads.network.model.decoder.layers.17.self_attn_layer_norm.weight:
   device: cuda:0
   max: '2.386e-02'
-  mean: '5.608e-06'
+  mean: '5.609e-06'
   min: '-1.978e-02'
   shape:
   - 1024
-  sum: '5.743e-03'
+  sum: '5.744e-03'
 grads.network.model.decoder.layers.18.fc1.bias:
   device: cuda:0
   max: '9.537e-03'
-  mean: '2.528e-07'
-  min: '-6.978e-03'
+  mean: '2.52e-07'
+  min: '-6.979e-03'
   shape:
   - 4096
-  sum: '1.035e-03'
+  sum: '1.032e-03'
 grads.network.model.decoder.layers.18.fc1.weight:
   device: cuda:0
   max: '2.336e-01'
-  mean: '4.372e-10'
+  mean: '4.358e-10'
   min: '-2.608e-01'
   shape:
   - 4096
   - 1024
-  sum: '1.834e-03'
+  sum: '1.828e-03'
 grads.network.model.decoder.layers.18.fc2.bias:
   device: cuda:0
-  max: '1.464e-02'
-  mean: '-4.729e-11'
+  max: '1.465e-02'
+  mean: '-1.819e-11'
   min: '-1.239e-02'
   shape:
   - 1024
-  sum: '-4.843e-08'
+  sum: '-1.863e-08'
 grads.network.model.decoder.layers.18.fc2.weight:
   device: cuda:0
   max: '2.649e-02'
-  mean: '-3.411e-13'
+  mean: '0.e+00'
   min: '-1.881e-02'
   shape:
   - 1024
   - 4096
-  sum: '-1.431e-06'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.18.final_layer_norm.bias:
   device: cuda:0
   max: '1.606e-02'
@@ -1432,24 +1432,24 @@ grads.network.model.decoder.layers.18.final_layer_norm.weight:
   min: '-1.566e-02'
   shape:
   - 1024
-  sum: '-4.33e-02'
+  sum: '-4.330e-02'
 grads.network.model.decoder.layers.18.self_attn.k_proj.bias:
   device: cuda:0
-  max: '8.149e-10'
-  mean: '1.751e-12'
-  min: '-6.112e-10'
+  max: '6.403e-10'
+  mean: '-3.804e-13'
+  min: '-3.056e-10'
   shape:
   - 1024
-  sum: '1.793e-09'
+  sum: '-3.895e-10'
 grads.network.model.decoder.layers.18.self_attn.k_proj.weight:
   device: cuda:0
   max: '5.736e-02'
-  mean: '-1.494e-13'
-  min: '-8.239e-02'
+  mean: '1.643e-14'
+  min: '-8.238e-02'
   shape:
   - 1024
   - 1024
-  sum: '-1.567e-07'
+  sum: '1.723e-08'
 grads.network.model.decoder.layers.18.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.309e-02'
@@ -1461,17 +1461,17 @@ grads.network.model.decoder.layers.18.self_attn.out_proj.bias:
 grads.network.model.decoder.layers.18.self_attn.out_proj.weight:
   device: cuda:0
   max: '2.482e-03'
-  mean: '1.421e-14'
+  mean: '-1.563e-13'
   min: '-3.289e-03'
   shape:
   - 1024
   - 1024
-  sum: '1.490e-08'
+  sum: '-1.639e-07'
 grads.network.model.decoder.layers.18.self_attn.q_proj.bias:
   device: cuda:0
   max: '8.627e-03'
   mean: '-5.75e-06'
-  min: '-8.37e-03'
+  min: '-8.369e-03'
   shape:
   - 1024
   sum: '-5.888e-03'
@@ -1491,11 +1491,11 @@ grads.network.model.decoder.layers.18.self_attn.v_proj.bias:
   min: '-1.514e-02'
   shape:
   - 1024
-  sum: '8.852e-02'
+  sum: '8.851e-02'
 grads.network.model.decoder.layers.18.self_attn.v_proj.weight:
   device: cuda:0
   max: '4.127e-01'
-  mean: '-1.179e-06'
+  mean: '-1.178e-06'
   min: '-4.298e-01'
   shape:
   - 1024
@@ -1512,45 +1512,45 @@ grads.network.model.decoder.layers.18.self_attn_layer_norm.bias:
 grads.network.model.decoder.layers.18.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.925e-02'
-  mean: '2.833e-06'
+  mean: '2.831e-06'
   min: '-2.016e-02'
   shape:
   - 1024
-  sum: '2.901e-03'
+  sum: '2.899e-03'
 grads.network.model.decoder.layers.19.fc1.bias:
   device: cuda:0
   max: '9.326e-03'
-  mean: '1.864e-07'
+  mean: '1.837e-07'
   min: '-1.031e-02'
   shape:
   - 4096
-  sum: '7.635e-04'
+  sum: '7.523e-04'
 grads.network.model.decoder.layers.19.fc1.weight:
   device: cuda:0
   max: '2.191e-01'
-  mean: '6.199e-10'
+  mean: '6.108e-10'
   min: '-2.314e-01'
   shape:
   - 4096
   - 1024
-  sum: '2.600e-03'
+  sum: '2.562e-03'
 grads.network.model.decoder.layers.19.fc2.bias:
   device: cuda:0
   max: '1.581e-02'
-  mean: '-3.638e-12'
+  mean: '0.e+00'
   min: '-1.359e-02'
   shape:
   - 1024
-  sum: '-3.725e-09'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.19.fc2.weight:
   device: cuda:0
   max: '2.231e-02'
-  mean: '-2.274e-13'
+  mean: '0.e+00'
   min: '-2.506e-02'
   shape:
   - 1024
   - 4096
-  sum: '-9.537e-07'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.19.final_layer_norm.bias:
   device: cuda:0
   max: '1.757e-02'
@@ -1562,58 +1562,58 @@ grads.network.model.decoder.layers.19.final_layer_norm.bias:
 grads.network.model.decoder.layers.19.final_layer_norm.weight:
   device: cuda:0
   max: '1.497e-02'
-  mean: '7.64e-06'
+  mean: '7.640e-06'
   min: '-1.806e-02'
   shape:
   - 1024
-  sum: '7.823e-03'
+  sum: '7.824e-03'
 grads.network.model.decoder.layers.19.self_attn.k_proj.bias:
   device: cuda:0
-  max: '2.910e-10'
-  mean: '-2.277e-12'
-  min: '-5.53e-10'
+  max: '3.02e-10'
+  mean: '-5.693e-13'
+  min: '-2.474e-10'
   shape:
   - 1024
-  sum: '-2.331e-09'
+  sum: '-5.83e-10'
 grads.network.model.decoder.layers.19.self_attn.k_proj.weight:
   device: cuda:0
   max: '6.374e-02'
-  mean: '3.286e-14'
+  mean: '-2.404e-14'
   min: '-4.199e-02'
   shape:
   - 1024
   - 1024
-  sum: '3.446e-08'
+  sum: '-2.520e-08'
 grads.network.model.decoder.layers.19.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.581e-02'
-  mean: '1.273e-11'
+  mean: '-7.276e-12'
   min: '-1.360e-02'
   shape:
   - 1024
-  sum: '1.304e-08'
+  sum: '-7.451e-09'
 grads.network.model.decoder.layers.19.self_attn.out_proj.weight:
   device: cuda:0
   max: '4.519e-03'
-  mean: '-4.619e-14'
-  min: '-4.268e-03'
+  mean: '3.553e-14'
+  min: '-4.269e-03'
   shape:
   - 1024
   - 1024
-  sum: '-4.843e-08'
+  sum: '3.725e-08'
 grads.network.model.decoder.layers.19.self_attn.q_proj.bias:
   device: cuda:0
   max: '4.052e-03'
   mean: '1.142e-05'
-  min: '-3.510e-03'
+  min: '-3.511e-03'
   shape:
   - 1024
-  sum: '1.169e-02'
+  sum: '1.17e-02'
 grads.network.model.decoder.layers.19.self_attn.q_proj.weight:
   device: cuda:0
   max: '6.677e-02'
-  mean: '-1.414e-07'
-  min: '-7.579e-02'
+  mean: '-1.415e-07'
+  min: '-7.58e-02'
   shape:
   - 1024
   - 1024
@@ -1638,23 +1638,23 @@ grads.network.model.decoder.layers.19.self_attn.v_proj.weight:
 grads.network.model.decoder.layers.19.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.691e-02'
-  mean: '5.711e-05'
+  mean: '5.710e-05'
   min: '-1.452e-02'
   shape:
   - 1024
-  sum: '5.848e-02'
+  sum: '5.847e-02'
 grads.network.model.decoder.layers.19.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '1.503e-02'
-  mean: '-1.595e-06'
-  min: '-1.836e-02'
+  max: '1.504e-02'
+  mean: '-1.596e-06'
+  min: '-1.835e-02'
   shape:
   - 1024
-  sum: '-1.633e-03'
+  sum: '-1.634e-03'
 grads.network.model.decoder.layers.2.fc1.bias:
   device: cuda:0
-  max: '5.529e-03'
-  mean: '-4.981e-06'
+  max: '5.528e-03'
+  mean: '-4.982e-06'
   min: '-7.129e-03'
   shape:
   - 4096
@@ -1662,99 +1662,99 @@ grads.network.model.decoder.layers.2.fc1.bias:
 grads.network.model.decoder.layers.2.fc1.weight:
   device: cuda:0
   max: '8.963e-02'
-  mean: '9.518e-09'
+  mean: '9.519e-09'
   min: '-1.056e-01'
   shape:
   - 4096
   - 1024
-  sum: '3.992e-02'
+  sum: '3.993e-02'
 grads.network.model.decoder.layers.2.fc2.bias:
   device: cuda:0
-  max: '8.685e-03'
-  mean: '1.819e-11'
-  min: '-7.984e-03'
+  max: '8.683e-03'
+  mean: '0.e+00'
+  min: '-7.982e-03'
   shape:
   - 1024
-  sum: '1.863e-08'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.2.fc2.weight:
   device: cuda:0
-  max: '6.755e-03'
-  mean: '1.705e-13'
+  max: '6.756e-03'
+  mean: '-5.684e-14'
   min: '-6.235e-03'
   shape:
   - 1024
   - 4096
-  sum: '7.153e-07'
+  sum: '-2.384e-07'
 grads.network.model.decoder.layers.2.final_layer_norm.bias:
   device: cuda:0
-  max: '9.487e-03'
-  mean: '-8.621e-06'
-  min: '-9.096e-03'
+  max: '9.485e-03'
+  mean: '-8.647e-06'
+  min: '-9.094e-03'
   shape:
   - 1024
-  sum: '-8.827e-03'
+  sum: '-8.854e-03'
 grads.network.model.decoder.layers.2.final_layer_norm.weight:
   device: cuda:0
   max: '1.425e-02'
-  mean: '2.224e-05'
+  mean: '2.225e-05'
   min: '-1.681e-02'
   shape:
   - 1024
-  sum: '2.277e-02'
+  sum: '2.278e-02'
 grads.network.model.decoder.layers.2.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.075e-10'
-  mean: '2.204e-12'
-  min: '-4.075e-10'
+  max: '7.276e-10'
+  mean: '2.105e-12'
+  min: '-6.403e-10'
   shape:
   - 1024
-  sum: '2.256e-09'
+  sum: '2.156e-09'
 grads.network.model.decoder.layers.2.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.946e-02'
-  mean: '-1.904e-14'
+  mean: '-5.407e-14'
   min: '-1.651e-02'
   shape:
   - 1024
   - 1024
-  sum: '-1.997e-08'
+  sum: '-5.669e-08'
 grads.network.model.decoder.layers.2.self_attn.out_proj.bias:
   device: cuda:0
   max: '8.581e-03'
-  mean: '-1.455e-11'
-  min: '-7.185e-03'
+  mean: '7.276e-12'
+  min: '-7.184e-03'
   shape:
   - 1024
-  sum: '-1.490e-08'
+  sum: '7.451e-09'
 grads.network.model.decoder.layers.2.self_attn.out_proj.weight:
   device: cuda:0
-  max: '6.803e-03'
-  mean: '-2.842e-14'
+  max: '6.802e-03'
+  mean: '-7.105e-14'
   min: '-8.062e-03'
   shape:
   - 1024
   - 1024
-  sum: '-2.980e-08'
+  sum: '-7.451e-08'
 grads.network.model.decoder.layers.2.self_attn.q_proj.bias:
   device: cuda:0
   max: '7.422e-04'
-  mean: '8.641e-07'
-  min: '-7.442e-04'
+  mean: '8.642e-07'
+  min: '-7.440e-04'
   shape:
   - 1024
-  sum: '8.848e-04'
+  sum: '8.849e-04'
 grads.network.model.decoder.layers.2.self_attn.q_proj.weight:
   device: cuda:0
-  max: '9.61e-03'
-  mean: '7.472e-09'
+  max: '9.611e-03'
+  mean: '7.473e-09'
   min: '-8.949e-03'
   shape:
   - 1024
   - 1024
-  sum: '7.835e-03'
+  sum: '7.836e-03'
 grads.network.model.decoder.layers.2.self_attn.v_proj.bias:
   device: cuda:0
-  max: '7.805e-03'
+  max: '7.806e-03'
   mean: '5.733e-05'
   min: '-5.400e-03'
   shape:
@@ -1763,62 +1763,62 @@ grads.network.model.decoder.layers.2.self_attn.v_proj.bias:
 grads.network.model.decoder.layers.2.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.255e-01'
-  mean: '4.957e-07'
+  mean: '4.958e-07'
   min: '-1.039e-01'
   shape:
   - 1024
   - 1024
-  sum: '5.198e-01'
+  sum: '5.199e-01'
 grads.network.model.decoder.layers.2.self_attn_layer_norm.bias:
   device: cuda:0
   max: '8.702e-03'
   mean: '-3.180e-05'
-  min: '-7.399e-03'
+  min: '-7.398e-03'
   shape:
   - 1024
   sum: '-3.257e-02'
 grads.network.model.decoder.layers.2.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.282e-02'
-  mean: '-7.958e-06'
-  min: '-9.972e-03'
+  mean: '-7.960e-06'
+  min: '-9.967e-03'
   shape:
   - 1024
-  sum: '-8.149e-03'
+  sum: '-8.151e-03'
 grads.network.model.decoder.layers.20.fc1.bias:
   device: cuda:0
   max: '7.021e-03'
-  mean: '-8.223e-07'
+  mean: '-8.220e-07'
   min: '-9.715e-03'
   shape:
   - 4096
-  sum: '-3.368e-03'
+  sum: '-3.367e-03'
 grads.network.model.decoder.layers.20.fc1.weight:
   device: cuda:0
   max: '2.901e-01'
-  mean: '-2.469e-09'
+  mean: '-2.468e-09'
   min: '-2.366e-01'
   shape:
   - 4096
   - 1024
-  sum: '-1.036e-02'
+  sum: '-1.035e-02'
 grads.network.model.decoder.layers.20.fc2.bias:
   device: cuda:0
   max: '1.656e-02'
-  mean: '7.276e-11'
+  mean: '-1.455e-11'
   min: '-1.602e-02'
   shape:
   - 1024
-  sum: '7.451e-08'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.20.fc2.weight:
   device: cuda:0
   max: '5.451e-02'
-  mean: '6.821e-13'
+  mean: '0.e+00'
   min: '-6.944e-02'
   shape:
   - 1024
   - 4096
-  sum: '2.861e-06'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.20.final_layer_norm.bias:
   device: cuda:0
   max: '1.946e-02'
@@ -1830,45 +1830,45 @@ grads.network.model.decoder.layers.20.final_layer_norm.bias:
 grads.network.model.decoder.layers.20.final_layer_norm.weight:
   device: cuda:0
   max: '1.598e-02'
-  mean: '-4.827e-06'
-  min: '-1.876e-02'
+  mean: '-4.830e-06'
+  min: '-1.877e-02'
   shape:
   - 1024
-  sum: '-4.942e-03'
+  sum: '-4.946e-03'
 grads.network.model.decoder.layers.20.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.366e-10'
-  mean: '1.896e-12'
-  min: '-3.783e-10'
+  max: '3.201e-10'
+  mean: '-9.206e-13'
+  min: '-2.910e-10'
   shape:
   - 1024
-  sum: '1.941e-09'
+  sum: '-9.427e-10'
 grads.network.model.decoder.layers.20.self_attn.k_proj.weight:
   device: cuda:0
   max: '3.528e-02'
-  mean: '-6.006e-14'
+  mean: '-4.058e-14'
   min: '-3.229e-02'
   shape:
   - 1024
   - 1024
-  sum: '-6.298e-08'
+  sum: '-4.255e-08'
 grads.network.model.decoder.layers.20.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.564e-02'
-  mean: '3.638e-12'
+  mean: '2.910e-11'
   min: '-1.513e-02'
   shape:
   - 1024
-  sum: '3.725e-09'
+  sum: '2.980e-08'
 grads.network.model.decoder.layers.20.self_attn.out_proj.weight:
   device: cuda:0
   max: '8.664e-03'
-  mean: '-1.421e-14'
+  mean: '-1.243e-13'
   min: '-1.044e-02'
   shape:
   - 1024
   - 1024
-  sum: '-1.490e-08'
+  sum: '-1.304e-07'
 grads.network.model.decoder.layers.20.self_attn.q_proj.bias:
   device: cuda:0
   max: '1.403e-03'
@@ -1906,7 +1906,7 @@ grads.network.model.decoder.layers.20.self_attn.v_proj.weight:
 grads.network.model.decoder.layers.20.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.677e-02'
-  mean: '-2.001e-04'
+  mean: '-2.002e-04'
   min: '-1.659e-02'
   shape:
   - 1024
@@ -1914,11 +1914,11 @@ grads.network.model.decoder.layers.20.self_attn_layer_norm.bias:
 grads.network.model.decoder.layers.20.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.382e-02'
-  mean: '-9.214e-08'
+  mean: '-9.212e-08'
   min: '-1.511e-02'
   shape:
   - 1024
-  sum: '-9.435e-05'
+  sum: '-9.433e-05'
 grads.network.model.decoder.layers.21.fc1.bias:
   device: cuda:0
   max: '1.186e-02'
@@ -1939,24 +1939,24 @@ grads.network.model.decoder.layers.21.fc1.weight:
 grads.network.model.decoder.layers.21.fc2.bias:
   device: cuda:0
   max: '1.882e-02'
-  mean: '1.091e-11'
+  mean: '-1.819e-11'
   min: '-1.813e-02'
   shape:
   - 1024
-  sum: '1.118e-08'
+  sum: '-1.863e-08'
 grads.network.model.decoder.layers.21.fc2.weight:
   device: cuda:0
   max: '6.899e-02'
-  mean: '-6.821e-13'
+  mean: '-1.137e-13'
   min: '-8.597e-02'
   shape:
   - 1024
   - 4096
-  sum: '-2.861e-06'
+  sum: '-4.768e-07'
 grads.network.model.decoder.layers.21.final_layer_norm.bias:
   device: cuda:0
   max: '2.098e-02'
-  mean: '6.845e-05'
+  mean: '6.844e-05'
   min: '-2.03e-02'
   shape:
   - 1024
@@ -1971,38 +1971,38 @@ grads.network.model.decoder.layers.21.final_layer_norm.weight:
   sum: '3.043e-02'
 grads.network.model.decoder.layers.21.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.657e-10'
-  mean: '1.106e-12'
-  min: '-2.583e-10'
+  max: '4.075e-10'
+  mean: '1.086e-12'
+  min: '-3.638e-10'
   shape:
   - 1024
-  sum: '1.133e-09'
+  sum: '1.112e-09'
 grads.network.model.decoder.layers.21.self_attn.k_proj.weight:
   device: cuda:0
   max: '2.804e-02'
-  mean: '3.386e-14'
+  mean: '9.459e-14'
   min: '-3.453e-02'
   shape:
   - 1024
   - 1024
-  sum: '3.551e-08'
+  sum: '9.919e-08'
 grads.network.model.decoder.layers.21.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.878e-02'
-  mean: '2.547e-11'
+  mean: '-3.638e-12'
   min: '-1.614e-02'
   shape:
   - 1024
-  sum: '2.608e-08'
+  sum: '-3.725e-09'
 grads.network.model.decoder.layers.21.self_attn.out_proj.weight:
   device: cuda:0
   max: '9.506e-03'
-  mean: '-8.527e-14'
-  min: '-8.712e-03'
+  mean: '-4.263e-14'
+  min: '-8.713e-03'
   shape:
   - 1024
   - 1024
-  sum: '-8.941e-08'
+  sum: '-4.470e-08'
 grads.network.model.decoder.layers.21.self_attn.q_proj.bias:
   device: cuda:0
   max: '2.052e-03'
@@ -2023,28 +2023,28 @@ grads.network.model.decoder.layers.21.self_attn.q_proj.weight:
 grads.network.model.decoder.layers.21.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.497e-02'
-  mean: '5.044e-05'
+  mean: '5.043e-05'
   min: '-1.445e-02'
   shape:
   - 1024
-  sum: '5.165e-02'
+  sum: '5.164e-02'
 grads.network.model.decoder.layers.21.self_attn.v_proj.weight:
   device: cuda:0
   max: '4.172e-01'
-  mean: '-4.615e-07'
+  mean: '-4.614e-07'
   min: '-4.140e-01'
   shape:
   - 1024
   - 1024
-  sum: '-4.839e-01'
+  sum: '-4.838e-01'
 grads.network.model.decoder.layers.21.self_attn_layer_norm.bias:
   device: cuda:0
   max: '2.011e-02'
-  mean: '-6.539e-05'
+  mean: '-6.540e-05'
   min: '-1.742e-02'
   shape:
   - 1024
-  sum: '-6.696e-02'
+  sum: '-6.697e-02'
 grads.network.model.decoder.layers.21.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.288e-02'
@@ -2065,7 +2065,7 @@ grads.network.model.decoder.layers.22.fc1.weight:
   device: cuda:0
   max: '4.620e-01'
   mean: '1.121e-08'
-  min: '-3.344e-01'
+  min: '-3.343e-01'
   shape:
   - 4096
   - 1024
@@ -2073,20 +2073,20 @@ grads.network.model.decoder.layers.22.fc1.weight:
 grads.network.model.decoder.layers.22.fc2.bias:
   device: cuda:0
   max: '1.839e-02'
-  mean: '-2.910e-11'
+  mean: '-7.276e-12'
   min: '-1.655e-02'
   shape:
   - 1024
-  sum: '-2.980e-08'
+  sum: '-7.451e-09'
 grads.network.model.decoder.layers.22.fc2.weight:
   device: cuda:0
   max: '3.808e-02'
-  mean: '-4.547e-13'
+  mean: '5.116e-13'
   min: '-4.035e-02'
   shape:
   - 1024
   - 4096
-  sum: '-1.907e-06'
+  sum: '2.146e-06'
 grads.network.model.decoder.layers.22.final_layer_norm.bias:
   device: cuda:0
   max: '1.981e-02'
@@ -2105,38 +2105,38 @@ grads.network.model.decoder.layers.22.final_layer_norm.weight:
   sum: '6.009e-02'
 grads.network.model.decoder.layers.22.self_attn.k_proj.bias:
   device: cuda:0
-  max: '2.910e-10'
-  mean: '1.018e-12'
-  min: '-2.328e-10'
+  max: '2.328e-10'
+  mean: '-8.422e-13'
+  min: '-3.056e-10'
   shape:
   - 1024
-  sum: '1.043e-09'
+  sum: '-8.624e-10'
 grads.network.model.decoder.layers.22.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.37e-02'
-  mean: '3.741e-14'
+  mean: '-9.659e-15'
   min: '-1.851e-02'
   shape:
   - 1024
   - 1024
-  sum: '3.923e-08'
+  sum: '-1.013e-08'
 grads.network.model.decoder.layers.22.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.504e-02'
-  mean: '-1.091e-11'
+  mean: '-1.819e-11'
   min: '-1.527e-02'
   shape:
   - 1024
-  sum: '-1.118e-08'
+  sum: '-1.863e-08'
 grads.network.model.decoder.layers.22.self_attn.out_proj.weight:
   device: cuda:0
   max: '3.731e-03'
-  mean: '0.e+00'
+  mean: '-5.684e-14'
   min: '-4.715e-03'
   shape:
   - 1024
   - 1024
-  sum: '0.e+00'
+  sum: '-5.960e-08'
 grads.network.model.decoder.layers.22.self_attn.q_proj.bias:
   device: cuda:0
   max: '1.386e-03'
@@ -2148,7 +2148,7 @@ grads.network.model.decoder.layers.22.self_attn.q_proj.bias:
 grads.network.model.decoder.layers.22.self_attn.q_proj.weight:
   device: cuda:0
   max: '1.612e-02'
-  mean: '8.245e-08'
+  mean: '8.246e-08'
   min: '-1.700e-02'
   shape:
   - 1024
@@ -2157,36 +2157,36 @@ grads.network.model.decoder.layers.22.self_attn.q_proj.weight:
 grads.network.model.decoder.layers.22.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.086e-02'
-  mean: '6.068e-05'
+  mean: '6.069e-05'
   min: '-1.123e-02'
   shape:
   - 1024
-  sum: '6.213e-02'
+  sum: '6.215e-02'
 grads.network.model.decoder.layers.22.self_attn.v_proj.weight:
   device: cuda:0
   max: '2.964e-01'
-  mean: '-3.503e-07'
+  mean: '-3.504e-07'
   min: '-3.047e-01'
   shape:
   - 1024
   - 1024
-  sum: '-3.673e-01'
+  sum: '-3.674e-01'
 grads.network.model.decoder.layers.22.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.571e-02'
-  mean: '-3.788e-05'
+  mean: '-3.789e-05'
   min: '-1.599e-02'
   shape:
   - 1024
-  sum: '-3.879e-02'
+  sum: '-3.88e-02'
 grads.network.model.decoder.layers.22.self_attn_layer_norm.weight:
   device: cuda:0
   max: '7.293e-03'
-  mean: '-4.795e-06'
+  mean: '-4.794e-06'
   min: '-3.830e-02'
   shape:
   - 1024
-  sum: '-4.91e-03'
+  sum: '-4.909e-03'
 grads.network.model.decoder.layers.23.fc1.bias:
   device: cuda:0
   max: '1.824e-02'
@@ -2207,31 +2207,31 @@ grads.network.model.decoder.layers.23.fc1.weight:
 grads.network.model.decoder.layers.23.fc2.bias:
   device: cuda:0
   max: '9.662e-03'
-  mean: '5.457e-12'
+  mean: '1.819e-12'
   min: '-1.207e-02'
   shape:
   - 1024
-  sum: '5.588e-09'
+  sum: '1.863e-09'
 grads.network.model.decoder.layers.23.fc2.weight:
   device: cuda:0
   max: '2.020e-02'
-  mean: '9.095e-13'
+  mean: '6.821e-13'
   min: '-1.904e-02'
   shape:
   - 1024
   - 4096
-  sum: '3.815e-06'
+  sum: '2.861e-06'
 grads.network.model.decoder.layers.23.final_layer_norm.bias:
   device: cuda:0
   max: '1.025e-02'
   mean: '1.452e-04'
-  min: '-1.193e-02'
+  min: '-1.192e-02'
   shape:
   - 1024
   sum: '1.487e-01'
 grads.network.model.decoder.layers.23.final_layer_norm.weight:
   device: cuda:0
-  max: '9.744e-03'
+  max: '9.743e-03'
   mean: '3.538e-04'
   min: '-1.162e-02'
   shape:
@@ -2239,38 +2239,38 @@ grads.network.model.decoder.layers.23.final_layer_norm.weight:
   sum: '3.623e-01'
 grads.network.model.decoder.layers.23.self_attn.k_proj.bias:
   device: cuda:0
-  max: '8.731e-10'
-  mean: '-1.815e-12'
-  min: '-6.985e-10'
+  max: '5.821e-10'
+  mean: '1.369e-12'
+  min: '-4.948e-10'
   shape:
   - 1024
-  sum: '-1.858e-09'
+  sum: '1.402e-09'
 grads.network.model.decoder.layers.23.self_attn.k_proj.weight:
   device: cuda:0
-  max: '7.674e-02'
-  mean: '4.552e-15'
-  min: '-9.449e-02'
+  max: '7.675e-02'
+  mean: '1.814e-13'
+  min: '-9.45e-02'
   shape:
   - 1024
   - 1024
-  sum: '4.773e-09'
+  sum: '1.902e-07'
 grads.network.model.decoder.layers.23.self_attn.out_proj.bias:
   device: cuda:0
-  max: '8.238e-03'
-  mean: '1.455e-11'
+  max: '8.239e-03'
+  mean: '1.819e-12'
   min: '-9.641e-03'
   shape:
   - 1024
-  sum: '1.490e-08'
+  sum: '1.863e-09'
 grads.network.model.decoder.layers.23.self_attn.out_proj.weight:
   device: cuda:0
   max: '3.845e-03'
-  mean: '-5.684e-14'
+  mean: '9.592e-14'
   min: '-4.001e-03'
   shape:
   - 1024
   - 1024
-  sum: '-5.960e-08'
+  sum: '1.006e-07'
 grads.network.model.decoder.layers.23.self_attn.q_proj.bias:
   device: cuda:0
   max: '6.886e-03'
@@ -2291,11 +2291,11 @@ grads.network.model.decoder.layers.23.self_attn.q_proj.weight:
 grads.network.model.decoder.layers.23.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.707e-02'
-  mean: '-3.69e-05'
+  mean: '-3.691e-05'
   min: '-1.682e-02'
   shape:
   - 1024
-  sum: '-3.778e-02'
+  sum: '-3.78e-02'
 grads.network.model.decoder.layers.23.self_attn.v_proj.weight:
   device: cuda:0
   max: '4.430e-01'
@@ -2304,7 +2304,7 @@ grads.network.model.decoder.layers.23.self_attn.v_proj.weight:
   shape:
   - 1024
   - 1024
-  sum: '1.851e-01'
+  sum: '1.852e-01'
 grads.network.model.decoder.layers.23.self_attn_layer_norm.bias:
   device: cuda:0
   max: '8.470e-03'
@@ -2316,48 +2316,48 @@ grads.network.model.decoder.layers.23.self_attn_layer_norm.bias:
 grads.network.model.decoder.layers.23.self_attn_layer_norm.weight:
   device: cuda:0
   max: '5.296e-03'
-  mean: '-2.350e-05'
+  mean: '-2.35e-05'
   min: '-2.633e-02'
   shape:
   - 1024
-  sum: '-2.407e-02'
+  sum: '-2.406e-02'
 grads.network.model.decoder.layers.3.fc1.bias:
   device: cuda:0
-  max: '6.729e-03'
-  mean: '9.602e-07'
+  max: '6.73e-03'
+  mean: '9.586e-07'
   min: '-5.137e-03'
   shape:
   - 4096
-  sum: '3.933e-03'
+  sum: '3.927e-03'
 grads.network.model.decoder.layers.3.fc1.weight:
   device: cuda:0
   max: '1.203e-01'
-  mean: '-4.463e-10'
+  mean: '-4.455e-10'
   min: '-1.103e-01'
   shape:
   - 4096
   - 1024
-  sum: '-1.872e-03'
+  sum: '-1.869e-03'
 grads.network.model.decoder.layers.3.fc2.bias:
   device: cuda:0
-  max: '7.578e-03'
-  mean: '-3.638e-12'
-  min: '-8.14e-03'
+  max: '7.579e-03'
+  mean: '-7.276e-12'
+  min: '-8.140e-03'
   shape:
   - 1024
-  sum: '-3.725e-09'
+  sum: '-7.451e-09'
 grads.network.model.decoder.layers.3.fc2.weight:
   device: cuda:0
   max: '1.234e-02'
-  mean: '8.527e-14'
+  mean: '-2.274e-13'
   min: '-1.24e-02'
   shape:
   - 1024
   - 4096
-  sum: '3.576e-07'
+  sum: '-9.537e-07'
 grads.network.model.decoder.layers.3.final_layer_norm.bias:
   device: cuda:0
-  max: '8.514e-03'
+  max: '8.515e-03'
   mean: '1.464e-04'
   min: '-8.444e-03'
   shape:
@@ -2366,137 +2366,137 @@ grads.network.model.decoder.layers.3.final_layer_norm.bias:
 grads.network.model.decoder.layers.3.final_layer_norm.weight:
   device: cuda:0
   max: '2.337e-02'
-  mean: '-2.309e-05'
-  min: '-9.228e-03'
+  mean: '-2.308e-05'
+  min: '-9.225e-03'
   shape:
   - 1024
   sum: '-2.364e-02'
 grads.network.model.decoder.layers.3.self_attn.k_proj.bias:
   device: cuda:0
-  max: '3.201e-10'
-  mean: '-2.212e-12'
-  min: '-5.384e-10'
+  max: '2.910e-10'
+  mean: '4.927e-13'
+  min: '-5.239e-10'
   shape:
   - 1024
-  sum: '-2.265e-09'
+  sum: '5.045e-10'
 grads.network.model.decoder.layers.3.self_attn.k_proj.weight:
   device: cuda:0
   max: '2.496e-02'
-  mean: '9.892e-14'
+  mean: '8.982e-14'
   min: '-2.865e-02'
   shape:
   - 1024
   - 1024
-  sum: '1.037e-07'
+  sum: '9.418e-08'
 grads.network.model.decoder.layers.3.self_attn.out_proj.bias:
   device: cuda:0
-  max: '7.813e-03'
-  mean: '1.455e-11'
+  max: '7.812e-03'
+  mean: '0.e+00'
   min: '-9.081e-03'
   shape:
   - 1024
-  sum: '1.490e-08'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.3.self_attn.out_proj.weight:
   device: cuda:0
   max: '1.240e-02'
-  mean: '-1.386e-13'
+  mean: '-3.375e-14'
   min: '-8.509e-03'
   shape:
   - 1024
   - 1024
-  sum: '-1.453e-07'
+  sum: '-3.539e-08'
 grads.network.model.decoder.layers.3.self_attn.q_proj.bias:
   device: cuda:0
   max: '3.278e-03'
-  mean: '4.884e-06'
+  mean: '4.885e-06'
   min: '-1.355e-03'
   shape:
   - 1024
-  sum: '5.001e-03'
+  sum: '5.002e-03'
 grads.network.model.decoder.layers.3.self_attn.q_proj.weight:
   device: cuda:0
   max: '2.716e-02'
-  mean: '4.466e-08'
-  min: '-1.492e-02'
+  mean: '4.467e-08'
+  min: '-1.491e-02'
   shape:
   - 1024
   - 1024
-  sum: '4.683e-02'
+  sum: '4.684e-02'
 grads.network.model.decoder.layers.3.self_attn.v_proj.bias:
   device: cuda:0
-  max: '6.428e-03'
-  mean: '6.079e-05'
-  min: '-6.942e-03'
+  max: '6.426e-03'
+  mean: '6.080e-05'
+  min: '-6.945e-03'
   shape:
   - 1024
-  sum: '6.225e-02'
+  sum: '6.226e-02'
 grads.network.model.decoder.layers.3.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.024e-01'
-  mean: '5.559e-07'
+  mean: '5.56e-07'
   min: '-1.103e-01'
   shape:
   - 1024
   - 1024
-  sum: '5.829e-01'
+  sum: '5.830e-01'
 grads.network.model.decoder.layers.3.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '7.976e-03'
-  mean: '-3.11e-06'
-  min: '-9.223e-03'
+  max: '7.975e-03'
+  mean: '-3.111e-06'
+  min: '-9.224e-03'
   shape:
   - 1024
-  sum: '-3.184e-03'
+  sum: '-3.186e-03'
 grads.network.model.decoder.layers.3.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.342e-02'
-  mean: '4.908e-07'
+  mean: '4.895e-07'
   min: '-1.343e-02'
   shape:
   - 1024
-  sum: '5.026e-04'
+  sum: '5.013e-04'
 grads.network.model.decoder.layers.4.fc1.bias:
   device: cuda:0
-  max: '4.643e-03'
+  max: '4.634e-03'
   mean: '-4.954e-06'
-  min: '-6.034e-03'
+  min: '-6.032e-03'
   shape:
   - 4096
   sum: '-2.029e-02'
 grads.network.model.decoder.layers.4.fc1.weight:
   device: cuda:0
-  max: '1.050e-01'
-  mean: '-9.527e-10'
+  max: '1.05e-01'
+  mean: '-9.529e-10'
   min: '-1.201e-01'
   shape:
   - 4096
   - 1024
-  sum: '-3.996e-03'
+  sum: '-3.997e-03'
 grads.network.model.decoder.layers.4.fc2.bias:
   device: cuda:0
-  max: '7.078e-03'
-  mean: '2.183e-11'
-  min: '-7.643e-03'
+  max: '7.079e-03'
+  mean: '-7.276e-12'
+  min: '-7.644e-03'
   shape:
   - 1024
-  sum: '2.235e-08'
+  sum: '-7.451e-09'
 grads.network.model.decoder.layers.4.fc2.weight:
   device: cuda:0
-  max: '8.689e-03'
-  mean: '-8.527e-14'
+  max: '8.690e-03'
+  mean: '3.411e-13'
   min: '-1.055e-02'
   shape:
   - 1024
   - 4096
-  sum: '-3.576e-07'
+  sum: '1.431e-06'
 grads.network.model.decoder.layers.4.final_layer_norm.bias:
   device: cuda:0
-  max: '8.03e-03'
-  mean: '-2.692e-05'
-  min: '-8.823e-03'
+  max: '8.031e-03'
+  mean: '-2.691e-05'
+  min: '-8.824e-03'
   shape:
   - 1024
-  sum: '-2.757e-02'
+  sum: '-2.756e-02'
 grads.network.model.decoder.layers.4.final_layer_norm.weight:
   device: cuda:0
   max: '1.963e-02'
@@ -2508,33 +2508,33 @@ grads.network.model.decoder.layers.4.final_layer_norm.weight:
 grads.network.model.decoder.layers.4.self_attn.k_proj.bias:
   device: cuda:0
   max: '4.366e-10'
-  mean: '-3.384e-13'
-  min: '-5.821e-10'
+  mean: '3.982e-12'
+  min: '-2.256e-10'
   shape:
   - 1024
-  sum: '-3.465e-10'
+  sum: '4.077e-09'
 grads.network.model.decoder.layers.4.self_attn.k_proj.weight:
   device: cuda:0
   max: '2.148e-02'
-  mean: '-5.784e-14'
-  min: '-2.815e-02'
+  mean: '2.665e-14'
+  min: '-2.816e-02'
   shape:
   - 1024
   - 1024
-  sum: '-6.065e-08'
+  sum: '2.794e-08'
 grads.network.model.decoder.layers.4.self_attn.out_proj.bias:
   device: cuda:0
-  max: '7.796e-03'
-  mean: '-2.183e-11'
+  max: '7.798e-03'
+  mean: '1.455e-11'
   min: '-8.227e-03'
   shape:
   - 1024
-  sum: '-2.235e-08'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.4.self_attn.out_proj.weight:
   device: cuda:0
   max: '9.723e-03'
   mean: '5.684e-14'
-  min: '-1.092e-02'
+  min: '-1.093e-02'
   shape:
   - 1024
   - 1024
@@ -2542,90 +2542,90 @@ grads.network.model.decoder.layers.4.self_attn.out_proj.weight:
 grads.network.model.decoder.layers.4.self_attn.q_proj.bias:
   device: cuda:0
   max: '1.283e-03'
-  mean: '6.845e-06'
-  min: '-9.638e-04'
+  mean: '6.846e-06'
+  min: '-9.64e-04'
   shape:
   - 1024
-  sum: '7.009e-03'
+  sum: '7.010e-03'
 grads.network.model.decoder.layers.4.self_attn.q_proj.weight:
   device: cuda:0
   max: '1.396e-02'
-  mean: '4.486e-08'
-  min: '-1.043e-02'
+  mean: '4.487e-08'
+  min: '-1.042e-02'
   shape:
   - 1024
   - 1024
-  sum: '4.704e-02'
+  sum: '4.705e-02'
 grads.network.model.decoder.layers.4.self_attn.v_proj.bias:
   device: cuda:0
-  max: '6.887e-03'
-  mean: '1.621e-05'
-  min: '-6.61e-03'
+  max: '6.888e-03'
+  mean: '1.623e-05'
+  min: '-6.609e-03'
   shape:
   - 1024
-  sum: '1.66e-02'
+  sum: '1.662e-02'
 grads.network.model.decoder.layers.4.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.618e-01'
-  mean: '1.062e-07'
+  mean: '1.064e-07'
   min: '-1.498e-01'
   shape:
   - 1024
   - 1024
-  sum: '1.114e-01'
+  sum: '1.115e-01'
 grads.network.model.decoder.layers.4.self_attn_layer_norm.bias:
   device: cuda:0
-  max: '8.008e-03'
-  mean: '-1.212e-08'
+  max: '8.009e-03'
+  mean: '1.273e-09'
   min: '-8.459e-03'
   shape:
   - 1024
-  sum: '-1.241e-05'
+  sum: '1.304e-06'
 grads.network.model.decoder.layers.4.self_attn_layer_norm.weight:
   device: cuda:0
   max: '1.273e-02'
-  mean: '-2.654e-06'
+  mean: '-2.657e-06'
   min: '-1.02e-02'
   shape:
   - 1024
-  sum: '-2.718e-03'
+  sum: '-2.721e-03'
 grads.network.model.decoder.layers.5.fc1.bias:
   device: cuda:0
-  max: '3.971e-03'
-  mean: '2.957e-06'
+  max: '3.97e-03'
+  mean: '2.958e-06'
   min: '-5.305e-03'
   shape:
   - 4096
   sum: '1.211e-02'
 grads.network.model.decoder.layers.5.fc1.weight:
   device: cuda:0
-  max: '9.079e-02'
-  mean: '-1.417e-09'
-  min: '-9.727e-02'
+  max: '9.081e-02'
+  mean: '-1.418e-09'
+  min: '-9.728e-02'
   shape:
   - 4096
   - 1024
-  sum: '-5.945e-03'
+  sum: '-5.947e-03'
 grads.network.model.decoder.layers.5.fc2.bias:
   device: cuda:0
-  max: '6.959e-03'
-  mean: '-7.276e-12'
+  max: '6.957e-03'
+  mean: '-2.183e-11'
   min: '-8.184e-03'
   shape:
   - 1024
-  sum: '-7.451e-09'
+  sum: '-2.235e-08'
 grads.network.model.decoder.layers.5.fc2.weight:
   device: cuda:0
   max: '1.459e-02'
-  mean: '-1.705e-13'
+  mean: '-4.832e-13'
   min: '-1.745e-02'
   shape:
   - 1024
   - 4096
-  sum: '-7.153e-07'
+  sum: '-2.027e-06'
 grads.network.model.decoder.layers.5.final_layer_norm.bias:
   device: cuda:0
-  max: '7.483e-03'
+  max: '7.481e-03'
   mean: '-5.331e-05'
   min: '-8.873e-03'
   shape:
@@ -2638,91 +2638,91 @@ grads.network.model.decoder.layers.5.final_layer_norm.weight:
   min: '-9.695e-03'
   shape:
   - 1024
-  sum: '3.44e-02'
+  sum: '3.439e-02'
 grads.network.model.decoder.layers.5.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.948e-10'
-  mean: '3.106e-13'
-  min: '-4.220e-10'
+  max: '5.093e-10'
+  mean: '3.512e-12'
+  min: '-6.403e-10'
   shape:
   - 1024
-  sum: '3.181e-10'
+  sum: '3.596e-09'
 grads.network.model.decoder.layers.5.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.978e-02'
-  mean: '8.737e-14'
-  min: '-3.21e-02'
+  mean: '4.297e-14'
+  min: '-3.209e-02'
   shape:
   - 1024
   - 1024
-  sum: '9.162e-08'
+  sum: '4.505e-08'
 grads.network.model.decoder.layers.5.self_attn.out_proj.bias:
   device: cuda:0
   max: '8.798e-03'
-  mean: '7.276e-12'
-  min: '-9.077e-03'
+  mean: '-1.455e-11'
+  min: '-9.078e-03'
   shape:
   - 1024
-  sum: '7.451e-09'
+  sum: '-1.490e-08'
 grads.network.model.decoder.layers.5.self_attn.out_proj.weight:
   device: cuda:0
   max: '8.847e-03'
-  mean: '3.553e-14'
-  min: '-8.857e-03'
+  mean: '4.405e-13'
+  min: '-8.859e-03'
   shape:
   - 1024
   - 1024
-  sum: '3.725e-08'
+  sum: '4.619e-07'
 grads.network.model.decoder.layers.5.self_attn.q_proj.bias:
   device: cuda:0
   max: '2.318e-03'
-  mean: '-6.429e-07'
+  mean: '-6.482e-07'
   min: '-1.228e-03'
   shape:
   - 1024
-  sum: '-6.583e-04'
+  sum: '-6.637e-04'
 grads.network.model.decoder.layers.5.self_attn.q_proj.weight:
   device: cuda:0
-  max: '3.320e-02'
-  mean: '-1.640e-09'
+  max: '3.321e-02'
+  mean: '-1.654e-09'
   min: '-1.745e-02'
   shape:
   - 1024
   - 1024
-  sum: '-1.720e-03'
+  sum: '-1.734e-03'
 grads.network.model.decoder.layers.5.self_attn.v_proj.bias:
   device: cuda:0
-  max: '8.896e-03'
-  mean: '1.326e-05'
+  max: '8.895e-03'
+  mean: '1.324e-05'
   min: '-8.022e-03'
   shape:
   - 1024
-  sum: '1.358e-02'
+  sum: '1.356e-02'
 grads.network.model.decoder.layers.5.self_attn.v_proj.weight:
   device: cuda:0
   max: '1.966e-01'
-  mean: '3.383e-08'
-  min: '-1.690e-01'
+  mean: '3.378e-08'
+  min: '-1.69e-01'
   shape:
   - 1024
   - 1024
-  sum: '3.547e-02'
+  sum: '3.542e-02'
 grads.network.model.decoder.layers.5.self_attn_layer_norm.bias:
   device: cuda:0
   max: '8.963e-03'
-  mean: '-2.703e-05'
-  min: '-9.331e-03'
+  mean: '-2.705e-05'
+  min: '-9.332e-03'
   shape:
   - 1024
-  sum: '-2.768e-02'
+  sum: '-2.77e-02'
 grads.network.model.decoder.layers.5.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '1.667e-02'
-  mean: '-1.903e-06'
+  max: '1.668e-02'
+  mean: '-1.905e-06'
   min: '-1.146e-02'
   shape:
   - 1024
-  sum: '-1.949e-03'
+  sum: '-1.950e-03'
 grads.network.model.decoder.layers.6.fc1.bias:
   device: cuda:0
   max: '1.257e-02'
@@ -2733,108 +2733,108 @@ grads.network.model.decoder.layers.6.fc1.bias:
   sum: '-4.448e-02'
 grads.network.model.decoder.layers.6.fc1.weight:
   device: cuda:0
-  max: '1.29e-01'
-  mean: '1.506e-11'
-  min: '-1.669e-01'
+  max: '1.290e-01'
+  mean: '1.517e-11'
+  min: '-1.668e-01'
   shape:
   - 4096
   - 1024
-  sum: '6.318e-05'
+  sum: '6.362e-05'
 grads.network.model.decoder.layers.6.fc2.bias:
   device: cuda:0
   max: '9.356e-03'
-  mean: '-2.183e-11'
-  min: '-9.008e-03'
+  mean: '4.366e-11'
+  min: '-9.007e-03'
   shape:
   - 1024
-  sum: '-2.235e-08'
+  sum: '4.470e-08'
 grads.network.model.decoder.layers.6.fc2.weight:
   device: cuda:0
   max: '2.506e-02'
-  mean: '1.705e-13'
+  mean: '5.969e-13'
   min: '-2.432e-02'
   shape:
   - 1024
   - 4096
-  sum: '7.153e-07'
+  sum: '2.503e-06'
 grads.network.model.decoder.layers.6.final_layer_norm.bias:
   device: cuda:0
   max: '1.005e-02'
-  mean: '3.236e-05'
-  min: '-9.824e-03'
+  mean: '3.235e-05'
+  min: '-9.823e-03'
   shape:
   - 1024
-  sum: '3.313e-02'
+  sum: '3.312e-02'
 grads.network.model.decoder.layers.6.final_layer_norm.weight:
   device: cuda:0
-  max: '4.028e-02'
-  mean: '7.097e-06'
+  max: '4.029e-02'
+  mean: '7.093e-06'
   min: '-1.064e-02'
   shape:
   - 1024
-  sum: '7.268e-03'
+  sum: '7.264e-03'
 grads.network.model.decoder.layers.6.self_attn.k_proj.bias:
   device: cuda:0
-  max: '6.985e-10'
-  mean: '3.979e-13'
-  min: '-8.149e-10'
+  max: '2.212e-09'
+  mean: '2.743e-12'
+  min: '-4.657e-10'
   shape:
   - 1024
-  sum: '4.075e-10'
+  sum: '2.809e-09'
 grads.network.model.decoder.layers.6.self_attn.k_proj.weight:
   device: cuda:0
   max: '5.747e-02'
-  mean: '9.182e-14'
-  min: '-6.238e-02'
+  mean: '-1.987e-13'
+  min: '-6.243e-02'
   shape:
   - 1024
   - 1024
-  sum: '9.628e-08'
+  sum: '-2.084e-07'
 grads.network.model.decoder.layers.6.self_attn.out_proj.bias:
   device: cuda:0
-  max: '8.221e-03'
-  mean: '2.910e-11'
+  max: '8.222e-03'
+  mean: '7.276e-12'
   min: '-7.921e-03'
   shape:
   - 1024
-  sum: '2.980e-08'
+  sum: '7.451e-09'
 grads.network.model.decoder.layers.6.self_attn.out_proj.weight:
   device: cuda:0
-  max: '7.937e-03'
-  mean: '0.e+00'
+  max: '7.939e-03'
+  mean: '8.527e-14'
   min: '-1.069e-02'
   shape:
   - 1024
   - 1024
-  sum: '0.e+00'
+  sum: '8.941e-08'
 grads.network.model.decoder.layers.6.self_attn.q_proj.bias:
   device: cuda:0
-  max: '1.655e-03'
-  mean: '-7.839e-06'
-  min: '-2.956e-03'
+  max: '1.656e-03'
+  mean: '-7.843e-06'
+  min: '-2.958e-03'
   shape:
   - 1024
-  sum: '-8.027e-03'
+  sum: '-8.031e-03'
 grads.network.model.decoder.layers.6.self_attn.q_proj.weight:
   device: cuda:0
   max: '2.914e-02'
-  mean: '-3.26e-09'
-  min: '-2.952e-02'
+  mean: '-3.261e-09'
+  min: '-2.954e-02'
   shape:
   - 1024
   - 1024
-  sum: '-3.418e-03'
+  sum: '-3.42e-03'
 grads.network.model.decoder.layers.6.self_attn.v_proj.bias:
   device: cuda:0
-  max: '5.931e-03'
+  max: '5.932e-03'
   mean: '1.089e-04'
-  min: '-5.009e-03'
+  min: '-5.01e-03'
   shape:
   - 1024
   sum: '1.115e-01'
 grads.network.model.decoder.layers.6.self_attn.v_proj.weight:
   device: cuda:0
-  max: '1.311e-01'
+  max: '1.312e-01'
   mean: '4.527e-08'
   min: '-1.643e-01'
   shape:
@@ -2844,111 +2844,111 @@ grads.network.model.decoder.layers.6.self_attn.v_proj.weight:
 grads.network.model.decoder.layers.6.self_attn_layer_norm.bias:
   device: cuda:0
   max: '8.551e-03'
-  mean: '9.560e-06'
-  min: '-8.24e-03'
+  mean: '9.577e-06'
+  min: '-8.239e-03'
   shape:
   - 1024
-  sum: '9.79e-03'
+  sum: '9.807e-03'
 grads.network.model.decoder.layers.6.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '3.589e-02'
-  mean: '-3.934e-06'
+  max: '3.59e-02'
+  mean: '-3.938e-06'
   min: '-9.743e-03'
   shape:
   - 1024
-  sum: '-4.029e-03'
+  sum: '-4.032e-03'
 grads.network.model.decoder.layers.7.fc1.bias:
   device: cuda:0
   max: '9.245e-03'
   mean: '-1.028e-05'
-  min: '-5.298e-03'
+  min: '-5.297e-03'
   shape:
   - 4096
-  sum: '-4.211e-02'
+  sum: '-4.213e-02'
 grads.network.model.decoder.layers.7.fc1.weight:
   device: cuda:0
   max: '1.104e-01'
-  mean: '-1.881e-09'
+  mean: '-1.882e-09'
   min: '-2.285e-01'
   shape:
   - 4096
   - 1024
-  sum: '-7.891e-03'
+  sum: '-7.895e-03'
 grads.network.model.decoder.layers.7.fc2.bias:
   device: cuda:0
   max: '1.005e-02'
-  mean: '-1.819e-11'
+  mean: '1.455e-11'
   min: '-9.898e-03'
   shape:
   - 1024
-  sum: '-1.863e-08'
+  sum: '1.490e-08'
 grads.network.model.decoder.layers.7.fc2.weight:
   device: cuda:0
   max: '1.995e-02'
-  mean: '1.137e-13'
+  mean: '2.274e-13'
   min: '-2.254e-02'
   shape:
   - 1024
   - 4096
-  sum: '4.768e-07'
+  sum: '9.537e-07'
 grads.network.model.decoder.layers.7.final_layer_norm.bias:
   device: cuda:0
   max: '1.121e-02'
-  mean: '7.440e-05'
+  mean: '7.444e-05'
   min: '-1.076e-02'
   shape:
   - 1024
-  sum: '7.619e-02'
+  sum: '7.622e-02'
 grads.network.model.decoder.layers.7.final_layer_norm.weight:
   device: cuda:0
   max: '3.652e-02'
-  mean: '8.829e-06'
+  mean: '8.827e-06'
   min: '-1.238e-02'
   shape:
   - 1024
-  sum: '9.041e-03'
+  sum: '9.038e-03'
 grads.network.model.decoder.layers.7.self_attn.k_proj.bias:
   device: cuda:0
-  max: '5.239e-10'
-  mean: '1.984e-12'
-  min: '-6.985e-10'
+  max: '9.313e-10'
+  mean: '3.886e-12'
+  min: '-3.347e-10'
   shape:
   - 1024
-  sum: '2.031e-09'
+  sum: '3.979e-09'
 grads.network.model.decoder.layers.7.self_attn.k_proj.weight:
   device: cuda:0
   max: '4.476e-02'
-  mean: '-4.619e-14'
+  mean: '-3.036e-14'
   min: '-3.419e-02'
   shape:
   - 1024
   - 1024
-  sum: '-4.843e-08'
+  sum: '-3.184e-08'
 grads.network.model.decoder.layers.7.self_attn.out_proj.bias:
   device: cuda:0
-  max: '9.545e-03'
-  mean: '-9.095e-12'
+  max: '9.546e-03'
+  mean: '2.910e-11'
   min: '-8.879e-03'
   shape:
   - 1024
-  sum: '-9.313e-09'
+  sum: '2.980e-08'
 grads.network.model.decoder.layers.7.self_attn.out_proj.weight:
   device: cuda:0
   max: '1.048e-02'
-  mean: '-1.421e-13'
+  mean: '-4.974e-14'
   min: '-8.69e-03'
   shape:
   - 1024
   - 1024
-  sum: '-1.490e-07'
+  sum: '-5.215e-08'
 grads.network.model.decoder.layers.7.self_attn.q_proj.bias:
   device: cuda:0
-  max: '2.160e-03'
+  max: '2.16e-03'
   mean: '-8.566e-06'
-  min: '-2.122e-03'
+  min: '-2.123e-03'
   shape:
   - 1024
-  sum: '-8.772e-03'
+  sum: '-8.771e-03'
 grads.network.model.decoder.layers.7.self_attn.q_proj.weight:
   device: cuda:0
   max: '4.079e-02'
@@ -2961,15 +2961,15 @@ grads.network.model.decoder.layers.7.self_attn.q_proj.weight:
 grads.network.model.decoder.layers.7.self_attn.v_proj.bias:
   device: cuda:0
   max: '7.006e-03'
-  mean: '7.291e-05'
+  mean: '7.293e-05'
   min: '-6.243e-03'
   shape:
   - 1024
-  sum: '7.466e-02'
+  sum: '7.468e-02'
 grads.network.model.decoder.layers.7.self_attn.v_proj.weight:
   device: cuda:0
-  max: '1.411e-01'
-  mean: '-9.891e-09'
+  max: '1.412e-01'
+  mean: '-9.893e-09'
   min: '-1.577e-01'
   shape:
   - 1024
@@ -2978,24 +2978,24 @@ grads.network.model.decoder.layers.7.self_attn.v_proj.weight:
 grads.network.model.decoder.layers.7.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.008e-02'
-  mean: '7.627e-05'
-  min: '-8.98e-03'
+  mean: '7.626e-05'
+  min: '-8.979e-03'
   shape:
   - 1024
-  sum: '7.81e-02'
+  sum: '7.809e-02'
 grads.network.model.decoder.layers.7.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '4.076e-02'
-  mean: '-3.706e-06'
+  max: '4.077e-02'
+  mean: '-3.710e-06'
   min: '-1.091e-02'
   shape:
   - 1024
-  sum: '-3.795e-03'
+  sum: '-3.8e-03'
 grads.network.model.decoder.layers.8.fc1.bias:
   device: cuda:0
   max: '6.571e-03'
   mean: '-9.239e-07'
-  min: '-1.190e-02'
+  min: '-1.191e-02'
   shape:
   - 4096
   sum: '-3.784e-03'
@@ -3011,78 +3011,78 @@ grads.network.model.decoder.layers.8.fc1.weight:
 grads.network.model.decoder.layers.8.fc2.bias:
   device: cuda:0
   max: '1.032e-02'
-  mean: '-9.095e-12'
-  min: '-1.078e-02'
+  mean: '7.276e-12'
+  min: '-1.079e-02'
   shape:
   - 1024
-  sum: '-9.313e-09'
+  sum: '7.451e-09'
 grads.network.model.decoder.layers.8.fc2.weight:
   device: cuda:0
-  max: '1.953e-02'
-  mean: '-3.411e-13'
+  max: '1.952e-02'
+  mean: '0.e+00'
   min: '-2.184e-02'
   shape:
   - 1024
   - 4096
-  sum: '-1.431e-06'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.8.final_layer_norm.bias:
   device: cuda:0
   max: '1.166e-02'
-  mean: '-6.063e-05'
+  mean: '-6.062e-05'
   min: '-1.191e-02'
   shape:
   - 1024
   sum: '-6.208e-02'
 grads.network.model.decoder.layers.8.final_layer_norm.weight:
   device: cuda:0
-  max: '1.405e-02'
+  max: '1.406e-02'
   mean: '-2.412e-05'
   min: '-3.303e-02'
   shape:
   - 1024
-  sum: '-2.47e-02'
+  sum: '-2.470e-02'
 grads.network.model.decoder.layers.8.self_attn.k_proj.bias:
   device: cuda:0
-  max: '4.802e-10'
-  mean: '-8.46e-13'
-  min: '-5.239e-10'
+  max: '4.657e-10'
+  mean: '-6.843e-13'
+  min: '-4.657e-10'
   shape:
   - 1024
-  sum: '-8.663e-10'
+  sum: '-7.008e-10'
 grads.network.model.decoder.layers.8.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.918e-02'
-  mean: '-4.263e-14'
+  mean: '6.717e-15'
   min: '-2.013e-02'
   shape:
   - 1024
   - 1024
-  sum: '-4.470e-08'
+  sum: '7.043e-09'
 grads.network.model.decoder.layers.8.self_attn.out_proj.bias:
   device: cuda:0
   max: '9.190e-03'
-  mean: '0.e+00'
+  mean: '1.091e-11'
   min: '-1.076e-02'
   shape:
   - 1024
-  sum: '0.e+00'
+  sum: '1.118e-08'
 grads.network.model.decoder.layers.8.self_attn.out_proj.weight:
   device: cuda:0
-  max: '5.319e-03'
-  mean: '5.684e-14'
+  max: '5.318e-03'
+  mean: '0.e+00'
   min: '-6.160e-03'
   shape:
   - 1024
   - 1024
-  sum: '5.960e-08'
+  sum: '0.e+00'
 grads.network.model.decoder.layers.8.self_attn.q_proj.bias:
   device: cuda:0
   max: '1.440e-03'
-  mean: '6.485e-06'
+  mean: '6.483e-06'
   min: '-1.473e-03'
   shape:
   - 1024
-  sum: '6.641e-03'
+  sum: '6.638e-03'
 grads.network.model.decoder.layers.8.self_attn.q_proj.weight:
   device: cuda:0
   max: '2.656e-02'
@@ -3091,152 +3091,152 @@ grads.network.model.decoder.layers.8.self_attn.q_proj.weight:
   shape:
   - 1024
   - 1024
-  sum: '-1.057e-02'
+  sum: '-1.056e-02'
 grads.network.model.decoder.layers.8.self_attn.v_proj.bias:
   device: cuda:0
-  max: '6.51e-03'
+  max: '6.510e-03'
   mean: '-4.705e-05'
-  min: '-9.330e-03'
+  min: '-9.331e-03'
   shape:
   - 1024
-  sum: '-4.818e-02'
+  sum: '-4.817e-02'
 grads.network.model.decoder.layers.8.self_attn.v_proj.weight:
   device: cuda:0
-  max: '2.508e-01'
-  mean: '7.312e-08'
+  max: '2.509e-01'
+  mean: '7.311e-08'
   min: '-1.305e-01'
   shape:
   - 1024
   - 1024
-  sum: '7.667e-02'
+  sum: '7.666e-02'
 grads.network.model.decoder.layers.8.self_attn_layer_norm.bias:
   device: cuda:0
   max: '9.717e-03'
-  mean: '4.480e-05'
+  mean: '4.48e-05'
   min: '-1.114e-02'
   shape:
   - 1024
-  sum: '4.588e-02'
+  sum: '4.587e-02'
 grads.network.model.decoder.layers.8.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '2.654e-02'
-  mean: '3.595e-07'
+  max: '2.655e-02'
+  mean: '3.601e-07'
   min: '-1.405e-02'
   shape:
   - 1024
-  sum: '3.681e-04'
+  sum: '3.687e-04'
 grads.network.model.decoder.layers.9.fc1.bias:
   device: cuda:0
   max: '1.194e-02'
-  mean: '-2.191e-05'
-  min: '-1.094e-02'
+  mean: '-2.190e-05'
+  min: '-1.095e-02'
   shape:
   - 4096
-  sum: '-8.973e-02'
+  sum: '-8.971e-02'
 grads.network.model.decoder.layers.9.fc1.weight:
   device: cuda:0
   max: '2.009e-01'
-  mean: '-2.110e-08'
+  mean: '-2.11e-08'
   min: '-2.559e-01'
   shape:
   - 4096
   - 1024
-  sum: '-8.851e-02'
+  sum: '-8.849e-02'
 grads.network.model.decoder.layers.9.fc2.bias:
   device: cuda:0
   max: '1.111e-02'
-  mean: '-1.091e-11'
-  min: '-9.88e-03'
+  mean: '-3.274e-11'
+  min: '-9.881e-03'
   shape:
   - 1024
-  sum: '-1.118e-08'
+  sum: '-3.353e-08'
 grads.network.model.decoder.layers.9.fc2.weight:
   device: cuda:0
   max: '2.793e-02'
-  mean: '5.116e-13'
+  mean: '-7.958e-13'
   min: '-2.691e-02'
   shape:
   - 1024
   - 4096
-  sum: '2.146e-06'
+  sum: '-3.338e-06'
 grads.network.model.decoder.layers.9.final_layer_norm.bias:
   device: cuda:0
   max: '1.192e-02'
-  mean: '-5.164e-05'
+  mean: '-5.165e-05'
   min: '-1.084e-02'
   shape:
   - 1024
-  sum: '-5.288e-02'
+  sum: '-5.289e-02'
 grads.network.model.decoder.layers.9.final_layer_norm.weight:
   device: cuda:0
-  max: '4.972e-02'
-  mean: '-1.966e-05'
+  max: '4.971e-02'
+  mean: '-1.967e-05'
   min: '-1.012e-02'
   shape:
   - 1024
-  sum: '-2.013e-02'
+  sum: '-2.014e-02'
 grads.network.model.decoder.layers.9.self_attn.k_proj.bias:
   device: cuda:0
-  max: '2.328e-09'
-  mean: '4.321e-12'
-  min: '-8.149e-10'
+  max: '8.149e-10'
+  mean: '-1.908e-12'
+  min: '-2.328e-09'
   shape:
   - 1024
-  sum: '4.425e-09'
+  sum: '-1.953e-09'
 grads.network.model.decoder.layers.9.self_attn.k_proj.weight:
   device: cuda:0
   max: '1.124e-01'
-  mean: '5.540e-14'
-  min: '-9.913e-02'
+  mean: '-7.683e-14'
+  min: '-9.914e-02'
   shape:
   - 1024
   - 1024
-  sum: '5.809e-08'
+  sum: '-8.056e-08'
 grads.network.model.decoder.layers.9.self_attn.out_proj.bias:
   device: cuda:0
   max: '1.092e-02'
-  mean: '1.91e-11'
+  mean: '6.366e-12'
   min: '-9.128e-03'
   shape:
   - 1024
-  sum: '1.956e-08'
+  sum: '6.519e-09'
 grads.network.model.decoder.layers.9.self_attn.out_proj.weight:
   device: cuda:0
-  max: '8.924e-03'
-  mean: '-8.527e-14'
+  max: '8.925e-03'
+  mean: '1.705e-13'
   min: '-9.966e-03'
   shape:
   - 1024
   - 1024
-  sum: '-8.941e-08'
+  sum: '1.788e-07'
 grads.network.model.decoder.layers.9.self_attn.q_proj.bias:
   device: cuda:0
   max: '2.722e-03'
-  mean: '-4.809e-06'
+  mean: '-4.813e-06'
   min: '-3.995e-03'
   shape:
   - 1024
-  sum: '-4.925e-03'
+  sum: '-4.929e-03'
 grads.network.model.decoder.layers.9.self_attn.q_proj.weight:
   device: cuda:0
   max: '8.122e-02'
-  mean: '1.560e-08'
+  mean: '1.562e-08'
   min: '-6.148e-02'
   shape:
   - 1024
   - 1024
-  sum: '1.636e-02'
+  sum: '1.637e-02'
 grads.network.model.decoder.layers.9.self_attn.v_proj.bias:
   device: cuda:0
   max: '1.079e-02'
-  mean: '-3.370e-05'
-  min: '-9.869e-03'
+  mean: '-3.37e-05'
+  min: '-9.870e-03'
   shape:
   - 1024
   sum: '-3.451e-02'
 grads.network.model.decoder.layers.9.self_attn.v_proj.weight:
   device: cuda:0
-  max: '2.168e-01'
+  max: '2.169e-01'
   mean: '1.093e-07'
   min: '-2.438e-01'
   shape:
@@ -3246,23 +3246,23 @@ grads.network.model.decoder.layers.9.self_attn.v_proj.weight:
 grads.network.model.decoder.layers.9.self_attn_layer_norm.bias:
   device: cuda:0
   max: '1.143e-02'
-  mean: '5.283e-05'
+  mean: '5.285e-05'
   min: '-9.462e-03'
   shape:
   - 1024
-  sum: '5.410e-02'
+  sum: '5.412e-02'
 grads.network.model.decoder.layers.9.self_attn_layer_norm.weight:
   device: cuda:0
-  max: '2.182e-02'
-  mean: '-1.917e-07'
+  max: '2.183e-02'
+  mean: '-1.891e-07'
   min: '-2.175e-02'
   shape:
   - 1024
-  sum: '-1.963e-04'
+  sum: '-1.936e-04'
 grads.network.model.decoder.project_in.weight:
   device: cuda:0
   max: '2.598e-02'
-  mean: '1.600e-07'
+  mean: '1.601e-07'
   min: '-2.329e-02'
   shape:
   - 1024
@@ -3271,7 +3271,7 @@ grads.network.model.decoder.project_in.weight:
 grads.network.model.decoder.project_out.weight:
   device: cuda:0
   max: '1.123e-01'
-  mean: '-2.416e-07'
+  mean: '-2.417e-07'
   min: '-8.718e-02'
   shape:
   - 512
