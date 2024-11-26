@@ -10,549 +10,549 @@ input.attention_mask:
 input.input_ids:
   device: cuda:0
   max: 50118
-  mean: '5.265e+03'
+  mean: '5.447e+03'
   min: 2
   shape:
   - 8
   - 256
-  sum: 10781837
+  sum: 11154886
 input.labels:
   device: cuda:0
   max: 50118
-  mean: '5.265e+03'
+  mean: '5.447e+03'
   min: 2
   shape:
   - 8
   - 256
-  sum: 10781837
+  sum: 11154886
 out.logits:
   device: cuda:0
-  max: '3.507e+01'
-  mean: '-4.837e+00'
-  min: '-3.298e+01'
+  max: '3.537e+01'
+  mean: '-4.715e+00'
+  min: '-3.336e+01'
   shape:
   - 8
   - 256
   - 50272
-  sum: '-4.98e+08'
+  sum: '-4.855e+08'
 out.loss:
   device: cuda:0
-  max: '4.169e+00'
-  mean: '4.169e+00'
-  min: '4.169e+00'
+  max: '4.05e+00'
+  mean: '4.05e+00'
+  min: '4.05e+00'
   shape: []
-  sum: '4.169e+00'
+  sum: '4.05e+00'
 out.past_key_values.0.0:
   device: cuda:0
-  max: '1.78e+00'
-  mean: '-3.581e-03'
-  min: '-2.005e+00'
+  max: '1.824e+00'
+  mean: '-3.677e-03'
+  min: '-2.004e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-7.510e+03'
+  sum: '-7.711e+03'
 out.past_key_values.0.1:
   device: cuda:0
-  max: '1.665e-01'
-  mean: '8.363e-05'
-  min: '-1.568e-01'
+  max: '1.91e-01'
+  mean: '6.668e-05'
+  min: '-1.719e-01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.754e+02'
+  sum: '1.398e+02'
 out.past_key_values.1.0:
   device: cuda:0
-  max: '1.229e+01'
-  mean: '5.157e-03'
-  min: '-1.163e+01'
+  max: '1.150e+01'
+  mean: '5.521e-03'
+  min: '-1.144e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.082e+04'
+  sum: '1.158e+04'
 out.past_key_values.1.1:
   device: cuda:0
-  max: '4.479e+00'
-  mean: '2.619e-03'
+  max: '4.35e+00'
+  mean: '2.593e-03'
+  min: '-4.527e+00'
+  shape:
+  - 8
+  - 16
+  - 256
+  - 64
+  sum: '5.439e+03'
+out.past_key_values.10.0:
+  device: cuda:0
+  max: '9.741e+00'
+  mean: '5.765e-02'
+  min: '-1.030e+01'
+  shape:
+  - 8
+  - 16
+  - 256
+  - 64
+  sum: '1.209e+05'
+out.past_key_values.10.1:
+  device: cuda:0
+  max: '5.526e+00'
+  mean: '1.023e-02'
+  min: '-5.248e+00'
+  shape:
+  - 8
+  - 16
+  - 256
+  - 64
+  sum: '2.145e+04'
+out.past_key_values.11.0:
+  device: cuda:0
+  max: '9.2e+00'
+  mean: '4.524e-02'
+  min: '-8.32e+00'
+  shape:
+  - 8
+  - 16
+  - 256
+  - 64
+  sum: '9.488e+04'
+out.past_key_values.11.1:
+  device: cuda:0
+  max: '4.676e+00'
+  mean: '7.994e-03'
   min: '-4.337e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '5.493e+03'
-out.past_key_values.10.0:
-  device: cuda:0
-  max: '1.004e+01'
-  mean: '5.535e-02'
-  min: '-9.954e+00'
-  shape:
-  - 8
-  - 16
-  - 256
-  - 64
-  sum: '1.161e+05'
-out.past_key_values.10.1:
-  device: cuda:0
-  max: '5.407e+00'
-  mean: '7.382e-03'
-  min: '-5.421e+00'
-  shape:
-  - 8
-  - 16
-  - 256
-  - 64
-  sum: '1.548e+04'
-out.past_key_values.11.0:
-  device: cuda:0
-  max: '9.222e+00'
-  mean: '4.912e-02'
-  min: '-8.656e+00'
-  shape:
-  - 8
-  - 16
-  - 256
-  - 64
-  sum: '1.030e+05'
-out.past_key_values.11.1:
-  device: cuda:0
-  max: '4.49e+00'
-  mean: '6.813e-03'
-  min: '-4.356e+00'
-  shape:
-  - 8
-  - 16
-  - 256
-  - 64
-  sum: '1.429e+04'
+  sum: '1.676e+04'
 out.past_key_values.12.0:
   device: cuda:0
-  max: '8.792e+00'
-  mean: '-1.832e-03'
-  min: '-8.094e+00'
+  max: '8.099e+00'
+  mean: '-4.339e-03'
+  min: '-8.358e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-3.842e+03'
+  sum: '-9.101e+03'
 out.past_key_values.12.1:
   device: cuda:0
-  max: '5.004e+00'
-  mean: '5.763e-03'
-  min: '-5.606e+00'
+  max: '5.357e+00'
+  mean: '7.804e-03'
+  min: '-5.152e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.209e+04'
+  sum: '1.637e+04'
 out.past_key_values.13.0:
   device: cuda:0
-  max: '8.343e+00'
-  mean: '-3.719e-03'
-  min: '-8.637e+00'
+  max: '8.449e+00'
+  mean: '-9.491e-03'
+  min: '-8.29e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-7.799e+03'
+  sum: '-1.990e+04'
 out.past_key_values.13.1:
   device: cuda:0
-  max: '4.977e+00'
-  mean: '2.154e-03'
-  min: '-4.84e+00'
+  max: '4.555e+00'
+  mean: '3.872e-03'
+  min: '-5.178e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '4.518e+03'
+  sum: '8.120e+03'
 out.past_key_values.14.0:
   device: cuda:0
-  max: '8.527e+00'
-  mean: '-3.708e-02'
-  min: '-8.576e+00'
+  max: '7.696e+00'
+  mean: '-4.042e-02'
+  min: '-8.394e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-7.777e+04'
+  sum: '-8.477e+04'
 out.past_key_values.14.1:
   device: cuda:0
-  max: '5.15e+00'
-  mean: '5.069e-03'
-  min: '-5.532e+00'
+  max: '5.031e+00'
+  mean: '3.803e-03'
+  min: '-5.123e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.063e+04'
+  sum: '7.976e+03'
 out.past_key_values.15.0:
   device: cuda:0
-  max: '8.152e+00'
-  mean: '2.418e-02'
-  min: '-9.593e+00'
+  max: '8.108e+00'
+  mean: '2.572e-02'
+  min: '-1.000e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '5.071e+04'
+  sum: '5.394e+04'
 out.past_key_values.15.1:
   device: cuda:0
-  max: '5.053e+00'
-  mean: '-9.564e-03'
-  min: '-5.126e+00'
+  max: '4.85e+00'
+  mean: '-8.774e-03'
+  min: '-4.855e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-2.006e+04'
+  sum: '-1.840e+04'
 out.past_key_values.16.0:
   device: cuda:0
-  max: '8.555e+00'
-  mean: '-2.003e-02'
-  min: '-7.960e+00'
+  max: '8.927e+00'
+  mean: '-1.676e-02'
+  min: '-8.144e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-4.201e+04'
+  sum: '-3.515e+04'
 out.past_key_values.16.1:
   device: cuda:0
-  max: '4.549e+00'
-  mean: '-9.877e-03'
-  min: '-5.229e+00'
+  max: '4.793e+00'
+  mean: '-1.081e-02'
+  min: '-5.854e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-2.071e+04'
+  sum: '-2.268e+04'
 out.past_key_values.17.0:
   device: cuda:0
-  max: '9.987e+00'
-  mean: '1.882e-02'
-  min: '-1.047e+01'
+  max: '1.004e+01'
+  mean: '2.810e-02'
+  min: '-9.726e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '3.946e+04'
+  sum: '5.893e+04'
 out.past_key_values.17.1:
   device: cuda:0
-  max: '5.499e+00'
-  mean: '4.046e-03'
-  min: '-4.751e+00'
+  max: '5.284e+00'
+  mean: '5.285e-03'
+  min: '-5.681e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '8.486e+03'
+  sum: '1.108e+04'
 out.past_key_values.18.0:
   device: cuda:0
-  max: '8.157e+00'
-  mean: '4.879e-02'
-  min: '-8.859e+00'
+  max: '8.982e+00'
+  mean: '5.052e-02'
+  min: '-8.762e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.023e+05'
+  sum: '1.059e+05'
 out.past_key_values.18.1:
   device: cuda:0
-  max: '4.687e+00'
-  mean: '-2.521e-03'
-  min: '-4.955e+00'
+  max: '4.748e+00'
+  mean: '-1.694e-03'
+  min: '-4.891e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-5.287e+03'
+  sum: '-3.554e+03'
 out.past_key_values.19.0:
   device: cuda:0
-  max: '1.015e+01'
-  mean: '1.528e-02'
-  min: '-1.027e+01'
+  max: '9.813e+00'
+  mean: '1.273e-02'
+  min: '-9.707e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '3.205e+04'
+  sum: '2.670e+04'
 out.past_key_values.19.1:
   device: cuda:0
-  max: '4.66e+00'
-  mean: '-1.661e-02'
-  min: '-5.154e+00'
+  max: '4.619e+00'
+  mean: '-1.924e-02'
+  min: '-4.700e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-3.483e+04'
+  sum: '-4.036e+04'
 out.past_key_values.2.0:
   device: cuda:0
-  max: '1.064e+01'
-  mean: '7.244e-02'
-  min: '-1.031e+01'
+  max: '1.074e+01'
+  mean: '6.862e-02'
+  min: '-1.063e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.519e+05'
+  sum: '1.439e+05'
 out.past_key_values.2.1:
   device: cuda:0
-  max: '4.712e+00'
-  mean: '2.248e-03'
-  min: '-4.234e+00'
+  max: '4.396e+00'
+  mean: '2.223e-03'
+  min: '-4.462e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '4.714e+03'
+  sum: '4.662e+03'
 out.past_key_values.20.0:
   device: cuda:0
-  max: '1.099e+01'
-  mean: '5.109e-02'
-  min: '-1.172e+01'
+  max: '1.106e+01'
+  mean: '5.73e-02'
+  min: '-1.099e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.071e+05'
+  sum: '1.202e+05'
 out.past_key_values.20.1:
   device: cuda:0
-  max: '5.022e+00'
-  mean: '5.842e-03'
-  min: '-6.663e+00'
+  max: '4.813e+00'
+  mean: '6.246e-03'
+  min: '-5.477e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.225e+04'
+  sum: '1.31e+04'
 out.past_key_values.21.0:
   device: cuda:0
-  max: '1.132e+01'
-  mean: '5.089e-02'
-  min: '-1.055e+01'
+  max: '1.079e+01'
+  mean: '4.522e-02'
+  min: '-1.039e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.067e+05'
+  sum: '9.484e+04'
 out.past_key_values.21.1:
   device: cuda:0
-  max: '4.731e+00'
-  mean: '1.276e-02'
-  min: '-4.486e+00'
+  max: '4.631e+00'
+  mean: '1.379e-02'
+  min: '-4.818e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '2.676e+04'
+  sum: '2.891e+04'
 out.past_key_values.22.0:
   device: cuda:0
-  max: '1.03e+01'
-  mean: '4.091e-02'
-  min: '-1.162e+01'
+  max: '1.065e+01'
+  mean: '4.017e-02'
+  min: '-1.125e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '8.579e+04'
+  sum: '8.425e+04'
 out.past_key_values.22.1:
   device: cuda:0
-  max: '4.647e+00'
-  mean: '8.237e-03'
-  min: '-5.057e+00'
+  max: '5.105e+00'
+  mean: '5.328e-03'
+  min: '-4.445e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.727e+04'
+  sum: '1.117e+04'
 out.past_key_values.23.0:
   device: cuda:0
-  max: '8.126e+00'
-  mean: '1.065e-02'
-  min: '-8.797e+00'
+  max: '9.464e+00'
+  mean: '1.056e-02'
+  min: '-8.453e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '2.233e+04'
+  sum: '2.214e+04'
 out.past_key_values.23.1:
   device: cuda:0
-  max: '5.348e+00'
-  mean: '-1.145e-03'
-  min: '-4.637e+00'
+  max: '4.379e+00'
+  mean: '-1.464e-03'
+  min: '-4.951e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-2.401e+03'
+  sum: '-3.069e+03'
 out.past_key_values.3.0:
   device: cuda:0
-  max: '1.095e+01'
-  mean: '4.414e-02'
-  min: '-1.056e+01'
+  max: '1.142e+01'
+  mean: '4.512e-02'
+  min: '-1.147e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '9.256e+04'
+  sum: '9.462e+04'
 out.past_key_values.3.1:
   device: cuda:0
-  max: '4.339e+00'
-  mean: '-2.309e-03'
-  min: '-4.796e+00'
+  max: '4.416e+00'
+  mean: '-3.978e-04'
+  min: '-4.476e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-4.843e+03'
+  sum: '-8.342e+02'
 out.past_key_values.4.0:
   device: cuda:0
-  max: '1.216e+01'
-  mean: '-2.735e-02'
-  min: '-1.132e+01'
+  max: '1.193e+01'
+  mean: '-3.041e-02'
+  min: '-1.091e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-5.735e+04'
+  sum: '-6.377e+04'
 out.past_key_values.4.1:
   device: cuda:0
-  max: '4.455e+00'
-  mean: '5.272e-04'
-  min: '-5.199e+00'
+  max: '4.839e+00'
+  mean: '-4.185e-04'
+  min: '-5.120e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.106e+03'
+  sum: '-8.776e+02'
 out.past_key_values.5.0:
   device: cuda:0
-  max: '1.146e+01'
-  mean: '4.958e-02'
-  min: '-1.178e+01'
+  max: '1.230e+01'
+  mean: '4.608e-02'
+  min: '-1.164e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.04e+05'
+  sum: '9.664e+04'
 out.past_key_values.5.1:
   device: cuda:0
-  max: '4.7e+00'
-  mean: '9.000e-04'
-  min: '-4.806e+00'
+  max: '5.191e+00'
+  mean: '1.398e-03'
+  min: '-4.402e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.887e+03'
+  sum: '2.932e+03'
 out.past_key_values.6.0:
   device: cuda:0
-  max: '1.156e+01'
-  mean: '3.090e-03'
-  min: '-1.303e+01'
+  max: '1.248e+01'
+  mean: '6.588e-03'
+  min: '-1.322e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '6.480e+03'
+  sum: '1.382e+04'
 out.past_key_values.6.1:
   device: cuda:0
-  max: '4.412e+00'
-  mean: '4.780e-03'
-  min: '-4.179e+00'
+  max: '4.148e+00'
+  mean: '5.169e-03'
+  min: '-4.295e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '1.003e+04'
+  sum: '1.084e+04'
 out.past_key_values.7.0:
   device: cuda:0
-  max: '1.417e+01'
-  mean: '-1.118e-02'
-  min: '-1.204e+01'
+  max: '1.326e+01'
+  mean: '-1.400e-02'
+  min: '-1.272e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-2.346e+04'
+  sum: '-2.936e+04'
 out.past_key_values.7.1:
   device: cuda:0
-  max: '3.719e+00'
-  mean: '3.800e-03'
-  min: '-4.241e+00'
+  max: '4.043e+00'
+  mean: '5.246e-03'
+  min: '-3.823e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '7.970e+03'
+  sum: '1.100e+04'
 out.past_key_values.8.0:
   device: cuda:0
-  max: '1.256e+01'
-  mean: '1.216e-02'
-  min: '-1.361e+01'
+  max: '1.329e+01'
+  mean: '1.543e-02'
+  min: '-1.222e+01'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '2.551e+04'
+  sum: '3.235e+04'
 out.past_key_values.8.1:
   device: cuda:0
-  max: '4.220e+00'
-  mean: '-9.122e-04'
-  min: '-4.401e+00'
+  max: '4.179e+00'
+  mean: '-1.275e-03'
+  min: '-4.191e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '-1.913e+03'
+  sum: '-2.674e+03'
 out.past_key_values.9.0:
   device: cuda:0
-  max: '1.426e+01'
+  max: '1.514e+01'
   mean: '-1.051e-01'
-  min: '-1.891e+01'
+  min: '-1.701e+01'
   shape:
   - 8
   - 16
@@ -561,12 +561,12 @@ out.past_key_values.9.0:
   sum: '-2.204e+05'
 out.past_key_values.9.1:
   device: cuda:0
-  max: '5.008e+00'
-  mean: '2.591e-04'
-  min: '-4.651e+00'
+  max: '4.456e+00'
+  mean: '3.825e-04'
+  min: '-4.440e+00'
   shape:
   - 8
   - 16
   - 256
   - 64
-  sum: '5.433e+02'
+  sum: '8.022e+02'
