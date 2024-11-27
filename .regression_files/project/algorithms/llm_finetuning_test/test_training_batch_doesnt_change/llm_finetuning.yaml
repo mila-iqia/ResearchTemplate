@@ -1,0 +1,28 @@
+GPU: Quadro RTX 8000
+attention_mask:
+  device: cuda:0
+  max: 1
+  mean: '1.e+00'
+  min: 1
+  shape:
+  - 8
+  - 256
+  sum: 2048
+input_ids:
+  device: cuda:0
+  max: 50118
+  mean: '5.265e+03'
+  min: 2
+  shape:
+  - 8
+  - 256
+  sum: 10781837
+labels:
+  device: cuda:0
+  max: 50118
+  mean: '5.265e+03'
+  min: 2
+  shape:
+  - 8
+  - 256
+  sum: 10781837

@@ -2,6 +2,7 @@
 
 import copy
 import operator
+from typing import Any
 
 import jax
 import lightning
@@ -82,7 +83,8 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
 
         with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
             # TODO: This ugliness is because torchvision transforms use the global pytorch RNG!
-            torch.random.manual_seed(42)
+            # torch.random.manual_seed(42)
+            lightning.seed_everything(42, workers=True)
             batch = next(dataloader_iterator)
 
         return jax.tree.map(operator.methodcaller("to", device=device), batch)
@@ -97,11 +99,15 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
         assert isinstance(training_batch, dict)
         return training_batch
 
-    # Checking all the weights against the 900mb reference .npz file is a bit slow.
+    def test_training_batch_doesnt_change(
+        self, training_batch: dict, tensor_regression: TensorRegressionFixture
+    ):
+        tensor_regression.check(training_batch)
+
     @pytest.mark.xfail(
         SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
     )
-    @pytest.mark.slow
+    @pytest.mark.slow  # Checking against the 900mb reference .npz file is a bit slow.
     def test_initialization_is_reproducible(
         self,
         experiment_config: Config,
@@ -116,4 +122,21 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
             seed=seed,
             tensor_regression=tensor_regression,
             trainer=trainer,
+        )
+
+    @pytest.mark.xfail(
+        SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
+    )
+    def test_forward_pass_is_reproducible(
+        self,
+        forward_pass_input: Any,
+        algorithm: LLMFinetuningExample,
+        seed: int,
+        tensor_regression: TensorRegressionFixture,
+    ):
+        return super().test_forward_pass_is_reproducible(
+            forward_pass_input=forward_pass_input,
+            algorithm=algorithm,
+            seed=seed,
+            tensor_regression=tensor_regression,
         )
