@@ -1,4 +1,3 @@
-GPU: Quadro RTX 8000
 attention_mask:
   device: cuda:0
   max: 1

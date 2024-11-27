@@ -102,7 +102,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     def test_training_batch_doesnt_change(
         self, training_batch: dict, tensor_regression: TensorRegressionFixture
     ):
-        tensor_regression.check(training_batch)
+        tensor_regression.check(training_batch, include_gpu_name_in_stats=False)
 
     @pytest.mark.xfail(
         SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
