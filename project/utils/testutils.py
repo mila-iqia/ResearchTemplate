@@ -67,7 +67,7 @@ def get_config_loader():
     AutoSchemaPlugin = None
     backup = None
     try:
-        from hydra_plugins.hydra_auto_schema.auto_schema_plugin import (  # type: ignore
+        from hydra_plugins.auto_schema.auto_schema_plugin import (
             AutoSchemaPlugin,
         )
 
