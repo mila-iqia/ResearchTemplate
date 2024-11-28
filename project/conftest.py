@@ -328,15 +328,16 @@ def algorithm(
     datamodule: lightning.LightningDataModule | None,
     trainer: lightning.Trainer | JaxTrainer,
     seed: int,
+    device: torch.device,
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
     algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
-        with trainer.init_module():
+        with trainer.init_module(), device:
             # A bit hacky, but we have to do this because the lightningmodule isn't associated
             # with a Trainer.
-            algorithm._device = torch.get_default_device()
+            algorithm._device = device
             algorithm.configure_model()
     return algorithm
 

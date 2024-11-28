@@ -57,6 +57,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         datamodule: lightning.LightningDataModule | None,
         seed: int,
         trainer: lightning.Trainer,
+        device: torch.device,
     ):
         """Checks that the weights initialization is consistent given the a random seed."""
 
@@ -65,10 +66,10 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
             algorithm_1 = instantiate_algorithm(experiment_config.algorithm, datamodule)
             assert isinstance(algorithm_1, lightning.LightningModule)
 
-            with trainer.init_module():
+            with trainer.init_module(), device:
                 # A bit hacky, but we have to do this because the lightningmodule isn't associated
                 # with a Trainer.
-                algorithm_1._device = torch.get_default_device()
+                algorithm_1._device = device
                 algorithm_1.configure_model()
 
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
@@ -76,10 +77,10 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
             algorithm_2 = instantiate_algorithm(experiment_config.algorithm, datamodule)
             assert isinstance(algorithm_2, lightning.LightningModule)
 
-            with trainer.init_module():
+            with trainer.init_module(), device:
                 # A bit hacky, but we have to do this because the lightningmodule isn't associated
                 # with a Trainer.
-                algorithm_2._device = torch.get_default_device()
+                algorithm_2._device = device
                 algorithm_2.configure_model()
 
         torch.testing.assert_close(algorithm_1.state_dict(), algorithm_2.state_dict())
@@ -157,16 +158,17 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         seed: int,
         tensor_regression: TensorRegressionFixture,
         trainer: lightning.Trainer,
+        device: torch.device,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
             algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
             assert isinstance(algorithm, lightning.LightningModule)
-            with trainer.init_module():
+            with trainer.init_module(), device:
                 # A bit hacky, but we have to do this because the lightningmodule isn't associated
                 # with a Trainer.
-                algorithm._device = torch.get_default_device()
+                algorithm._device = device
                 algorithm.configure_model()
 
         tensor_regression.check(
