@@ -2,6 +2,7 @@
 
 import copy
 import operator
+from pathlib import Path
 from typing import Any
 
 import jax
@@ -148,4 +149,21 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
             algorithm=algorithm,
             seed=seed,
             tensor_regression=tensor_regression,
+        )
+
+    @pytest.mark.xfail(
+        SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
+    )
+    def test_backward_pass_is_reproducible(
+        self,
+        datamodule: lightning.LightningDataModule,
+        algorithm: LLMFinetuningExample,
+        seed: int,
+        accelerator: str,
+        devices: int | list[int],
+        tensor_regression: TensorRegressionFixture,
+        tmp_path: Path,
+    ):
+        return super().test_backward_pass_is_reproducible(
+            datamodule, algorithm, seed, accelerator, devices, tensor_regression, tmp_path
         )
