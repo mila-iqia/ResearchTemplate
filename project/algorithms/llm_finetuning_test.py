@@ -122,6 +122,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
         seed: int,
         tensor_regression: TensorRegressionFixture,
         trainer: lightning.Trainer,
+        device: torch.device,
     ):
         super().test_initialization_is_reproducible(
             experiment_config=experiment_config,
@@ -129,6 +130,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
             seed=seed,
             tensor_regression=tensor_regression,
             trainer=trainer,
+            device=device,
         )
 
     @pytest.mark.xfail(
