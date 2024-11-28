@@ -63,8 +63,12 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
         """
         # a bit hacky: Set the trainer on the lightningmodule.
         algorithm._trainer = trainer
-        algorithm.prepare_data()
-        algorithm.setup("fit")
+        with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
+            # TODO: This is necessary because torchvision transforms use the global pytorch RNG!
+            lightning.seed_everything(42, workers=True)
+
+            algorithm.prepare_data()
+            algorithm.setup("fit")
 
         train_dataloader = algorithm.train_dataloader()
         assert isinstance(train_dataloader, DataLoader)
@@ -78,13 +82,12 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
 
         # The batch of data will always be the same because the dataloaders are passed a Generator
         # object in their constructor.
-        assert isinstance(train_dataloader, DataLoader)
-        dataloader_iterator = iter(train_dataloader)
 
         with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
-            # TODO: This ugliness is because torchvision transforms use the global pytorch RNG!
-            # torch.random.manual_seed(42)
+            # TODO: This is necessary because torchvision transforms use the global pytorch RNG!
             lightning.seed_everything(42, workers=True)
+            assert isinstance(train_dataloader, DataLoader)
+            dataloader_iterator = iter(train_dataloader)
             batch = next(dataloader_iterator)
 
         return jax.tree.map(operator.methodcaller("to", device=device), batch)
@@ -102,6 +105,10 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     def test_training_batch_doesnt_change(
         self, training_batch: dict, tensor_regression: TensorRegressionFixture
     ):
+        # For other algos that have a datamodule, those have a dedicated test class in
+        # datamodules_test.py.
+        # Here since this lightningmodule does not use a datamodule, we test the train_dataloader
+        # method.
         tensor_regression.check(training_batch, include_gpu_name_in_stats=False)
 
     @pytest.mark.xfail(
