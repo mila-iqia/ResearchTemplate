@@ -10,18 +10,18 @@ attention_mask:
 input_ids:
   device: cuda:0
   max: 50118
-  mean: '5.265e+03'
+  mean: '5.447e+03'
   min: 2
   shape:
   - 8
   - 256
-  sum: 10781837
+  sum: 11154886
 labels:
   device: cuda:0
   max: 50118
-  mean: '5.265e+03'
+  mean: '5.447e+03'
   min: 2
   shape:
   - 8
   - 256
-  sum: 10781837
+  sum: 11154886
