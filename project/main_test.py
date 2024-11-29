@@ -14,7 +14,7 @@ from hydra.types import RunMode
 from omegaconf import DictConfig
 
 import project.main
-from project.conftest import command_line_overrides
+from project.conftest import command_line_overrides, skip_on_macOS_in_CI
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import IN_GITHUB_CI
@@ -195,7 +195,10 @@ def test_can_run_experiment(
     project.main.main()
 
 
-@pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=example"], indirect=True)
+@skip_on_macOS_in_CI
+@pytest.mark.parametrize(
+    command_line_overrides.__name__, ["algorithm=image_classifier"], indirect=True
+)
 def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
     """Test to check that the datamodule is required (even when just the example algorithm is set).
 
@@ -216,7 +219,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     [
-        "algorithm=example datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
+        "algorithm=image_classifier datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
     ],
     indirect=True,
 )

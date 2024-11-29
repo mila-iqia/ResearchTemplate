@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import ClassVar, Concatenate, Literal, ParamSpec, TypeVar
 
 import torch
+import torchvision.transforms
+import torchvision.transforms.v2
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, random_split
 from torch.utils.data._utils.collate import collate_tensor_fn, default_collate_fn_map
 from torchvision.datasets import VisionDataset
-from torchvision.transforms import v2 as transforms
 from torchvision.tv_tensors import Image, set_return_type
 
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS
@@ -32,13 +33,13 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
     (Taken from pl_bolts which is not very well maintained.)
     """
 
-    name: ClassVar[str] = ""
+    name: str | None = ""
     """Dataset name."""
 
     dataset_cls: ClassVar[type[VisionDataset]]
     """Dataset class to use."""
 
-    dims: ClassVar[tuple[C, H, W]]
+    dims: tuple[C, H, W]
     """A tuple describing the shape of the data."""
 
     def __init__(
@@ -85,12 +86,27 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
         self.pin_memory = pin_memory
         self.drop_last = drop_last
         self.train_transforms = train_transforms or self.default_transforms()
-        self.val_transforms = val_transforms or transforms.Compose(
-            [transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]
+        self.val_transforms = val_transforms or torchvision.transforms.v2.Compose(
+            [
+                torchvision.transforms.v2.ToImage(),
+                torchvision.transforms.v2.ToDtype(torch.float32, scale=True),
+            ]
         )
-        self.test_transforms = test_transforms or transforms.Compose(
-            [transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]
+        self.test_transforms = test_transforms or torchvision.transforms.v2.Compose(
+            [
+                torchvision.transforms.v2.ToImage(),
+                torchvision.transforms.v2.ToDtype(torch.float32, scale=True),
+            ]
         )
+        if (
+            not normalize
+            and train_transforms is not None
+            and _contains_normalization_transform(train_transforms)
+        ):
+            logger.warning(
+                "You passed `normalize=False` but `train_transforms` contains a normalization transform. "
+                "The provided normalization transform will be applied."
+            )
 
         # todo: what about the shuffling at each epoch?
         _rng = torch.Generator(device="cpu").manual_seed(self.seed)
@@ -115,7 +131,9 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             self.test_kwargs["train"] = False
 
         self.batch_size_per_device: int = batch_size
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(
+            logger=False, ignore=["train_transforms", "val_transforms", "test_transforms"]
+        )
 
     def prepare_data(self) -> None:
         """Saves files to data_dir."""
@@ -313,3 +331,15 @@ def num_cpus_on_node() -> int:
     if hasattr(os, "sched_getaffinity"):
         return len(os.sched_getaffinity(0))
     return torch.multiprocessing.cpu_count()
+
+
+def _contains_normalization_transform(transforms: Callable) -> bool:
+    if isinstance(
+        transforms, torchvision.transforms.Normalize | torchvision.transforms.v2.Normalize
+    ):
+        return True
+    if isinstance(transforms, torchvision.transforms.Compose | torchvision.transforms.v2.Compose):
+        return any(_contains_normalization_transform(t) for t in transforms.transforms)
+    if isinstance(transforms, torch.nn.Sequential):
+        return any(_contains_normalization_transform(t) for t in transforms.transforms)
+    return False

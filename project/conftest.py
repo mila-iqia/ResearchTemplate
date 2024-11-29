@@ -7,7 +7,7 @@ by tests.
 
 Our goal here is to make sure that the way we create networks/datasets/algorithms during tests match
 as closely as possible how they are created normally in a real run.
-For example, when running `python project/main.py algorithm=example`.
+For example, when running `python project/main.py algorithm=image_classifier`.
 
 We achieve this like so: All the components of an experiment are created using fixtures.
 The first fixtures to be invoked are the ones that would correspond to command-line arguments.
@@ -55,6 +55,7 @@ algorithm & datamodule -- is used by --> some_other_test
 from __future__ import annotations
 
 import copy
+import functools
 import operator
 import os
 import shlex
@@ -67,9 +68,12 @@ from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Literal
 
+import hydra.errors
 import jax
 import lightning
+import lightning.pytorch
 import lightning.pytorch as pl
+import lightning.pytorch.utilities
 import pytest
 import tensor_regression.stats
 import torch
@@ -79,7 +83,11 @@ from _pytest.runner import CallInfo
 from hydra import compose, initialize_config_module
 from hydra.conf import HydraHelpConf
 from hydra.core.hydra_config import HydraConfig
+from hydra_plugins.auto_schema import auto_schema_plugin
+from hydra_plugins.auto_schema.auto_schema_plugin import add_schemas_to_all_hydra_configs
 from omegaconf import DictConfig, open_dict
+from tensor_regression.stats import get_simple_attributes
+from tensor_regression.to_array import to_ndarray
 from torch import Tensor
 from torch.utils.data import DataLoader
 
@@ -95,14 +103,13 @@ from project.main import PROJECT_NAME
 from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.seeding import seeded_rng
 from project.utils.testutils import (
+    IN_GITHUB_CI,
     PARAM_WHEN_USED_MARK_NAME,
     default_marks_for_config_combinations,
     default_marks_for_config_name,
 )
 from project.utils.typing_utils import is_sequence_of
-from project.utils.typing_utils.protocols import DataModule
 
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
@@ -114,6 +121,45 @@ logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 1.0
 DEFAULT_SEED = 42
+
+# Note: Here we attempt to make this happen only once.
+auto_schema_plugin.add_schemas_to_all_hydra_configs = functools.cache(
+    add_schemas_to_all_hydra_configs
+)
+
+
+fails_on_macOS_in_CI = pytest.mark.xfail(
+    sys.platform == "darwin" and IN_GITHUB_CI,
+    raises=(RuntimeError, hydra.errors.InstantiationException),
+    reason="Raises 'MPS backend out of memory' error on MacOS in GitHub CI.",
+)
+skip_on_macOS_in_CI = pytest.mark.skipif(
+    sys.platform == "darwin" and IN_GITHUB_CI,
+    reason="TODO: Fails for some reason on MacOS in GitHub CI.",
+)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def prevent_jax_from_reserving_all_the_vram():
+    # note; not using monkeypatch because we want this to be session-scoped.
+    @contextmanager
+    def change_env(variable_name: str, value: str):
+        val_before = os.environ.get(variable_name)
+        os.environ[variable_name] = value
+        yield
+        if val_before is None:
+            os.environ.pop(variable_name)
+        else:
+            os.environ[variable_name] = val_before
+
+    # Set these so that we can use torch and jax during tests on the same GPU (and so that Jax lets
+    # go of the VRAM it doesn't need anymore.
+    # See https://jax.readthedocs.io/en/latest/gpu_memory_allocation.html for more info.
+    with (
+        change_env("XLA_PYTHON_CLIENT_PREALLOCATE", "false"),
+        change_env("XLA_PYTHON_CLIENT_ALLOCATOR", "platform"),
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -140,7 +186,7 @@ def algorithm_config(request: pytest.FixtureRequest) -> str | None:
     """The algorithm config to use in the experiment, as if `algorithm=<value>` was passed.
 
     This is parametrized with all the configurations for a given algorithm type when using the
-    included tests, for example as is done in [project.algorithms.example_test][].
+    included tests, for example as is done in [project.algorithms.image_classifier_test][].
     """
     algorithm_config_name = getattr(request, "param", None)
     if algorithm_config_name:
@@ -270,7 +316,7 @@ def experiment_config(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_dictconfig: DictConfig) -> DataModule | None:
+def datamodule(experiment_dictconfig: DictConfig) -> lightning.LightningDataModule | None:
     """Fixture that creates the datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
     return instantiate_datamodule(experiment_dictconfig["datamodule"])
@@ -278,15 +324,20 @@ def datamodule(experiment_dictconfig: DictConfig) -> DataModule | None:
 
 @pytest.fixture(scope="function")
 def algorithm(
-    experiment_config: Config, datamodule: DataModule | None, device: torch.device, seed: int
+    experiment_config: Config,
+    datamodule: lightning.LightningDataModule | None,
+    trainer: lightning.Trainer | JaxTrainer,
+    seed: int,
+    device: torch.device,
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    # todo: Use the `with device` block only for `configure_model` to replicate the same conditions
-    # as when we're using the PyTorch-Lightning Trainer.
-    with device:
-        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
-        if isinstance(algorithm, lightning.LightningModule):
+    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+    if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
+        with trainer.init_module(), device:
+            # A bit hacky, but we have to do this because the lightningmodule isn't associated
+            # with a Trainer.
+            algorithm._device = device
             algorithm.configure_model()
     return algorithm
 
@@ -344,7 +395,8 @@ def seed(request: pytest.FixtureRequest, make_torch_deterministic: None):
     random_seed = getattr(request, "param", DEFAULT_SEED)
     assert isinstance(random_seed, int) or random_seed is None
 
-    with seeded_rng(random_seed):
+    with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+        lightning.seed_everything(random_seed, workers=True)
         yield random_seed
 
 
@@ -665,3 +717,32 @@ def _patched_simple_attributes(v, precision: int | None):
     stats = tensor_regression.stats.get_simple_attributes(v, precision=precision)
     stats.pop("hash", None)
     return stats
+
+
+@get_simple_attributes.register(tuple)
+def _get_tuple_attributes(value: tuple, precision: int | None):
+    # This is called to get some simple stats to store in regression files during tests, in
+    # particular for tuples (since there isn't already a handler for it in the tensor_regression
+    # package.)
+    # Note: This information about this output is not very descriptive.
+    # not this is called only for the `out.past_key_values` entry in the `CausalLMOutputWithPast`
+    # that is returned from the forward pass output.
+    num_items_to_include = 5  # only show the stats of some of the items.
+    return {
+        "length": len(value),
+        **{
+            f"{i}": get_simple_attributes(item, precision=precision)
+            for i, item in enumerate(value[:num_items_to_include])
+        },
+    }
+
+
+@to_ndarray.register(list)
+@to_ndarray.register(tuple)
+def _tuple_to_ndarray(v: tuple | list):
+    """Convert a tuple of values to a numpy array to be stored in a regression file."""
+    # This could get a bit tricky because the items might not have the same shape and so on.
+    # However it seems like the ndarrays_regression fixture (which is what tensor_regression uses
+    # under the hood) is not complaining about us returning a list here, so we'll leave it at that
+    # for now.
+    return {i: to_ndarray(v_i) for i, v_i in enumerate(v)}  # type: ignore

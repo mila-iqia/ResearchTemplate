@@ -1,3 +1,3 @@
-from .algorithm_tests import LearningAlgorithmTests
+from .lightning_module_tests import LightningModuleTests
 
-__all__ = ["LearningAlgorithmTests"]
+__all__ = ["LightningModuleTests"]

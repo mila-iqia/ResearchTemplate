@@ -23,6 +23,7 @@ from project.experiment import (
 from project.utils.hydra_utils import resolve_dictconfig
 
 
+# NTOE: could also run these commands with the `resources` group and `cluster=mila`
 @pytest.mark.skipif(not shutil.which("sbatch"), reason="Needs to be run on a SLURM cluster")
 @pytest.mark.parametrize(
     "command_line_arguments",
@@ -30,7 +31,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Instrumenting your code -baseline
         """
         experiment=profiling \
-        algorithm=example \
+        algorithm=image_classifier \
         trainer.logger.wandb.name="Baseline" \
         trainer.logger.wandb.tags=["Training","Baseline comparison","CPU/GPU comparison"]
         """,
@@ -77,7 +78,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Identifying potential bottlenecks - fcnet mnist
         """
         experiment=profiling \
-        algorithm=example \
+        algorithm=image_classifier \
         algorithm/network=fcnet \
         datamodule=mnist \
         trainer.logger.wandb.name="FcNet/MNIST baseline with training" \
@@ -86,7 +87,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         # Throughput across GPU types
         """
         experiment=profiling \
-        algorithm=example \
+        algorithm=image_classifier \
         resources=gpu \
         hydra.launcher.gres='gpu:a100:1' \
         hydra.launcher.cpus_per_task=4 \
@@ -98,7 +99,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         pytest.param(
             """
         -m experiment=profiling \
-        algorithm=example \
+        algorithm=image_classifier \
         datamodule.num_workers=8 \
         datamodule.batch_size=32,64,128,256 \
         trainer.logger.wandb.tags=["Batch size comparison"]\

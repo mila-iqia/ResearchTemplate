@@ -2,15 +2,14 @@
 
 import copy
 import operator
+from pathlib import Path
+from typing import Any
 
 import jax
 import lightning
-import numpy as np
 import pytest
 import torch
 from tensor_regression import TensorRegressionFixture
-from tensor_regression.stats import get_simple_attributes
-from tensor_regression.to_array import to_ndarray
 from torch.utils.data import DataLoader
 
 from project.algorithms.llm_finetuning import (
@@ -19,13 +18,11 @@ from project.algorithms.llm_finetuning import (
     TokenizerConfig,
     get_hash_of,
 )
-from project.algorithms.testsuites.algorithm_tests import LearningAlgorithmTests
+from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs.config import Config
-from project.conftest import command_line_overrides
 from project.utils.env_vars import SLURM_JOB_ID
-from project.utils.testutils import IN_GITHUB_COULD_CI, run_for_all_configs_of_type
+from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 from project.utils.typing_utils import PyTree
-from project.utils.typing_utils.protocols import DataModule
 
 
 @pytest.mark.parametrize(
@@ -49,44 +46,9 @@ def test_get_hash_of(c1, c2):
     assert get_hash_of(c2) == get_hash_of(copy.deepcopy(c2))
 
 
-@get_simple_attributes.register(tuple)
-def _get_tuple_attributes(value: tuple, precision: int | None):
-    # This is called to get some simple stats to store in regression files during tests, in
-    # particular for tuples (since there isn't already a handler for it in the tensor_regression
-    # package.)
-    # Note: This information about this output is not very descriptive.
-    # not this is called only for the `out.past_key_values` entry in the `CausalLMOutputWithPast`
-    # that is returned from the forward pass output.
-    num_items_to_include = 5  # only show the stats of some of the items.
-    return {
-        "length": len(value),
-        **{
-            f"{i}": get_simple_attributes(item, precision=precision)
-            for i, item in enumerate(value[:num_items_to_include])
-        },
-    }
-
-
-@to_ndarray.register(tuple)
-def _tuple_to_ndarray(v: tuple) -> np.ndarray:
-    """Convert a tuple of values to a numpy array to be stored in a regression file."""
-    # This could get a bit tricky because the items might not have the same shape and so on.
-    # However it seems like the ndarrays_regression fixture (which is what tensor_regression uses
-    # under the hood) is not complaining about us returning a list here, so we'll leave it at that
-    # for now.
-    return [to_ndarray(v_i) for v_i in v]  # type: ignore
-
-
-@pytest.mark.skipif(
-    IN_GITHUB_COULD_CI, reason="This test is too resource-intensive to run on the GitHub CI."
-)
-@pytest.mark.parametrize(
-    command_line_overrides.__name__,
-    ["trainer.strategy=auto" if SLURM_JOB_ID is None else ""],
-    indirect=True,
-)
+@pytest.mark.skipif(total_vram_gb() < 16, reason="Not enough VRAM to run this test.")
 @run_for_all_configs_of_type("algorithm", LLMFinetuningExample)
-class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
+class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     @pytest.fixture(scope="function")
     def train_dataloader(
         self,
@@ -102,8 +64,12 @@ class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
         """
         # a bit hacky: Set the trainer on the lightningmodule.
         algorithm._trainer = trainer
-        algorithm.prepare_data()
-        algorithm.setup("fit")
+        with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
+            # TODO: This is necessary because torchvision transforms use the global pytorch RNG!
+            lightning.seed_everything(42, workers=True)
+
+            algorithm.prepare_data()
+            algorithm.setup("fit")
 
         train_dataloader = algorithm.train_dataloader()
         assert isinstance(train_dataloader, DataLoader)
@@ -117,12 +83,12 @@ class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
 
         # The batch of data will always be the same because the dataloaders are passed a Generator
         # object in their constructor.
-        assert isinstance(train_dataloader, DataLoader)
-        dataloader_iterator = iter(train_dataloader)
 
         with torch.random.fork_rng(list(range(torch.cuda.device_count()))):
-            # TODO: This ugliness is because torchvision transforms use the global pytorch RNG!
-            torch.random.manual_seed(42)
+            # TODO: This is necessary because torchvision transforms use the global pytorch RNG!
+            lightning.seed_everything(42, workers=True)
+            assert isinstance(train_dataloader, DataLoader)
+            dataloader_iterator = iter(train_dataloader)
             batch = next(dataloader_iterator)
 
         return jax.tree.map(operator.methodcaller("to", device=device), batch)
@@ -137,15 +103,30 @@ class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
         assert isinstance(training_batch, dict)
         return training_batch
 
-    # Checking all the weights against the 900mb reference .npz file is a bit slow.
-    @pytest.mark.slow
+    @pytest.mark.xfail(
+        SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
+    )
+    def test_training_batch_doesnt_change(
+        self, training_batch: dict, tensor_regression: TensorRegressionFixture
+    ):
+        # For other algos that have a datamodule, those have a dedicated test class in
+        # datamodules_test.py.
+        # Here since this lightningmodule does not use a datamodule, we test the train_dataloader
+        # method.
+        tensor_regression.check(training_batch, include_gpu_name_in_stats=False)
+
+    @pytest.mark.xfail(
+        SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
+    )
+    @pytest.mark.slow  # Checking against the 900mb reference .npz file is a bit slow.
     def test_initialization_is_reproducible(
         self,
         experiment_config: Config,
-        datamodule: DataModule,
+        datamodule: lightning.LightningDataModule,
         seed: int,
         tensor_regression: TensorRegressionFixture,
         trainer: lightning.Trainer,
+        device: torch.device,
     ):
         super().test_initialization_is_reproducible(
             experiment_config=experiment_config,
@@ -153,4 +134,39 @@ class TestLLMFinetuningExample(LearningAlgorithmTests[LLMFinetuningExample]):
             seed=seed,
             tensor_regression=tensor_regression,
             trainer=trainer,
+            device=device,
+        )
+
+    @pytest.mark.xfail(
+        SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
+    )
+    def test_forward_pass_is_reproducible(
+        self,
+        forward_pass_input: Any,
+        algorithm: LLMFinetuningExample,
+        seed: int,
+        tensor_regression: TensorRegressionFixture,
+    ):
+        return super().test_forward_pass_is_reproducible(
+            forward_pass_input=forward_pass_input,
+            algorithm=algorithm,
+            seed=seed,
+            tensor_regression=tensor_regression,
+        )
+
+    @pytest.mark.xfail(
+        SLURM_JOB_ID is not None, reason="TODO: Seems to be failing when run on a SLURM cluster."
+    )
+    def test_backward_pass_is_reproducible(
+        self,
+        datamodule: lightning.LightningDataModule,
+        algorithm: LLMFinetuningExample,
+        seed: int,
+        accelerator: str,
+        devices: int | list[int],
+        tensor_regression: TensorRegressionFixture,
+        tmp_path: Path,
+    ):
+        return super().test_backward_pass_is_reproducible(
+            datamodule, algorithm, seed, accelerator, devices, tensor_regression, tmp_path
         )

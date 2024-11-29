@@ -7,8 +7,7 @@ from project.datamodules.image_classification.mnist import MNISTDataModule
 
 class FashionMNISTDataModule(MNISTDataModule):
     """
-    .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/
-        wp-content/uploads/2019/02/Plot-of-a-Subset-of-Images-from-the-Fashion-MNIST-Dataset.png
+    .. figure:: https://storage.googleapis.com/kaggle-datasets-images/2243/3791/9384af51de8baa77f6320901f53bd26b/dataset-cover.png
         :width: 400
         :alt: Fashion MNIST
 

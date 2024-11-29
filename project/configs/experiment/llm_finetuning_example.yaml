@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - override /algorithm: llm_finetuning_example
+  - override /algorithm: llm_finetuning
   - override /trainer/callbacks: default
 
 algorithm:

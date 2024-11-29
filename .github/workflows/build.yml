@@ -87,7 +87,7 @@ jobs:
   local_integration_tests:
     needs: [unit_tests, check_docs]
     runs-on: self-hosted
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       max-parallel: 1
       matrix:
@@ -150,7 +150,7 @@ jobs:
     name: Run integration tests on the ${{ matrix.cluster }} cluster in job ${{ needs.launch-slurm-actions-runner.outputs.job_id}}
     needs: [launch-slurm-actions-runner]
     runs-on: ${{ matrix.cluster }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       max-parallel: 5
       matrix:

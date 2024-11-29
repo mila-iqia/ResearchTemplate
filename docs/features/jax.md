@@ -1,9 +1,9 @@
 ---
 additional_python_references:
-  - project.algorithms.jax_rl_example
-  - project.algorithms.example
-  - project.algorithms.jax_example
-  - project.algorithms.text_classification_example
+  - project.algorithms.jax_ppo
+  - project.algorithms.image_classifier
+  - project.algorithms.jax_image_classifier
+  - project.algorithms.text_classifier
   - project.trainers.jax_trainer
 ---
 
@@ -12,18 +12,10 @@ additional_python_references:
 > 🔥 NOTE: This is a feature that is entirely unique to this template! 🔥
 
 This template includes examples that use either Jax, PyTorch, or both!
-
-<!-- TODO: De-duplicate: This is a bit like a duplicate of the table from the examples/index.md -->
-
-| Example link                                                    | Reference                   | Framework   | Lightning?   |
-| --------------------------------------------------------------- | --------------------------- | ----------- | ------------ |
-| [ExampleAlgorithm](../examples/jax_sl_example.md)               | `ExampleAlgorithm`          | Torch       | yes          |
-| [JaxExample](../examples/jax_sl_example.md)                     | `JaxExample`                | Torch + Jax | yes          |
-| [TextClassificationExample](../examples/text_classification.md) | `TextClassificationExample` | Torch + 🤗   | yes          |
-| [JaxRLExample](../examples/jax_rl_example.md)                   | `JaxRLExample`              | Jax         | no (almost!) |
+There's a table describing each example [here](../examples/index.md#examples).
 
 
-In fact, here you can mix and match both Jax and Torch code. For example, you can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.
+You can mix and match both Jax and Torch code. For example, you can use Jax for your dataloading, your network, or the learning algorithm, all while still benefiting from the nice stuff that comes from using PyTorch-Lightning.
 
 ??? note "**How does this work?**"
     Well, we use [torch-jax-interop](https://www.github.com/lebrice/torch_jax_interop), another package developed here at Mila 😎, that allows easy interop between torch and jax code. Feel free to take a look at it if you'd like to use it as part of your own project. 😁
@@ -40,12 +32,12 @@ training loop as usual, you can!
 
 The [lightning.Trainer][lightning.pytorch.trainer.trainer.Trainer] will not be able to tell that you're using Jax!
 
-**Take a look at [this image classification example that uses a Jax network](../examples/jax_sl_example.md).**
+**Take a look at [this image classification example that uses a Jax network](../examples/jax_image_classification.md).**
 
 
 ## End-to-end training in Jax: the `JaxTrainer`
 
-The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl_example.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s, which are a simplified, jax-based look-alike of `lightning.LightningModule`s.
+The `JaxTrainer`, used in the [Jax RL Example](../examples/jax_rl.md), follows a similar structure as the lightning Trainer. However, instead of training LightningModules, it trains `JaxModule`s, which are a simplified, jax-based look-alike of `lightning.LightningModule`s.
 
 
 The "algorithm" needs to match the `JaxModule` protocol:

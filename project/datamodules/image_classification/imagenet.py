@@ -16,28 +16,30 @@ import rich
 import rich.logging
 import torch
 import torch.utils.data
+import torchvision
 import tqdm
 from torchvision.datasets import ImageNet
 from torchvision.models.resnet import ResNet152_Weights
-from torchvision.transforms import v2 as transform_lib
+from torchvision.transforms import v2 as transforms
 
-from project.datamodules.vision import VisionDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
 from project.utils.typing_utils import C, H, W
-from project.utils.typing_utils.protocols import Module
 
 logger = get_logger(__name__)
 
 
 def imagenet_normalization():
-    return transform_lib.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
 ClassIndex = NewType("ClassIndex", int)
 ImageIndex = NewType("ImageIndex", int)
 
 
-class ImageNetDataModule(VisionDataModule):
+class ImageNetDataModule(ImageClassificationDataModule):
     """ImageNet datamodule.
 
     Extracted from https://github.com/Lightning-Universe/lightning-bolts/blob/master/src/pl_bolts/datamodules/imagenet_datamodule.py
@@ -52,16 +54,16 @@ class ImageNetDataModule(VisionDataModule):
         - TODO: need to pass num_imgs_per_class=-1 for test dataset and split="test".
     """
 
-    name: ClassVar[str] = "imagenet"
+    name: str | None = "imagenet"
     """Dataset name."""
 
-    dataset_cls: ClassVar[type[ImageNet]] = ImageNet
+    dataset_cls: ClassVar[type[torchvision.datasets.VisionDataset]] = ImageNet
     """Dataset class to use."""
 
     dims: tuple[C, H, W] = (C(3), H(224), W(224))
     """A tuple describing the shape of the data."""
 
-    num_classes: ClassVar[int] = 1000
+    num_classes: int = 1000
 
     def __init__(
         self,
@@ -146,10 +148,13 @@ class ImageNetDataModule(VisionDataModule):
         logger.debug(f"Setup ImageNet datamodule for {stage=}")
         super().setup(stage)
 
-    def _split_dataset(self, dataset: ImageNet, train: bool = True) -> torch.utils.data.Dataset:
+    def _split_dataset(
+        self, dataset: torchvision.datasets.VisionDataset, train: bool = True
+    ) -> torch.utils.data.Dataset:
+        assert isinstance(dataset, ImageNet)
         class_item_indices: dict[ClassIndex, list[ImageIndex]] = defaultdict(list)
         for dataset_index, y in enumerate(dataset.targets):
-            class_item_indices[y].append(dataset_index)
+            class_item_indices[ClassIndex(y)].append(ImageIndex(dataset_index))
 
         train_val_split_seed = self.seed
         gen = torch.Generator().manual_seed(train_val_split_seed)
@@ -187,56 +192,56 @@ class ImageNetDataModule(VisionDataModule):
                 f" make sure the folder contains a subfolder named {split}"
             )
 
-    def default_transforms(self) -> Module[[torch.Tensor], torch.Tensor]:
+    def default_transforms(self) -> torch.nn.Module:
         return ResNet152_Weights.IMAGENET1K_V1.transforms
 
-    def train_transform(self) -> Module[[torch.Tensor], torch.Tensor]:
+    def train_transform(self) -> torch.nn.Module:
         """The standard imagenet transforms.
 
-        .. code-block:: python
-
-            transform_lib.Compose([
-                transform_lib.RandomResizedCrop(self.image_size),
-                transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToTensor(),
-                transform_lib.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225]
-                ),
-            ])
+        ```python
+        transforms.Compose([
+            transforms.RandomResizedCrop(self.image_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            ),
+        ])
+        ```
         """
-        return transform_lib.Compose(
+        return transforms.Compose(
             [
-                transform_lib.RandomResizedCrop(self.image_size),
-                transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToImage(),
-                transform_lib.ToDtype(torch.float32, scale=True),
+                transforms.RandomResizedCrop(self.image_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToImage(),
+                transforms.ToDtype(torch.float32, scale=True),
                 imagenet_normalization(),
             ]
         )
 
-    def val_transform(self) -> Callable:
+    def val_transform(self) -> transforms.Compose:
         """The standard imagenet transforms for validation.
 
         .. code-block:: python
 
-            transform_lib.Compose([
-                transform_lib.Resize(self.image_size + 32),
-                transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToTensor(),
-                transform_lib.Normalize(
+            transforms.Compose([
+                transforms.Resize(self.image_size + 32),
+                transforms.CenterCrop(self.image_size),
+                transforms.ToTensor(),
+                transforms.Normalize(
                     mean=[0.485, 0.456, 0.406],
                     std=[0.229, 0.224, 0.225]
                 ),
             ])
         """
 
-        return transform_lib.Compose(
+        return transforms.Compose(
             [
-                transform_lib.Resize(self.image_size + 32),
-                transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToImage(),
-                transform_lib.ToDtype(torch.float32, scale=True),
+                transforms.Resize(self.image_size + 32),
+                transforms.CenterCrop(self.image_size),
+                transforms.ToImage(),
+                transforms.ToDtype(torch.float32, scale=True),
                 imagenet_normalization(),
             ]
         )

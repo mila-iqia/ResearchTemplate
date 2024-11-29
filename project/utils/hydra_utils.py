@@ -134,7 +134,7 @@ def resolve_dictconfig(dict_config: DictConfig) -> Config:
         value_in_config = _get_attr(config, attribute)
         if pre_instantiated_object != value_in_config:
             logger.debug(
-                f"Overwriting the config at {attribute} with the pre-instantiated "
+                f"Overwriting the config at {attribute} with the already-instantiated "
                 f"object {pre_instantiated_object}"
             )
             _set_attr(config, attribute, pre_instantiated_object)

@@ -7,11 +7,9 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 import torchvision.transforms as T
-from torchvision.datasets import INaturalist
+from torchvision.datasets import INaturalist, VisionDataset
 
-from project.datamodules.image_classification.image_classification import (
-    ImageClassificationDataModule,
-)
+from project.datamodules.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS, SLURM_TMPDIR
 from project.utils.typing_utils import C, H, W
 
@@ -34,11 +32,11 @@ def inat_dataset_dir() -> Path:
     return network_dir
 
 
-class INaturalistDataModule(ImageClassificationDataModule):
-    name: ClassVar[str] = "inaturalist"
+class INaturalistDataModule(VisionDataModule):
+    name: str | None = "inaturalist"
     """Dataset name."""
 
-    dataset_cls: ClassVar[type[INaturalist]] = INaturalist
+    dataset_cls: ClassVar[type[VisionDataset]] = INaturalist
     """Dataset class to use."""
 
     dims: tuple[C, H, W] = (C(3), H(224), W(224))

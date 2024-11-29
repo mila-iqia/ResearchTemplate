@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import torch
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2 as transforms
@@ -9,7 +7,6 @@ from torchvision.transforms import v2 as transforms
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision import VisionDataModule
 from project.utils.typing_utils import C, H, W
 
 
@@ -26,7 +23,7 @@ def cifar10_train_transforms():
     )
 
 
-def cifar10_normalization() -> Callable:
+def cifar10_normalization() -> transforms.Normalize:
     return transforms.Normalize(
         mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
         std=[x / 255.0 for x in [63.0, 62.1, 66.7]],
@@ -42,7 +39,7 @@ def cifar10_unnormalization(x: torch.Tensor) -> torch.Tensor:
     return (x * std) + mean
 
 
-class CIFAR10DataModule(ImageClassificationDataModule, VisionDataModule):
+class CIFAR10DataModule(ImageClassificationDataModule):
     """
     .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/wp-content/uploads/2019/01/
         Plot-of-a-Subset-of-Images-from-the-CIFAR-10-Dataset.png
@@ -94,9 +91,9 @@ class CIFAR10DataModule(ImageClassificationDataModule, VisionDataModule):
         train_len, _ = self._get_splits(len_dataset=50_000)
         return train_len
 
-    def default_transforms(self) -> Callable:
+    def default_transforms(self) -> transforms.Compose:
         if self.normalize:
-            cf10_transforms = transforms.Compose(
+            return transforms.Compose(
                 [
                     transforms.ToImage(),
                     transforms.ToDtype(torch.float32, scale=True),
@@ -104,12 +101,9 @@ class CIFAR10DataModule(ImageClassificationDataModule, VisionDataModule):
                     transforms.ToImage(),  # unsure if this is necessary.
                 ]
             )
-        else:
-            cf10_transforms = transforms.Compose(
-                [
-                    transforms.ToImage(),
-                    transforms.ToDtype(torch.float32, scale=True),
-                ]
-            )
-
-        return cf10_transforms
+        return transforms.Compose(
+            [
+                transforms.ToImage(),
+                transforms.ToDtype(torch.float32, scale=True),
+            ]
+        )

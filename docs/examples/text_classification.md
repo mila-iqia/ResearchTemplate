@@ -1,22 +1,28 @@
-# Text Classification ( + 🤗)
+---
+additional_python_references:
+  - project.algorithms.text_classifier
+  - project.datamodules.text.text_classification
+---
+
+# Text Classification (⚡ + 🤗)
 
 ## Overview
 
-The [TextClassificationExample][project.algorithms.text_classification_example.TextClassificationExample] is a [LightningModule][lightning.pytorch.core.module.LightningModule] for a simple text classification task.
+The `TextClassifier` is a [LightningModule][lightning.pytorch.core.module.LightningModule] for a simple text classification task.
 
-It accepts a [TextClassificationDataModule][project.datamodules.text.TextClassificationDataModule] as input, along with a network.
+It accepts a `TextClassificationDataModule` as input, along with a network.
 
-??? note "Click to show the code for HFExample"
-    {{ inline('project.algorithms.text_classification_example.TextClassificationExample', 4) }}
+??? note "Click to show the code of the lightningmodule"
+    {{ inline('project.algorithms.text_classifier.TextClassifier', 4) }}
 
 ## Config files
 
 ### Algorithm config
 
 ??? note "Click to show the Algorithm config"
-    Source: project/configs/algorithm/text_classification_example.yaml
+    Source: project/configs/algorithm/text_classifier.yaml
 
-    {{ inline('project/configs/algorithm/text_classification_example.yaml', 4) }}
+    {{ inline('project/configs/algorithm/text_classifier.yaml', 4) }}
 
 ### Datamodule config
 

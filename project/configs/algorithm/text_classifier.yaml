@@ -1,0 +1,11 @@
+# Config for the Text classification example algorithm
+_target_: project.algorithms.text_classifier.TextClassifier
+_recursive_: false
+network:
+  _target_: transformers.models.auto.modeling_auto.AutoModelForSequenceClassification.from_pretrained
+  pretrained_model_name_or_path: albert-base-v2
+
+# NOTE: Why _partial_? Because the config doesn't create the algo directly, it creates a function
+# that will accept the datamodule and network and return the algo.
+_partial_: true
+hf_metric_name: glue

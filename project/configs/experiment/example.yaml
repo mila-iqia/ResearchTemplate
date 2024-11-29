@@ -6,7 +6,7 @@
 # python project/main.py experiment=example
 
 defaults:
-  - override /algorithm: example
+  - override /algorithm: image_classifier
   - override /algorithm/network: resnet18
   - override /datamodule: cifar10
   - override /trainer: default

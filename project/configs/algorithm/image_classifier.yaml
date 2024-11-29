@@ -1,0 +1,15 @@
+# This is an example of how you can use a config file to configure a LightningModule.
+# In this case we configure the image classifier algorithm.
+defaults:
+  - network: resnet18
+  - optimizer: Adam
+  - _self_
+
+_target_: project.algorithms.image_classifier.ImageClassifier
+# Note: Why _partial_ here? Because the config doesn't create the algo directly:
+# the datamodule is instantiated first and then passed to the algorithm.
+_partial_: true
+_recursive_: false
+
+optimizer:
+  lr: 0.001

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -11,6 +12,7 @@ from torchvision.transforms import v2 as transforms
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.utils.env_vars import DATA_DIR
 from project.utils.typing_utils import C, H, W
 
 
@@ -75,9 +77,9 @@ class MNISTDataModule(ImageClassificationDataModule):
 
     def __init__(
         self,
-        data_dir: str | None = None,
+        data_dir: str | Path = DATA_DIR,
         val_split: int | float = 0.2,
-        num_workers: int | None = 0,
+        num_workers: int = 0,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,

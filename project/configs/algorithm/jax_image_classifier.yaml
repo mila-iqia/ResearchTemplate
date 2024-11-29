@@ -1,0 +1,15 @@
+# Config for the JaxImageClassifier algorithm
+defaults:
+  - network: jax_cnn
+  - optimizer: SGD
+_target_: project.algorithms.jax_image_classifier.JaxImageClassifier
+# NOTE: Why _partial_ here? Because the config doesn't create the algo directly.
+# The datamodule is instantiated first and then passed to the algorithm.
+_partial_: true
+_recursive_: false
+
+optimizer:
+  lr: 0.001
+
+init_seed: 123
+debug: False

@@ -11,7 +11,6 @@ from lightning import pytorch as pl
 from typing_extensions import TypeVar, override
 
 from project.utils.typing_utils import NestedMapping
-from project.utils.utils import get_log_dir
 
 logger = get_logger(__name__)
 
@@ -54,7 +53,7 @@ class Callback(pl.Callback, Generic[BatchType, StepOutputType]):
         # todo: "tune" is mentioned in the docstring, is it still used?
         stage: Literal["fit", "validate", "test", "predict", "tune"],
     ) -> None:
-        self.log_dir = get_log_dir(trainer=trainer)
+        self.log_dir = Path(trainer.log_dir or trainer.default_root_dir)
 
     def on_shared_batch_start(
         self,

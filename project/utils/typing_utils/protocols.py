@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import typing
-from collections.abc import Iterable
 from typing import Literal, ParamSpec, Protocol, TypeVar, runtime_checkable
 
-from torch import nn
+if typing.TYPE_CHECKING:
+    from torch import nn
+    from torch.utils.data import DataLoader
 
 P = ParamSpec("P")
 OutT = TypeVar("OutT", covariant=True)
@@ -12,7 +13,7 @@ OutT = TypeVar("OutT", covariant=True)
 
 @runtime_checkable
 class Module(Protocol[P, OutT]):
-    """Small protocol used to help annotate the input/outputs of `torch.nn.Module`s."""
+    """Small protocol that can be used to annotate the input/output types of `torch.nn.Module`s."""
 
     def forward(self, *args: P.args, **kwargs: P.kwargs) -> OutT:
         raise NotImplementedError
@@ -48,16 +49,11 @@ class DataModule(Protocol[BatchType]):
 
     def setup(self, stage: Literal["fit", "validate", "test", "predict"]) -> None: ...
 
-    def train_dataloader(self) -> Iterable[BatchType]: ...
+    def train_dataloader(self) -> DataLoader[BatchType]: ...
 
 
 @runtime_checkable
 class ClassificationDataModule(DataModule[BatchType], Protocol):
+    """Protocol that matches "datamodules with a 'num_classes' int attribute."""
+
     num_classes: int
-
-
-# todo: Decide if we want this to be a base class or a protocol. Currently a base class.
-# @runtime_checkable
-# class ImageClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
-#     num_classes: int
-#     dims: tuple[C, H, W]

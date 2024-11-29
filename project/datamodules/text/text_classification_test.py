@@ -1,39 +1,36 @@
 from __future__ import annotations
 
+import lightning
 import pytest
-from omegaconf import DictConfig
 
 from project.datamodules.text.text_classification import TextClassificationDataModule
-from project.experiment import (
-    instantiate_datamodule,
-)
-from project.utils.hydra_config_utils import get_config_loader
-from project.utils.testutils import (
-    run_for_all_configs_of_type,
-)
-from project.utils.typing_utils.protocols import DataModule
+from project.experiment import instantiate_datamodule
+from project.utils.testutils import get_config_loader
+
+datamodule_configs = ["glue_cola"]
 
 
 @pytest.fixture()
 def datamodule(
-    datamodule_config: str | None,
-    command_line_overrides: list[str] | None,
-) -> DataModule:
+    request: pytest.FixtureRequest,
+) -> lightning.LightningDataModule:
     """Fixture that creates the datamodule for the given config."""
     # Load only the datamodule? (assuming it doesn't depend on the network or anything else...)
     from hydra.types import RunMode
 
+    datamodule_config_name = request.param
+    # need to pass a datamodule config via indirect parametrization.
+    assert isinstance(datamodule_config_name, str)
+
     config = get_config_loader().load_configuration(
-        f"datamodule/{datamodule_config}.yaml",
-        overrides=command_line_overrides or [],
+        f"datamodule/{datamodule_config_name}.yaml",
+        overrides=[],
         run_mode=RunMode.RUN,
     )
     datamodule_config = config["datamodule"]
-    assert isinstance(datamodule_config, DictConfig)
     datamodule = instantiate_datamodule(datamodule_config)
+    assert datamodule is not None
     return datamodule
-
-    # NOTE: creating the datamodule by itself instead of with everything else.
 
 
 @pytest.fixture()
@@ -64,7 +61,7 @@ def prepared_datamodule(
     datamodule.working_path = _slurm_tmpdir_before
 
 
-@run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
+@pytest.mark.parametrize(datamodule.__name__, datamodule_configs, indirect=True)
 def test_dataset_location(
     prepared_datamodule: TextClassificationDataModule,
 ):
@@ -79,21 +76,3 @@ def test_dataset_location(
     for file_name in expected_files:
         file_path = datamodule.working_path / file_name
         assert file_path.exists(), f"Expected file: {file_name} not found at {file_path}."
-
-
-@run_for_all_configs_of_type("datamodule", TextClassificationDataModule)
-@pytest.mark.skip(reason="Not implemented")
-def test_pretrained_weight_location(
-    prepared_datamodule: TextClassificationDataModule,
-):
-    """Test that the pretrained weights are downloaded to the correct location."""
-    # datamodule = prepared_datamodule
-    pass
-
-
-## mismatched tasks
-# datamodule = HFDataModule(
-#    tokenizer="EleutherAI/gpt-neo-125M",
-#    hf_dataset_path="roneneldan/TinyStories",
-#    dataset_path=SLURM_TMPDIR,
-# )

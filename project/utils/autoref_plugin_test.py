@@ -32,7 +32,7 @@ from .autoref_plugin import CustomAutoRefPlugin
         ),
         ("`Trainer`", "[`Trainer`][lightning.pytorch.trainer.trainer.Trainer]"),
         # since `Trainer` is in the `known_things` list, we add the proper ref.
-        ("`.devcontainer/devcontainer.json`", "`.devcontainer/devcontainer.json`")
+        ("`.devcontainer/devcontainer.json`", "`.devcontainer/devcontainer.json`"),
     ],
 )
 def test_autoref_plugin(input: str, expected: str):
@@ -71,12 +71,12 @@ def test_ref_using_additional_python_references():
         ),
         config=mkdocs_config,
     )
-    page.meta = {"additional_python_references": ["project.algorithms.example"]}
+    page.meta = {"additional_python_references": ["project.algorithms.image_classifier"]}
 
     result = plugin.on_page_markdown(
-        "`ExampleAlgorithm`",
+        "`ImageClassifier`",
         page=page,
         config=mkdocs_config,
         files=Files([]),
     )
-    assert result == "[`ExampleAlgorithm`][project.algorithms.example.ExampleAlgorithm]"
+    assert result == "[`ImageClassifier`][project.algorithms.image_classifier.ImageClassifier]"

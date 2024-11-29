@@ -1,0 +1,20 @@
+input:
+  device: cuda:0
+  max: '2.640e+00'
+  mean: '-6.663e-02'
+  min: '-2.118e+00'
+  shape:
+  - 64
+  - 3
+  - 224
+  - 224
+  sum: '-6.419e+05'
+out:
+  device: cuda:0
+  max: '2.934e+00'
+  mean: '-8.071e-04'
+  min: '-2.896e+00'
+  shape:
+  - 64
+  - 1000
+  sum: '-5.165e+01'
