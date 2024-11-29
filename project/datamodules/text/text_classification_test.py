@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import huggingface_hub.errors
 import lightning
 import pytest
 
@@ -61,6 +62,11 @@ def prepared_datamodule(
     datamodule.working_path = _slurm_tmpdir_before
 
 
+@pytest.mark.xfail(
+    raises=huggingface_hub.errors.HfHubHTTPError,
+    strict=False,
+    reason="Can sometimes get 'Too many requests for url'",
+)
 @pytest.mark.parametrize(datamodule.__name__, datamodule_configs, indirect=True)
 def test_dataset_location(
     prepared_datamodule: TextClassificationDataModule,

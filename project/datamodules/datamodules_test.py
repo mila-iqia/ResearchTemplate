@@ -19,8 +19,6 @@ from project.utils.testutils import run_for_all_configs_in_group
 from project.utils.typing_utils import is_sequence_of
 
 
-# @use_overrides(["datamodule.num_workers=0"])
-# @pytest.mark.timeout(25, func_only=True)
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "stage",
@@ -47,9 +45,8 @@ def test_first_batch(
     stage: RunningStage,
     datadir: Path,
 ):
-    # todo: skip this test if the dataset isn't already downloaded (for example on the GitHub CI).
-
-    # TODO: This causes hanging issues when tests fail, since dataloader workers aren't cleaned up.
+    # Note: using dataloader workers in tests can cause issues, since if a test fails, dataloader
+    # workers aren't always cleaned up properly.
     if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
         datamodule.num_workers = 0  # type: ignore
 
