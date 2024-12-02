@@ -3,23 +3,28 @@
 See the [project.algorithms.image_classifier_test][] module for an example of how to use this.
 """
 
+from __future__ import annotations
+
 import copy
-import inspect
 from abc import ABC
 from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, Literal, TypeVar, get_args
+from typing import Any, Generic, Literal, TypeVar
 
 import jax
 import lightning
 import pytest
 import torch
 from lightning import LightningDataModule, LightningModule
+from omegaconf import DictConfig
 from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
-from project.experiment import instantiate_algorithm
+from project.conftest import DEFAULT_SEED
+from project.experiment import instantiate_algorithm, instantiate_trainer, setup_logging
+from project.trainers.jax_trainer import JaxTrainer
+from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.typing_utils import PyTree, is_sequence_of
 
 logger = get_logger(__name__)
@@ -27,7 +32,7 @@ logger = get_logger(__name__)
 AlgorithmType = TypeVar("AlgorithmType", bound=LightningModule)
 
 
-@pytest.mark.incremental
+@pytest.mark.incremental  # https://docs.pytest.org/en/stable/example/simple.html#incremental-testing-test-steps
 class LightningModuleTests(Generic[AlgorithmType], ABC):
     """Suite of generic tests for a LightningModule.
 
@@ -39,38 +44,105 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
 
     # algorithm_config: ParametrizedFixture[str]
 
-    def forward_pass(self, algorithm: LightningModule, input: PyTree[torch.Tensor]):
-        """Performs the forward pass with the lightningmodule, unpacking the inputs if necessary.
+    @pytest.fixture(scope="class")
+    def experiment_config(
+        self,
+        experiment_dictconfig: DictConfig,
+    ) -> Config:
+        """The experiment configuration, with all interpolations resolved."""
+        config = resolve_dictconfig(copy.deepcopy(experiment_dictconfig))
+        return config
 
-        Overwrite this if your algorithm's forward method is more complicated.
-        """
-        signature = inspect.signature(algorithm.forward)
-        if any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in signature.parameters.values()):
-            return algorithm(*input)
-        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values()):
-            return algorithm(**input)
-        return algorithm(input)
+    @pytest.fixture(scope="class")
+    def trainer(
+        self,
+        experiment_config: Config,
+    ) -> lightning.Trainer | JaxTrainer:
+        setup_logging(log_level=experiment_config.log_level)
+        lightning.seed_everything(experiment_config.seed, workers=True)
+        return instantiate_trainer(experiment_config)
 
-    def test_initialization_is_reproducible(
+    @pytest.fixture(scope="class")
+    def algorithm(
         self,
         experiment_config: Config,
         datamodule: lightning.LightningDataModule | None,
-        seed: int,
-        tensor_regression: TensorRegressionFixture,
-        trainer: lightning.Trainer,
+        trainer: lightning.Trainer | JaxTrainer,
         device: torch.device,
     ):
-        """Check that the network initialization is reproducible given the same random seed."""
-        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
-            torch.random.manual_seed(seed)
-            algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
-            assert isinstance(algorithm, lightning.LightningModule)
-            # A bit hacky, but we have to do this because the lightningmodule isn't associated
-            # with a Trainer here.
+        """Fixture that creates the "algorithm" (a
+        [LightningModule][lightning.pytorch.core.module.LightningModule])."""
+        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        if isinstance(trainer, lightning.Trainer) and isinstance(
+            algorithm, lightning.LightningModule
+        ):
             with trainer.init_module(), device:
+                # A bit hacky, but we have to do this because the lightningmodule isn't associated
+                # with a Trainer.
                 algorithm._device = device
                 algorithm.configure_model()
+        return algorithm
 
+    @pytest.fixture(scope="class")
+    def make_torch_deterministic(self):
+        """Set torch to deterministic mode for unit tests that use the tensor_regression
+        fixture."""
+        mode_before = torch.get_deterministic_debug_mode()
+        torch.set_deterministic_debug_mode("error")
+        yield
+        torch.set_deterministic_debug_mode(mode_before)
+
+    @pytest.fixture(scope="class")
+    def seed(self, request: pytest.FixtureRequest):
+        """Fixture that seeds everything for reproducibility and yields the random seed used."""
+        random_seed = getattr(request, "param", DEFAULT_SEED)
+        assert isinstance(random_seed, int) or random_seed is None
+
+        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
+            lightning.seed_everything(random_seed, workers=True)
+            yield random_seed
+
+    @pytest.fixture(scope="class")
+    def training_step_content(
+        self,
+        datamodule: LightningDataModule,
+        algorithm: AlgorithmType,
+        seed: int,
+        accelerator: str,
+        devices: int | list[int],
+        tmp_path_factory: pytest.TempPathFactory,
+    ):
+        """Check that the backward pass is reproducible given the same weights, inputs and random
+        seed."""
+        gradients_callback = GetStuffFromFirstTrainingStep()
+
+        forward_pass_arg = []
+        forward_pass_out = []
+
+        def _save_forward_input_and_output(module: AlgorithmType, args, output):
+            forward_pass_arg.append(args)
+            forward_pass_out.append(output)
+
+        with algorithm.register_forward_hook(_save_forward_input_and_output):
+            self.do_one_step_of_training(
+                algorithm,
+                datamodule,
+                accelerator=accelerator,
+                devices=devices,
+                callbacks=[gradients_callback],
+                tmp_path=tmp_path_factory.mktemp("training_step_content"),
+            )
+        assert isinstance(gradients_callback.grads, dict)
+        assert isinstance(gradients_callback.training_step_output, dict)
+        return (algorithm, gradients_callback, forward_pass_arg, forward_pass_out)
+
+    def test_initialization_is_reproducible(
+        self,
+        training_step_content: tuple[AlgorithmType, GetStuffFromFirstTrainingStep],
+        tensor_regression: TensorRegressionFixture,
+    ):
+        """Check that the network initialization is reproducible given the same random seed."""
+        algorithm, *_ = training_step_content
         tensor_regression.check(
             algorithm.state_dict(),
             # todo: is this necessary? Shouldn't the weights be the same on CPU and GPU?
@@ -81,61 +153,52 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
 
     def test_forward_pass_is_reproducible(
         self,
-        forward_pass_input: Any,
-        algorithm: AlgorithmType,
-        seed: int,
+        training_step_content: tuple[
+            AlgorithmType, GetStuffFromFirstTrainingStep, list[Any], list[Any]
+        ],
         tensor_regression: TensorRegressionFixture,
     ):
         """Check that the forward pass is reproducible given the same input and random seed."""
-        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
-            torch.random.manual_seed(seed)
-            out = self.forward_pass(algorithm, forward_pass_input)
-        # todo: make tensor-regression more flexible so it can handle tuples in the nested dict.
-        forward_pass_input = convert_list_and_tuples_to_dicts(forward_pass_input)
-        out = convert_list_and_tuples_to_dicts(out)
+        algorithm, _test_callback, forward_pass_inputs, forward_pass_outputs = (
+            training_step_content
+        )
+        # Here we convert everything to dicts before saving to a file.
+        # todo: make tensor-regression more flexible so it can handle tuples and lists in the dict.
+        forward_pass_input = convert_list_and_tuples_to_dicts(forward_pass_inputs[0])
+        out = convert_list_and_tuples_to_dicts(forward_pass_outputs[0])
         tensor_regression.check(
             {"input": forward_pass_input, "out": out},
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance for changes.
             # Save the regression files on a different subfolder for each device (cpu / cuda)
+            # todo: check if these values actually differ when run on cpu vs gpu.
             additional_label=next(algorithm.parameters()).device.type,
             include_gpu_name_in_stats=False,
         )
 
     def test_backward_pass_is_reproducible(
         self,
-        datamodule: LightningDataModule,
-        algorithm: AlgorithmType,
-        seed: int,
-        accelerator: str,
-        devices: int | list[int],
+        training_step_content: tuple[
+            AlgorithmType, GetStuffFromFirstTrainingStep, list[Any], list[Any]
+        ],
         tensor_regression: TensorRegressionFixture,
-        tmp_path: Path,
+        accelerator: str,
     ):
         """Check that the backward pass is reproducible given the same weights, inputs and random
         seed."""
-
-        with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
-            torch.random.manual_seed(seed)
-            gradients_callback = GetStuffFromFirstTrainingStep()
-            self.do_one_step_of_training(
-                algorithm,
-                datamodule,
-                accelerator=accelerator,
-                devices=devices,
-                callbacks=[gradients_callback],
-                tmp_path=tmp_path,
-            )
-        # BUG: Fix issue in tensor_regression calling .numpy() on cuda tensors.
-        assert isinstance(gradients_callback.grads, dict)
-        assert isinstance(gradients_callback.outputs, dict)
+        _algorithm, test_callback, *_ = training_step_content
+        assert isinstance(test_callback.grads, dict)
+        assert isinstance(test_callback.training_step_output, dict)
+        # Here we convert everything to dicts before saving to a file.
         # todo: make tensor-regression more flexible so it can handle tuples and lists in the dict.
-        batch = convert_list_and_tuples_to_dicts(gradients_callback.batch)
-        outputs = convert_list_and_tuples_to_dicts(gradients_callback.outputs)
+        batch = convert_list_and_tuples_to_dicts(test_callback.batch)
+        training_step_outputs = convert_list_and_tuples_to_dicts(
+            test_callback.training_step_output
+        )
         tensor_regression.check(
             {
                 "batch": batch,
-                "grads": gradients_callback.grads,
-                "outputs": outputs,
+                "grads": test_callback.grads,
+                "outputs": training_step_outputs,
             },
             # todo: this tolerance was mainly added for the jax example.
             default_tolerance={"rtol": 1e-5, "atol": 1e-6},  # some tolerance
@@ -188,7 +251,9 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
 
         Overwrite this if you train your algorithm differently.
         """
-        # TODO: Why are we creating the trainer here manually, why not load it from the config?
+        # NOTE: Here we create the trainer manually, but we could also
+        # create it from the config (making sure to overwrite the right parameters to disable
+        # checkpointing and logging to wandb etc.
         trainer = lightning.Trainer(
             accelerator=accelerator,
             callbacks=callbacks,
@@ -202,29 +267,14 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         return callbacks
 
 
-def _get_algorithm_class_from_generic_arg(
-    cls: type[LightningModuleTests[AlgorithmType]],
-) -> type[AlgorithmType]:
-    """Retrieves the class under test from the class definition (without having to set a class
-    attribute."""
-    class_under_test = get_args(cls.__orig_bases__[0])[0]  # type: ignore
-    if inspect.isclass(class_under_test) and issubclass(class_under_test, LightningModule):
-        return class_under_test  # type: ignore
-
-    # todo: Check if the class under test is a TypeVar, if so, check its bound.
-    raise RuntimeError(
-        "Your test class needs to pass the class under test to the generic base class.\n"
-        "for example: `class TestMyAlgorithm(AlgorithmTests[MyAlgorithm]):`\n"
-        f"(Got {class_under_test})"
-    )
-
-
 class GetStuffFromFirstTrainingStep(lightning.Callback):
+    """Callback used in tests to get things from the first call to `training_step`."""
+
     def __init__(self):
         super().__init__()
         self.grads: dict[str, torch.Tensor | None] = {}
         self.batch: Any | None = None
-        self.outputs: torch.Tensor | Mapping[str, Any] | None = None
+        self.training_step_output: torch.Tensor | Mapping[str, Any] | None = None
 
     def on_train_batch_end(
         self,
@@ -237,8 +287,8 @@ class GetStuffFromFirstTrainingStep(lightning.Callback):
         super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
         if self.batch is None:
             self.batch = batch
-        if self.outputs is None:
-            self.outputs = outputs
+        if self.training_step_output is None:
+            self.training_step_output = outputs
 
     def on_after_backward(self, trainer: lightning.Trainer, pl_module: LightningModule) -> None:
         super().on_after_backward(trainer, pl_module)
