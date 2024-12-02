@@ -18,7 +18,7 @@ from .image_classifier import ImageClassifier
 
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
-    ["algorithm=image_classifier datamodule=cifar10"],
+    ["algorithm=image_classifier dataset=cifar10"],
     indirect=True,
 )
 def test_example_experiment_defaults(experiment_config: Config) -> None:
@@ -28,7 +28,7 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
         ImageClassifier.__module__ + "." + ImageClassifier.__qualname__
     )
 
-    assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
+    assert isinstance(experiment_config.dataset, CIFAR10DataModule)
 
 
 @skip_on_macOS_in_CI

@@ -11,12 +11,12 @@ from project.conftest import (  # noqa: F401
     algorithm_network_config,
     command_line_arguments,
     command_line_overrides,
-    datamodule_config,
+    dataset_config,
     experiment_dictconfig,
 )
 from project.experiment import (
     instantiate_algorithm,
-    instantiate_datamodule,
+    instantiate_dataset,
     instantiate_trainer,
     setup_logging,
 )
@@ -80,7 +80,7 @@ from project.utils.hydra_utils import resolve_dictconfig
         experiment=profiling \
         algorithm=image_classifier \
         algorithm/network=fcnet \
-        datamodule=mnist \
+        dataset=mnist \
         trainer.logger.wandb.name="FcNet/MNIST baseline with training" \
         trainer.logger.wandb.tags=["CPU/GPU comparison","GPU","MNIST"]
         """,
@@ -122,7 +122,7 @@ def test_notebook_commands_dont_cause_errors(experiment_dictconfig: DictConfig):
     setup_logging(log_level=config.log_level)
     lightning.seed_everything(config.seed, workers=True)
     _trainer = instantiate_trainer(config)
-    datamodule = instantiate_datamodule(config.datamodule)
-    _algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
+    dataset = instantiate_dataset(config.dataset)
+    _algorithm = instantiate_algorithm(config.algorithm, dataset=dataset)
 
     # Note: Here we don't actually do anything with the objects.

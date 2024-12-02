@@ -50,7 +50,7 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
     )
     def test_backward_pass_is_reproducible(  # type: ignore
         self,
-        datamodule: TextClassificationDataModule,
+        dataset: TextClassificationDataModule,
         algorithm: TextClassifier,
         seed: int,
         accelerator: str,
@@ -59,7 +59,7 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
         tmp_path: Path,
     ):
         return super().test_backward_pass_is_reproducible(
-            datamodule=datamodule,
+            dataset=dataset,
             algorithm=algorithm,
             seed=seed,
             accelerator=accelerator,
@@ -73,7 +73,7 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
     def test_overfit_batch(
         self,
         algorithm: TextClassifier,
-        datamodule: TextClassificationDataModule,
+        dataset: TextClassificationDataModule,
         tmp_path: Path,
         num_steps: int = 3,
     ):
@@ -91,7 +91,7 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
             limit_train_batches=1,
             max_epochs=num_steps,
         )
-        trainer.fit(algorithm, datamodule)
+        trainer.fit(algorithm, dataset)
         losses_at_each_epoch: list[Tensor] = get_loss_cb.losses
 
         assert (

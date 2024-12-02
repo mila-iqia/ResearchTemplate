@@ -14,9 +14,9 @@ The first fixtures to be invoked are the ones that would correspond to command-l
 The fixtures for command-line arguments
 
 
-For example, one of the fixtures which is created first is [datamodule_config][project.conftest.datamodule_config].
+For example, one of the fixtures which is created first is [dataset_config][project.conftest.dataset_config].
 
-The first fixtures to be created are the [datamodule_config][project.conftest.datamodule_config], `network_config` and `algorithm_config`, along with `overrides`.
+The first fixtures to be created are the [dataset_config][project.conftest.dataset_config], `network_config` and `algorithm_config`, along with `overrides`.
 From these, the `experiment_dictconfig` is created
 
 ```mermaid
@@ -24,9 +24,9 @@ From these, the `experiment_dictconfig` is created
 title: Fixture dependency graph
 ---
 flowchart TD
-datamodule_config[
-    <a href="#project.conftest.datamodule_config">datamodule_config</a>
-] -- 'datamodule=A' --> command_line_arguments
+dataset_config[
+    <a href="#project.conftest.dataset_config">dataset_config</a>
+] -- 'dataset=A' --> command_line_arguments
 algorithm_config[
     <a href="#project.conftest.algorithm_config">algorithm_config</a>
 ] -- 'algorithm=B' --> command_line_arguments
@@ -35,7 +35,7 @@ command_line_overrides[
 ] -- 'seed=123' --> command_line_arguments
 command_line_arguments[
     <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
-] -- load configs for 'datamodule=A algorithm=B seed=123' --> experiment_dictconfig
+] -- load configs for 'dataset=A algorithm=B seed=123' --> experiment_dictconfig
 experiment_dictconfig[
     <a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>
 ] -- instantiate objects from configs --> experiment_config
@@ -95,7 +95,7 @@ from project.configs.config import Config
 from project.datasets.vision import VisionDataModule, num_cpus_on_node
 from project.experiment import (
     instantiate_algorithm,
-    instantiate_datamodule,
+    instantiate_dataset,
     instantiate_trainer,
     setup_logging,
 )
@@ -195,13 +195,13 @@ def algorithm_config(request: pytest.FixtureRequest) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def datamodule_config(request: pytest.FixtureRequest) -> str | None:
-    """The datamodule config to use in the experiment, as if `datamodule=<value>` was passed."""
+def dataset_config(request: pytest.FixtureRequest) -> str | None:
+    """The dataset config to use in the experiment, as if `dataset=<value>` was passed."""
 
-    datamodule_config_name = getattr(request, "param", None)
-    if datamodule_config_name:
-        _add_default_marks_for_config_name(datamodule_config_name, request)
-    return datamodule_config_name
+    dataset_config_name = getattr(request, "param", None)
+    if dataset_config_name:
+        _add_default_marks_for_config_name(dataset_config_name, request)
+    return dataset_config_name
 
 
 @pytest.fixture(scope="session")
@@ -216,7 +216,7 @@ def algorithm_network_config(request: pytest.FixtureRequest) -> str | None:
 @pytest.fixture(scope="session")
 def command_line_arguments(
     algorithm_config: str | None,
-    datamodule_config: str | None,
+    dataset_config: str | None,
     algorithm_network_config: str | None,
     command_line_overrides: tuple[str, ...],
     request: pytest.FixtureRequest,
@@ -224,7 +224,7 @@ def command_line_arguments(
     """Fixture that returns the command-line arguments that will be passed to Hydra to run the
     experiment.
 
-    The `algorithm_config`, `network_config` and `datamodule_config` values here are parametrized
+    The `algorithm_config`, `network_config` and `dataset_config` values here are parametrized
     indirectly by most tests using the [`project.utils.testutils.run_for_all_configs_of_type`][]
     function so that the respective components are created in the same way as they
     would be by Hydra in a regular run.
@@ -238,7 +238,7 @@ def command_line_arguments(
         assert isinstance(param, list | tuple)
         return tuple(param)
 
-    combination = set([datamodule_config, algorithm_network_config, algorithm_config])
+    combination = set([dataset_config, algorithm_network_config, algorithm_config])
     for configs, marks in default_marks_for_config_combinations.items():
         marks = [marks] if not isinstance(marks, list | tuple) else marks
         configs = set(configs)
@@ -262,8 +262,8 @@ def command_line_arguments(
         default_overrides.append(f"algorithm={algorithm_config}")
     if algorithm_network_config:
         default_overrides.append(f"algorithm/network={algorithm_network_config}")
-    if datamodule_config:
-        default_overrides.append(f"datamodule={datamodule_config}")
+    if dataset_config:
+        default_overrides.append(f"dataset={dataset_config}")
 
     all_overrides = default_overrides + list(command_line_overrides)
     return all_overrides
@@ -316,23 +316,23 @@ def experiment_config(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_dictconfig: DictConfig) -> lightning.LightningDataModule | None:
-    """Fixture that creates the datamodule for the given config."""
+def dataset(experiment_dictconfig: DictConfig) -> lightning.LightningDataModule | None:
+    """Fixture that creates the dataset or datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_dictconfig["datamodule"])
+    return instantiate_dataset(experiment_dictconfig["dataset"])
 
 
 @pytest.fixture(scope="function")
 def algorithm(
     experiment_config: Config,
-    datamodule: lightning.LightningDataModule | None,
+    dataset: lightning.LightningDataModule | None,
     trainer: lightning.Trainer | JaxTrainer,
     seed: int,
     device: torch.device,
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+    algorithm = instantiate_algorithm(experiment_config.algorithm, dataset=dataset)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
         with trainer.init_module(), device:
             # A bit hacky, but we have to do this because the lightningmodule isn't associated
@@ -353,19 +353,19 @@ def trainer(
 
 @pytest.fixture(scope="session")
 def train_dataloader(
-    datamodule: lightning.LightningDataModule | None, request: pytest.FixtureRequest
+    dataset: lightning.LightningDataModule | None, request: pytest.FixtureRequest
 ) -> DataLoader:
-    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
-        datamodule.num_workers = 0  # type: ignore
-    if datamodule is None:
+    if isinstance(dataset, VisionDataModule) or hasattr(dataset, "num_workers"):
+        dataset.num_workers = 0  # type: ignore
+    if dataset is None:
         raise NotImplementedError(
             "This test is trying to use `train_dataloader` directly or indirectly but the "
             "algorithm that is being tested does not use a datamodule (or the test was not "
             "configured properly)! Consider overwriting this fixture in your test class."
         )
-    datamodule.prepare_data()
-    datamodule.setup("fit")
-    train_dataloader = datamodule.train_dataloader()
+    dataset.prepare_data()
+    dataset.setup("fit")
+    train_dataloader = dataset.train_dataloader()
     assert isinstance(train_dataloader, DataLoader)
     return train_dataloader
 

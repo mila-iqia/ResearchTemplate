@@ -30,7 +30,7 @@ class FashionMNISTDataModule(MNISTDataModule):
         dm = FashionMNISTDataModule('.')
         model = LitModel()
 
-        Trainer().fit(model, datamodule=dm)
+        Trainer().fit(model, dataset=dm)
     """
 
     name = "fashion_mnist"

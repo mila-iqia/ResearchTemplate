@@ -41,5 +41,5 @@ pass uses Jax to calculate the gradients, and the weights are updated by a PyTor
 ## Running the example
 
 ```console
-$ python project/main.py algorithm=jax_image_classifier network=jax_cnn datamodule=cifar10
+$ python project/main.py algorithm=jax_image_classifier network=jax_cnn dataset=cifar10
 ```

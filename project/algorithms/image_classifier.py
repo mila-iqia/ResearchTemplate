@@ -3,7 +3,7 @@
 This can be run from the command-line like so:
 
 ```console
-python project/main.py algorithm=image_classification datamodule=cifar10
+python project/main.py algorithm=image_classification dataset=cifar10
 ```
 """
 

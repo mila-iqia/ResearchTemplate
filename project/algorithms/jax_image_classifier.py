@@ -229,11 +229,11 @@ def demo(**trainer_kwargs):
     network = JaxCNN(num_classes=datamodule.num_classes)
     optimizer = functools.partial(torch.optim.SGD, lr=0.01)  # type: ignore
     model = JaxImageClassifier(
-        datamodule=datamodule,
+        dataset=datamodule,
         network=hydra_zen.just(network),  # type: ignore
         optimizer=hydra_zen.just(optimizer),  # type: ignore
     )
-    trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model, dataset=datamodule)
 
     ...
 
