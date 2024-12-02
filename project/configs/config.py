@@ -34,14 +34,14 @@ class Config:
     """Configuration for the datamodule (dataset + transforms + dataloader creation).
 
     This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
-    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
+    See the [MNISTDataModule][project.datasets.image_classification.mnist.MNISTDataModule] for an example.
     """
 
     datamodule: Optional[Any] = None  # noqa
     """Configuration for the datamodule (dataset + transforms + dataloader creation).
 
     This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
-    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
+    See the [MNISTDataModule][project.datasets.image_classification.mnist.MNISTDataModule] for an example.
     """
 
     trainer: dict = field(default_factory=dict)

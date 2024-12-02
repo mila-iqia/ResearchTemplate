@@ -1,6 +1,6 @@
 defaults:
   - vision
   - _self_
-_target_: project.datamodules.INaturalistDataModule
+_target_: project.datasets.INaturalistDataModule
 version: "2021_train"
 target_type: "full"

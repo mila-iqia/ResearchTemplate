@@ -1,4 +1,4 @@
 defaults:
   - mnist
   - _self_
-_target_: project.datamodules.FashionMNISTDataModule
+_target_: project.datasets.FashionMNISTDataModule

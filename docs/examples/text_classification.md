@@ -1,7 +1,7 @@
 ---
 additional_python_references:
   - project.algorithms.text_classifier
-  - project.datamodules.text.text_classification
+  - project.datasets.text.text_classification
 ---
 
 # Text Classification (⚡ + 🤗)

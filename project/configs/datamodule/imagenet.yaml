@@ -1,5 +1,5 @@
 defaults:
   - vision
   - _self_
-_target_: project.datamodules.ImageNetDataModule
+_target_: project.datasets.ImageNetDataModule
 # todo: add good configuration options here.
