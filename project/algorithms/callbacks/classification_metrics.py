@@ -2,6 +2,7 @@ import warnings
 from logging import getLogger as get_logger
 from typing import Literal, TypedDict
 
+import lightning
 import torch
 import torchmetrics
 from lightning import LightningModule, Trainer
@@ -9,7 +10,6 @@ from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
 from typing_extensions import NotRequired, Required, override
 
-from project.algorithms.callbacks.callback import BatchType, Callback
 from project.utils.typing_utils.protocols import ClassificationDataModule
 
 logger = get_logger(__name__)
@@ -30,7 +30,7 @@ class ClassificationOutputs(TypedDict, total=False):
     """The class labels."""
 
 
-class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
+class ClassificationMetricsCallback(lightning.Callback):
     """Callback that adds classification metrics to a LightningModule."""
 
     def __init__(self) -> None:
@@ -105,12 +105,92 @@ class ClassificationMetricsCallback(Callback[BatchType, ClassificationOutputs]):
         self.add_metrics_to(pl_module, num_classes=num_classes)
 
     @override
+    def on_train_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: ClassificationOutputs,
+        batch: tuple[Tensor, Tensor],
+        batch_index: int,
+    ) -> None:
+        super().on_train_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_idx=batch_index,
+        )
+        self.on_shared_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_index=batch_index,
+            phase="train",
+        )
+
+    @override
+    def on_validation_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: ClassificationOutputs,
+        batch: tuple[Tensor, Tensor],
+        batch_idx: int,
+        dataloader_idx: int = 0,
+    ) -> None:
+        super().on_validation_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,  # type: ignore
+            batch=batch,
+            batch_idx=batch_idx,
+            dataloader_idx=dataloader_idx,
+        )
+        self.on_shared_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_index=batch_idx,
+            phase="val",
+            dataloader_idx=dataloader_idx,
+        )
+
+    @override
+    def on_test_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: ClassificationOutputs,
+        batch: tuple[Tensor, Tensor],
+        batch_index: int,
+        dataloader_idx: int = 0,
+    ) -> None:
+        super().on_test_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,  # type: ignore
+            batch=batch,
+            batch_idx=batch_index,
+            dataloader_idx=dataloader_idx,
+        )
+        self.on_shared_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_index=batch_index,
+            dataloader_idx=dataloader_idx,
+            phase="test",
+        )
+
     def on_shared_batch_end(
         self,
         trainer: Trainer,
         pl_module: LightningModule,
         outputs: ClassificationOutputs,
-        batch: BatchType,
+        batch: tuple[Tensor, Tensor],
         batch_index: int,
         phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,

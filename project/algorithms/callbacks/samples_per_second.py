@@ -1,18 +1,25 @@
 import time
-from typing import Any, Literal
+from typing import Any, Generic, Literal
 
 import jax
+import lightning
 import torch
 from lightning import LightningModule, Trainer
+from lightning.pytorch.utilities.types import STEP_OUTPUT
 from torch import Tensor
-from torch.optim import Optimizer
-from typing_extensions import override
+from torch.optim.optimizer import Optimizer
+from typing_extensions import TypeVar, override
 
-from project.algorithms.callbacks.callback import BatchType, Callback, StepOutputType
-from project.utils.typing_utils import is_sequence_of
+from project.utils.typing_utils import NestedMapping, is_sequence_of
+
+BatchType = TypeVar(
+    "BatchType",
+    bound=torch.Tensor | tuple[torch.Tensor, ...] | NestedMapping[str, torch.Tensor],
+    contravariant=True,
+)
 
 
-class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
+class MeasureSamplesPerSecondCallback(lightning.Callback, Generic[BatchType]):
     def __init__(self, num_optimizers: int | None = None):
         super().__init__()
         self.last_step_times: dict[Literal["train", "val", "test"], float] = {}
@@ -20,6 +27,20 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
         self.num_optimizers: int | None = num_optimizers
 
     @override
+    def on_train_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        super().on_train_epoch_start(trainer, pl_module)
+        self.on_shared_epoch_start(trainer, pl_module, phase="train")
+
+    @override
+    def on_validation_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        super().on_validation_epoch_start(trainer, pl_module)
+        self.on_shared_epoch_start(trainer, pl_module, phase="val")
+
+    @override
+    def on_test_epoch_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        super().on_test_epoch_start(trainer, pl_module)
+        self.on_shared_epoch_start(trainer, pl_module, phase="test")
+
     def on_shared_epoch_start(
         self,
         trainer: Trainer,
@@ -36,25 +57,96 @@ class MeasureSamplesPerSecondCallback(Callback[BatchType, StepOutputType]):
                 self.num_optimizers = len(optimizer_or_optimizers)
 
     @override
+    def on_train_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: STEP_OUTPUT,
+        batch: BatchType,
+        batch_idx: int,
+    ) -> None:
+        super().on_train_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_idx=batch_idx,
+        )
+        self.on_shared_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_index=batch_idx,
+            phase="train",
+        )
+
+    @override
+    def on_validation_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: STEP_OUTPUT,
+        batch: BatchType,
+        batch_idx: int,
+        dataloader_idx: int = 0,
+    ) -> None:
+        super().on_validation_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,  # type: ignore
+            batch=batch,
+            batch_idx=batch_idx,
+            dataloader_idx=dataloader_idx,
+        )
+        self.on_shared_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_index=batch_idx,
+            phase="val",
+            dataloader_idx=dataloader_idx,
+        )
+
+    @override
+    def on_test_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: STEP_OUTPUT,
+        batch: BatchType,
+        batch_idx: int,
+        dataloader_idx: int = 0,
+    ) -> None:
+        super().on_test_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,  # type: ignore
+            batch=batch,
+            batch_idx=batch_idx,
+            dataloader_idx=dataloader_idx,
+        )
+        self.on_shared_batch_end(
+            trainer=trainer,
+            pl_module=pl_module,
+            outputs=outputs,
+            batch=batch,
+            batch_index=batch_idx,
+            dataloader_idx=dataloader_idx,
+            phase="test",
+        )
+
     def on_shared_batch_end(
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        outputs: StepOutputType,
+        outputs: STEP_OUTPUT,
         batch: BatchType,
         batch_index: int,
         phase: Literal["train", "val", "test"],
         dataloader_idx: int | None = None,
     ):
-        super().on_shared_batch_end(
-            trainer,
-            pl_module=pl_module,
-            outputs=outputs,
-            batch=batch,
-            batch_index=batch_index,
-            phase=phase,
-            dataloader_idx=dataloader_idx,
-        )
         now = time.perf_counter()
         if phase in self.last_step_times:
             elapsed = now - self.last_step_times[phase]

@@ -23,6 +23,7 @@ import torch_jax_interop
 from gymnax.environments.environment import Environment
 from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBar
 from lightning.pytorch.loggers import CSVLogger
+from lightning.pytorch.utilities.types import STEP_OUTPUT
 from tensor_regression import TensorRegressionFixture
 from torch.utils.data import DataLoader
 from typing_extensions import override
@@ -694,11 +695,11 @@ class RlThroughputCallback(MeasureSamplesPerSecondCallback):
         self,
         trainer: lightning.Trainer,
         pl_module: lightning.LightningModule,
-        outputs: dict[str, torch.Tensor],
+        outputs: STEP_OUTPUT,
         batch: TrajectoryWithLastObs,
-        batch_index: int,
+        batch_idx: int,
     ) -> None:
-        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_index)
+        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
         if not isinstance(batch, TrajectoryWithLastObs):
             return
         episodes = batch.trajectories
