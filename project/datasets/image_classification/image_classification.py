@@ -4,7 +4,7 @@ from torch import Tensor
 from torchvision.tv_tensors import Image
 from typing_extensions import TypeVar
 
-from project.datamodules.vision import VisionDataModule
+from project.datasets.vision import VisionDataModule
 from project.utils.typing_utils import C, H, W
 from project.utils.typing_utils.protocols import ClassificationDataModule
 

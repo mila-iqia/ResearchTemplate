@@ -6,7 +6,7 @@ from torch.utils.data import Subset
 from torchvision import transforms as T
 from torchvision.datasets import INaturalist
 
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 

@@ -6,7 +6,7 @@ import pytest
 
 from project.algorithms.jax_image_classifier import JaxImageClassifier
 from project.conftest import fails_on_macOS_in_CI
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.testutils import run_for_all_configs_of_type

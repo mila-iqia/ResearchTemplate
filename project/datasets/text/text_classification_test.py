@@ -4,7 +4,7 @@ import huggingface_hub.errors
 import lightning
 import pytest
 
-from project.datamodules.text.text_classification import TextClassificationDataModule
+from project.datasets.text.text_classification import TextClassificationDataModule
 from project.experiment import instantiate_datamodule
 from project.utils.testutils import get_config_loader
 

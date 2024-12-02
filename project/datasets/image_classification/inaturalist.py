@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Literal
 import torchvision.transforms as T
 from torchvision.datasets import INaturalist, VisionDataset
 
-from project.datamodules.vision import VisionDataModule
+from project.datasets.vision import VisionDataModule
 from project.utils.env_vars import DATA_DIR, NUM_WORKERS, SLURM_TMPDIR
 from project.utils.typing_utils import C, H, W
 

@@ -92,7 +92,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.vision import VisionDataModule, num_cpus_on_node
+from project.datasets.vision import VisionDataModule, num_cpus_on_node
 from project.experiment import (
     instantiate_algorithm,
     instantiate_datamodule,

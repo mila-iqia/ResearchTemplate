@@ -11,10 +11,10 @@ from tensor_regression.fixture import TensorRegressionFixture, get_test_source_a
 from torch import Tensor
 
 from project.conftest import command_line_overrides
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision import VisionDataModule
+from project.datasets.vision import VisionDataModule
 from project.utils.testutils import run_for_all_configs_in_group
 from project.utils.typing_utils import is_sequence_of
 
@@ -45,6 +45,7 @@ def test_first_batch(
     stage: RunningStage,
     datadir: Path,
 ):
+    """Test that the first batch of the dataloader is reproducible (the same for the same seed)."""
     # Note: using dataloader workers in tests can cause issues, since if a test fails, dataloader
     # workers aren't always cleaned up properly.
     if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):

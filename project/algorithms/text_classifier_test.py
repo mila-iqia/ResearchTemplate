@@ -12,7 +12,7 @@ from transformers import PreTrainedModel
 from typing_extensions import override
 
 from project.algorithms.text_classifier import TextClassifier
-from project.datamodules.text.text_classification import TextClassificationDataModule
+from project.datasets.text.text_classification import TextClassificationDataModule
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 

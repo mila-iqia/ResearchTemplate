@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from torchvision.datasets import FashionMNIST
 
-from project.datamodules.image_classification.mnist import MNISTDataModule
+from project.datasets.image_classification.mnist import MNISTDataModule
 
 
 class FashionMNISTDataModule(MNISTDataModule):

@@ -16,10 +16,10 @@ from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.image_classification.mnist import MNISTDataModule
+from project.datasets.image_classification.mnist import MNISTDataModule
 from project.utils.typing_utils import HydraConfigFor
 
 
