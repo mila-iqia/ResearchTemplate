@@ -45,9 +45,6 @@ dependencies = [
 readme = "README.md"
 requires-python = ">= 3.10"
 
-[project.entry-points."mkdocs.plugins"]
-custom_autoref_plugin = "project.utils.autoref_plugin:CustomAutoRefPlugin"
-
 [dependency-groups]
 dev = [
     "mktestdocs>=0.2.2",
@@ -75,6 +72,7 @@ docs = [
     "mkdocs-video>=1.5.0",
     "mkdocs-section-index>=0.3.9",
     "mkdocs-macros-plugin>=1.0.5",
+    "mkdocs-autoref-plugin",
 ]
 gpu = ["jax[cuda12]>=0.4.31"]
 
@@ -118,6 +116,7 @@ managed = true
 
 [tool.uv.sources]
 remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", branch = "master" }
+mkdocs-autoref-plugin = { git = "https://github.com/lebrice/mkdocs-autoref-plugin" }
 
 # [tool.uv.tasks]
 # serve-docs = "mkdocs serve"
