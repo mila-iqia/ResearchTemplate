@@ -37,20 +37,20 @@ grads.network.params.1:
 grads.network.params.2:
   device: cuda:0
   max: '1.382e-01'
-  mean: '0.e+00'
+  mean: '-7.451e-10'
   min: '-9.016e-02'
   shape:
   - 10
-  sum: '0.e+00'
+  sum: '-7.451e-09'
 grads.network.params.3:
   device: cuda:0
   max: '4.029e-01'
-  mean: '-5.122e-10'
+  mean: '-6.170e-10'
   min: '-2.145e-01'
   shape:
   - 256
   - 10
-  sum: '-1.311e-06'
+  sum: '-1.58e-06'
 outputs.logits:
   device: cuda:0
   max: '2.481e+00'
