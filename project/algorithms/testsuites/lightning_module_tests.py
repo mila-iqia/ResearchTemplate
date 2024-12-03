@@ -40,6 +40,13 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     of decent unit tests that should apply to any LightningModule.
 
     See the [project.algorithms.image_classifier_test][] module for an example.
+
+    Other ideas:
+    - pytest-benchmark for regression tests on forward / backward pass / training step speed
+    - pytest-profiling for profiling the training step? (pytorch variant?)
+    - Dataset splits: check some basic stats about the train/val/test inputs, are they somewhat similar?
+    - Define the input as a space, check that the dataset samples are in that space and not too
+      many samples are statistically OOD?
     """
 
     # algorithm_config: ParametrizedFixture[str]
