@@ -16,7 +16,7 @@ import jax
 import lightning
 import pytest
 import torch
-from lightning import LightningDataModule, LightningModule
+from lightning import LightningModule
 from omegaconf import DictConfig
 from tensor_regression import TensorRegressionFixture
 
@@ -105,7 +105,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     @pytest.fixture(scope="class")
     def training_step_content(
         self,
-        datamodule: LightningDataModule,
+        datamodule: lightning.LightningDataModule | None,
         algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
@@ -138,16 +138,20 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
 
     def test_initialization_is_reproducible(
         self,
-        training_step_content: tuple[AlgorithmType, GetStuffFromFirstTrainingStep],
+        training_step_content: tuple[
+            AlgorithmType, GetStuffFromFirstTrainingStep, list[Any], list[Any]
+        ],
         tensor_regression: TensorRegressionFixture,
+        accelerator: str,
     ):
         """Check that the network initialization is reproducible given the same random seed."""
         algorithm, *_ = training_step_content
+
         tensor_regression.check(
             algorithm.state_dict(),
             # todo: is this necessary? Shouldn't the weights be the same on CPU and GPU?
             # Save the regression files on a different subfolder for each device (cpu / cuda)
-            additional_label=next(algorithm.parameters()).device.type,
+            additional_label=accelerator if accelerator not in ["auto", "gpu", "cuda"] else None,
             include_gpu_name_in_stats=False,
         )
 
@@ -241,7 +245,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     def do_one_step_of_training(
         self,
         algorithm: AlgorithmType,
-        datamodule: LightningDataModule,
+        datamodule: lightning.LightningDataModule | None,
         accelerator: str,
         devices: int | list[int] | Literal["auto"],
         callbacks: list[lightning.Callback],
