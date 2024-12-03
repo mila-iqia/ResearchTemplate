@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from torchvision.datasets import FashionMNIST
 
-from project.datamodules.image_classification.mnist import MNISTDataModule
+from project.datasets.image_classification.mnist import MNISTDataModule
 
 
 class FashionMNISTDataModule(MNISTDataModule):
@@ -30,7 +30,7 @@ class FashionMNISTDataModule(MNISTDataModule):
         dm = FashionMNISTDataModule('.')
         model = LitModel()
 
-        Trainer().fit(model, datamodule=dm)
+        Trainer().fit(model, dataset=dm)
     """
 
     name = "fashion_mnist"

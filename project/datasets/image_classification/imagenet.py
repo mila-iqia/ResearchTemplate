@@ -22,7 +22,7 @@ from torchvision.datasets import ImageNet
 from torchvision.models.resnet import ResNet152_Weights
 from torchvision.transforms import v2 as transforms
 
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS

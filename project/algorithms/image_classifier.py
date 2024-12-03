@@ -3,7 +3,7 @@
 This can be run from the command-line like so:
 
 ```console
-python project/main.py algorithm=image_classification datamodule=cifar10
+python project/main.py algorithm=image_classification dataset=cifar10
 ```
 """
 
@@ -21,7 +21,7 @@ from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.datamodules.image_classification import ImageClassificationDataModule
+from project.datasets.image_classification import ImageClassificationDataModule
 from project.utils.typing_utils import HydraConfigFor
 
 logger = getLogger(__name__)

@@ -1,7 +1,7 @@
 ---
 additional_python_references:
   - project.algorithms.text_classifier
-  - project.datamodules.text.text_classification
+  - project.datasets.text.text_classification
 ---
 
 # Text Classification (⚡ + 🤗)
@@ -27,9 +27,9 @@ It accepts a `TextClassificationDataModule` as input, along with a network.
 ### Datamodule config
 
 ??? note "Click to show the Datamodule config"
-    Source: project/configs/datamodule/glue_cola.yaml
+    Source: project/configs/dataset/glue_cola.yaml
 
-    {{ inline('project/configs/datamodule/glue_cola.yaml', 4) }}
+    {{ inline('project/configs/dataset/glue_cola.yaml', 4) }}
 
 ## Running the example
 

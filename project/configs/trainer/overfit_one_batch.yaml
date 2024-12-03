@@ -1,5 +1,5 @@
 # Note: This configuration should be run in combination with an algorithm. For example like this:
-# `python project/main.py algorithm=example datamodule=cifar10 trainer=overfit_one_batch`
+# `python project/main.py algorithm=example dataset=cifar10 trainer=overfit_one_batch`
 #
 defaults:
   - default

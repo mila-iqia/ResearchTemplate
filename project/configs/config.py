@@ -21,7 +21,7 @@ class Config:
     """
 
     algorithm: Any
-    """Configuration for the algorithm (a
+    """Configuration for the algorithm to use during training (typically a
     [LightningModule][lightning.pytorch.core.module.LightningModule]).
 
     It is suggested for this class to accept a `datamodule` and `network` as arguments. The
@@ -30,18 +30,11 @@ class Config:
     For more info, see the [instantiate_algorithm][project.experiment.instantiate_algorithm] function.
     """
 
-    datamodule: Any | None = None
-    """Configuration for the datamodule (dataset + transforms + dataloader creation).
+    dataset: Optional[Any] = None  # noqa
+    """Configuration for the dataset or datamodule (dataset + transforms + dataloader creation).
 
     This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
-    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
-    """
-
-    datamodule: Optional[Any] = None  # noqa
-    """Configuration for the datamodule (dataset + transforms + dataloader creation).
-
-    This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
-    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
+    See the [MNISTDataModule][project.datasets.image_classification.mnist.MNISTDataModule] for an example.
     """
 
     trainer: dict = field(default_factory=dict)

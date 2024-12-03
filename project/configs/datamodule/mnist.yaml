@@ -1,9 +1,0 @@
-defaults:
-  - vision
-  - _self_
-_target_: project.datamodules.MNISTDataModule
-data_dir: ${constant:torchvision_dir,DATA_DIR}
-normalize: True
-batch_size: 128
-train_transforms:
-  _target_: project.datamodules.image_classification.mnist.mnist_train_transforms

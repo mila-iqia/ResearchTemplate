@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 from project.configs.algorithm.network import network_store
 from project.configs.algorithm.optimizer import optimizers_store
 from project.configs.config import Config
-from project.configs.datamodule import datamodule_store
+from project.configs.dataset import datamodule_store
 from project.utils.remote_launcher_plugin import RemoteSlurmQueueConf
 
 cs = ConfigStore.instance()

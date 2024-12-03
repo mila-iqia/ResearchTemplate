@@ -9,7 +9,7 @@ from torch import Tensor
 from torchvision.datasets import MNIST
 from torchvision.transforms import v2 as transforms
 
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.env_vars import DATA_DIR

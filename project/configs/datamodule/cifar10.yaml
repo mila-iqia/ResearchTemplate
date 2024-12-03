@@ -1,8 +1,0 @@
-defaults:
-  - vision
-  - _self_
-_target_: project.datamodules.CIFAR10DataModule
-data_dir: ${constant:torchvision_dir,DATA_DIR}
-batch_size: 128
-train_transforms:
-  _target_: project.datamodules.image_classification.cifar10.cifar10_train_transforms

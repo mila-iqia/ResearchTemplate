@@ -15,7 +15,7 @@ import jax
 import lightning
 import pytest
 import torch
-from lightning import LightningDataModule, LightningModule
+from lightning import LightningModule
 from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
@@ -63,7 +63,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
         """Check that the network initialization is reproducible given the same random seed."""
         with torch.random.fork_rng(devices=list(range(torch.cuda.device_count()))):
             torch.random.manual_seed(seed)
-            algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+            algorithm = instantiate_algorithm(experiment_config.algorithm, dataset=datamodule)
             assert isinstance(algorithm, lightning.LightningModule)
             # A bit hacky, but we have to do this because the lightningmodule isn't associated
             # with a Trainer here.
@@ -103,7 +103,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
 
     def test_backward_pass_is_reproducible(
         self,
-        datamodule: LightningDataModule,
+        dataset: lightning.LightningDataModule | None,
         algorithm: AlgorithmType,
         seed: int,
         accelerator: str,
@@ -119,7 +119,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
             gradients_callback = GetStuffFromFirstTrainingStep()
             self.do_one_step_of_training(
                 algorithm,
-                datamodule,
+                dataset,
                 accelerator=accelerator,
                 devices=devices,
                 callbacks=[gradients_callback],
@@ -178,7 +178,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     def do_one_step_of_training(
         self,
         algorithm: AlgorithmType,
-        datamodule: LightningDataModule,
+        dataset: lightning.LightningDataModule | None,
         accelerator: str,
         devices: int | list[int] | Literal["auto"],
         callbacks: list[lightning.Callback],
@@ -198,7 +198,10 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
             deterministic=True,
             default_root_dir=tmp_path,
         )
-        trainer.fit(algorithm, datamodule=datamodule)
+        if isinstance(dataset, lightning.LightningDataModule):
+            trainer.fit(algorithm, datamodule=dataset)
+        else:
+            trainer.fit(algorithm)
         return callbacks
 
 

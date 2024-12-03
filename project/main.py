@@ -34,7 +34,7 @@ from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.experiment import (
     instantiate_algorithm,
-    instantiate_datamodule,
+    instantiate_dataset,
     setup_logging,
 )
 from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
@@ -104,11 +104,11 @@ def main(dict_config: DictConfig) -> dict:
     )
 
     # Create the datamodule (if present)
-    datamodule: lightning.LightningDataModule | None = instantiate_datamodule(config.datamodule)
+    dataset: lightning.LightningDataModule | None = instantiate_dataset(config.dataset)
 
     # Create the "algorithm"
     algorithm: lightning.LightningModule | JaxModule = instantiate_algorithm(
-        config.algorithm, datamodule=datamodule
+        config.algorithm, dataset=dataset
     )
 
     if wandb.run:
@@ -118,15 +118,13 @@ def main(dict_config: DictConfig) -> dict:
         )
 
     # Train the algorithm.
-    train_results = train(
-        config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm
-    )
+    train_results = train(config=config, trainer=trainer, dataset=dataset, algorithm=algorithm)
 
     # Evaluate the algorithm.
     if isinstance(trainer, lightning.Trainer):
         assert isinstance(algorithm, lightning.LightningModule)
         metric_name, error, _metrics = evaluate_lightningmodule(
-            algorithm, datamodule=datamodule, trainer=trainer
+            algorithm, dataset=dataset, trainer=trainer
         )
     else:
         assert isinstance(trainer, JaxTrainer)
@@ -146,7 +144,7 @@ def main(dict_config: DictConfig) -> dict:
 def train(
     config: Config,
     trainer: lightning.Trainer | JaxTrainer,
-    datamodule: lightning.LightningDataModule | None,
+    dataset: lightning.LightningDataModule | None,
     algorithm: lightning.LightningModule | JaxModule,
 ):
     if isinstance(trainer, lightning.Trainer):
@@ -155,14 +153,14 @@ def train(
         # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
         # example in RL, where we need to set the actor to use in the environment, as well as
         # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
-        datamodule = getattr(algorithm, "datamodule", datamodule)
+        dataset = getattr(algorithm, "datamodule", dataset)
         return trainer.fit(
             algorithm,
-            datamodule=datamodule,
+            datamodule=dataset,
             ckpt_path=config.ckpt_path,
         )
 
-    if datamodule is not None:
+    if dataset is not None:
         raise NotImplementedError(
             "The JaxTrainer doesn't yet support using a datamodule. For now, you should "
             f"return a batch of data from the {JaxModule.get_batch.__name__} method in your "
@@ -210,7 +208,7 @@ MetricName = str
 def evaluate_lightningmodule(
     algorithm: lightning.LightningModule,
     trainer: lightning.Trainer,
-    datamodule: lightning.LightningDataModule | None,
+    dataset: lightning.LightningDataModule | None,
 ) -> tuple[MetricName, float | None, dict]:
     """Evaluates the algorithm and returns the metrics.
 
@@ -235,11 +233,11 @@ def evaluate_lightningmodule(
         ]
     elif trainer.limit_val_batches != 0:
         results_type = "val"
-        results = trainer.validate(model=algorithm, datamodule=datamodule)
+        results = trainer.validate(model=algorithm, datamodule=dataset)
     else:
         warnings.warn(RuntimeWarning("About to use the test set for evaluation!"))
         results_type = "test"
-        results = trainer.test(model=algorithm, datamodule=datamodule)
+        results = trainer.test(model=algorithm, datamodule=dataset)
 
     if results is None:
         rich.print("RUN FAILED!")

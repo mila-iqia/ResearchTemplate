@@ -16,10 +16,10 @@ from torch_jax_interop import WrappedJaxFunction, torch_to_jax
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.image_classification.mnist import MNISTDataModule
+from project.datasets.image_classification.mnist import MNISTDataModule
 from project.utils.typing_utils import HydraConfigFor
 
 
@@ -229,11 +229,11 @@ def demo(**trainer_kwargs):
     network = JaxCNN(num_classes=datamodule.num_classes)
     optimizer = functools.partial(torch.optim.SGD, lr=0.01)  # type: ignore
     model = JaxImageClassifier(
-        datamodule=datamodule,
+        dataset=datamodule,
         network=hydra_zen.just(network),  # type: ignore
         optimizer=hydra_zen.just(optimizer),  # type: ignore
     )
-    trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model, dataset=datamodule)
 
     ...
 

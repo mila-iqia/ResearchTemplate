@@ -122,7 +122,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     def test_initialization_is_reproducible(
         self,
         experiment_config: Config,
-        datamodule: lightning.LightningDataModule,
+        dataset: lightning.LightningDataModule,
         seed: int,
         tensor_regression: TensorRegressionFixture,
         trainer: lightning.Trainer,
@@ -130,7 +130,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     ):
         super().test_initialization_is_reproducible(
             experiment_config=experiment_config,
-            datamodule=datamodule,
+            dataset=dataset,
             seed=seed,
             tensor_regression=tensor_regression,
             trainer=trainer,
@@ -159,7 +159,7 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
     )
     def test_backward_pass_is_reproducible(
         self,
-        datamodule: lightning.LightningDataModule,
+        dataset: lightning.LightningDataModule,
         algorithm: LLMFinetuningExample,
         seed: int,
         accelerator: str,
@@ -168,5 +168,5 @@ class TestLLMFinetuningExample(LightningModuleTests[LLMFinetuningExample]):
         tmp_path: Path,
     ):
         return super().test_backward_pass_is_reproducible(
-            datamodule, algorithm, seed, accelerator, devices, tensor_regression, tmp_path
+            dataset, algorithm, seed, accelerator, devices, tensor_regression, tmp_path
         )

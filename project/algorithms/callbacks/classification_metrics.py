@@ -94,7 +94,7 @@ class ClassificationMetricsCallback(lightning.Callback):
             warnings.warn(
                 RuntimeWarning(
                     f"Disabling the {type(self).__name__} callback because it only works with "
-                    f"classification datamodules, but {pl_module.datamodule=} isn't a "
+                    f"classification datamodules, but {pl_module.dataset=} isn't a "
                     f"{ClassificationDataModule.__name__}."
                 )
             )

@@ -109,14 +109,14 @@ experiment_commands_to_test = [
     ),
     pytest.param(
         "experiment=profiling "
-        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
+        "dataset=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
         "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
         "trainer.fast_dev_run=True ",  # make each job quicker to run
         marks=pytest.mark.slow,
     ),
     (
         "experiment=profiling algorithm=no_op "
-        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
+        "dataset=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
         "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
         "trainer.fast_dev_run=True "  # make each job quicker to run
     ),
@@ -219,7 +219,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     [
-        "algorithm=image_classifier datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
+        "algorithm=image_classifier dataset=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
     ],
     indirect=True,
 )

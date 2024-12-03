@@ -100,32 +100,32 @@ def instantiate_trainer(experiment_config: Config) -> Trainer | JaxTrainer:
     return trainer
 
 
-def instantiate_datamodule(
-    datamodule_config: Builds[type[LightningDataModule]] | LightningDataModule | None,
+def instantiate_dataset(
+    dataset_config: Builds[type[LightningDataModule]] | LightningDataModule | None,
 ) -> LightningDataModule | None:
-    """Instantiate the datamodule from the configuration dict.
+    """Instantiate the dataset/datamodule from the configuration dict.
 
     Any interpolations in the config will have already been resolved by the time we get here.
     """
-    if not datamodule_config:
+    if not dataset_config:
         return None
     import lightning
 
-    if isinstance(datamodule_config, lightning.LightningDataModule):
+    if isinstance(dataset_config, lightning.LightningDataModule):
         logger.info(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
-            f"{datamodule_config=}"
+            f"{dataset_config=}"
         )
-        datamodule = datamodule_config
+        datamodule = dataset_config
     else:
-        logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
-        datamodule = instantiate(datamodule_config)
+        logger.debug(f"Instantiating dataset from config: {dataset_config}")
+        datamodule = instantiate(dataset_config)
 
     return datamodule
 
 
 def instantiate_algorithm(
-    algorithm_config: Config, datamodule: LightningDataModule | None
+    algorithm_config: Config, dataset: LightningDataModule | None
 ) -> LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
@@ -148,14 +148,14 @@ def instantiate_algorithm(
         )
         return algo_config
 
-    if datamodule:
-        algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
+    if dataset:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=dataset)
     else:
         algo_or_algo_partial = hydra.utils.instantiate(algo_config)
 
     if isinstance(algo_or_algo_partial, functools.partial):
-        if datamodule:
-            algorithm = algo_or_algo_partial(datamodule=datamodule)
+        if dataset:
+            algorithm = algo_or_algo_partial(datamodule=dataset)
         else:
             algorithm = algo_or_algo_partial()
     else:

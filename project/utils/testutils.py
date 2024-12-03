@@ -17,8 +17,8 @@ import torch
 import torchvision.models
 from hydra.core.config_store import ConfigStore
 
-from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
-from project.datamodules.image_classification.mnist import MNISTDataModule
+from project.datasets.image_classification.fashion_mnist import FashionMNISTDataModule
+from project.datasets.image_classification.mnist import MNISTDataModule
 from project.utils.env_vars import NETWORK_DIR
 from project.utils.hydra_utils import get_outer_class
 

@@ -4,7 +4,7 @@ import torch
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2 as transforms
 
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.typing_utils import C, H, W

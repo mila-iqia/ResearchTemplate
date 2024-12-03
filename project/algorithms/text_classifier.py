@@ -11,7 +11,7 @@ from transformers import (
 )
 from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput
 
-from project.datamodules.text.text_classification import TextClassificationDataModule
+from project.datasets.text.text_classification import TextClassificationDataModule
 from project.utils.typing_utils import HydraConfigFor
 
 

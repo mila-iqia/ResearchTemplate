@@ -11,10 +11,10 @@ from tensor_regression.fixture import TensorRegressionFixture, get_test_source_a
 from torch import Tensor
 
 from project.conftest import command_line_overrides
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.datamodules.vision import VisionDataModule
+from project.datasets.vision import VisionDataModule
 from project.utils.testutils import run_for_all_configs_in_group
 from project.utils.typing_utils import is_sequence_of
 
@@ -38,45 +38,46 @@ from project.utils.typing_utils import is_sequence_of
 @pytest.mark.parametrize(command_line_overrides.__name__, ["algorithm=no_op"], indirect=True)
 @run_for_all_configs_in_group(group_name="datamodule")
 def test_first_batch(
-    datamodule: LightningDataModule,
+    dataset: LightningDataModule,
     request: pytest.FixtureRequest,
     tensor_regression: TensorRegressionFixture,
     original_datadir: Path,
     stage: RunningStage,
     datadir: Path,
 ):
+    """Test that the first batch of the dataloader is reproducible (the same for the same seed)."""
     # Note: using dataloader workers in tests can cause issues, since if a test fails, dataloader
     # workers aren't always cleaned up properly.
-    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
-        datamodule.num_workers = 0  # type: ignore
+    if isinstance(dataset, VisionDataModule) or hasattr(dataset, "num_workers"):
+        dataset.num_workers = 0  # type: ignore
 
-    datamodule.prepare_data()
+    dataset.prepare_data()
     if stage == RunningStage.TRAINING:
-        datamodule.setup("fit")
-        dataloader = datamodule.train_dataloader()
+        dataset.setup("fit")
+        dataloader = dataset.train_dataloader()
     elif stage in [RunningStage.VALIDATING, RunningStage.SANITY_CHECKING]:
-        datamodule.setup("validate")
-        dataloader = datamodule.val_dataloader()
+        dataset.setup("validate")
+        dataloader = dataset.val_dataloader()
     elif stage == RunningStage.TESTING:
-        datamodule.setup("test")
-        dataloader = datamodule.test_dataloader()
+        dataset.setup("test")
+        dataloader = dataset.test_dataloader()
     else:
         assert stage == RunningStage.PREDICTING
-        datamodule.setup("predict")
-        dataloader = datamodule.predict_dataloader()
+        dataset.setup("predict")
+        dataloader = dataset.predict_dataloader()
 
     iterator = iter(dataloader)
     batch = next(iterator)
     from torchvision.tv_tensors import Image
 
-    if isinstance(datamodule, ImageClassificationDataModule):
+    if isinstance(dataset, ImageClassificationDataModule):
         assert isinstance(batch, list | tuple) and len(batch) == 2
         # todo: if we tighten this and make it so vision datamodules return Images, then we should
         # have strict asserts here that check that batch[0] is an Image. It doesn't seem to be the case though.
         # assert isinstance(batch[0], Image)
         assert isinstance(batch[0], torch.Tensor)
         assert isinstance(batch[1], torch.Tensor)
-    elif isinstance(datamodule, VisionDataModule):
+    elif isinstance(dataset, VisionDataModule):
         if isinstance(batch, list | tuple):
             # assert isinstance(batch[0], Image)
             assert isinstance(batch[0], torch.Tensor)
@@ -134,7 +135,7 @@ def test_first_batch(
         RunningStage.PREDICTING: "prediction(?)",
     }
 
-    fig.suptitle(f"First {split[stage]} batch of datamodule {type(datamodule).__name__}")
+    fig.suptitle(f"First {split[stage]} batch of datamodule {type(dataset).__name__}")
     figure_path, _ = get_test_source_and_temp_file_paths(
         extension=".png",
         request=request,

@@ -4,8 +4,8 @@ import huggingface_hub.errors
 import lightning
 import pytest
 
-from project.datamodules.text.text_classification import TextClassificationDataModule
-from project.experiment import instantiate_datamodule
+from project.datasets.text.text_classification import TextClassificationDataModule
+from project.experiment import instantiate_dataset
 from project.utils.testutils import get_config_loader
 
 datamodule_configs = ["glue_cola"]
@@ -29,7 +29,7 @@ def datamodule(
         run_mode=RunMode.RUN,
     )
     datamodule_config = config["datamodule"]
-    datamodule = instantiate_datamodule(datamodule_config)
+    datamodule = instantiate_dataset(datamodule_config)
     assert datamodule is not None
     return datamodule
 

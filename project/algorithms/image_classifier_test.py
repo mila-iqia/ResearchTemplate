@@ -7,8 +7,8 @@ from transformers import PreTrainedModel
 from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs import Config
 from project.conftest import command_line_overrides, skip_on_macOS_in_CI
-from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
-from project.datamodules.image_classification.image_classification import (
+from project.datasets.image_classification.cifar10 import CIFAR10DataModule
+from project.datasets.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
 from project.utils.testutils import run_for_all_configs_of_type
@@ -18,7 +18,7 @@ from .image_classifier import ImageClassifier
 
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
-    ["algorithm=image_classifier datamodule=cifar10"],
+    ["algorithm=image_classifier dataset=cifar10"],
     indirect=True,
 )
 def test_example_experiment_defaults(experiment_config: Config) -> None:
@@ -28,7 +28,7 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
         ImageClassifier.__module__ + "." + ImageClassifier.__qualname__
     )
 
-    assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
+    assert isinstance(experiment_config.dataset, CIFAR10DataModule)
 
 
 @skip_on_macOS_in_CI
