@@ -1,14 +1,14 @@
 batch.0:
   device: cuda:0
   max: '2.640e+00'
-  mean: '-6.663e-02'
+  mean: '-6.142e-02'
   min: '-2.118e+00'
   shape:
   - 64
   - 3
   - 224
   - 224
-  sum: '-6.419e+05'
+  sum: '-5.917e+05'
 batch.1:
   device: cuda:0
   max: 988
@@ -19,577 +19,577 @@ batch.1:
   sum: 33166
 grads.network.bn1.bias:
   device: cuda:0
-  max: '1.433e-02'
-  mean: '1.035e-03'
-  min: '-1.257e-02'
+  max: '1.271e-02'
+  mean: '-1.027e-04'
+  min: '-1.268e-02'
   shape:
   - 64
-  sum: '6.621e-02'
+  sum: '-6.573e-03'
 grads.network.bn1.weight:
   device: cuda:0
-  max: '1.866e-02'
-  mean: '9.764e-05'
-  min: '-2.028e-02'
+  max: '1.774e-02'
+  mean: '-8.635e-05'
+  min: '-1.674e-02'
   shape:
   - 64
-  sum: '6.249e-03'
+  sum: '-5.527e-03'
 grads.network.conv1.weight:
   device: cuda:0
-  max: '1.798e-01'
-  mean: '6.264e-03'
-  min: '-1.354e-01'
+  max: '2.109e-01'
+  mean: '3.684e-03'
+  min: '-1.847e-01'
   shape:
   - 64
   - 3
   - 7
   - 7
-  sum: '5.893e+01'
+  sum: '3.466e+01'
 grads.network.fc.bias:
   device: cuda:0
-  max: '3.523e-03'
-  mean: '2.235e-11'
+  max: '3.518e-03'
+  mean: '2.980e-11'
   min: '-3.062e-02'
   shape:
   - 1000
-  sum: '2.235e-08'
+  sum: '2.980e-08'
 grads.network.fc.weight:
   device: cuda:0
-  max: '4.594e-03'
-  mean: '1.490e-11'
-  min: '-8.777e-02'
+  max: '4.303e-03'
+  mean: '2.980e-11'
+  min: '-7.610e-02'
   shape:
   - 1000
   - 512
-  sum: '7.629e-06'
+  sum: '1.526e-05'
 grads.network.layer1.0.bn1.bias:
   device: cuda:0
-  max: '1.035e-02'
-  mean: '-8.887e-05'
-  min: '-1.081e-02'
+  max: '8.641e-03'
+  mean: '-7.812e-04'
+  min: '-8.647e-03'
   shape:
   - 64
-  sum: '-5.688e-03'
+  sum: '-5.e-02'
 grads.network.layer1.0.bn1.weight:
   device: cuda:0
-  max: '1.322e-02'
-  mean: '3.085e-09'
-  min: '-1.446e-02'
+  max: '9.976e-03'
+  mean: '4.162e-09'
+  min: '-9.564e-03'
   shape:
   - 64
-  sum: '1.974e-07'
+  sum: '2.664e-07'
 grads.network.layer1.0.bn2.bias:
   device: cuda:0
-  max: '5.771e-03'
-  mean: '2.727e-04'
-  min: '-8.209e-03'
+  max: '4.759e-03'
+  mean: '-4.058e-05'
+  min: '-6.041e-03'
   shape:
   - 64
-  sum: '1.745e-02'
+  sum: '-2.597e-03'
 grads.network.layer1.0.bn2.weight:
   device: cuda:0
-  max: '9.735e-03'
-  mean: '3.428e-05'
-  min: '-7.881e-03'
+  max: '1.573e-02'
+  mean: '4.815e-04'
+  min: '-7.385e-03'
   shape:
   - 64
-  sum: '2.194e-03'
+  sum: '3.081e-02'
 grads.network.layer1.0.conv1.weight:
   device: cuda:0
-  max: '3.228e-02'
-  mean: '-2.187e-04'
-  min: '-3.009e-02'
+  max: '3.727e-02'
+  mean: '4.84e-05'
+  min: '-2.909e-02'
   shape:
   - 64
   - 64
   - 3
   - 3
-  sum: '-8.063e+00'
+  sum: '1.784e+00'
 grads.network.layer1.0.conv2.weight:
   device: cuda:0
-  max: '2.011e-02'
-  mean: '-8.082e-05'
-  min: '-2.321e-02'
+  max: '2.013e-02'
+  mean: '9.22e-05'
+  min: '-1.982e-02'
   shape:
   - 64
   - 64
   - 3
   - 3
-  sum: '-2.979e+00'
+  sum: '3.399e+00'
 grads.network.layer1.1.bn1.bias:
   device: cuda:0
-  max: '8.757e-03'
-  mean: '3.335e-04'
-  min: '-8.009e-03'
+  max: '5.703e-03'
+  mean: '-5.734e-04'
+  min: '-8.499e-03'
   shape:
   - 64
-  sum: '2.134e-02'
+  sum: '-3.67e-02'
 grads.network.layer1.1.bn1.weight:
   device: cuda:0
-  max: '1.031e-02'
-  mean: '-1.251e-09'
-  min: '-8.325e-03'
+  max: '9.981e-03'
+  mean: '-4.860e-09'
+  min: '-8.737e-03'
   shape:
   - 64
-  sum: '-8.009e-08'
+  sum: '-3.111e-07'
 grads.network.layer1.1.bn2.bias:
   device: cuda:0
-  max: '3.688e-03'
-  mean: '-1.159e-04'
-  min: '-3.878e-03'
+  max: '4.094e-03'
+  mean: '-1.796e-04'
+  min: '-4.228e-03'
   shape:
   - 64
-  sum: '-7.419e-03'
+  sum: '-1.15e-02'
 grads.network.layer1.1.bn2.weight:
   device: cuda:0
-  max: '7.533e-03'
-  mean: '-1.319e-04'
-  min: '-1.042e-02'
+  max: '1.106e-02'
+  mean: '-3.951e-04'
+  min: '-8.18e-03'
   shape:
   - 64
-  sum: '-8.443e-03'
+  sum: '-2.529e-02'
 grads.network.layer1.1.conv1.weight:
   device: cuda:0
-  max: '1.682e-02'
-  mean: '7.859e-05'
-  min: '-1.756e-02'
+  max: '1.803e-02'
+  mean: '-7.176e-05'
+  min: '-1.731e-02'
   shape:
   - 64
   - 64
   - 3
   - 3
-  sum: '2.897e+00'
+  sum: '-2.645e+00'
 grads.network.layer1.1.conv2.weight:
   device: cuda:0
-  max: '1.164e-02'
-  mean: '-8.183e-05'
-  min: '-1.057e-02'
+  max: '1.123e-02'
+  mean: '-4.017e-06'
+  min: '-1.396e-02'
   shape:
   - 64
   - 64
   - 3
   - 3
-  sum: '-3.017e+00'
+  sum: '-1.481e-01'
 grads.network.layer2.0.bn1.bias:
   device: cuda:0
-  max: '6.346e-03'
-  mean: '3.467e-04'
-  min: '-5.223e-03'
+  max: '4.642e-03'
+  mean: '1.543e-04'
+  min: '-5.930e-03'
   shape:
   - 128
-  sum: '4.438e-02'
+  sum: '1.975e-02'
 grads.network.layer2.0.bn1.weight:
   device: cuda:0
-  max: '4.709e-03'
-  mean: '8.731e-11'
-  min: '-5.212e-03'
+  max: '4.549e-03'
+  mean: '-2.889e-09'
+  min: '-6.023e-03'
   shape:
   - 128
-  sum: '1.118e-08'
+  sum: '-3.697e-07'
 grads.network.layer2.0.bn2.bias:
   device: cuda:0
-  max: '4.109e-03'
-  mean: '1.036e-04'
-  min: '-5.165e-03'
+  max: '3.817e-03'
+  mean: '-2.366e-05'
+  min: '-3.840e-03'
   shape:
   - 128
-  sum: '1.326e-02'
+  sum: '-3.029e-03'
 grads.network.layer2.0.bn2.weight:
   device: cuda:0
-  max: '7.476e-03'
-  mean: '-1.799e-05'
-  min: '-5.677e-03'
+  max: '5.694e-03'
+  mean: '-9.502e-05'
+  min: '-5.515e-03'
   shape:
   - 128
-  sum: '-2.302e-03'
+  sum: '-1.216e-02'
 grads.network.layer2.0.conv1.weight:
   device: cuda:0
-  max: '1.684e-02'
-  mean: '-1.249e-04'
-  min: '-1.531e-02'
+  max: '1.456e-02'
+  mean: '2.676e-05'
+  min: '-1.177e-02'
   shape:
   - 128
   - 64
   - 3
   - 3
-  sum: '-9.211e+00'
+  sum: '1.973e+00'
 grads.network.layer2.0.conv2.weight:
   device: cuda:0
-  max: '9.979e-03'
-  mean: '-4.225e-05'
-  min: '-9.486e-03'
+  max: '8.337e-03'
+  mean: '-3.767e-05'
+  min: '-9.125e-03'
   shape:
   - 128
   - 128
   - 3
   - 3
-  sum: '-6.229e+00'
+  sum: '-5.555e+00'
 grads.network.layer2.0.downsample.0.weight:
   device: cuda:0
-  max: '1.095e-02'
-  mean: '-1.596e-04'
-  min: '-1.44e-02'
+  max: '9.921e-03'
+  mean: '-9.705e-05'
+  min: '-1.303e-02'
   shape:
   - 128
   - 64
   - 1
   - 1
-  sum: '-1.307e+00'
+  sum: '-7.950e-01'
 grads.network.layer2.0.downsample.1.bias:
   device: cuda:0
-  max: '4.109e-03'
-  mean: '1.036e-04'
-  min: '-5.165e-03'
+  max: '3.817e-03'
+  mean: '-2.366e-05'
+  min: '-3.840e-03'
   shape:
   - 128
-  sum: '1.326e-02'
+  sum: '-3.029e-03'
 grads.network.layer2.0.downsample.1.weight:
   device: cuda:0
-  max: '5.643e-03'
-  mean: '-9.116e-05'
-  min: '-5.724e-03'
+  max: '6.796e-03'
+  mean: '1.332e-04'
+  min: '-4.764e-03'
   shape:
   - 128
-  sum: '-1.167e-02'
+  sum: '1.705e-02'
 grads.network.layer2.1.bn1.bias:
   device: cuda:0
-  max: '3.875e-03'
-  mean: '2.269e-04'
-  min: '-3.296e-03'
+  max: '4.862e-03'
+  mean: '7.704e-05'
+  min: '-3.708e-03'
   shape:
   - 128
-  sum: '2.904e-02'
+  sum: '9.861e-03'
 grads.network.layer2.1.bn1.weight:
   device: cuda:0
-  max: '3.931e-03'
-  mean: '1.222e-09'
-  min: '-5.433e-03'
+  max: '5.664e-03'
+  mean: '-1.659e-09'
+  min: '-6.275e-03'
   shape:
   - 128
-  sum: '1.565e-07'
+  sum: '-2.123e-07'
 grads.network.layer2.1.bn2.bias:
   device: cuda:0
-  max: '3.029e-03'
-  mean: '1.229e-04'
-  min: '-2.608e-03'
+  max: '2.931e-03'
+  mean: '9.268e-05'
+  min: '-3.275e-03'
   shape:
   - 128
-  sum: '1.574e-02'
+  sum: '1.186e-02'
 grads.network.layer2.1.bn2.weight:
   device: cuda:0
-  max: '4.324e-03'
-  mean: '1.091e-04'
-  min: '-4.632e-03'
+  max: '3.809e-03'
+  mean: '-3.820e-05'
+  min: '-3.601e-03'
   shape:
   - 128
-  sum: '1.397e-02'
+  sum: '-4.89e-03'
 grads.network.layer2.1.conv1.weight:
   device: cuda:0
-  max: '8.457e-03'
-  mean: '-2.224e-05'
-  min: '-8.334e-03'
+  max: '8.135e-03'
+  mean: '-4.213e-06'
+  min: '-8.613e-03'
   shape:
   - 128
   - 128
   - 3
   - 3
-  sum: '-3.279e+00'
+  sum: '-6.212e-01'
 grads.network.layer2.1.conv2.weight:
   device: cuda:0
-  max: '6.936e-03'
-  mean: '-2.779e-05'
-  min: '-6.811e-03'
+  max: '6.837e-03'
+  mean: '-2.916e-05'
+  min: '-8.253e-03'
   shape:
   - 128
   - 128
   - 3
   - 3
-  sum: '-4.098e+00'
+  sum: '-4.300e+00'
 grads.network.layer3.0.bn1.bias:
   device: cuda:0
-  max: '2.770e-03'
-  mean: '5.8e-05'
-  min: '-3.176e-03'
+  max: '2.39e-03'
+  mean: '-2.179e-05'
+  min: '-2.675e-03'
   shape:
   - 256
-  sum: '1.485e-02'
+  sum: '-5.578e-03'
 grads.network.layer3.0.bn1.weight:
   device: cuda:0
-  max: '4.501e-03'
-  mean: '-1.965e-09'
-  min: '-3.247e-03'
+  max: '3.958e-03'
+  mean: '-3.711e-10'
+  min: '-3.378e-03'
   shape:
   - 256
-  sum: '-5.029e-07'
+  sum: '-9.499e-08'
 grads.network.layer3.0.bn2.bias:
   device: cuda:0
-  max: '2.85e-03'
-  mean: '2.536e-05'
-  min: '-3.149e-03'
+  max: '2.351e-03'
+  mean: '9.29e-06'
+  min: '-2.234e-03'
   shape:
   - 256
-  sum: '6.493e-03'
+  sum: '2.378e-03'
 grads.network.layer3.0.bn2.weight:
   device: cuda:0
-  max: '3.689e-03'
-  mean: '-1.113e-04'
-  min: '-3.318e-03'
+  max: '2.677e-03'
+  mean: '-6.531e-06'
+  min: '-3.361e-03'
   shape:
   - 256
-  sum: '-2.850e-02'
+  sum: '-1.672e-03'
 grads.network.layer3.0.conv1.weight:
   device: cuda:0
-  max: '8.373e-03'
-  mean: '1.589e-06'
-  min: '-8.216e-03'
+  max: '8.356e-03'
+  mean: '-1.346e-05'
+  min: '-7.572e-03'
   shape:
   - 256
   - 128
   - 3
   - 3
-  sum: '4.685e-01'
+  sum: '-3.969e+00'
 grads.network.layer3.0.conv2.weight:
   device: cuda:0
-  max: '7.279e-03'
-  mean: '3.597e-07'
-  min: '-6.876e-03'
+  max: '4.846e-03'
+  mean: '8.220e-06'
+  min: '-6.097e-03'
   shape:
   - 256
   - 256
   - 3
   - 3
-  sum: '2.122e-01'
+  sum: '4.849e+00'
 grads.network.layer3.0.downsample.0.weight:
   device: cuda:0
-  max: '7.642e-03'
-  mean: '7.352e-06'
-  min: '-6.323e-03'
+  max: '6.926e-03'
+  mean: '2.394e-05'
+  min: '-5.875e-03'
   shape:
   - 256
   - 128
   - 1
   - 1
-  sum: '2.409e-01'
+  sum: '7.844e-01'
 grads.network.layer3.0.downsample.1.bias:
   device: cuda:0
-  max: '2.85e-03'
-  mean: '2.536e-05'
-  min: '-3.149e-03'
+  max: '2.351e-03'
+  mean: '9.29e-06'
+  min: '-2.234e-03'
   shape:
   - 256
-  sum: '6.493e-03'
+  sum: '2.378e-03'
 grads.network.layer3.0.downsample.1.weight:
   device: cuda:0
-  max: '3.721e-03'
-  mean: '1.250e-04'
-  min: '-3.504e-03'
+  max: '3.362e-03'
+  mean: '4.264e-05'
+  min: '-2.955e-03'
   shape:
   - 256
-  sum: '3.201e-02'
+  sum: '1.092e-02'
 grads.network.layer3.1.bn1.bias:
   device: cuda:0
-  max: '2.634e-03'
-  mean: '3.564e-05'
-  min: '-2.17e-03'
+  max: '1.942e-03'
+  mean: '-9.510e-06'
+  min: '-2.224e-03'
   shape:
   - 256
-  sum: '9.124e-03'
+  sum: '-2.435e-03'
 grads.network.layer3.1.bn1.weight:
   device: cuda:0
-  max: '2.518e-03'
-  mean: '1.983e-10'
-  min: '-2.539e-03'
+  max: '2.689e-03'
+  mean: '-5.948e-10'
+  min: '-3.468e-03'
   shape:
   - 256
-  sum: '5.076e-08'
+  sum: '-1.523e-07'
 grads.network.layer3.1.bn2.bias:
   device: cuda:0
-  max: '2.024e-03'
-  mean: '6.733e-05'
-  min: '-1.777e-03'
+  max: '1.634e-03'
+  mean: '2.694e-05'
+  min: '-1.504e-03'
   shape:
   - 256
-  sum: '1.724e-02'
+  sum: '6.896e-03'
 grads.network.layer3.1.bn2.weight:
   device: cuda:0
-  max: '2.737e-03'
-  mean: '-1.37e-05'
-  min: '-2.669e-03'
+  max: '2.593e-03'
+  mean: '-3.611e-05'
+  min: '-3.369e-03'
   shape:
   - 256
-  sum: '-3.507e-03'
+  sum: '-9.244e-03'
 grads.network.layer3.1.conv1.weight:
   device: cuda:0
-  max: '5.457e-03'
-  mean: '-1.498e-06'
-  min: '-5.48e-03'
+  max: '5.157e-03'
+  mean: '8.517e-06'
+  min: '-4.620e-03'
   shape:
   - 256
   - 256
   - 3
   - 3
-  sum: '-8.836e-01'
+  sum: '5.024e+00'
 grads.network.layer3.1.conv2.weight:
   device: cuda:0
-  max: '4.436e-03'
-  mean: '7.578e-07'
-  min: '-4.453e-03'
+  max: '4.516e-03'
+  mean: '-1.377e-05'
+  min: '-3.671e-03'
   shape:
   - 256
   - 256
   - 3
   - 3
-  sum: '4.469e-01'
+  sum: '-8.122e+00'
 grads.network.layer4.0.bn1.bias:
   device: cuda:0
-  max: '1.529e-03'
-  mean: '4.731e-05'
-  min: '-1.600e-03'
+  max: '1.389e-03'
+  mean: '2.127e-05'
+  min: '-1.66e-03'
   shape:
   - 512
-  sum: '2.422e-02'
+  sum: '1.089e-02'
 grads.network.layer4.0.bn1.weight:
   device: cuda:0
-  max: '2.836e-03'
-  mean: '3.382e-09'
-  min: '-1.948e-03'
+  max: '3.501e-03'
+  mean: '2.910e-09'
+  min: '-3.476e-03'
   shape:
   - 512
-  sum: '1.731e-06'
+  sum: '1.490e-06'
 grads.network.layer4.0.bn2.bias:
   device: cuda:0
-  max: '4.572e-03'
-  mean: '2.561e-04'
-  min: '-3.552e-03'
+  max: '4.854e-03'
+  mean: '2.704e-04'
+  min: '-3.529e-03'
   shape:
   - 512
-  sum: '1.311e-01'
+  sum: '1.385e-01'
 grads.network.layer4.0.bn2.weight:
   device: cuda:0
-  max: '4.103e-03'
-  mean: '2.118e-04'
-  min: '-2.870e-03'
+  max: '3.923e-03'
+  mean: '1.858e-04'
+  min: '-2.593e-03'
   shape:
   - 512
-  sum: '1.084e-01'
+  sum: '9.515e-02'
 grads.network.layer4.0.conv1.weight:
   device: cuda:0
-  max: '5.52e-03'
-  mean: '-1.319e-05'
-  min: '-5.398e-03'
+  max: '5.933e-03'
+  mean: '-4.272e-06'
+  min: '-5.908e-03'
   shape:
   - 512
   - 256
   - 3
   - 3
-  sum: '-1.556e+01'
+  sum: '-5.039e+00'
 grads.network.layer4.0.conv2.weight:
   device: cuda:0
-  max: '3.6e-03'
-  mean: '-4.087e-06'
-  min: '-4.384e-03'
+  max: '3.158e-03'
+  mean: '2.135e-06'
+  min: '-3.562e-03'
   shape:
   - 512
   - 512
   - 3
   - 3
-  sum: '-9.643e+00'
+  sum: '5.037e+00'
 grads.network.layer4.0.downsample.0.weight:
   device: cuda:0
-  max: '4.390e-03'
-  mean: '-2.207e-06'
-  min: '-5.205e-03'
+  max: '4.447e-03'
+  mean: '1.095e-05'
+  min: '-4.228e-03'
   shape:
   - 512
   - 256
   - 1
   - 1
-  sum: '-2.893e-01'
+  sum: '1.436e+00'
 grads.network.layer4.0.downsample.1.bias:
   device: cuda:0
-  max: '4.572e-03'
-  mean: '2.561e-04'
-  min: '-3.552e-03'
+  max: '4.854e-03'
+  mean: '2.704e-04'
+  min: '-3.529e-03'
   shape:
   - 512
-  sum: '1.311e-01'
+  sum: '1.385e-01'
 grads.network.layer4.0.downsample.1.weight:
   device: cuda:0
-  max: '3.626e-03'
-  mean: '1.351e-04'
-  min: '-3.259e-03'
+  max: '2.905e-03'
+  mean: '1.773e-04'
+  min: '-3.313e-03'
   shape:
   - 512
-  sum: '6.917e-02'
+  sum: '9.076e-02'
 grads.network.layer4.1.bn1.bias:
   device: cuda:0
-  max: '1.327e-03'
-  mean: '1.918e-05'
-  min: '-1.29e-03'
+  max: '1.308e-03'
+  mean: '1.466e-05'
+  min: '-1.400e-03'
   shape:
   - 512
-  sum: '9.818e-03'
+  sum: '7.505e-03'
 grads.network.layer4.1.bn1.weight:
   device: cuda:0
-  max: '2.764e-03'
-  mean: '3.335e-09'
-  min: '-2.679e-03'
+  max: '2.31e-03'
+  mean: '2.845e-09'
+  min: '-2.817e-03'
   shape:
   - 512
-  sum: '1.707e-06'
+  sum: '1.457e-06'
 grads.network.layer4.1.bn2.bias:
   device: cuda:0
-  max: '7.656e-03'
-  mean: '4.169e-04'
-  min: '-5.189e-03'
+  max: '7.246e-03'
+  mean: '4.285e-04'
+  min: '-4.605e-03'
   shape:
   - 512
-  sum: '2.134e-01'
+  sum: '2.194e-01'
 grads.network.layer4.1.bn2.weight:
   device: cuda:0
-  max: '3.609e-03'
-  mean: '2.029e-04'
-  min: '-3.125e-03'
+  max: '3.809e-03'
+  mean: '1.852e-04'
+  min: '-3.260e-03'
   shape:
   - 512
-  sum: '1.039e-01'
+  sum: '9.484e-02'
 grads.network.layer4.1.conv1.weight:
   device: cuda:0
-  max: '4.400e-03'
-  mean: '-9.705e-06'
-  min: '-3.475e-03'
+  max: '3.772e-03'
+  mean: '-4.186e-06'
+  min: '-3.472e-03'
   shape:
   - 512
   - 512
   - 3
   - 3
-  sum: '-2.29e+01'
+  sum: '-9.876e+00'
 grads.network.layer4.1.conv2.weight:
   device: cuda:0
-  max: '3.91e-03'
-  mean: '1.074e-05'
-  min: '-2.999e-03'
+  max: '3.217e-03'
+  mean: '6.716e-06'
+  min: '-3.656e-03'
   shape:
   - 512
   - 512
   - 3
   - 3
-  sum: '2.535e+01'
+  sum: '1.584e+01'
 outputs.logits:
   device: cuda:0
-  max: '2.934e+00'
-  mean: '-8.071e-04'
-  min: '-2.896e+00'
+  max: '2.513e+00'
+  mean: '-5.438e-04'
+  min: '-2.572e+00'
   shape:
   - 64
   - 1000
-  sum: '-5.165e+01'
+  sum: '-3.480e+01'
 outputs.loss:
   device: cuda:0
-  max: '7.073e+00'
-  mean: '7.073e+00'
-  min: '7.073e+00'
+  max: '7.074e+00'
+  mean: '7.074e+00'
+  min: '7.074e+00'
   shape: []
-  sum: '7.073e+00'
+  sum: '7.074e+00'
 outputs.y:
   device: cuda:0
   max: 988

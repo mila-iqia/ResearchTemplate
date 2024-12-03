@@ -1,0 +1,51 @@
+network.0.1.bias:
+  device: cpu
+  max: '3.630e-02'
+  mean: '1.357e-03'
+  min: '-3.509e-02'
+  shape:
+  - 128
+  sum: '1.736e-01'
+network.0.1.weight:
+  device: cpu
+  max: '3.671e-02'
+  mean: '7.046e-05'
+  min: '-3.671e-02'
+  shape:
+  - 128
+  - 784
+  sum: '7.070e+00'
+network.1.0.bias:
+  device: cpu
+  max: '8.321e-02'
+  mean: '-6.689e-03'
+  min: '-8.653e-02'
+  shape:
+  - 128
+  sum: '-8.562e-01'
+network.1.0.weight:
+  device: cpu
+  max: '8.935e-02'
+  mean: '1.302e-04'
+  min: '-8.938e-02'
+  shape:
+  - 128
+  - 128
+  sum: '2.134e+00'
+network.2.0.bias:
+  device: cpu
+  max: '4.138e-02'
+  mean: '-3.545e-02'
+  min: '-8.038e-02'
+  shape:
+  - 10
+  sum: '-3.545e-01'
+network.2.0.weight:
+  device: cpu
+  max: '8.929e-02'
+  mean: '-6.76e-04'
+  min: '-8.917e-02'
+  shape:
+  - 10
+  - 128
+  sum: '-8.652e-01'
