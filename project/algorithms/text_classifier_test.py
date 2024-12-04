@@ -16,7 +16,7 @@ from project.datamodules.text.text_classification import TextClassificationDataM
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 
-from .testsuites.lightning_module_tests import LightningModuleTests
+from .testsuites.lightning_module_tests import GetStuffFromFirstTrainingStep, LightningModuleTests
 
 
 class RecordTrainingLossCb(lightning.Callback):
@@ -50,22 +50,16 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
     )
     def test_backward_pass_is_reproducible(  # type: ignore
         self,
-        datamodule: TextClassificationDataModule,
-        algorithm: TextClassifier,
-        seed: int,
-        accelerator: str,
-        devices: int | list[int],
+        training_step_content: tuple[
+            TextClassifier, GetStuffFromFirstTrainingStep, list[Any], list[Any]
+        ],
         tensor_regression: TensorRegressionFixture,
-        tmp_path: Path,
+        accelerator: str,
     ):
         return super().test_backward_pass_is_reproducible(
-            datamodule=datamodule,
-            algorithm=algorithm,
-            seed=seed,
-            accelerator=accelerator,
-            devices=devices,
+            training_step_content=training_step_content,
             tensor_regression=tensor_regression,
-            tmp_path=tmp_path,
+            accelerator=accelerator,
         )
 
     @pytest.mark.skip(reason="TODO: Seems to be causing issues due to DDP?")

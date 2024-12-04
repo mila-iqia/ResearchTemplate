@@ -686,14 +686,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         metafunc.parametrize(arg_name, arg_values, indirect=indirect, _param_mark=marker)
 
 
-def pytest_ignore_collect(path: str):
-    p = Path(path)
-    # fixme: Trying to fix doctest issues for project/configs/algorithm/lr_scheduler/__init__.py::project.configs.algorithm.lr_scheduler.StepLRConfig
-    if p.name in ["lr_scheduler", "optimizer"] and "configs" in p.parts:
-        return True
-    return False
-
-
 def pytest_configure(config: pytest.Config):
     config.addinivalue_line("markers", "fast: mark test as fast to run (after fixtures are setup)")
     config.addinivalue_line(
