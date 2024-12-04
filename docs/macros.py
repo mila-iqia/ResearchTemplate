@@ -14,16 +14,20 @@ if typing.TYPE_CHECKING:
     from mkdocs_macros.plugin import MacrosPlugin
 
 import lightning
-from mkdocs_autoref_plugin.autoref_plugin import default_reference_sources
 
-default_reference_sources.extend(
-    [
-        lightning.Trainer,
-        lightning.LightningModule,
-        lightning.LightningDataModule,
-        torch.nn.Module,
-    ]
-)
+try:
+    from mkdocs_autoref_plugin.autoref_plugin import default_reference_sources
+
+    default_reference_sources.extend(
+        [
+            lightning.Trainer,
+            lightning.LightningModule,
+            lightning.LightningDataModule,
+            torch.nn.Module,
+        ]
+    )
+except ImportError:
+    pass
 
 logger = logging.getLogger(__name__)
 
