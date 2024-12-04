@@ -18,11 +18,11 @@ network.params.1:
 network.params.2:
   device: cpu
   max: '7.950e-05'
-  mean: '-4.832e-14'
+  mean: '1.123e-12'
   min: '-4.535e-05'
   shape:
   - 10
-  sum: '-4.832e-13'
+  sum: '1.123e-11'
 network.params.3:
   device: cpu
   max: '1.421e-01'

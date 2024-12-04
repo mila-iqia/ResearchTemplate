@@ -75,20 +75,20 @@ grads.network.params.5:
 grads.network.params.6:
   device: cuda:0
   max: '6.867e-02'
-  mean: '-7.451e-10'
+  mean: '-1.490e-09'
   min: '-7.932e-02'
   shape:
   - 10
-  sum: '-7.451e-09'
+  sum: '-1.490e-08'
 grads.network.params.7:
   device: cuda:0
   max: '7.035e-02'
-  mean: '-1.193e-10'
+  mean: '-3.638e-11'
   min: '-7.68e-02'
   shape:
   - 256
   - 10
-  sum: '-3.055e-07'
+  sum: '-9.313e-08'
 outputs.logits:
   device: cuda:0
   max: '8.371e-01'
