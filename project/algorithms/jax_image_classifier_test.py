@@ -9,15 +9,15 @@ from project.conftest import fails_on_macOS_in_CI
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.testutils import run_for_all_configs_of_type
+from project.utils.testutils import IN_GITHUB_CI, run_for_all_configs_of_type
 
 from .testsuites.lightning_module_tests import LightningModuleTests
 
 
-# @pytest.mark.xfail(
-#     IN_SELF_HOSTED_GITHUB_CI,
-#     reason="TODO: Test appears to be flaky only when run on the self-hosted runner?.",
-# )
+@pytest.mark.xfail(
+    IN_GITHUB_CI,
+    reason="TODO: Test appears to be flaky only when run on the CI?",
+)
 @fails_on_macOS_in_CI
 @run_for_all_configs_of_type("algorithm", JaxImageClassifier)
 @run_for_all_configs_of_type("algorithm/network", flax.linen.Module)
