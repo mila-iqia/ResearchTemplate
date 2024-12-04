@@ -1,6 +1,6 @@
 """Datamodules (datasets + preprocessing + dataloading)
 
-See the :ref:`lightning.LightningDataModule` class for more information.
+See the `lightning.LightningDataModule` class for more information.
 """
 
 from .image_classification import ImageClassificationDataModule

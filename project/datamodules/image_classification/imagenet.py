@@ -46,10 +46,10 @@ class ImageNetDataModule(ImageClassificationDataModule):
     - Made this a subclass of VisionDataModule
 
     Notes:
+
     - train_dataloader uses the train split of imagenet2012 and puts away a portion of it for the validation split.
     - val_dataloader uses the part of the train split of imagenet2012  that was not used for training via
         `num_imgs_per_val_class`
-        - TODO: needs to pass split='val' to UnlabeledImagenet.
     - test_dataloader uses the validation split of imagenet2012 for testing.
         - TODO: need to pass num_imgs_per_class=-1 for test dataset and split="test".
     """
