@@ -231,14 +231,21 @@ def test_fast_dev_run(experiment_dictconfig: DictConfig):
     assert isinstance(result["value"], float)
 
 
-@pytest.mark.xfail(reason="TODO: cluster sweep example causes pydantic serialization error")
 def test_run_auto_schema_via_cli_without_errors():
     """Checks that the command completes without errors."""
     # Run programmatically instead of with a subprocess so we can get nice coverage stats.
     # assuming we're at the project root directory.
     from hydra_auto_schema.__main__ import main as hydra_auto_schema_main
 
-    hydra_auto_schema_main([str(CONFIG_DIR), "--stop-on-error", "-vv"])
+    hydra_auto_schema_main(
+        [
+            f"{REPO_ROOTDIR}",
+            f"--configs_dir={CONFIG_DIR}",
+            "--stop-on-error",
+            "--regen-schemas",
+            "-vv",
+        ]
+    )
 
 
 # TODO: Add some more integration tests:
