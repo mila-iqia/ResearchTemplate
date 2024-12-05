@@ -48,7 +48,6 @@ auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     add_headers=False,  # don't fallback to adding headers if we can't use vscode settings file.
 )
 
-# setup_logging(log_level="INFO", global_log_level="ERROR")
 add_configs_to_hydra_store()
 
 
@@ -73,12 +72,10 @@ def main(dict_config: DictConfig) -> dict:
     """
 
     print_config(dict_config, resolve=False)
-    if dict_config["algorithm"] is None:
-        raise ValueError("The 'algorithm' config group is required for the experiment to run.")
+    assert dict_config["algorithm"] is not None
 
     # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
-
     setup_logging(
         log_level=config.log_level,
         global_log_level="DEBUG" if config.debug else "INFO" if config.verbose else "WARNING",
