@@ -15,7 +15,7 @@ This is a project template for ML researchers developed at [Mila](https://www.mi
 
 See [this introduction to the project](https://mila-iqia.github.io/ResearchTemplate/intro) for a detailed description of the context and motivations behind this project.
 
-🚧 Please note: This is a work-in-progress and will only get better over time! We want your feedback!🙏
+🚧 Please note: This is a work-in-progress and will get better over time! We want your feedback!🙏
 
 ## Installation
 
