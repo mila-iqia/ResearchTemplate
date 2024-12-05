@@ -28,7 +28,7 @@ def train(
     algorithm,
     /,
     **kwargs,
-) -> Any:
+) -> tuple[Any, Any]:
     raise NotImplementedError(
         f"There is no registered handler for training algorithm {algorithm} of type "
         f"{type(algorithm)}! (kwargs: {kwargs})."
@@ -92,7 +92,9 @@ def evaluate_lightningmodule(
     /,
     *,
     trainer: lightning.Trainer,
-    datamodule: lightning.LightningDataModule | None,
+    datamodule: lightning.LightningDataModule | None = None,
+    config: Config,
+    train_results: Any = None,
 ) -> tuple[MetricName, float | None, dict]:
     """Evaluates the algorithm and returns the metrics.
 
@@ -100,6 +102,7 @@ def evaluate_lightningmodule(
     training error when `trainer.overfit_batches != 0` (e.g. when debugging or testing). Otherwise,
     if `trainer.limit_val_batches == 0`, returns the test error.
     """
+    datamodule = datamodule or getattr(algorithm, "datamodule", None)
 
     # exp.trainer.logger.log_hyperparams()
     # When overfitting on a single batch or only training, we return the train error.
@@ -169,7 +172,7 @@ def instantiate_datamodule(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
             f"{datamodule_config=}"
         )
-        return
+        return datamodule_config
 
     logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
     return hydra.utils.instantiate(datamodule_config)
@@ -180,8 +183,8 @@ def train_lightningmodule(
     algorithm: lightning.LightningModule,
     /,
     *,
-    datamodule: lightning.LightningDataModule | None,
     trainer: lightning.Trainer | None,
+    datamodule: lightning.LightningDataModule | None = None,
     config: Config,
 ):
     # Create the Trainer from the config.

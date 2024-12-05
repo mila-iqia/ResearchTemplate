@@ -70,7 +70,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     ) -> lightning.Trainer | JaxTrainer:
         setup_logging(log_level=experiment_config.log_level)
         lightning.seed_everything(experiment_config.seed, workers=True)
-        return instantiate_trainer(experiment_config)
+        return instantiate_trainer(experiment_config.trainer)
 
     @pytest.fixture(scope="class")
     def algorithm(
@@ -82,7 +82,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     ):
         """Fixture that creates the "algorithm" (a
         [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule)
         if isinstance(trainer, lightning.Trainer) and isinstance(
             algorithm, lightning.LightningModule
         ):

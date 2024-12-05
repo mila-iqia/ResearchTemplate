@@ -120,8 +120,8 @@ def test_notebook_commands_dont_cause_errors(experiment_dictconfig: DictConfig):
     # _experiment = _setup_experiment(config)
     setup_logging(log_level=config.log_level)
     lightning.seed_everything(config.seed, workers=True)
-    _trainer = instantiate_trainer(config)
+    _trainer = instantiate_trainer(config.trainer)
     datamodule = instantiate_datamodule(config.datamodule)
-    _algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
+    _algorithm = instantiate_algorithm(config, datamodule=datamodule)
 
     # Note: Here we don't actually do anything with the objects.

@@ -331,7 +331,7 @@ def algorithm(
 ):
     """Fixture that creates the "algorithm" (a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+    algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
         with trainer.init_module(), device:
             # A bit hacky, but we have to do this because the lightningmodule isn't associated
@@ -346,8 +346,9 @@ def trainer(
     experiment_config: Config,
 ) -> pl.Trainer | JaxTrainer:
     setup_logging(log_level=experiment_config.log_level)
+    # put here to copy what's done in main.py
     lightning.seed_everything(experiment_config.seed, workers=True)
-    return instantiate_trainer(experiment_config)
+    return instantiate_trainer(experiment_config.trainer)
 
 
 @pytest.fixture(scope="session")

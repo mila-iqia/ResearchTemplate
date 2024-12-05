@@ -84,8 +84,12 @@ def main(dict_config: DictConfig) -> dict:
         global_log_level="DEBUG" if config.debug else "INFO" if config.verbose else "WARNING",
     )
 
+    # Seed the random number generators, so the weights that are
+    # constructed are deterministic and reproducible.
+    lightning.seed_everything(seed=config.seed, workers=True)
+
     # Create the algo.
-    algorithm = hydra.utils.instantiate(config.algorithm)
+    algorithm = instantiate_algorithm(config)
 
     # Create the trainer
     trainer = instantiate_trainer(config.trainer)
@@ -142,7 +146,9 @@ def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
     project_logger.setLevel(log_level.upper())
 
 
-def instantiate_algorithm(config: Config) -> lightning.LightningModule | JaxModule:
+def instantiate_algorithm(
+    config: Config, datamodule: lightning.LightningDataModule | None = None
+) -> lightning.LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
     It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
@@ -151,15 +157,14 @@ def instantiate_algorithm(config: Config) -> lightning.LightningModule | JaxModu
 
     The instantiated datamodule and network will be passed to the algorithm's constructor.
     """
-    # seed the random number generators, so the weights that are
-    # constructed are deterministic and reproducible.
-    lightning.seed_everything(seed=config.seed, workers=True)
 
     # Create the algorithm
     algo_config = config.algorithm
 
     # Create the datamodule (if present) from the config
-    datamodule: lightning.LightningDataModule | None = instantiate_datamodule(config.datamodule)
+    if datamodule is None and config.datamodule is not None:
+        datamodule = instantiate_datamodule(config.datamodule)
+
     if datamodule:
         algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
     else:

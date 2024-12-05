@@ -1,7 +1,9 @@
 # ADAPTED FROM https://github.com/facebookresearch/hydra/blob/main/examples/advanced/hydra_app_example/tests/test_example.py
 from __future__ import annotations
 
+import shlex
 import shutil
+import subprocess
 import sys
 import uuid
 from unittest.mock import Mock
@@ -12,7 +14,9 @@ import torch
 from _pytest.mark.structures import ParameterSet
 from hydra.types import RunMode
 from omegaconf import DictConfig
+from pytest_regressions.file_regression import FileRegressionFixture
 
+import project.experiment
 import project.main
 from project.conftest import command_line_overrides, skip_on_macOS_in_CI
 from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
@@ -46,31 +50,20 @@ def test_torch_can_use_the_GPU():
 
 @pytest.fixture
 def mock_train(monkeypatch: pytest.MonkeyPatch):
-    mock_train_fn = Mock(spec=project.main.train)
+    mock_train_fn = Mock(spec=project.main.train, return_value=(None, None))
     monkeypatch.setattr(project.main, project.main.train.__name__, mock_train_fn)
     return mock_train_fn
 
 
 @pytest.fixture
-def mock_evaluate_lightningmodule(monkeypatch: pytest.MonkeyPatch):
-    mock_eval_lightningmodule = Mock(
-        spec=project.main.evaluate_lightningmodule, return_value=("fake", 0.0, {})
-    )
+def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
+    mock_eval = Mock(spec=project.experiment.evaluate, return_value=("fake", 0.0, {}))
     monkeypatch.setattr(
-        project.main, project.main.evaluate_lightningmodule.__name__, mock_eval_lightningmodule
+        project.main,
+        project.experiment.evaluate.__name__,
+        mock_eval,
     )
-    return mock_eval_lightningmodule
-
-
-@pytest.fixture
-def mock_evaluate_jax_module(monkeypatch: pytest.MonkeyPatch):
-    mock_eval_jax_module = Mock(
-        spec=project.main.evaluate_jax_module, return_value=("fake", 0.0, {})
-    )
-    monkeypatch.setattr(
-        project.main, project.main.evaluate_jax_module.__name__, mock_eval_jax_module
-    )
-    return mock_eval_jax_module
+    return mock_eval
 
 
 experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
@@ -92,11 +85,6 @@ experiment_commands_to_test = [
             pytest.mark.skipif(
                 IN_GITHUB_CI,
                 reason="Remote launcher tries to do a git push, doesn't work in github CI.",
-            ),
-            pytest.mark.xfail(
-                raises=TypeError,
-                reason="TODO: Getting a `TypeError: cannot pickle 'weakref.ReferenceType' object` error.",
-                strict=False,
             ),
         ],
     ),
@@ -152,8 +140,7 @@ def test_experiment_config_is_tested(experiment_config: str):
 def test_can_load_experiment_configs(
     experiment_dictconfig: DictConfig,
     mock_train: Mock,
-    mock_evaluate_lightningmodule: Mock,
-    mock_evaluate_jax_module: Mock,
+    mock_evaluate: Mock,
 ):
     # Mock out some part of the `main` function to not actually run anything.
     if experiment_dictconfig["hydra"]["mode"] == RunMode.MULTIRUN:
@@ -168,10 +155,7 @@ def test_can_load_experiment_configs(
         assert results is not None
 
     mock_train.assert_called_once()
-    # One of them should have been called once.
-    assert (mock_evaluate_lightningmodule.call_count == 1) ^ (
-        mock_evaluate_jax_module.call_count == 1
-    )
+    mock_evaluate.assert_called_once()
 
 
 @pytest.mark.slow
@@ -210,6 +194,13 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
         match="Did you forget to set a value for the 'datamodule' config?",
     ):
         _ = resolve_dictconfig(experiment_dictconfig)
+
+
+def test_help_string(file_regression: FileRegressionFixture) -> None:
+    help_string = subprocess.run(
+        shlex.split("python project/main.py --help"), text=True, capture_output=True
+    ).stderr
+    file_regression.check(help_string)
 
 
 @pytest.mark.skipif(
