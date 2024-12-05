@@ -93,13 +93,13 @@ from torch.utils.data import DataLoader
 
 from project.configs.config import Config
 from project.datamodules.vision import VisionDataModule, num_cpus_on_node
-from project.experiment import (
+from project.main import (
+    PROJECT_NAME,
     instantiate_algorithm,
     instantiate_datamodule,
     instantiate_trainer,
     setup_logging,
 )
-from project.main import PROJECT_NAME
 from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig

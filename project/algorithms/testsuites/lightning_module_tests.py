@@ -22,7 +22,7 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.conftest import DEFAULT_SEED
-from project.experiment import instantiate_algorithm, instantiate_trainer, setup_logging
+from project.main import instantiate_algorithm, instantiate_trainer, setup_logging
 from project.trainers.jax_trainer import JaxTrainer
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.typing_utils import PyTree, is_sequence_of

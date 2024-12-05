@@ -11,6 +11,7 @@ This does the following:
 from __future__ import annotations
 
 import dataclasses
+import functools
 import logging
 import operator
 import os
@@ -25,26 +26,24 @@ import lightning.pytorch
 import lightning.pytorch.loggers
 import omegaconf
 import rich
+import rich.logging
 import wandb
 from hydra_plugins.auto_schema import auto_schema_plugin
+from hydra_zen.typing import Builds
+from lightning import Trainer
 from omegaconf import DictConfig
 
 from project.algorithms.jax_ppo import EvalMetrics
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.experiment import (
-    instantiate_algorithm,
-    instantiate_datamodule,
-    setup_logging,
-)
 from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
 
 PROJECT_NAME = Path(__file__).parent.name
 REPO_ROOTDIR = Path(__file__).parent.parent
+logger = logging.getLogger(__name__)
 
-setup_logging(log_level="INFO", global_log_level="ERROR")
 
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
@@ -55,6 +54,7 @@ auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     add_headers=False,  # don't fallback to adding headers if we can't use vscode settings file.
 )
 
+# setup_logging(log_level="INFO", global_log_level="ERROR")
 add_configs_to_hydra_store()
 
 
@@ -78,6 +78,8 @@ def main(dict_config: DictConfig) -> dict:
     4. Returns the evaluation metrics.
     """
     print_config(dict_config, resolve=False)
+    if dict_config["algorithm"] is None:
+        raise ValueError("The 'algorithm' config group is required for the experiment to run.")
 
     # Resolve all the interpolations in the configs.
     config: Config = resolve_dictconfig(dict_config)
@@ -91,22 +93,13 @@ def main(dict_config: DictConfig) -> dict:
     # constructed are deterministic and reproducible.
     lightning.seed_everything(seed=config.seed, workers=True)
 
-    # Create the Trainer
-    trainer_config = config.trainer.copy()  # Avoid mutating the config if possible.
-    callbacks: list[lightning.Callback] | None = instantiate_values(
-        trainer_config.pop("callbacks", None)
-    )
-    logger: list[lightning.pytorch.loggers.Logger] | None = instantiate_values(
-        trainer_config.pop("logger", None)
-    )
-    trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
-        trainer_config, callbacks=callbacks, logger=logger
-    )
+    # Create the Trainer from the config.
+    trainer = instantiate_trainer(config.trainer)
 
-    # Create the datamodule (if present)
+    # Create the datamodule (if present) from the config
     datamodule: lightning.LightningDataModule | None = instantiate_datamodule(config.datamodule)
 
-    # Create the "algorithm"
+    # Create the algo.
     algorithm: lightning.LightningModule | JaxModule = instantiate_algorithm(
         config.algorithm, datamodule=datamodule
     )
@@ -119,7 +112,10 @@ def main(dict_config: DictConfig) -> dict:
 
     # Train the algorithm.
     train_results = train(
-        config=config, trainer=trainer, datamodule=datamodule, algorithm=algorithm
+        algorithm,
+        config=config,
+        trainer=trainer,
+        datamodule=datamodule,
     )
 
     # Evaluate the algorithm.
@@ -144,10 +140,12 @@ def main(dict_config: DictConfig) -> dict:
 
 
 def train(
-    config: Config,
-    trainer: lightning.Trainer | JaxTrainer,
-    datamodule: lightning.LightningDataModule | None,
     algorithm: lightning.LightningModule | JaxModule,
+    /,
+    *,
+    datamodule: lightning.LightningDataModule | None,
+    trainer: lightning.Trainer | JaxTrainer,
+    config: Config,
 ):
     if isinstance(trainer, lightning.Trainer):
         assert isinstance(algorithm, lightning.LightningModule)
@@ -181,6 +179,125 @@ def train(
     # TODO: Use ckpt_path argument to load the training state and resume the training run.
     assert config.ckpt_path is None
     return trainer.fit(algorithm, rng=rng)
+
+
+def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
+    from project.main import PROJECT_NAME
+
+    logging.basicConfig(
+        level=global_log_level.upper(),
+        # format="%(asctime)s - %(levelname)s - %(message)s",
+        format="%(message)s",
+        datefmt="[%X]",
+        force=True,
+        handlers=[
+            rich.logging.RichHandler(
+                markup=True,
+                rich_tracebacks=True,
+                tracebacks_width=100,
+                tracebacks_show_locals=False,
+            )
+        ],
+    )
+
+    project_logger = logging.getLogger(PROJECT_NAME)
+    project_logger.setLevel(log_level.upper())
+
+
+def instantiate_trainer(trainer_config: dict | DictConfig) -> Trainer | JaxTrainer:
+    # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
+    # fields have the right type.
+    # Create the Trainer
+    trainer_config = trainer_config.copy()  # Avoid mutating the config.
+    callbacks: list[lightning.Callback] | None = instantiate_values(
+        trainer_config.pop("callbacks", None)
+    )
+    logger: list[lightning.pytorch.loggers.Logger] | None = instantiate_values(
+        trainer_config.pop("logger", None)
+    )
+    trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
+        trainer_config, callbacks=callbacks, logger=logger
+    )
+    return trainer
+
+
+def instantiate_datamodule(
+    datamodule_config: Builds[type[lightning.LightningDataModule]]
+    | lightning.LightningDataModule
+    | None,
+) -> lightning.LightningDataModule | None:
+    """Instantiate the datamodule from the configuration dict.
+
+    Any interpolations in the config will have already been resolved by the time we get here.
+    """
+    if not datamodule_config:
+        return None
+    import lightning
+
+    if isinstance(datamodule_config, lightning.LightningDataModule):
+        logger.info(
+            f"Datamodule was already instantiated (probably to interpolate a field value). "
+            f"{datamodule_config=}"
+        )
+        datamodule = datamodule_config
+    else:
+        logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
+        datamodule = hydra.utils.instantiate(datamodule_config)
+
+    return datamodule
+
+
+def instantiate_algorithm(
+    algorithm_config: Config, datamodule: lightning.LightningDataModule | None
+) -> lightning.LightningModule | JaxModule:
+    """Function used to instantiate the algorithm.
+
+    It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
+    as arguments, to make it easier to swap out different networks and datamodules during
+    experiments.
+
+    The instantiated datamodule and network will be passed to the algorithm's constructor.
+    """
+    # TODO: The algorithm is now always instantiated on the CPU, whereas it used to be instantiated
+    # directly on the default device (GPU).
+    # Create the algorithm
+    algo_config = algorithm_config
+    import lightning
+
+    if isinstance(algo_config, lightning.LightningModule):
+        logger.info(
+            f"Algorithm was already instantiated (probably to interpolate a field value)."
+            f"{algo_config=}"
+        )
+        return algo_config
+
+    if datamodule:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
+    else:
+        algo_or_algo_partial = hydra.utils.instantiate(algo_config)
+
+    if isinstance(algo_or_algo_partial, functools.partial):
+        if datamodule:
+            algorithm = algo_or_algo_partial(datamodule=datamodule)
+        else:
+            algorithm = algo_or_algo_partial()
+    else:
+        # logger.warning(
+        #     f"Your algorithm config {algo_config} doesn't have '_partial_: true' set, which is "
+        #     f"not recommended (since we can't pass the datamodule to the constructor)."
+        # )
+        algorithm = algo_or_algo_partial
+    from project.trainers.jax_trainer import JaxModule
+
+    if not isinstance(algorithm, lightning.LightningModule | JaxModule):
+        logger.warning(
+            UserWarning(
+                f"Your algorithm ({algorithm}) is not a LightningModule. Beware that this isn't "
+                f"explicitly supported at the moment."
+            )
+        )
+
+    return algorithm
 
 
 def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:

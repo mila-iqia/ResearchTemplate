@@ -14,7 +14,7 @@ from project.conftest import (  # noqa: F401
     datamodule_config,
     experiment_dictconfig,
 )
-from project.experiment import (
+from project.main import (
     instantiate_algorithm,
     instantiate_datamodule,
     instantiate_trainer,
