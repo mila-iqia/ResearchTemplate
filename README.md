@@ -15,7 +15,7 @@ This is a project template for ML researchers developed at [Mila](https://www.mi
 
 See [this introduction to the project](https://mila-iqia.github.io/ResearchTemplate/intro) for a detailed description of the context and motivations behind this project.
 
-Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024.
+🚧 Please note: This is a Work-in-Progress. The goal is to make a first release by the end of summer 2024. 🚧
 
 ## Installation
 
@@ -33,13 +33,13 @@ This project makes use of the following libraries:
 
 - [Hydra](https://hydra.cc/) is used to configure the project. It allows you to define configuration files and override them from the command line.
 - [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) is used to as the training framework. It provides a high-level interface to organize ML research code.
-    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as is shown in the [Jax example](https://mila-iqia.github.io/ResearchTemplate/examples/jax) 🔥
+    - 🔥 Please note: You can also use [Jax](https://jax.readthedocs.io/en/latest/) with this repo, as is shown in the [Jax example](https://mila-iqia.github.io/ResearchTemplate/examples/jax_image_classification/) 🔥
 - [Weights & Biases](https://wandb.ai) is used to log metrics and visualize results.
 - [pytest](https://docs.pytest.org/en/stable/) is used for testing.
 
 ## Who is this for? Why should you use this template?
 
-This template comes with [some unique features that can *only* be found here (for now)!](https://mila-iqia.github.io/ResearchTemplate/features/index.md)
+This template comes with [some unique features that can *only* be found here (for now)!](https://mila-iqia.github.io/ResearchTemplate/features/)
 
 - [Torch and Jax support](https://mila-iqia.github.io/ResearchTemplate/features/jax/)
 - [Rich IDE support for Hydra config files](https://mila-iqia.github.io/ResearchTemplate/features/auto_schema/)
@@ -48,7 +48,7 @@ This template comes with [some unique features that can *only* be found here (fo
 
 To make the best use of this template, you should ideally already have a good understanding of Python, some experience with PyTorch, and some basic experience with SLURM.
 
-See [this page](https://mila-iqia.github.io/ResearchTemplate/related) for a list of other templates to choose from if this isn't for you.
+See [this page](https://mila-iqia.github.io/ResearchTemplate/resources/#other-project-templates) for a list of other templates to choose from if this isn't for you.
 
 Please consider making an issue on this repo if you feel like this could be improved, or something is confusing to you. We very much need and appreciate your feedback! 😊
 
