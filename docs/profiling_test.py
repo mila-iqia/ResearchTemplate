@@ -14,10 +14,9 @@ from project.conftest import (  # noqa: F401
     datamodule_config,
     experiment_dictconfig,
 )
+from project.experiment import instantiate_datamodule, instantiate_trainer
 from project.main import (
     instantiate_algorithm,
-    instantiate_datamodule,
-    instantiate_trainer,
     setup_logging,
 )
 from project.utils.hydra_utils import resolve_dictconfig

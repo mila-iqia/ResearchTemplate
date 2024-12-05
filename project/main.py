@@ -10,35 +10,29 @@ This does the following:
 
 from __future__ import annotations
 
-import dataclasses
 import functools
 import logging
-import operator
 import os
-import warnings
+import typing
 from pathlib import Path
-from typing import Any
 
 import hydra
-import jax
 import lightning
-import lightning.pytorch
-import lightning.pytorch.loggers
 import omegaconf
 import rich
 import rich.logging
 import wandb
 from hydra_plugins.auto_schema import auto_schema_plugin
-from hydra_zen.typing import Builds
-from lightning import Trainer
 from omegaconf import DictConfig
 
-from project.algorithms.jax_ppo import EvalMetrics
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.trainers.jax_trainer import JaxModule, JaxTrainer, Ts, _MetricsT
+from project.experiment import evaluate, instantiate_datamodule, instantiate_trainer, train
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.utils import print_config
+
+if typing.TYPE_CHECKING:
+    from project.trainers.jax_trainer import JaxModule
 
 PROJECT_NAME = Path(__file__).parent.name
 REPO_ROOTDIR = Path(__file__).parent.parent
@@ -77,6 +71,7 @@ def main(dict_config: DictConfig) -> dict:
     3. Calls `evaluation` to evaluate the model
     4. Returns the evaluation metrics.
     """
+
     print_config(dict_config, resolve=False)
     if dict_config["algorithm"] is None:
         raise ValueError("The 'algorithm' config group is required for the experiment to run.")
@@ -89,20 +84,11 @@ def main(dict_config: DictConfig) -> dict:
         global_log_level="DEBUG" if config.debug else "INFO" if config.verbose else "WARNING",
     )
 
-    # seed the random number generators, so the weights that are
-    # constructed are deterministic and reproducible.
-    lightning.seed_everything(seed=config.seed, workers=True)
-
-    # Create the Trainer from the config.
-    trainer = instantiate_trainer(config.trainer)
-
-    # Create the datamodule (if present) from the config
-    datamodule: lightning.LightningDataModule | None = instantiate_datamodule(config.datamodule)
-
     # Create the algo.
-    algorithm: lightning.LightningModule | JaxModule = instantiate_algorithm(
-        config.algorithm, datamodule=datamodule
-    )
+    algorithm = hydra.utils.instantiate(config.algorithm)
+
+    # Create the trainer
+    trainer = instantiate_trainer(config.trainer)
 
     if wandb.run:
         wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
@@ -111,25 +97,19 @@ def main(dict_config: DictConfig) -> dict:
         )
 
     # Train the algorithm.
-    train_results = train(
+    algorithm, train_results = train(
         algorithm,
-        config=config,
         trainer=trainer,
-        datamodule=datamodule,
+        config=config,
     )
 
     # Evaluate the algorithm.
-    if isinstance(trainer, lightning.Trainer):
-        assert isinstance(algorithm, lightning.LightningModule)
-        metric_name, error, _metrics = evaluate_lightningmodule(
-            algorithm, datamodule=datamodule, trainer=trainer
-        )
-    else:
-        assert isinstance(trainer, JaxTrainer)
-        assert isinstance(algorithm, JaxModule)
-        metric_name, error, _metrics = evaluate_jax_module(
-            algorithm, trainer=trainer, train_results=train_results
-        )
+    metric_name, error, _metrics = evaluate(
+        algorithm,
+        trainer=trainer,
+        train_results=train_results,
+        config=config,
+    )
 
     if wandb.run:
         wandb.finish()
@@ -137,48 +117,6 @@ def main(dict_config: DictConfig) -> dict:
     assert error is not None
     # Results are returned like this so that the Orion sweeper can parse the results correctly.
     return dict(name=metric_name, type="objective", value=error)
-
-
-def train(
-    algorithm: lightning.LightningModule | JaxModule,
-    /,
-    *,
-    datamodule: lightning.LightningDataModule | None,
-    trainer: lightning.Trainer | JaxTrainer,
-    config: Config,
-):
-    if isinstance(trainer, lightning.Trainer):
-        assert isinstance(algorithm, lightning.LightningModule)
-        # Train the model using the dataloaders of the datamodule:
-        # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
-        # example in RL, where we need to set the actor to use in the environment, as well as
-        # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
-        datamodule = getattr(algorithm, "datamodule", datamodule)
-        return trainer.fit(
-            algorithm,
-            datamodule=datamodule,
-            ckpt_path=config.ckpt_path,
-        )
-
-    if datamodule is not None:
-        raise NotImplementedError(
-            "The JaxTrainer doesn't yet support using a datamodule. For now, you should "
-            f"return a batch of data from the {JaxModule.get_batch.__name__} method in your "
-            f"algorithm."
-        )
-
-    if not isinstance(algorithm, JaxModule):
-        raise TypeError(
-            f"The selected algorithm ({algorithm}) doesn't implement the required methods of "
-            f"a {JaxModule.__name__}, so it can't be used with the `{JaxTrainer.__name__}`. "
-            f"Try to subclass {JaxModule.__name__} and implement the missing methods."
-        )
-    import jax
-
-    rng = jax.random.key(config.seed)
-    # TODO: Use ckpt_path argument to load the training state and resume the training run.
-    assert config.ckpt_path is None
-    return trainer.fit(algorithm, rng=rng)
 
 
 def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
@@ -204,52 +142,7 @@ def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
     project_logger.setLevel(log_level.upper())
 
 
-def instantiate_trainer(trainer_config: dict | DictConfig) -> Trainer | JaxTrainer:
-    # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
-    # fields have the right type.
-    # Create the Trainer
-    trainer_config = trainer_config.copy()  # Avoid mutating the config.
-    callbacks: list[lightning.Callback] | None = instantiate_values(
-        trainer_config.pop("callbacks", None)
-    )
-    logger: list[lightning.pytorch.loggers.Logger] | None = instantiate_values(
-        trainer_config.pop("logger", None)
-    )
-    trainer: lightning.Trainer | JaxTrainer = hydra.utils.instantiate(
-        trainer_config, callbacks=callbacks, logger=logger
-    )
-    return trainer
-
-
-def instantiate_datamodule(
-    datamodule_config: Builds[type[lightning.LightningDataModule]]
-    | lightning.LightningDataModule
-    | None,
-) -> lightning.LightningDataModule | None:
-    """Instantiate the datamodule from the configuration dict.
-
-    Any interpolations in the config will have already been resolved by the time we get here.
-    """
-    if not datamodule_config:
-        return None
-    import lightning
-
-    if isinstance(datamodule_config, lightning.LightningDataModule):
-        logger.info(
-            f"Datamodule was already instantiated (probably to interpolate a field value). "
-            f"{datamodule_config=}"
-        )
-        datamodule = datamodule_config
-    else:
-        logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
-        datamodule = hydra.utils.instantiate(datamodule_config)
-
-    return datamodule
-
-
-def instantiate_algorithm(
-    algorithm_config: Config, datamodule: lightning.LightningDataModule | None
-) -> lightning.LightningModule | JaxModule:
+def instantiate_algorithm(config: Config) -> lightning.LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
     It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
@@ -258,19 +151,15 @@ def instantiate_algorithm(
 
     The instantiated datamodule and network will be passed to the algorithm's constructor.
     """
-    # TODO: The algorithm is now always instantiated on the CPU, whereas it used to be instantiated
-    # directly on the default device (GPU).
+    # seed the random number generators, so the weights that are
+    # constructed are deterministic and reproducible.
+    lightning.seed_everything(seed=config.seed, workers=True)
+
     # Create the algorithm
-    algo_config = algorithm_config
-    import lightning
+    algo_config = config.algorithm
 
-    if isinstance(algo_config, lightning.LightningModule):
-        logger.info(
-            f"Algorithm was already instantiated (probably to interpolate a field value)."
-            f"{algo_config=}"
-        )
-        return algo_config
-
+    # Create the datamodule (if present) from the config
+    datamodule: lightning.LightningDataModule | None = instantiate_datamodule(config.datamodule)
     if datamodule:
         algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
     else:
@@ -278,154 +167,11 @@ def instantiate_algorithm(
 
     if isinstance(algo_or_algo_partial, functools.partial):
         if datamodule:
-            algorithm = algo_or_algo_partial(datamodule=datamodule)
-        else:
-            algorithm = algo_or_algo_partial()
-    else:
-        # logger.warning(
-        #     f"Your algorithm config {algo_config} doesn't have '_partial_: true' set, which is "
-        #     f"not recommended (since we can't pass the datamodule to the constructor)."
-        # )
-        algorithm = algo_or_algo_partial
-    from project.trainers.jax_trainer import JaxModule
+            return algo_or_algo_partial(datamodule=datamodule)
+        return algo_or_algo_partial()
 
-    if not isinstance(algorithm, lightning.LightningModule | JaxModule):
-        logger.warning(
-            UserWarning(
-                f"Your algorithm ({algorithm}) is not a LightningModule. Beware that this isn't "
-                f"explicitly supported at the moment."
-            )
-        )
-
+    algorithm = algo_or_algo_partial
     return algorithm
-
-
-def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
-    """Returns the list of objects at the values in this dict of configs.
-
-    This is used for the config of the `trainer/logger` and `trainer/callbacks` fields, where
-    we can combine multiple config groups by adding entries in a dict.
-
-    For example, using `trainer/logger=wandb` and `trainer/logger=tensorboard` would result in a
-    dict with `wandb` and `tensorboard` as keys, and the corresponding config groups as values.
-
-    This would then return a list with the instantiated WandbLogger and TensorBoardLogger objects.
-    """
-    if not config_dict:
-        return None
-    objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
-    if objects_dict is None:
-        return None
-
-    assert isinstance(objects_dict, dict | DictConfig)
-    return [v for v in objects_dict.values() if v is not None]
-
-
-MetricName = str
-
-
-def evaluate_lightningmodule(
-    algorithm: lightning.LightningModule,
-    trainer: lightning.Trainer,
-    datamodule: lightning.LightningDataModule | None,
-) -> tuple[MetricName, float | None, dict]:
-    """Evaluates the algorithm and returns the metrics.
-
-    By default, if validation is to be performed, returns the validation error. Returns the
-    training error when `trainer.overfit_batches != 0` (e.g. when debugging or testing). Otherwise,
-    if `trainer.limit_val_batches == 0`, returns the test error.
-    """
-
-    # exp.trainer.logger.log_hyperparams()
-    # When overfitting on a single batch or only training, we return the train error.
-    if (trainer.limit_val_batches == trainer.limit_test_batches == 0) or (
-        trainer.overfit_batches == 1  # type: ignore
-    ):
-        # We want to report the training error.
-        results_type = "train"
-        results = [
-            {
-                **trainer.logged_metrics,
-                **trainer.callback_metrics,
-                **trainer.progress_bar_metrics,
-            }
-        ]
-    elif trainer.limit_val_batches != 0:
-        results_type = "val"
-        results = trainer.validate(model=algorithm, datamodule=datamodule)
-    else:
-        warnings.warn(RuntimeWarning("About to use the test set for evaluation!"))
-        results_type = "test"
-        results = trainer.test(model=algorithm, datamodule=datamodule)
-
-    if results is None:
-        rich.print("RUN FAILED!")
-        return "fail", None, {}
-
-    metrics = dict(results[0])
-    for key, value in metrics.items():
-        rich.print(f"{results_type} {key}: ", value)
-
-    logger = logging.getLogger(__name__)
-
-    if (accuracy := metrics.get(f"{results_type}/accuracy")) is not None:
-        # NOTE: This is the value that is used for HParam sweeps.
-        metric_name = "1-accuracy"
-        error = 1 - accuracy
-
-    elif (loss := metrics.get(f"{results_type}/loss")) is not None:
-        logger.info("Assuming that the objective to minimize is the loss metric.")
-        # If 'accuracy' isn't in the results, assume that the loss is the metric to use.
-        metric_name = "loss"
-        error = loss
-    else:
-        raise RuntimeError(
-            f"Don't know which metric to use to calculate the 'error' of this run.\n"
-            f"Here are the available metric names:\n"
-            f"{list(metrics.keys())}"
-        )
-
-    return metric_name, error, metrics
-
-
-def evaluate_jax_module(
-    algorithm: JaxModule[Ts, Any, _MetricsT],
-    trainer: JaxTrainer,
-    train_results: tuple[Ts, _MetricsT] | None = None,
-):
-    # todo: there isn't yet a `validate` method on the jax trainer.
-    assert isinstance(trainer, JaxTrainer)
-    assert train_results is not None
-    metrics = train_results[1]
-
-    return get_error_from_metrics(metrics)
-
-
-# BUG: ULTRA weird bug happens with cloudpickle if we use a singledispatch function here!
-# @functools.singledispatch
-def get_error_from_metrics(metrics: _MetricsT) -> tuple[str, float, dict]:
-    """Returns the main metric name, its value, and the full metrics dictionary."""
-    if isinstance(metrics, EvalMetrics):
-        return get_error_from_jax_rl_example_metrics(metrics)
-    raise NotImplementedError(
-        f"Don't know how to calculate the error to minimize from metrics {metrics} of type "
-        f"{type(metrics)}! "
-        f"You probably need to register a handler for it."
-    )
-
-
-# @get_error_from_metrics.register(EvalMetrics)
-def get_error_from_jax_rl_example_metrics(metrics: EvalMetrics):
-    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
-    assert isinstance(last_epoch_metrics, EvalMetrics)
-    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
-    # vmap).
-    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
-    return (
-        "-avg_cumulative_reward",
-        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
-        dataclasses.asdict(last_epoch_metrics),
-    )
 
 
 if __name__ == "__main__":

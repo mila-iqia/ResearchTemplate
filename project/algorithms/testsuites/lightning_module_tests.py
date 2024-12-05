@@ -22,7 +22,8 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.conftest import DEFAULT_SEED
-from project.main import instantiate_algorithm, instantiate_trainer, setup_logging
+from project.experiment import instantiate_trainer
+from project.main import instantiate_algorithm, setup_logging
 from project.trainers.jax_trainer import JaxTrainer
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.typing_utils import PyTree, is_sequence_of
@@ -47,6 +48,8 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     - Dataset splits: check some basic stats about the train/val/test inputs, are they somewhat similar?
     - Define the input as a space, check that the dataset samples are in that space and not too
       many samples are statistically OOD?
+    - Test to monitor distributed traffic out of this process?
+        - Dummy two-process tests (on CPU) to check before scaling up experiments?
     """
 
     # algorithm_config: ParametrizedFixture[str]
