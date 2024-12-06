@@ -30,6 +30,7 @@ class TextClassifier(LightningModule):
         init_seed: int = 42,
     ):
         super().__init__()
+        self.datamodule = datamodule
         self.network_config = network
         self.num_labels = datamodule.num_classes
         self.task_name = datamodule.task_name

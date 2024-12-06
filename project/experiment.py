@@ -198,8 +198,10 @@ def train_lightningmodule(
     # example in RL, where we need to set the actor to use in the environment, as well as
     # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
     if datamodule is None:
-        datamodule = datamodule or getattr(algorithm, "datamodule", None)
-
+        if hasattr(algorithm, "datamodule"):
+            datamodule = getattr(algorithm, "datamodule")
+        elif config.datamodule is not None:
+            datamodule = instantiate_datamodule(config.datamodule)
     trainer.fit(algorithm, datamodule=datamodule, ckpt_path=config.ckpt_path)
     train_results = None  # todo: get the train results from the trainer.
     return algorithm, train_results
