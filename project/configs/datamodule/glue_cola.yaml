@@ -1,4 +1,4 @@
-_target_: project.datamodules.text.TextClassificationDataModule
+_target_: project.datamodules.text.text_classification.TextClassificationDataModule
 data_dir: ${oc.env:SCRATCH,.}/data
 hf_dataset_path: glue
 task_name: cola

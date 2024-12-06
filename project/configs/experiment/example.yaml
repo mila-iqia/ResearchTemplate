@@ -16,7 +16,7 @@ defaults:
 # The parameters below will be merged with parameters from default configurations set above.
 # This allows you to overwrite only specified parameters
 
-# The name of the e
+# The name of the experiment (for logging)
 name: example
 
 seed: ${oc.env:SLURM_PROCID,42}

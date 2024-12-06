@@ -19,6 +19,8 @@ import lightning.pytorch.loggers
 from hydra.core.hydra_config import HydraConfig
 from typing_extensions import TypeVar
 
+from project.configs.config import Config
+from project.experiment import train
 from project.utils.typing_utils.jax_typing_utils import jit
 
 Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
@@ -60,6 +62,37 @@ class JaxModule(Protocol[Ts, _B, _MetricsT]):
     def eval_callback(self, ts: Ts) -> _MetricsT:
         """Perform evaluation and return metrics."""
         raise NotImplementedError
+
+
+@train.register(JaxModule)
+def train_jax_module(
+    algorithm: JaxModule,
+    /,
+    *,
+    trainer: JaxTrainer,
+    config: Config,
+    datamodule: None = None,
+):
+    if datamodule is not None:
+        raise NotImplementedError(
+            "The JaxTrainer doesn't yet support using a datamodule. For now, you should "
+            f"return a batch of data from the {JaxModule.get_batch.__name__} method in your "
+            f"algorithm."
+        )
+
+    if not isinstance(algorithm, JaxModule):
+        raise TypeError(
+            f"The selected algorithm ({algorithm}) doesn't implement the required methods of "
+            f"a {JaxModule.__name__}, so it can't be used with the `{JaxTrainer.__name__}`. "
+            f"Try to subclass {JaxModule.__name__} and implement the missing methods."
+        )
+    import jax
+
+    rng = jax.random.key(config.seed)
+    # TODO: Use ckpt_path argument to load the training state and resume the training run.
+    assert config.ckpt_path is None
+    ts, train_metrics = trainer.fit(algorithm, rng=rng)
+    return algorithm, (ts, train_metrics)
 
 
 class JaxCallback(flax.struct.PyTreeNode):

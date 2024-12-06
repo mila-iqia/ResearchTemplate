@@ -1,5 +1,5 @@
 # todo: This config should not show up as an option on the command-line.
-_target_: project.datamodules.VisionDataModule
+_target_: project.datamodules.vision.VisionDataModule
 data_dir: ${constant:DATA_DIR}
 num_workers: ${constant:NUM_WORKERS}
 val_split: 0.1  # NOTE: reduced from default of 0.2
