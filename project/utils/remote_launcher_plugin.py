@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # https://github.com/facebookresearch/hydra/blob/main/examples/plugins/example_launcher_plugin/hydra_plugins/example_launcher_plugin/example_launcher.py
 
 import dataclasses
@@ -60,7 +59,9 @@ def _instantiate(self: Plugins, config: DictConfig) -> Plugin:
 Plugins._instantiate = _instantiate
 
 
-@dataclasses.dataclass(init=False)
+# Made this a dataclass to avoid having an ugly default repr, but it causes issues with
+# hydra-auto-schema because it tries to create a schema for everything here.
+# @dataclasses.dataclass(init=False)
 class RemoteSlurmLauncher(BaseSubmititLauncher):
     _EXECUTOR: ClassVar[str] = "remoteslurm"
 
