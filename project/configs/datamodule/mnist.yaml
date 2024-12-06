@@ -1,7 +1,7 @@
 defaults:
   - vision
   - _self_
-_target_: project.datamodules.MNISTDataModule
+_target_: project.datamodules.image_classification.mnist.MNISTDataModule
 data_dir: ${constant:torchvision_dir,DATA_DIR}
 normalize: True
 batch_size: 128
