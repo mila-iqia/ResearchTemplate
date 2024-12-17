@@ -1,0 +1,84 @@
+
+main is powered by Hydra.
+
+== Configuration groups ==
+Compose your configuration from those groups (group=option)
+
+algorithm: image_classifier, jax_image_classifier, jax_ppo, llm_finetuning, no_op, text_classifier
+algorithm/lr_scheduler: CosineAnnealingLR, StepLR
+algorithm/network: fcnet, jax_cnn, jax_fcnet, resnet18, resnet50
+algorithm/optimizer: Adam, SGD, custom_adam
+cluster: beluga, cedar, current, mila, narval
+datamodule: cifar10, fashion_mnist, glue_cola, imagenet, inaturalist, mnist, vision
+experiment: cluster_sweep_example, example, jax_rl_example, llm_finetuning_example, local_sweep_example, profiling, text_classification_example
+resources: cpu, gpu
+trainer: cpu, debug, default, jax_trainer, overfit_one_batch
+trainer/callbacks: default, early_stopping, model_checkpoint, model_summary, no_checkpoints, none, rich_progress_bar
+trainer/logger: tensorboard, wandb, wandb_cluster
+
+
+== Config ==
+Override anything in the config (foo.bar=value)
+
+algorithm: ???
+datamodule: null
+trainer:
+  callbacks:
+    model_checkpoint:
+      _target_: lightning.pytorch.callbacks.ModelCheckpoint
+      dirpath: ${hydra:runtime.output_dir}/checkpoints
+      filename: epoch_{epoch:03d}
+      monitor: val/loss
+      verbose: false
+      save_last: true
+      save_top_k: 1
+      mode: min
+      auto_insert_metric_name: false
+      save_weights_only: false
+      every_n_train_steps: null
+      train_time_interval: null
+      every_n_epochs: null
+      save_on_train_epoch_end: null
+    early_stopping:
+      _target_: lightning.pytorch.callbacks.EarlyStopping
+      monitor: val/loss
+      min_delta: 0.0
+      patience: 5
+      verbose: false
+      mode: min
+      strict: true
+      check_finite: true
+      stopping_threshold: null
+      divergence_threshold: null
+      check_on_train_epoch_end: null
+    model_summary:
+      _target_: lightning.pytorch.callbacks.RichModelSummary
+      max_depth: 2
+    rich_progress_bar:
+      _target_: lightning.pytorch.callbacks.RichProgressBar
+    lr_monitor:
+      _target_: lightning.pytorch.callbacks.LearningRateMonitor
+    device_utilisation:
+      _target_: lightning.pytorch.callbacks.DeviceStatsMonitor
+    throughput:
+      _target_: project.algorithms.callbacks.samples_per_second.MeasureSamplesPerSecondCallback
+  _target_: lightning.Trainer
+  accelerator: auto
+  strategy: auto
+  devices: 1
+  deterministic: false
+  fast_dev_run: false
+  min_epochs: 1
+  max_epochs: 10
+  default_root_dir: ${hydra:runtime.output_dir}
+  detect_anomaly: false
+log_level: info
+seed: 123
+name: default
+debug: false
+verbose: false
+ckpt_path: null
+
+
+Powered by Hydra (https://hydra.cc)
+Use --hydra-help to view Hydra specific help

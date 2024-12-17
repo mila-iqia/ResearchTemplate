@@ -198,8 +198,14 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
 
 def test_help_string(file_regression: FileRegressionFixture) -> None:
     help_string = subprocess.run(
-        shlex.split("python project/main.py --help"), text=True, capture_output=True
-    ).stderr
+        # Pass a seed so it isn't selected randomly, which would make the regression file change.
+        shlex.split("python project/main.py seed=123 --help"),
+        text=True,
+        capture_output=True,
+    ).stdout
+    # Remove trailing whitespace so pre-commit doesn't change the regression file.
+    # Also remove the last empty line (which would also be removed by pre-commit).
+    help_string = "\n".join([line.rstrip() for line in help_string.splitlines()]).rstrip()
     file_regression.check(help_string)
 
 
