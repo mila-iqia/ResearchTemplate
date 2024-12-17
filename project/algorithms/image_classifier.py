@@ -14,6 +14,7 @@ from typing import Literal
 
 import hydra_zen
 import torch
+from jaxtyping import Float
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch.core import LightningModule
 from torch import Tensor
@@ -23,6 +24,7 @@ from torch.optim.optimizer import Optimizer
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.datamodules.image_classification import ImageClassificationDataModule
 from project.utils.typing_utils import HydraConfigFor
+from project.utils.typing_utils.tensor_types import typecheck
 
 logger = getLogger(__name__)
 
@@ -73,24 +75,41 @@ class ImageClassifier(LightningModule):
                 # distributed training and to infer shapes.
                 _ = self.network(self.example_input_array)
 
-    def forward(self, input: Tensor) -> Tensor:
+    @typecheck
+    def forward(self, input: Float[Tensor, "*b, C, H, W"]) -> Float[Tensor, "*b, num_classes"]:
         """Forward pass of the network."""
         assert self.network is not None
         logits = self.network(input)
         return logits
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+    @typecheck
+    def training_step(
+        self,
+        batch: tuple[Float[Tensor, "b, C, H, W"], Float[Tensor, "b, num_classes"]],
+        batch_index: int,
+    ):
         return self.shared_step(batch, batch_index=batch_index, phase="train")
 
-    def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+    @typecheck
+    def validation_step(
+        self,
+        batch: tuple[Float[Tensor, "b, C, H, W"], Float[Tensor, "b, num_classes"]],
+        batch_index: int,
+    ):
         return self.shared_step(batch, batch_index=batch_index, phase="val")
 
-    def test_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
+    @typecheck
+    def test_step(
+        self,
+        batch: tuple[Float[Tensor, "b, C, H, W"], Float[Tensor, "b, num_classes"]],
+        batch_index: int,
+    ):
         return self.shared_step(batch, batch_index=batch_index, phase="test")
 
+    @typecheck
     def shared_step(
         self,
-        batch: tuple[Tensor, Tensor],
+        batch: tuple[Float[Tensor, "b, C, H, W"], Float[Tensor, "b, num_classes"]],
         batch_index: int,
         phase: Literal["train", "val", "test"],
     ):

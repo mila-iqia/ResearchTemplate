@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import os
 from logging import getLogger
+from typing import TypeVar
 
 from beartype import beartype
 from jaxtyping import Bool, Float, Int, Shaped, jaxtyped, PyTree
 from torch import Tensor
 
 logger = getLogger(__name__)
+T = TypeVar("T")
 
 
-def identity(t):
+def identity(t: T) -> T:
     return t
 
 
