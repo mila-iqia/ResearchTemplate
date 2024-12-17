@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, NewType, TypeGuard
 
@@ -9,6 +10,12 @@ from hydra_zen.typing import Builds
 from typing_extensions import TypeVar
 
 from .protocols import DataModule
+
+T = TypeVar("T")
+if typing.TYPE_CHECKING:
+    PyTree = T | Iterable["PyTree[T]"] | Mapping[Any, "PyTree[T]"]
+else:
+    from .tensor_types import PyTree
 
 # These are used to show which dim is which.
 C = NewType("C", int)
@@ -25,7 +32,6 @@ HydraConfigFor = Builds[type[T]]
 
 
 NestedMapping = Mapping[K, V | "NestedMapping[K, V]"]
-PyTree = T | Iterable["PyTree[T]"] | Mapping[Any, "PyTree[T]"]
 
 
 def is_sequence_of(

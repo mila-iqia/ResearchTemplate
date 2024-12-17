@@ -51,7 +51,9 @@
 					".venv": true,
 					".pytest_cache": true,
 					".benchmarks": true,
-					".ruff_cache": true
+					".ruff_cache": true,
+					".schemas": true,
+					".regression_files": false
 				},
 				"python.testing.unittestEnabled": false,
 				"python.testing.pytestEnabled": true,
@@ -84,6 +86,7 @@
 	"containerEnv": {
 		"SCRATCH": "/home/vscode/scratch",
 		"SLURM_TMPDIR": "/tmp",
+		"NETWORK_DIR": "/network",
 		"UV_LINK_MODE": "symlink",
 		"UV_CACHE_DIR": "/home/vscode/.uv_cache"
 	},

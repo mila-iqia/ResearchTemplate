@@ -41,6 +41,9 @@ dependencies = [
     "remote-slurm-executor",
     "watchdog>=5.0.3",
     "hydra-auto-schema>=0.0.6",
+    "jaxtyping>=0.2.36",
+    "beartype>=0.19.0",
+    "typeguard>=4.4.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
