@@ -204,8 +204,8 @@ def test_help_string(file_regression: FileRegressionFixture) -> None:
         capture_output=True,
     ).stdout
     # Remove trailing whitespace so pre-commit doesn't change the regression file.
-    # Also remove the last empty line (which would also be removed by pre-commit).
-    help_string = "\n".join([line.rstrip() for line in help_string.splitlines()]).rstrip()
+    # Also remove first or last empty lines (which would also be removed by pre-commit).
+    help_string = "\n".join([line.rstrip() for line in help_string.splitlines()]).strip() + "\n"
     file_regression.check(help_string)
 
 

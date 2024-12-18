@@ -1,4 +1,3 @@
-
 main is powered by Hydra.
 
 == Configuration groups ==
