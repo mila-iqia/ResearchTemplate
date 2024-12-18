@@ -1,7 +1,0 @@
-# yaml-language-server: $schema=nested.json
-a:
-  b:
-    foo:
-      _target_: project.utils.auto_schema_test.Bar
-      bar: "boo"
-      baz: 123
