@@ -27,7 +27,7 @@ class Config:
     It is suggested for this class to accept a `datamodule` and `network` as arguments. The
     instantiated datamodule and network will be passed to the algorithm's constructor.
 
-    For more info, see the [instantiate_algorithm][project.experiment.instantiate_algorithm] function.
+    For more info, see the [instantiate_algorithm][project.main.instantiate_algorithm] function.
     """
 
     datamodule: Any | None = None

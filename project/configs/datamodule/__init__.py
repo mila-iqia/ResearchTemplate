@@ -4,10 +4,6 @@ from hydra_zen import store
 
 logger = get_logger(__name__)
 
-
-# TODO: Make it possible to extend a structured base via yaml files as well as adding new fields
-# (for example, ImagetNet32DataModule has a new constructor argument which can't be set atm in the
-# config).
 datamodule_store = store(group="datamodule")
 
 
