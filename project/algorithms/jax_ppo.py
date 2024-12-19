@@ -7,7 +7,9 @@ See the `JaxRLExample` class for a description of the differences w.r.t. `rejax.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import functools
+import operator
 from collections.abc import Callable, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
@@ -36,6 +38,8 @@ from rejax.networks import DiscretePolicy, GaussianPolicy, VNetwork
 from typing_extensions import TypeVar
 from xtils.jitpp import Static
 
+from project import experiment
+from project.configs.config import Config
 from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer
 from project.utils.typing_utils.jax_typing_utils import field, jit
 
@@ -826,3 +830,32 @@ class RenderEpisodesCallback(JaxCallback):
         gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
         jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
+
+
+@experiment.evaluate.register
+def evaluate_ppo_example(
+    algorithm: JaxRLExample,
+    /,
+    *,
+    trainer: JaxTrainer,
+    train_results: tuple[PPOState, EvalMetrics],
+    config: Config,
+    datamodule: None = None,
+):
+    """Override for the `evaluate` function used by `main.py`, in the case of this algorithm."""
+    # todo: there isn't yet a `validate` method on the jax trainer.
+    assert isinstance(algorithm, JaxModule)
+    assert isinstance(trainer, JaxTrainer)
+    assert train_results is not None
+    metrics = train_results[1]
+
+    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
+    assert isinstance(last_epoch_metrics, EvalMetrics)
+    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
+    # vmap).
+    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
+    return (
+        "-avg_cumulative_reward",
+        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
+        dataclasses.asdict(last_epoch_metrics),
+    )

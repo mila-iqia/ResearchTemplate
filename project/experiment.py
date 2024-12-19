@@ -1,108 +1,164 @@
-"""Module containing the functions which create experiment components from Hydra configs.
-
-This is essentially just calling [hydra.utils.instantiate](
-https://hydra.cc/docs/1.3/advanced/instantiate_objects/overview/#internaldocs-banner)
-on the
-datamodule, network, trainer, and algorithm configs in a certain order.
-
-This also adds the instance_attr custom resolver, which allows you to retrieve an attribute of
-an instantiated object instead of a config.
-"""
-
 from __future__ import annotations
 
-import copy
 import functools
 import logging
 import typing
+import warnings
 from typing import Any
 
 import hydra
-import hydra.utils
-import hydra_zen
-import rich.console
-import rich.logging
-import rich.traceback
+import lightning
+import rich
+from hydra_zen.typing import Builds
+from omegaconf import DictConfig
+
+from project.configs.config import Config
 
 if typing.TYPE_CHECKING:
-    from hydra_zen.typing import Builds
-    from lightning import Callback, LightningDataModule, LightningModule, Trainer
+    import lightning
 
-    from project.configs.config import Config
-    from project.trainers.jax_trainer import JaxModule, JaxTrainer
+    from project.trainers.jax_trainer import JaxTrainer
+
 
 logger = logging.getLogger(__name__)
 
 
-# BUG: Always using the pydantic parser when instantiating things would be nice, but it currently
-# causes issues related to pickling: https://github.com/mit-ll-responsible-ai/hydra-zen/issues/717
-# def _use_pydantic[C: Callable](fn: C) -> C:
-#     return functools.partial(hydra_zen.instantiate, _target_wrapper_=pydantic_parser)  # type: ignore
-# instantiate = _use_pydantic(hydra_zen.instantiate)
-
-instantiate = hydra_zen.instantiate
-
-
-def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
-    from project.main import PROJECT_NAME
-
-    logging.basicConfig(
-        level=global_log_level.upper(),
-        # format="%(asctime)s - %(levelname)s - %(message)s",
-        format="%(message)s",
-        datefmt="[%X]",
-        force=True,
-        handlers=[
-            rich.logging.RichHandler(
-                markup=True,
-                rich_tracebacks=True,
-                tracebacks_width=100,
-                tracebacks_show_locals=False,
-            )
-        ],
+@functools.singledispatch
+def train(
+    algorithm,
+    /,
+    **kwargs,
+) -> tuple[Any, Any]:
+    raise NotImplementedError(
+        f"There is no registered handler for training algorithm {algorithm} of type "
+        f"{type(algorithm)}! (kwargs: {kwargs})."
+        f"Registered handlers: "
+        + "\n\t".join([f"- {k}: {v.__name__}" for k, v in train.registry.items()])
     )
 
-    project_logger = logging.getLogger(PROJECT_NAME)
-    project_logger.setLevel(log_level.upper())
+
+@functools.singledispatch
+def evaluate(algorithm: Any, /, **kwargs) -> tuple[str, float | None, dict]:
+    """Evaluates the algorithm.
+
+    Returns the name of the 'error' metric for this run, its value, and a dict of metrics.
+    """
+    raise NotImplementedError(
+        f"There is no registered handler for evaluating algorithm {algorithm} of type "
+        f"{type(algorithm)}! (kwargs: {kwargs})"
+    )
 
 
-def instantiate_trainer(experiment_config: Config) -> Trainer | JaxTrainer:
+def instantiate_trainer(trainer_config: dict | DictConfig) -> lightning.Trainer | JaxTrainer:
     # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
     # fields have the right type.
-
-    # instantiate all the callbacks
-    callback_configs = experiment_config.trainer.pop("callbacks", {})
-    callback_configs = {k: v for k, v in callback_configs.items() if v is not None}
-    callbacks: dict[str, Callback] | None = hydra.utils.instantiate(
-        callback_configs, _convert_="object"
-    )
-    # Create the loggers, if any.
-    loggers: dict[str, Any] | None = hydra.utils.instantiate(
-        experiment_config.trainer.pop("logger", {})
-    )
-
-    # Create the Trainer.
-
-    # BUG: `hydra.utils.instantiate` doesn't work with override **kwargs when some of them are
-    # dataclasses (e.g. a callback).
-    # trainer = hydra.utils.instantiate(
-    #     config,
-    #     callbacks=list(callbacks.values()) if callbacks else None,
-    #     logger=list(loggers.values()) if loggers else None,
-    # )
-    assert isinstance(experiment_config.trainer, dict)
-    config = copy.deepcopy(experiment_config.trainer)
-    target = hydra.utils.get_object(config.pop("_target_"))
-    _callbacks = list(callbacks.values()) if callbacks else None
-    _loggers = list(loggers.values()) if loggers else None
-
-    trainer = target(**config, callbacks=_callbacks, logger=_loggers)
+    # Create the Trainer
+    trainer_config = trainer_config.copy()  # Avoid mutating the config.
+    callbacks: list | None = instantiate_values(trainer_config.pop("callbacks", None))
+    logger: list | None = instantiate_values(trainer_config.pop("logger", None))
+    trainer = hydra.utils.instantiate(trainer_config, callbacks=callbacks, logger=logger)
     return trainer
 
 
+def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
+    """Returns the list of objects at the values in this dict of configs.
+
+    This is used for the config of the `trainer/logger` and `trainer/callbacks` fields, where
+    we can combine multiple config groups by adding entries in a dict.
+
+    For example, using `trainer/logger=wandb` and `trainer/logger=tensorboard` would result in a
+    dict with `wandb` and `tensorboard` as keys, and the corresponding config groups as values.
+
+    This would then return a list with the instantiated WandbLogger and TensorBoardLogger objects.
+    """
+    if not config_dict:
+        return None
+    objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
+    if objects_dict is None:
+        return None
+
+    assert isinstance(objects_dict, dict | DictConfig)
+    return [v for v in objects_dict.values() if v is not None]
+
+
+MetricName = str
+
+import lightning  # noqa
+
+
+@evaluate.register(lightning.LightningModule)
+def evaluate_lightningmodule(
+    algorithm: lightning.LightningModule,
+    /,
+    *,
+    trainer: lightning.Trainer,
+    datamodule: lightning.LightningDataModule | None = None,
+    config: Config,
+    train_results: Any = None,
+) -> tuple[MetricName, float | None, dict]:
+    """Evaluates the algorithm and returns the metrics.
+
+    By default, if validation is to be performed, returns the validation error. Returns the
+    training error when `trainer.overfit_batches != 0` (e.g. when debugging or testing). Otherwise,
+    if `trainer.limit_val_batches == 0`, returns the test error.
+    """
+    datamodule = datamodule or getattr(algorithm, "datamodule", None)
+
+    # exp.trainer.logger.log_hyperparams()
+    # When overfitting on a single batch or only training, we return the train error.
+    if (trainer.limit_val_batches == trainer.limit_test_batches == 0) or (
+        trainer.overfit_batches == 1  # type: ignore
+    ):
+        # We want to report the training error.
+        results_type = "train"
+        results = [
+            {
+                **trainer.logged_metrics,
+                **trainer.callback_metrics,
+                **trainer.progress_bar_metrics,
+            }
+        ]
+    elif trainer.limit_val_batches != 0:
+        results_type = "val"
+        results = trainer.validate(model=algorithm, datamodule=datamodule)
+    else:
+        warnings.warn(RuntimeWarning("About to use the test set for evaluation!"))
+        results_type = "test"
+        results = trainer.test(model=algorithm, datamodule=datamodule)
+
+    if results is None:
+        rich.print("RUN FAILED!")
+        return "fail", None, {}
+
+    metrics = dict(results[0])
+    for key, value in metrics.items():
+        rich.print(f"{results_type} {key}: ", value)
+
+    if (accuracy := metrics.get(f"{results_type}/accuracy")) is not None:
+        # NOTE: This is the value that is used for HParam sweeps.
+        metric_name = "1-accuracy"
+        error = 1 - accuracy
+
+    elif (loss := metrics.get(f"{results_type}/loss")) is not None:
+        logger.info("Assuming that the objective to minimize is the loss metric.")
+        # If 'accuracy' isn't in the results, assume that the loss is the metric to use.
+        metric_name = "loss"
+        error = loss
+    else:
+        raise RuntimeError(
+            f"Don't know which metric to use to calculate the 'error' of this run.\n"
+            f"Here are the available metric names:\n"
+            f"{list(metrics.keys())}"
+        )
+
+    return metric_name, error, metrics
+
+
 def instantiate_datamodule(
-    datamodule_config: Builds[type[LightningDataModule]] | LightningDataModule | None,
-) -> LightningDataModule | None:
+    datamodule_config: Builds[type[lightning.LightningDataModule]]
+    | lightning.LightningDataModule
+    | None,
+) -> lightning.LightningDataModule | None:
     """Instantiate the datamodule from the configuration dict.
 
     Any interpolations in the config will have already been resolved by the time we get here.
@@ -116,62 +172,36 @@ def instantiate_datamodule(
             f"Datamodule was already instantiated (probably to interpolate a field value). "
             f"{datamodule_config=}"
         )
-        datamodule = datamodule_config
-    else:
-        logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
-        datamodule = instantiate(datamodule_config)
+        return datamodule_config
 
-    return datamodule
+    logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
+    return hydra.utils.instantiate(datamodule_config)
 
 
-def instantiate_algorithm(
-    algorithm_config: Config, datamodule: LightningDataModule | None
-) -> LightningModule | JaxModule:
-    """Function used to instantiate the algorithm.
+@train.register
+def train_lightningmodule(
+    algorithm: lightning.LightningModule,
+    /,
+    *,
+    trainer: lightning.Trainer | None,
+    datamodule: lightning.LightningDataModule | None = None,
+    config: Config,
+):
+    # Create the Trainer from the config.
+    if trainer is None:
+        _trainer = instantiate_trainer(config.trainer)
+        assert isinstance(_trainer, lightning.Trainer)
+        trainer = _trainer
 
-    It is suggested that your algorithm (LightningModule) take in the `datamodule` and `network`
-    as arguments, to make it easier to swap out different networks and datamodules during
-    experiments.
-
-    The instantiated datamodule and network will be passed to the algorithm's constructor.
-    """
-    # TODO: The algorithm is now always instantiated on the CPU, whereas it used to be instantiated
-    # directly on the default device (GPU).
-    # Create the algorithm
-    algo_config = algorithm_config
-    import lightning
-
-    if isinstance(algo_config, lightning.LightningModule):
-        logger.info(
-            f"Algorithm was already instantiated (probably to interpolate a field value)."
-            f"{algo_config=}"
-        )
-        return algo_config
-
-    if datamodule:
-        algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
-    else:
-        algo_or_algo_partial = hydra.utils.instantiate(algo_config)
-
-    if isinstance(algo_or_algo_partial, functools.partial):
-        if datamodule:
-            algorithm = algo_or_algo_partial(datamodule=datamodule)
-        else:
-            algorithm = algo_or_algo_partial()
-    else:
-        # logger.warning(
-        #     f"Your algorithm config {algo_config} doesn't have '_partial_: true' set, which is "
-        #     f"not recommended (since we can't pass the datamodule to the constructor)."
-        # )
-        algorithm = algo_or_algo_partial
-    from project.trainers.jax_trainer import JaxModule
-
-    if not isinstance(algorithm, lightning.LightningModule | JaxModule):
-        logger.warning(
-            UserWarning(
-                f"Your algorithm ({algorithm}) is not a LightningModule. Beware that this isn't "
-                f"explicitly supported at the moment."
-            )
-        )
-
-    return algorithm
+    # Train the model using the dataloaders of the datamodule:
+    # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
+    # example in RL, where we need to set the actor to use in the environment, as well as
+    # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
+    if datamodule is None:
+        if hasattr(algorithm, "datamodule"):
+            datamodule = getattr(algorithm, "datamodule")
+        elif config.datamodule is not None:
+            datamodule = instantiate_datamodule(config.datamodule)
+    trainer.fit(algorithm, datamodule=datamodule, ckpt_path=config.ckpt_path)
+    train_results = None  # todo: get the train results from the trainer.
+    return algorithm, train_results

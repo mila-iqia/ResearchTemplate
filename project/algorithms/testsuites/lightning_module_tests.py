@@ -22,7 +22,8 @@ from tensor_regression import TensorRegressionFixture
 
 from project.configs.config import Config
 from project.conftest import DEFAULT_SEED
-from project.experiment import instantiate_algorithm, instantiate_trainer, setup_logging
+from project.experiment import instantiate_trainer
+from project.main import instantiate_algorithm, setup_logging
 from project.trainers.jax_trainer import JaxTrainer
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.typing_utils import PyTree, is_sequence_of
@@ -47,6 +48,8 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     - Dataset splits: check some basic stats about the train/val/test inputs, are they somewhat similar?
     - Define the input as a space, check that the dataset samples are in that space and not too
       many samples are statistically OOD?
+    - Test to monitor distributed traffic out of this process?
+        - Dummy two-process tests (on CPU) to check before scaling up experiments?
     """
 
     # algorithm_config: ParametrizedFixture[str]
@@ -67,7 +70,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     ) -> lightning.Trainer | JaxTrainer:
         setup_logging(log_level=experiment_config.log_level)
         lightning.seed_everything(experiment_config.seed, workers=True)
-        return instantiate_trainer(experiment_config)
+        return instantiate_trainer(experiment_config.trainer)
 
     @pytest.fixture(scope="class")
     def algorithm(
@@ -79,7 +82,7 @@ class LightningModuleTests(Generic[AlgorithmType], ABC):
     ):
         """Fixture that creates the "algorithm" (a
         [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-        algorithm = instantiate_algorithm(experiment_config.algorithm, datamodule=datamodule)
+        algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule)
         if isinstance(trainer, lightning.Trainer) and isinstance(
             algorithm, lightning.LightningModule
         ):
