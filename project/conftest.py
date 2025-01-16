@@ -174,9 +174,9 @@ def original_datadir(original_datadir: Path):
     """
     # `original_datadir` is a fixture provided by the `pytest-datadir` package, its value is set
     # based on the test that is currently being run (and its parameters).
-    regression_file_path_relation_portion = original_datadir.relative_to(REPO_ROOTDIR)
+    relative_path_to_regression_file = original_datadir.relative_to(REPO_ROOTDIR)
     regression_files_dir = REPO_ROOTDIR / "tests" / ".regression_files"
-    return regression_files_dir / regression_file_path_relation_portion
+    return regression_files_dir / relative_path_to_regression_file
 
 
 @pytest.fixture(scope="session")
