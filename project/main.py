@@ -25,6 +25,7 @@ import wandb
 from hydra_plugins.auto_schema import auto_schema_plugin
 from omegaconf import DictConfig
 
+import project
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.experiment import evaluate, instantiate_datamodule, instantiate_trainer, train
@@ -34,7 +35,7 @@ from project.utils.utils import print_config
 if typing.TYPE_CHECKING:
     from project.trainers.jax_trainer import JaxModule
 
-PROJECT_NAME = Path(__file__).parent.name
+PROJECT_NAME = project.__name__
 REPO_ROOTDIR = Path(__file__).parent.parent
 logger = logging.getLogger(__name__)
 

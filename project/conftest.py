@@ -165,19 +165,18 @@ def prevent_jax_from_reserving_all_the_vram():
 def original_datadir(original_datadir: Path):
     """Overwrite the original_datadir fixture value to change where regression files are created.
 
-    By default, they are in a folder next to the source. Here instead we move them to $SCRATCH if
-    available, or to a .regression_files folder at the root of the repo otherwise.
+    By default, they are in a folder next to the source. Here instead we move them to a different
+    folder to keep the source code folder as neat as we can.
+
+    TODO: The large regression files (the .npz files containing tensors) could be stored in a cache
+    on $SCRATCH and referenced to via a symlink in the test folder. There could be some issues
+    though if scratch is cleaned up.
     """
-    relative_portion = original_datadir.relative_to(REPO_ROOTDIR)
-    datadir = REPO_ROOTDIR / ".regression_files"
-
-    # if SCRATCH and not datadir.exists():
-    #     # puts a symlink .regression_files in the repo root that points to the same dir in $SCRATCH
-    #     actual_dir = SCRATCH / datadir.relative_to(REPO_ROOTDIR)
-    #     actual_dir.mkdir(parents=True, exist_ok=True)
-    #     datadir.symlink_to(actual_dir)
-
-    return datadir / relative_portion
+    # `original_datadir` is a fixture provided by the `pytest-datadir` package, its value is set
+    # based on the test that is currently being run (and its parameters).
+    relative_path_to_regression_file = original_datadir.relative_to(REPO_ROOTDIR)
+    regression_files_dir = REPO_ROOTDIR / "tests" / ".regression_files"
+    return regression_files_dir / relative_path_to_regression_file
 
 
 @pytest.fixture(scope="session")
