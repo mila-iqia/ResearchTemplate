@@ -4,17 +4,18 @@ from __future__ import annotations
 import shlex
 import shutil
 import subprocess
-from pathlib import Path
+import sys
+import uuid
 from unittest.mock import Mock
 
 import omegaconf.errors
 import pytest
 import torch
+from _pytest.mark.structures import ParameterSet
 from hydra.types import RunMode
 from omegaconf import DictConfig
 from pytest_regressions.file_regression import FileRegressionFixture
 
-import project.configs
 import project.experiment
 import project.main
 from project.conftest import command_line_overrides, skip_on_macOS_in_CI
@@ -22,7 +23,9 @@ from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import IN_GITHUB_CI
 
-CONFIG_DIR = Path(project.configs.__file__).parent
+from .main import PROJECT_NAME, main
+
+CONFIG_DIR = REPO_ROOTDIR / PROJECT_NAME / "configs"
 
 
 def test_jax_can_use_the_GPU():
@@ -64,6 +67,7 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
 
 
 experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
+
 experiment_commands_to_test = [
     "experiment=example trainer.fast_dev_run=True",
     "experiment=text_classification_example trainer.fast_dev_run=True",
@@ -113,6 +117,21 @@ experiment_commands_to_test = [
 ]
 
 
+@pytest.mark.parametrize("experiment_config", experiment_configs)
+def test_experiment_config_is_tested(experiment_config: str):
+    select_experiment_command = f"experiment={experiment_config}"
+
+    for test_command in experiment_commands_to_test:
+        if isinstance(test_command, ParameterSet):
+            assert len(test_command.values) == 1
+            assert isinstance(test_command.values[0], str), test_command.values
+            test_command = test_command.values[0]
+        if select_experiment_command in test_command:
+            return  # success.
+
+    raise RuntimeError(f"{experiment_config=} is not tested by any of the test commands!")
+
+
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     experiment_commands_to_test,
@@ -137,6 +156,27 @@ def test_can_load_experiment_configs(
 
     mock_train.assert_called_once()
     mock_evaluate.assert_called_once()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    experiment_commands_to_test,
+    indirect=True,
+)
+def test_can_run_experiment(
+    command_line_overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    # Mock out some part of the `main` function to not actually run anything.
+    # Get a unique hash id:
+    # todo: Set a unique name to avoid collisions between tests and reusing previous results.
+    name = f"{request.function.__name__}_{uuid.uuid4().hex}"
+    command_line_args = ["project/main.py"] + list(command_line_overrides) + [f"name={name}"]
+    print(command_line_args)
+    monkeypatch.setattr(sys, "argv", command_line_args)
+    project.main.main()
 
 
 @skip_on_macOS_in_CI
@@ -169,6 +209,25 @@ def test_help_string(file_regression: FileRegressionFixture) -> None:
     file_regression.check(help_string)
 
 
+@pytest.mark.skipif(
+    IN_GITHUB_CI and sys.platform == "darwin",
+    reason="TODO: Getting a 'MPS backend out of memory' error on the Github CI. ",
+)
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    [
+        "algorithm=image_classifier datamodule=cifar10 seed=1 trainer/callbacks=none trainer.fast_dev_run=True"
+    ],
+    indirect=True,
+)
+def test_fast_dev_run(experiment_dictconfig: DictConfig):
+    result = main(experiment_dictconfig)
+    assert isinstance(result, dict)
+    assert result["type"] == "objective"
+    assert isinstance(result["name"], str)
+    assert isinstance(result["value"], float)
+
+
 def test_run_auto_schema_via_cli_without_errors():
     """Checks that the command completes without errors."""
     # Run programmatically instead of with a subprocess so we can get nice coverage stats.
@@ -184,3 +243,8 @@ def test_run_auto_schema_via_cli_without_errors():
             "-vv",
         ]
     )
+
+
+# TODO: Add some more integration tests:
+# - running sweeps from Hydra!
+# - using the slurm launcher!
