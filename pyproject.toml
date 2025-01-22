@@ -82,7 +82,7 @@ build-backend = "hatchling.build"
 
 
 [tool.pytest.ini_options]
-testpaths = ["project", "docs"]
+testpaths = ["project", "docs", "tests"]
 norecursedirs = [".venv", "site"]
 # Required to use torch deterministic mode.
 env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
