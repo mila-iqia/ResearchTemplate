@@ -143,8 +143,10 @@ class JaxImageClassifier(LightningModule):
         # This is the same thing as the `ImageClassifier.shared_step`!
         x, y = batch
         assert not x.requires_grad
-        assert self.network is not None
-        logits = self.network(x)
+        # This calls self.forward, and is preferable to calling self.network directly, since it
+        # allows forward hooks to be called. This is useful for example when testing or debugging.
+        logits = self(x)
+
         assert isinstance(logits, torch.Tensor)
         # In this example we use a jax "encoder" network and a PyTorch loss function, but we could
         # also just as easily have done the whole forward and backward pass in jax if we wanted to.
