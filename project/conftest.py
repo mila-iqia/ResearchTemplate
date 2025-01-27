@@ -369,6 +369,7 @@ def train_dataloader(
     return train_dataloader
 
 
+# todo: Remove (unused).
 @pytest.fixture(scope="session")
 def training_batch(
     train_dataloader: DataLoader, device: torch.device
