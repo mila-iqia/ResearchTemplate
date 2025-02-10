@@ -110,7 +110,7 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["project"]
+packages = ["project", "hydra_plugins"]
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
