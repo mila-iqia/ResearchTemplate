@@ -84,44 +84,44 @@ jobs:
           name: coverage-reports-unit-tests-${{ matrix.platform }}-${{ matrix.python-version }}
           path: ./coverage.xml
 
-  local_integration_tests:
-    needs: [unit_tests, check_docs]
-    runs-on: self-hosted
-    timeout-minutes: 30
-    strategy:
-      max-parallel: 1
-      matrix:
-        python-version: ["3.10"]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-          enable-cache: false  # no need, uses the local uv cache.
-          # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+  # local_integration_tests:
+  #   needs: [unit_tests, check_docs]
+  #   runs-on: self-hosted
+  #   timeout-minutes: 30
+  #   strategy:
+  #     max-parallel: 1
+  #     matrix:
+  #       python-version: ["3.10"]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install the latest version of uv
+  #       uses: astral-sh/setup-uv@v3
+  #       with:
+  #         version: "latest"
+  #         enable-cache: false  # no need, uses the local uv cache.
+  #         # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pin python-version ${{ matrix.python-version }}
-        run: uv python pin ${{ matrix.python-version }}
+  #     - name: Pin python-version ${{ matrix.python-version }}
+  #       run: uv python pin ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: uv sync --all-extras --frozen
+  #     - name: Install dependencies
+  #       run: uv sync --all-extras --frozen
 
-      - name: Test with pytest
-        run: uv run pytest -v --cov=project --cov-report=xml --cov-append
+  #     - name: Test with pytest
+  #       run: uv run pytest -v --cov=project --cov-report=xml --cov-append
 
-      - name: Test with pytest (only slow tests)
-        run: uv run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+  #     - name: Test with pytest (only slow tests)
+  #       run: uv run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
 
-      - name: Store coverage report as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports-integration-tests-${{ matrix.python-version }}
-          path: ./coverage.xml
+  #     - name: Store coverage report as an artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: coverage-reports-integration-tests-${{ matrix.python-version }}
+  #         path: ./coverage.xml
 
   launch-slurm-actions-runner:
-    needs: [local_integration_tests]
+    needs: [unit_tests, check_docs]
     runs-on: self-hosted
     timeout-minutes: 5
     strategy:
@@ -182,7 +182,7 @@ jobs:
 
   # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
   upload-coverage-codecov:
-    needs: [local_integration_tests, slurm_integration_tests]
+    needs: [slurm_integration_tests]
     runs-on: ubuntu-latest
     name: Upload coverage reports to Codecov
     timeout-minutes: 5
