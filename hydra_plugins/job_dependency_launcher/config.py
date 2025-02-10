@@ -11,28 +11,33 @@ from hydra_plugins.job_dependency_launcher.launcher import PytestJobDependencyLa
 class PytestJobDependencyLauncherConfig:
     """Slurm configuration overrides and specific parameters."""
 
-    # _target_: str = "hydra_plugins.job_dependency_launcher.launcher.PytestJobDependencyLauncher"
-
     folder: str = "${hydra.sweep.dir}/.submitit/%j"
 
     # maximum time for the job in minutes
-    timeout_min: int = 60
+    time: int = 60
     # number of cpus to use for each task
     cpus_per_task: int | None = None
     # number of gpus to use on each node
     gpus_per_node: int | None = None
-    # number of tasks to spawn on each node
-    tasks_per_node: int = 1
-    # memory to reserve for the job on each node (in GB)
-    mem_gb: int | None = None
+    # # number of tasks to spawn on each node
+    # tasks_per_node: int = 1
+    # # memory to reserve for the job on each node (in GB)
+    # mem_gb: int | None = None
     # number of nodes to use for the job
     nodes: int = 1
+
     # name of the job
-    name: str = "${hydra.job.name}"
+    job_name: str = "${hydra.job.name}"
+
     # redirect stderr to stdout
     stderr_to_stdout: bool = False
 
     test_command: list[str] = dataclasses.field(default_factory=["pytest", "-x", "-v"].copy)
+
+    # number of tasks to spawn on each node
+    ntasks_per_node: int = 1
+    # memory to reserve for the job on each node (in GB)
+    mem: int | None = None
 
     # Params are used to configure sbatch, for more info check:
     # https://github.com/facebookincubator/submitit/blob/master/submitit/slurm/slurm.py
