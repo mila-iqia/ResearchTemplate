@@ -171,7 +171,9 @@ class PytestJobDependencyLauncher(SlurmLauncher):
             executor._internal_update_parameters(**params)
 
             self.test_job = executor.submit(CommandFunction(list(self.test_job_params)))
-            print(f"Launched test job: {self.test_job.job_id} for command {self.test_job_params}")
+            log.info(
+                f"Launched test job: {self.test_job.job_id} for command {self.test_job_params}"
+            )
 
         # We already launched the test job.
         assert self.test_job is not None
