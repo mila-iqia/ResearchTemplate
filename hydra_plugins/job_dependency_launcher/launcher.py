@@ -303,4 +303,5 @@ class SimplerSubmititLauncher(Launcher):
 
     def launch(
         self, job_overrides: Sequence[Sequence[str]], initial_job_idx: int
-    ) -> Sequence[JobReturn]: ...
+    ) -> Sequence[JobReturn]:
+        raise NotImplementedError()
