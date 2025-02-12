@@ -1,6 +1,7 @@
 # IDEA: Replacement for the --multirun option of Hydra.
 # from hydra.main import   # noqa
 
+import argparse
 import contextlib
 import dataclasses
 import datetime
@@ -8,11 +9,12 @@ import functools
 import inspect
 import logging
 import os
-import shlex
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
+import hydra
 import hydra_zen
 import rich.logging
 import simple_parsing
@@ -72,89 +74,65 @@ def parse_args_into_config(
 SCRATCH = Path(os.environ["SCRATCH"])
 
 
-def get_hydra_args_parser() -> simple_parsing.ArgumentParser:
-    """Copied from `get_args_parser` in Hydra.
+@dataclasses.dataclass
+class HydraArgs:
+    overrides: list[str] = simple_parsing.field(positional=True)
+    """Any key=value arguments to override config values (use dots for.nested=overrides)"""
 
-    Uses simple-parsing instead so we can add dataclass args.
+    help: bool = simple_parsing.field(alias=["-h", "--help"], default=False)
+    """Application's help."""
 
-    TODO: Make a function that takes an argparse.ArgumentParser and creates a new
-    simple_parsing.ArgumentParser by copying its actions.
-    """
-    from hydra import __version__
+    hydra_help: bool = simple_parsing.field(default=False)
+    """Hydra's help."""
 
-    parser = simple_parsing.ArgumentParser(add_help=False, description="Hydra")
-    parser.add_argument("--help", "-h", action="store_true", help="Application's help")
-    parser.add_argument("--hydra-help", action="store_true", help="Hydra's help")
-    parser.add_argument(
-        "--version",
-        action="version",
-        help="Show Hydra's version and exit",
-        version=f"Hydra {__version__}",
+    version: bool = simple_parsing.field(
+        default=False, action="version", version=f"Hydra {hydra.__version__}"
     )
-    parser.add_argument(
-        "overrides",
-        nargs="*",
-        help="Any key=value arguments to override config values (use dots for.nested=overrides)",
-    )
+    """Show Hydra's version and exit."""
 
-    parser.add_argument(
-        "--cfg",
-        "-c",
-        choices=["job", "hydra", "all"],
-        help="Show config instead of running [job|hydra|all]",
+    cfg: Literal["job", "hydra", "all"] | None = simple_parsing.field(
+        alias=["-c", "--cfg"], default=None
     )
-    parser.add_argument(
-        "--resolve",
-        action="store_true",
-        help="Used in conjunction with --cfg, resolve config interpolations before printing.",
-    )
+    """Show config instead of running [job|hydra|all]"""
 
-    parser.add_argument("--package", "-p", help="Config package to show")
+    resolve: bool = False
+    """Used in conjunction with --cfg, resolve config interpolations before printing."""
 
-    parser.add_argument("--run", "-r", action="store_true", help="Run a job")
+    package: str | None = simple_parsing.field(alias=["-p", "--package"], default=None)
+    """Config package to show."""
 
-    parser.add_argument(
-        "--multirun",
-        "-m",
-        action="store_true",
-        help="Run multiple jobs with the configured launcher and sweeper",
-    )
+    run: bool = simple_parsing.field(alias=["-r", "--run"], default=False)
+    """Run a job."""
+
+    multirun: bool = simple_parsing.field(alias=["-m", "--multirun"], default=False)
+    """Run multiple jobs with the configured launcher and sweeper."""
 
     # defer building the completion help string until we actually need to render it
     class LazyCompletionHelp:
+        # def __add__(self, other):
+        #     return f"{self}{other}"
+
         def __repr__(self) -> str:
             return f"Install or Uninstall shell completion:\n{_get_completion_help()}"
 
-    parser.add_argument(
-        "--shell-completion",
-        "-sc",
-        action="store_true",
-        help=LazyCompletionHelp(),  # type: ignore
+    shell_completion: str = simple_parsing.field(
+        alias=["-sc", "--shell-completion"], default=argparse.SUPPRESS, help=LazyCompletionHelp()
     )
 
-    parser.add_argument(
-        "--config-path",
-        "-cp",
-        help="""Overrides the config_path specified in hydra.main().
-                    The config_path is absolute or relative to the Python file declaring @hydra.main()""",
-    )
+    config_path: Path | None = simple_parsing.field(alias=["-cp", "--config-path"], default=None)
+    """Overrides the config_path specified in hydra.main().
 
-    parser.add_argument(
-        "--config-name",
-        "-cn",
-        help="Overrides the config_name specified in hydra.main()",
-    )
+    The config_path is absolute or relative to the Python file declaring @hydra.main()
+    """
 
-    parser.add_argument(
-        "--config-dir",
-        "-cd",
-        help="Adds an additional config dir to the config search path",
-    )
+    config_name: str | None = simple_parsing.field(alias=["-cn", "--config-name"], default=None)
+    """Overrides the config_name specified in hydra.main()"""
 
-    parser.add_argument(
-        "--experimental-rerun",
-        help="Rerun a job from a previous config pickle",
-    )
+    config_dir: Path | None = simple_parsing.field(alias=["-cd", "--config-dir"], default=None)
+    """Adds an additional config dir to the config search path."""
+
+    experimental_rerun: bool = False
+    """Rerun a job from a previous config pickle."""
 
     info_choices = [
         "all",
@@ -164,16 +142,16 @@ def get_hydra_args_parser() -> simple_parsing.ArgumentParser:
         "plugins",
         "searchpath",
     ]
-    parser.add_argument(
-        "--info",
-        "-i",
-        const="all",
-        nargs="?",
-        action="store",
-        choices=info_choices,
-        help=f"Print Hydra information [{'|'.join(info_choices)}]",
+    info: Literal["all", "config", "defaults", "defaults-tree", "plugins", "searchpath"] | None = (
+        simple_parsing.field(
+            alias=["-i", "--info"],
+            default="all",
+            nargs="?",
+            choices=info_choices,
+            const="all",
+        )
     )
-    return parser
+    """Print Hydra information."""
 
 
 _SbatchArgs = hydra_zen.kwargs_of(
@@ -204,7 +182,12 @@ class SlurmExecutorArgs:
 def launch():
     args = None
     # argv = sys.argv[1:]
-    parser = get_hydra_args_parser()
+    # parser = get_hydra_args_parser()
+    parser = simple_parsing.ArgumentParser(
+        add_option_string_dash_variants=simple_parsing.DashVariant.DASH, add_help=False
+    )
+    parser.add_arguments(HydraArgs, "hydra")
+
     parser.add_argument(
         "--cluster",
         type=str,
@@ -224,7 +207,7 @@ def launch():
 
     verbose = args.verbose
 
-    overrides: list[str] = args.overrides
+    overrides: list[str] = args.hydra.overrides
     # todo: use this with the RemoteSlurmExecutor to maybe run the jobs on a remote cluster.
     # todo: maybe use a subgroup action to either parse the remote slurm executor args or regular Executor args.
     # from remote_slurm_executor import RemoteSlurmExecutor  # noqa
@@ -267,8 +250,8 @@ def launch():
 
         # idea: Could run tests specific to that particular config (that use some of the job_args?)
         test_command = ["uv", "run", "pytest", "-x", "-v", "--gen-missing"]
-        logger.info(f"Launching test job with command: {shlex.join(test_command)}")
         test_job = executor.submit(submitit.helpers.CommandFunction(test_command))
+        logger.info(f"Test job ({test_job.job_id}): {test_command}")
 
         ## Launch the Sweep
 
@@ -282,17 +265,17 @@ def launch():
             }
         )
 
-        for i, job_args in enumerate(args_for_each_job):
-            logger.info(f"Job {i}: {job_args}")
         # todo: look into executor._submit_command.
         sweep_jobs = executor.submit_array(
             [
                 submitit.helpers.CommandFunction(
                     ["uv", "run", "python", "project/main.py", *job_args]
                 )
-                for i, job_args in enumerate(args_for_each_job)
+                for job_args in args_for_each_job
             ]
         )
+        for i, (job, job_args) in enumerate(zip(sweep_jobs, args_for_each_job)):
+            logger.info(f"Job #{i} ({job.job_id}): {job_args}")
 
         try:
             logger.debug("Test job results:\n", test_job.result())

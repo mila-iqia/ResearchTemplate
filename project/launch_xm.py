@@ -16,6 +16,8 @@ from xmanager import xm
 
 from project.conftest import command_line_overrides  # noqa
 
+# TODO: Look into Fiddle
+
 # note: port is from the *local* SSH config entry for mila / compute nodes
 os.environ["DOCKER_HOST"] = "tcp://127.0.0.1:2366"
 
