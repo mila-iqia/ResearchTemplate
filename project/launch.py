@@ -211,7 +211,7 @@ def launch():
     # todo: use this with the RemoteSlurmExecutor to maybe run the jobs on a remote cluster.
     # todo: maybe use a subgroup action to either parse the remote slurm executor args or regular Executor args.
     # from remote_slurm_executor import RemoteSlurmExecutor  # noqa
-    _cluster: str = args.cluster
+    cluster: str = args.cluster
     resources: SbatchArgs = args.resources
     executor_args: SlurmExecutorArgs = args.executor
 
@@ -236,10 +236,9 @@ def launch():
     sweep_jobs = []
     # snapshot_dir =
     with (
-        # submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder, root_dir=None)
-        # if cluster == "current"
-        # else SomeCustomRemoteSnapshot?
-        contextlib.nullcontext()
+        submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder, root_dir=None)
+        if cluster == "current"
+        else contextlib.nullcontext()
     ):
         executor: submitit.SlurmExecutor = hydra_zen.instantiate(executor_args)
         executor.update_parameters(
@@ -247,6 +246,7 @@ def launch():
         )
 
         ## Launch the test job
+        logging.info(f"Working directory: {executor.folder}")
 
         # idea: Could run tests specific to that particular config (that use some of the job_args?)
         test_command = ["uv", "run", "pytest", "-x", "-v", "--gen-missing"]
