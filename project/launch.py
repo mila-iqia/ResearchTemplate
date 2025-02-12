@@ -1,18 +1,23 @@
 # IDEA: Replacement for the --multirun option of Hydra.
 # from hydra.main import   # noqa
 
+import contextlib
 import dataclasses
 import datetime
 import functools
 import inspect
+import logging
 import os
+import shlex
 import sys
 from collections.abc import Callable
 from pathlib import Path
 
 import hydra_zen
+import rich.logging
 import simple_parsing
 import submitit
+import submitit.core.utils
 from hydra._internal.core_plugins.basic_sweeper import BasicSweeper
 from hydra._internal.hydra import Hydra
 from hydra._internal.utils import _get_completion_help, create_automatic_config_search_path
@@ -22,6 +27,8 @@ from omegaconf import OmegaConf
 from submitit.slurm.slurm import _make_sbatch_string
 
 from project.conftest import command_line_overrides  # noqa
+
+logger = logging.getLogger(__name__)
 
 
 def split_arguments_for_each_run(multirun_overrides: list[str]) -> list[list[str]]:
@@ -177,15 +184,18 @@ _SbatchArgs = hydra_zen.kwargs_of(
 @dataclasses.dataclass
 class SbatchArgs(_SbatchArgs):
     time: int | str = 10
-    gpus_per_task: int | str = 1
+    nodes: int = 1
+    ntasks_per_node: int = 1
     cpus_per_task: int = 1
+    gpus_per_task: int | str | None = 1
+    # ntasks_per_gpu: int | None = None  # todo: support this!
     mem: str = "4G"
 
 
 @hydra_zen.hydrated_dataclass(submitit.SlurmExecutor)
 class SlurmExecutorArgs:
-    folder: str | Path = dataclasses.field(
-        default=SCRATCH / "snapshots" / datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
+    folder: Path = dataclasses.field(
+        default=SCRATCH / "logs" / datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
     )
     max_num_timeout: int = 0
     python: str = "uv run --all-extras python"
@@ -204,39 +214,78 @@ def launch():
             "SLURM cluster and want to run your jobs there."
         ),
     )
+    parser.add_argument(
+        "-v", "--verbose", action="count", default=0, help="Enable verbose output."
+    )
     parser.add_arguments(SlurmExecutorArgs, "executor")
     parser.add_arguments(SbatchArgs, "resources")
 
     args = parser.parse_args()
+
+    verbose = args.verbose
+
     overrides: list[str] = args.overrides
     # todo: use this with the RemoteSlurmExecutor to maybe run the jobs on a remote cluster.
     # todo: maybe use a subgroup action to either parse the remote slurm executor args or regular Executor args.
     # from remote_slurm_executor import RemoteSlurmExecutor  # noqa
-    # cluster: str = args.cluster
+    _cluster: str = args.cluster
     resources: SbatchArgs = args.resources
     executor_args: SlurmExecutorArgs = args.executor
 
+    logging.basicConfig(
+        level=logging.DEBUG if verbose >= 2 else logging.INFO if verbose == 1 else logging.WARNING,
+        # format="%(asctime)s - %(levelname)s - %(message)s",
+        format="%(message)s",
+        datefmt="[%X]",
+        # force=True,
+        handlers=[
+            rich.logging.RichHandler(
+                markup=True,
+                rich_tracebacks=True,
+                tracebacks_width=100,
+                tracebacks_show_locals=False,
+            )
+        ],
+    )
+
     args_for_each_job = split_arguments_for_each_run(overrides)
 
-    jobs = []
-    snapshot_dir = SCRATCH / "foo"
-    with submitit.helpers.RsyncSnapshot(snapshot_dir=snapshot_dir, root_dir=None):
+    sweep_jobs = []
+    # snapshot_dir =
+    with (
+        # submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder, root_dir=None)
+        # if cluster == "current"
+        # else SomeCustomRemoteSnapshot?
+        contextlib.nullcontext()
+    ):
         executor: submitit.SlurmExecutor = hydra_zen.instantiate(executor_args)
-        executor.update_parameters(**dataclasses.asdict(resources))
+        executor.update_parameters(
+            **{k: v for k, v in dataclasses.asdict(resources).items() if k != "_target_"}
+        )
+
+        ## Launch the test job
 
         # idea: Could run tests specific to that particular config (that use some of the job_args?)
-        test_command = ["uv", "run", "pytest", "-x", "-v"]
+        test_command = ["uv", "run", "pytest", "-x", "-v", "--gen-missing"]
+        logger.info(f"Launching test job with command: {shlex.join(test_command)}")
         test_job = executor.submit(submitit.helpers.CommandFunction(test_command))
 
-        # Kind-of weird that we have to change the executor in-place here.
-        executor.update_parameters(
-            **{"dependency": f"afterok:{test_job.job_id}", "kill-on-invalid-dep": "yes"}
-        )
-        for i, job_args in enumerate(args_for_each_job):
-            print(f"Job {i}: {job_args}")
+        ## Launch the Sweep
 
+        # Kind-of weird that we have to change the executor in-place here.
+        additional_parameters = (executor.parameters.get("additional_parameters") or {}).copy()
+        additional_parameters["kill-on-invalid-dep"] = "yes"
+        executor.update_parameters(
+            **{
+                "dependency": f"afterok:{test_job.job_id}",
+                "additional_parameters": additional_parameters,
+            }
+        )
+
+        for i, job_args in enumerate(args_for_each_job):
+            logger.info(f"Job {i}: {job_args}")
         # todo: look into executor._submit_command.
-        jobs = executor.submit_array(
+        sweep_jobs = executor.submit_array(
             [
                 submitit.helpers.CommandFunction(
                     ["uv", "run", "python", "project/main.py", *job_args]
@@ -245,7 +294,23 @@ def launch():
             ]
         )
 
-    print([job.result() for job in jobs])
+        try:
+            logger.debug("Test job results:\n", test_job.result())
+        except submitit.core.utils.UncompletedJobError as err:
+            logger.error(
+                "[bold red blink]Test job failed! Aborting Sweep![/]", extra={"markup": True}
+            )
+            logger.error(err)
+            return
+
+        try:
+            job_results = [job.result() for job in sweep_jobs]
+            for i, result in enumerate(job_results):
+                print(f"Job {i} result: {result}")
+        except submitit.core.utils.UncompletedJobError as err:
+            logger.error(f"Uncompleted jobs: {err}")
+            logger.error(test_job.stderr())
+        ## TODO: Launch the final job that uses the best hparams from the sweep and no val split.
 
 
 def run_with_command_line_args(main_fn: Callable, command_line_args: list[str]):
