@@ -1,0 +1,169 @@
+# questions
+
+_message_before_copy: |
+    🧪 Thanks for generating a project using the Mila Research Project template! 😎
+
+    You'll be asked a few questions. This will be used to generate a tailored project for you.
+
+
+project_name:
+  type: str
+  question: "What is the name of this new research project?"
+  required: true
+  # todo: add a task below that replaces all instances of 'project' in Python files with this?
+  default: "project"
+
+your_name:
+  type: str
+  question: "What is your name?"
+  required: true
+  placeholder: "FirstName LastName"
+
+github_username:
+  type: str
+  question: "What is your GitHub username?"
+  required: true
+  validator: "{% if github_username == '' %}Please enter your username on github.{% endif %}"
+  help: |
+    What is your GitHub username?
+
+    NOTE: This script does not create a GitHub repository for you, but a link will be printed below
+    to help you set that up yourself.
+  placeholder: "{{ your_name | lower | replace(' ', '') }}"
+
+your_email:
+  type: str
+  question: "What is your email address?"
+  required: false
+  default: "{{ your_name | lower | replace(' ', '.') }}@mila.quebec"
+
+project_description:
+  type: str
+  question: "What is this project about?"
+  required: false
+  default: "{{project_name}}: A new research project at Mila."
+
+python_version:
+  type: str
+  question: "What Python version do you want to use?"
+  required: true
+  choices:
+    - "3.9"
+    - "3.10"
+    - "3.11"
+    - "3.12"
+    - "3.13"
+  default: "3.10"
+
+# IDEA: Simplify the repo creation part of the form for new users.
+# However, does that maybe make too many assumptions about how people will use this?
+# For example, what if they want to apply this template to their existing repo / project?
+# create_github_repo:
+#   type: bool
+#   question: "Would you like to create a GitHub repository for this project?"
+#   required: true
+#   default: true
+#   help: |
+#     Click the following link to create a new private repository on GitHub:
+#     ```
+#     https://github.com/new?name={{project_name}}&description="{{project_description}}"&visibility=private
+#     ```
+#     Once that is done, press Enter to continue.
+
+# Adds an option with a nice selector to choose which examples to keep.
+# TODO: Also add integration tests to make sure that the repo still works when those files are deleted.
+algorithms_to_include:
+  type: str
+
+  multiselect: true
+  choices:
+    Image Classification (PyTorch): "image_classifier"
+    Image Classification (Jax): "jax_image_classifier"
+    Proximal Policy Optimization (Jax): "jax_ppo"
+    LLM Fine-tuning (PyTorch, 🤗): "llm_finetuning"
+    Text classification (PyTorch, 🤗): "text_classifier"
+  default: ["image_classifier", "jax_image_classifier", "jax_ppo", "llm_finetuning", "text_classifier"]
+  help: |
+    Choose which example learning algorithms to include in your project. (Use space to toggle, and Enter to confirm).
+
+
+# todo: Should we also add a question to select which datasets/datamodules to include?
+
+
+# note: https://copier.readthedocs.io/en/stable/configuring/#templates_suffix
+# This could maybe be useful!
+# _templates_suffix: ""
+
+_tasks:
+    # Initialize a git repository.
+    - "git init"
+    - "git remote add origin https://www.github.com/{{github_username}}/{{project_name}} || true"
+
+
+    # Write an error message and exit if this is being run from Windows. Suggest running from WSL instead.
+    - command: |
+        echo "This template is not supported on Windows. Please run this template from WSL instead."
+        echo "See https://learn.microsoft.com/en-us/windows/wsl/install for more information."
+        exit 1
+      when: "{{ _copier_conf.os == 'windows' }}"
+
+    # Remove stuff from the template that isn't necessary for the new projects.
+    - "rm -r docs"
+    - "rm mkdocs.yml"
+    - "rm .github/workflows/docs.yml"
+
+    # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
+    - command: mv project {{project_name}}
+      when: "{{ project_name != 'project' }}"
+    - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ project_name }}/g'
+      when: "{{ project_name != 'project' and _copier_conf.os == 'linux' }}"
+    - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ project_name }}/g'
+      when: "{{ project_name != 'project' and _copier_conf.os == 'macos' }}"
+
+    # Remove unwanted examples:
+    - command: rm --verbose {{project_name}}/algorithms/image_classifier*.py {{project_name}}/configs/algorithm/image_classifier.yaml
+      when: "{{ 'image_classifier' not in algorithms_to_include }}"
+    - command: rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py {{project_name}}/configs/algorithm/jax_image_classifier.yaml
+      when: "{{ 'jax_image_classifier' not in algorithms_to_include }}"
+    - command: rm --verbose {{project_name}}/algorithms/jax_ppo*.py {{project_name}}/configs/algorithm/jax_ppo.yaml
+      when: "{{ 'jax_ppo' not in algorithms_to_include }}"
+    - command: rm --verbose {{project_name}}/algorithms/llm_finetuning*.py {{project_name}}/configs/algorithm/llm_finetuning.yaml
+      when: "{{ 'llm_finetuning' not in algorithms_to_include }}"
+    - command: rm --verbose {{project_name}}/algorithms/text_classifier*.py {{project_name}}/configs/algorithm/text_classifier.yaml
+      when: "{{ 'text_classifier' not in algorithms_to_include }}"
+
+    # Fix the import order in Python files with ruff
+    - "uvx ruff check . --fix"
+    - "uvx pre-commit run --all-files || true"  # we don't care if there are errors here.
+    - "git add ."
+    - "git commit -m 'Initial commit'"
+    - "uvx pre-commit install"
+    - "uv python pin {{python_version}}"
+    - "uv sync --all-extras"
+
+# TODO: How to link this project to a new github repo? Could we create the repo from the CLI
+# somehow?
+
+_message_after_copy: |
+    ----------------------------------------------------------------------
+
+    🎊 Your project "{{ project_name }}" has been created successfully! 🎊
+
+    Recommended Next steps:
+
+    1. Change directory to the project root:
+
+        $ cd {{ _copier_conf.dst_path }}
+
+    2. Create a new Github Repository for this project by clicking on this URL:
+
+        https://github.com/new?name={{project_name}}&description="{{project_description}}"&visibility=private
+
+    3. Push this project to this new github repository:
+
+        $ git remote add origin https://www.github.com/{{github_username}}/{{project_name}}
+        $ git fetch origin
+        $ git branch --set-upstream-to=origin/master master
+        $ git push
+
+    4. Open up your favorite code editor (e.g. VsCode) and start coding! 🚀

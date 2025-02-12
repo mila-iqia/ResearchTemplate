@@ -65,7 +65,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
 ## Starting a new project
 
-To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate).
+<!-- To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate). -->
 
 
 ## Setting up your environment
@@ -73,37 +73,49 @@ To create a new project using this template, [_*Click Here*_](https://github.com
 Here are two recommended ways to setup your development environment:
 
 * Using the [uv](https://rye.astral.sh/) package manager
-* Using a development container (recommended if you are able to install Docker on your machine)
+* Using a development container (recommended for advanced users that are familiar with containers)
 
 
 === "Locally (Linux / Mac)"
 
-    1. Clone your new repo and navigate into it
 
-        ```bash
-        git clone https://www.github.com/your-username/your-repo-name
-        cd your-repo-name
-        ```
+    1. Install `uv`:
 
-    2. Install the package manager
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
 
-        ```bash
-        # Install uv
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        source $HOME/.cargo/env
-        ```
+    You might need to restart your terminal for the changes to take effect.
 
-    3. Install dependencies
+    2. Create your new project
 
-        ```bash
-        uv sync  # Creates a virtual environment and installs dependencies in it.
-        ```
+    Once you have `uv` installed locally, use this command to create a new project from this template:
+    (Replace `new_project` with the path to the new project root folder.)
+
+    ```bash
+    uvx copier copy --trust gh:mila-iqia/ResearchTemplate research_project
+    ```
+
+    This will ask you a few questions and help setup your project.
+
+    Navigate to this new project, open up your favorite IDE, and voila! You're all setup! 🎊
+
+    Use this command to see all available options:
+
+    ```bash
+    cd new_project  # replace with your folder.
+    uv sync  # Creates a virtual environment and installs dependencies in it.
+    . .venv/bin/activate  # activate the virtual environment
+    python project/main.py --help
+    ```
+
 
 === "Locally (Windows)"
 
     1. Install WSL following [this guide](https://learn.microsoft.com/en-us/windows/wsl/install)
     2. Follow the installation instructions for Linux
 
+<!--
 === "On a SLURM cluster"
 
     1. Clone your new repo and navigate into it
@@ -120,7 +132,7 @@ Here are two recommended ways to setup your development environment:
         ```console
         srun --pty --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=00:10:00 scripts/mila_setup.sh
         ```
-
+ -->
 
 ## Usage
 
