@@ -164,10 +164,11 @@ class SbatchArgs(_SbatchArgs):
     time: int | str = 10
     nodes: int = 1
     ntasks_per_node: int = 1
-    cpus_per_task: int = 1
+    cpus_per_task: int = 4
     gpus_per_task: int | str | None = 1
     # ntasks_per_gpu: int | None = None  # todo: support this!
-    mem: str = "4G"
+    mem: str = "16G"
+    stderr_to_stdout: bool = True
 
 
 @hydra_zen.hydrated_dataclass(submitit.SlurmExecutor)
@@ -236,7 +237,7 @@ def launch():
     sweep_jobs = []
     # snapshot_dir =
     with (
-        submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder, root_dir=None)
+        submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder / "code", root_dir=None)
         if cluster == "current"
         else contextlib.nullcontext()
     ):
@@ -249,7 +250,7 @@ def launch():
         logging.info(f"Working directory: {executor.folder}")
 
         # idea: Could run tests specific to that particular config (that use some of the job_args?)
-        test_command = ["uv", "run", "pytest", "-x", "-v", "--gen-missing"]
+        test_command = ["uv", "run", "--all-extras", "pytest", "-x", "-v", "--gen-missing"]
         test_job = executor.submit(submitit.helpers.CommandFunction(test_command))
         logger.info(f"Test job ({test_job.job_id}): {test_command}")
 
@@ -269,7 +270,7 @@ def launch():
         sweep_jobs = executor.submit_array(
             [
                 submitit.helpers.CommandFunction(
-                    ["uv", "run", "python", "project/main.py", *job_args]
+                    ["uv", "run", "--all-extras", "python", "project/main.py", *job_args]
                 )
                 for job_args in args_for_each_job
             ]
