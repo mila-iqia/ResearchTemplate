@@ -15,7 +15,6 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           version: "latest"
-          enable-cache: true  # no need, uses the local uv cache.
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache-suffix: "3.10"
@@ -28,8 +27,3 @@ jobs:
 
       - name: Deploy docs
         run: uv run mkdocs gh-deploy --force
-        # note: Checking if we really need the one below:
-        # uses: mhausenblas/mkdocs-deploy-gh-pages@1.9
-        # # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

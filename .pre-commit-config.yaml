@@ -40,10 +40,12 @@ repos:
 
   # python docstring formatting
   - repo: https://github.com/myint/docformatter
-    rev: v1.7.5
+    # Don't autoupdate until https://github.com/PyCQA/docformatter/issues/293 is fixed
+    rev: eb1df347edd128b30cd3368dddc3aa65edcfac38
     hooks:
       - id: docformatter
         language: python
+        additional_dependencies: [tomli]
         args: [--in-place, --wrap-summaries=99, --wrap-descriptions=99]
         require_serial: true
 
