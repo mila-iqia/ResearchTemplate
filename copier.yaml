@@ -1,15 +1,15 @@
 # questions
 
 _message_before_copy: |
-    🧪 Thanks for generating a project using the Mila Research Project template! 😎
+  🧪 Thanks for generating a project using the Mila Research Project template! 😎
 
-    You'll be asked a few questions. This will be used to generate a tailored project for you.
-
+  You'll be asked a few questions. This will be used to generate a tailored project for you.
 
 project_name:
   type: str
   question: "What is the name of this new research project?"
   required: true
+  validator: "{% if ' ' in project_name %}Please enter a project name without spaces.{% endif %}"
   # todo: add a task below that replaces all instances of 'project' in Python files with this?
   default: "project"
 
@@ -81,7 +81,14 @@ examples_to_include:
     Proximal Policy Optimization (Jax): "jax_ppo"
     LLM Fine-tuning (PyTorch, 🤗): "llm_finetuning"
     Text classification (PyTorch, 🤗): "text_classifier"
-  default: ["image_classifier", "jax_image_classifier", "jax_ppo", "llm_finetuning", "text_classifier"]
+  default:
+    [
+      "image_classifier",
+      "jax_image_classifier",
+      "jax_ppo",
+      "llm_finetuning",
+      "text_classifier",
+    ]
   help: |
     Choose which examples to include in your project. (Use space to toggle, and Enter to confirm).
     By default, keeps all the examples.
@@ -89,84 +96,81 @@ examples_to_include:
     Please note that you may have a few minor errors to correct (e.g. import statements) if you
     unselect some examples. This will be fixed eventually.
 
-
 # todo: Should we also add a question to select which datasets/datamodules to include?
-
 
 # note: https://copier.readthedocs.io/en/stable/configuring/#templates_suffix
 # This could maybe be useful!
 # _templates_suffix: ""
 
 _tasks:
-    # Initialize a git repository.
-    - "git init"
-    - "git remote add origin https://www.github.com/{{github_username}}/{{project_name}} || true"
+  # Initialize a git repository.
+  - "git init"
+  - "git remote add origin https://www.github.com/{{github_username}}/{{project_name}} || true"
 
+  # Write an error message and exit if this is being run from Windows. Suggest running from WSL instead.
+  - command: |
+      echo "This template is not supported on Windows. Please run this template from WSL instead."
+      echo "See https://learn.microsoft.com/en-us/windows/wsl/install for more information."
+      exit 1
+    when: "{{ _copier_conf.os == 'windows' }}"
 
-    # Write an error message and exit if this is being run from Windows. Suggest running from WSL instead.
-    - command: |
-        echo "This template is not supported on Windows. Please run this template from WSL instead."
-        echo "See https://learn.microsoft.com/en-us/windows/wsl/install for more information."
-        exit 1
-      when: "{{ _copier_conf.os == 'windows' }}"
+  # Remove stuff from the template that isn't necessary for the new projects.
+  - "rm -r docs"
+  - "rm mkdocs.yml"
+  - "rm .github/workflows/docs.yml"
 
-    # Remove stuff from the template that isn't necessary for the new projects.
-    - "rm -r docs"
-    - "rm mkdocs.yml"
-    - "rm .github/workflows/docs.yml"
+  # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
+  - command: mv project {{project_name}}
+    when: "{{ project_name != 'project' }}"
+  - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ project_name }}/g'
+    when: "{{ project_name != 'project' and _copier_conf.os == 'linux' }}"
+  - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ project_name }}/g'
+    when: "{{ project_name != 'project' and _copier_conf.os == 'macos' }}"
 
-    # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
-    - command: mv project {{project_name}}
-      when: "{{ project_name != 'project' }}"
-    - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ project_name }}/g'
-      when: "{{ project_name != 'project' and _copier_conf.os == 'linux' }}"
-    - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ project_name }}/g'
-      when: "{{ project_name != 'project' and _copier_conf.os == 'macos' }}"
+  # Remove unwanted examples:
+  - command: rm --verbose {{project_name}}/algorithms/image_classifier*.py {{project_name}}/configs/algorithm/image_classifier.yaml
+    when: "{{ 'image_classifier' not in examples_to_include }}"
+  - command: rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py {{project_name}}/configs/algorithm/jax_image_classifier.yaml
+    when: "{{ 'jax_image_classifier' not in examples_to_include }}"
+  - command: rm --verbose {{project_name}}/algorithms/jax_ppo*.py {{project_name}}/configs/algorithm/jax_ppo.yaml
+    when: "{{ 'jax_ppo' not in examples_to_include }}"
+  - command: rm --verbose {{project_name}}/algorithms/llm_finetuning*.py {{project_name}}/configs/algorithm/llm_finetuning.yaml
+    when: "{{ 'llm_finetuning' not in examples_to_include }}"
+  - command: rm --verbose {{project_name}}/algorithms/text_classifier*.py {{project_name}}/configs/algorithm/text_classifier.yaml
+    when: "{{ 'text_classifier' not in examples_to_include }}"
 
-    # Remove unwanted examples:
-    - command: rm --verbose {{project_name}}/algorithms/image_classifier*.py {{project_name}}/configs/algorithm/image_classifier.yaml
-      when: "{{ 'image_classifier' not in examples_to_include }}"
-    - command: rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py {{project_name}}/configs/algorithm/jax_image_classifier.yaml
-      when: "{{ 'jax_image_classifier' not in examples_to_include }}"
-    - command: rm --verbose {{project_name}}/algorithms/jax_ppo*.py {{project_name}}/configs/algorithm/jax_ppo.yaml
-      when: "{{ 'jax_ppo' not in examples_to_include }}"
-    - command: rm --verbose {{project_name}}/algorithms/llm_finetuning*.py {{project_name}}/configs/algorithm/llm_finetuning.yaml
-      when: "{{ 'llm_finetuning' not in examples_to_include }}"
-    - command: rm --verbose {{project_name}}/algorithms/text_classifier*.py {{project_name}}/configs/algorithm/text_classifier.yaml
-      when: "{{ 'text_classifier' not in examples_to_include }}"
-
-    # Fix the import order in Python files with ruff
-    - "uvx ruff check . --fix"
-    - "uvx pre-commit run --all-files || true"  # we don't care if there are errors here.
-    - "git add ."
-    - "git commit -m 'Initial commit'"
-    - "uvx pre-commit install"
-    - "uv python pin {{python_version}}"
-    - "uv sync --all-extras"
+  # Fix the import order in Python files with ruff
+  - "uvx ruff check . --fix"
+  - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
+  - "git add ."
+  - "git commit -m 'Initial commit'"
+  - "uvx pre-commit install"
+  - "uv python pin {{python_version}}"
+  - "uv sync --all-extras"
 
 # TODO: How to link this project to a new github repo? Could we create the repo from the CLI
 # somehow?
 
 _message_after_copy: |
-    ----------------------------------------------------------------------
+  ----------------------------------------------------------------------
 
-    🎊 Your project "{{ project_name }}" has been created successfully! 🎊
+  🎊 Your project "{{ project_name }}" has been created successfully! 🎊
 
-    Recommended Next steps:
+  Recommended Next steps:
 
-    1. Change directory to the project root:
+  1. Change directory to the project root:
 
-        $ cd {{ _copier_conf.dst_path }}
+      $ cd {{ _copier_conf.dst_path }}
 
-    2. Create a new Github Repository for this project by clicking on this URL:
+  2. Create a new Github Repository for this project by clicking on this URL:
 
-        https://github.com/new?name={{project_name}}&description="{{project_description}}"&visibility=private
+      https://github.com/new?name={{project_name}}&description="{{project_description}}"&visibility=private
 
-    3. Push this project to this new github repository:
+  3. Push this project to this new github repository:
 
-        $ git remote add origin https://www.github.com/{{github_username}}/{{project_name}}
-        $ git fetch origin
-        $ git branch --set-upstream-to=origin/master master
-        $ git push
+      $ git remote add origin https://www.github.com/{{github_username}}/{{project_name}}
+      $ git fetch origin
+      $ git branch --set-upstream-to=origin/master master
+      $ git push
 
-    4. Open up your favorite code editor (e.g. VsCode) and start coding! 🚀
+  4. Open up your favorite code editor (e.g. VsCode) and start coding! 🚀

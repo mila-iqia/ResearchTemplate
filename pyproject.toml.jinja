@@ -65,8 +65,9 @@ dev = [
 gpu = ["jax[cuda12]>=0.4.31"]
 
 [tool.pytest.ini_options]
-testpaths = ["project", "docs", "tests"]
-norecursedirs = [".venv", "site"]
+testpaths = ["{{project_name}}", "tests"]
+norecursedirs = [".venv"]
+
 # Required to use torch deterministic mode.
 env = ["CUBLAS_WORKSPACE_CONFIG=:4096:8"]
 addopts = [
