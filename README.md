@@ -19,13 +19,30 @@ See [this introduction to the project](https://mila-iqia.github.io/ResearchTempl
 
 ## Installation
 
-Projects created with this template use [uv](https://docs.astral.sh/uv/) to manage dependencies. Once you have `uv` installed locally, you can install all dependencies with a single command:
+Projects created with this template use [uv](https://docs.astral.sh/uv/getting-started/installation/#installing-uv) to manage dependencies.
+First, follow the instructions [here](https://docs.astral.sh/uv/getting-started/installation/#installing-uv) to install `uv` on your machine.
+
+Once you have `uv` installed locally, use this command to create a new project from this template:
+
+Replace `new_project` with the path where you'd like to create the new project.
 
 ```bash
-uv sync  # Creates a virtual environment and installs dependencies in it.
+uvx copier copy --trust gh:mila-iqia/ResearchTemplate new_project
 ```
 
-For more detailed instructions, take a look at [this page](https://mila-iqia.github.io/ResearchTemplate/#setting-up-your-environment) of the template docs.
+This will ask you a few questions and setup your project.
+
+Navigate to this new project, open up your favorite IDE, and voila! You're all setup! 🎊
+
+Use this command to see all available options:
+
+```bash
+cd new_project  # replace with your folder.
+. .venv/bin/activate
+uv run python project/main.py --help
+```
+
+For more detailed instructions, take a look at [this page](https://mila-iqia.github.io/ResearchTemplate/#setting-up-your-environment).
 
 ## Overview
 
