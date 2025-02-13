@@ -72,9 +72,8 @@ python_version:
 
 # Adds an option with a nice selector to choose which examples to keep.
 # TODO: Also add integration tests to make sure that the repo still works when those files are deleted.
-algorithms_to_include:
+examples_to_include:
   type: str
-
   multiselect: true
   choices:
     Image Classification (PyTorch): "image_classifier"
@@ -84,7 +83,11 @@ algorithms_to_include:
     Text classification (PyTorch, 🤗): "text_classifier"
   default: ["image_classifier", "jax_image_classifier", "jax_ppo", "llm_finetuning", "text_classifier"]
   help: |
-    Choose which example learning algorithms to include in your project. (Use space to toggle, and Enter to confirm).
+    Choose which examples to include in your project. (Use space to toggle, and Enter to confirm).
+    By default, keeps all the examples.
+
+    Please note that you may have a few minor errors to correct (e.g. import statements) if you
+    unselect some examples. This will be fixed eventually.
 
 
 # todo: Should we also add a question to select which datasets/datamodules to include?
@@ -122,15 +125,15 @@ _tasks:
 
     # Remove unwanted examples:
     - command: rm --verbose {{project_name}}/algorithms/image_classifier*.py {{project_name}}/configs/algorithm/image_classifier.yaml
-      when: "{{ 'image_classifier' not in algorithms_to_include }}"
+      when: "{{ 'image_classifier' not in examples_to_include }}"
     - command: rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py {{project_name}}/configs/algorithm/jax_image_classifier.yaml
-      when: "{{ 'jax_image_classifier' not in algorithms_to_include }}"
+      when: "{{ 'jax_image_classifier' not in examples_to_include }}"
     - command: rm --verbose {{project_name}}/algorithms/jax_ppo*.py {{project_name}}/configs/algorithm/jax_ppo.yaml
-      when: "{{ 'jax_ppo' not in algorithms_to_include }}"
+      when: "{{ 'jax_ppo' not in examples_to_include }}"
     - command: rm --verbose {{project_name}}/algorithms/llm_finetuning*.py {{project_name}}/configs/algorithm/llm_finetuning.yaml
-      when: "{{ 'llm_finetuning' not in algorithms_to_include }}"
+      when: "{{ 'llm_finetuning' not in examples_to_include }}"
     - command: rm --verbose {{project_name}}/algorithms/text_classifier*.py {{project_name}}/configs/algorithm/text_classifier.yaml
-      when: "{{ 'text_classifier' not in algorithms_to_include }}"
+      when: "{{ 'text_classifier' not in examples_to_include }}"
 
     # Fix the import order in Python files with ruff
     - "uvx ruff check . --fix"
