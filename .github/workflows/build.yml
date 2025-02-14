@@ -101,11 +101,21 @@ jobs:
           version: "latest"
       - name: Write the choices into a yaml file to be passed to Copier
         run: |
-          echo "your_name: John Doe" > choices.yaml
-          echo "github_username: johndoe" >> choices.yaml
-          echo "python_version: ${{ matrix.python-version }}" >> choices.yaml
+          echo 'project_name: "new_project"' > choices.yaml
+          echo 'your_name: "John Doe"' >> choices.yaml
+          echo 'github_username: "johndoe"' >> choices.yaml
+          echo 'python_version: "${{ matrix.python-version }}"' >> choices.yaml
+      - name: Add the examples to include to the choices file
+        if: ${{ matrix.example_to_include != '' }}
+        run: |
           echo "examples_to_include:" >> choices.yaml
-          echo "  - ${{ matrix.example_to_include }}" >> choices.yaml
+          echo '  - "${{ matrix.example_to_include }}"' >> choices.yaml
+      - name: Add an empty list to the choices file (no examples included)
+        if: ${{ matrix.example_to_include == '' }}
+        run: |
+          echo 'examples_to_include: []' >> choices.yaml
+      - name: display the file contents
+        run: cat choices.yaml
       - name: Create a new project from the template with Copier
         run: |
           uvx copier copy --trust --defaults -r HEAD --data-file choices.yaml . ${{ github.workspace }}/new_project
