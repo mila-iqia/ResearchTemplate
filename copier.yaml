@@ -133,6 +133,10 @@ _tasks:
   - command: |
       rm --verbose {{project_name}}/algorithms/image_classifier*.py
       rm --verbose {{project_name}}/configs/algorithm/image_classifier.yaml
+      rm --verbose {{project_name}}/configs/experiment/example.yaml
+      rm --verbose {{project_name}}/configs/experiment/cluster_sweep_example.yaml
+      rm --verbose {{project_name}}/configs/experiment/local_sweep_example.yaml
+      rm --verbose {{project_name}}/configs/experiment/profiling.yaml
     when: "{{ 'image_classifier' not in examples_to_include }}"
 
   - command: |
@@ -145,17 +149,49 @@ _tasks:
   - command: |
       rm --verbose {{project_name}}/algorithms/jax_ppo*.py
       rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
+      rm --verbose {{project_name}}/configs/experiment/jax_rl_example.yaml
     when: "{{ 'jax_ppo' not in examples_to_include }}"
 
   - command: |
       rm --verbose {{project_name}}/algorithms/llm_finetuning*.py
       rm --verbose {{project_name}}/configs/algorithm/llm_finetuning.yaml
+      rm --verbose {{project_name}}/configs/experiment/llm_finetuning_example.yaml
     when: "{{ 'llm_finetuning' not in examples_to_include }}"
 
   - command: |
       rm --verbose {{project_name}}/algorithms/text_classifier*.py
       rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
+      rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
     when: "{{ 'text_classifier' not in examples_to_include }}"
+
+  # Remove unneeded dependencies:
+
+  ## Jax-related dependencies:
+  - command: |
+      uv remove rejax gymnax gymnasium xtils
+    when: "{{ 'jax_ppo' not in examples_to_include }}"
+  - command: |
+      uv remove jax jaxlib torch-jax-interop
+    when: "{{ 'jax_ppo' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
+
+  ## Huggingface-related dependencies:
+  - command: |
+      uv remove evaluate
+    when: "{{ 'text_classifier' not in examples_to_include }}"
+  - command: |
+      uv remove transformers datasets
+    when: "{{ 'text_classifier' not in examples_to_include and 'llm_finetuning' not in examples_to_include }}"
+
+  ## Lightning-related dependencies
+  ## TODO: Potentially even remove pytorch-lightning as a dependency if no examples are selected.
+  ## This currently would completely break the project. There are lots of references to
+  ## Pytorch-Lightning everywhere. Using a generic "TrainerLike" protocol or similar might help.
+  # - command: |
+  #     uv remove lightning
+  #   when: |
+  #     {{ 'image_classifier' not in examples_to_include and \
+  #        'llm_finetuning' not in examples_to_include and \
+  #        'text_classifier' not in examples_to_include }}
 
   # Fix the import order in Python files with ruff
   - "uvx ruff check . --fix"
