@@ -8,6 +8,8 @@ from torch import nn
 
 
 class FcNet(nn.Sequential):
+    """Simple fully-connected network."""
+
     @pydantic.dataclasses.dataclass
     class HParams:
         """Dataclass containing the network hyper-parameters.

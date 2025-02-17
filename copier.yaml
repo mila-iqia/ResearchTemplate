@@ -128,15 +128,31 @@ _tasks:
     when: "{{ project_name != 'project' and _copier_conf.os == 'macos' }}"
 
   # Remove unwanted examples:
-  - command: rm --verbose {{project_name}}/algorithms/image_classifier*.py {{project_name}}/configs/algorithm/image_classifier.yaml
+  - command: |
+      rm --verbose {{project_name}}/algorithms/image_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/image_classifier.yaml
     when: "{{ 'image_classifier' not in examples_to_include }}"
-  - command: rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py {{project_name}}/configs/algorithm/jax_image_classifier.yaml
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/jax_image_classifier.yaml
+      rm --verbose {{project_name}}/configs/algorithm/network/jax_cnn.yaml
+      rm --verbose {{project_name}}/configs/algorithm/network/jax_fcnet.yaml
     when: "{{ 'jax_image_classifier' not in examples_to_include }}"
-  - command: rm --verbose {{project_name}}/algorithms/jax_ppo*.py {{project_name}}/configs/algorithm/jax_ppo.yaml
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/jax_ppo*.py
+      rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
     when: "{{ 'jax_ppo' not in examples_to_include }}"
-  - command: rm --verbose {{project_name}}/algorithms/llm_finetuning*.py {{project_name}}/configs/algorithm/llm_finetuning.yaml
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/llm_finetuning*.py
+      rm --verbose {{project_name}}/configs/algorithm/llm_finetuning.yaml
     when: "{{ 'llm_finetuning' not in examples_to_include }}"
-  - command: rm --verbose {{project_name}}/algorithms/text_classifier*.py {{project_name}}/configs/algorithm/text_classifier.yaml
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/text_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
     when: "{{ 'text_classifier' not in examples_to_include }}"
 
   # Fix the import order in Python files with ruff
