@@ -170,3 +170,4 @@ lightning_logs
 # .python-version
 .testmondata*
 .schemas
+tests/.regression_files/**.png
