@@ -4,6 +4,9 @@ from __future__ import annotations
 import shlex
 import shutil
 import subprocess
+import sys
+import uuid
+from logging import getLogger
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -22,7 +25,46 @@ from project.conftest import command_line_overrides, skip_on_macOS_in_CI
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 
+logger = getLogger(__name__)
+
 CONFIG_DIR = Path(project.configs.__file__).parent
+
+
+experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
+"""The list of all experiments configs in the `configs/experiment` directory.
+
+This is used to check that all the experiment configs are covered by tests.
+"""
+
+experiment_commands_to_test: list[str | ParameterSet] = []
+"""List of experiment commands to run for testing.
+
+Consider adding a command that runs simple sanity check for your algorithm, something like one step
+of training or something similar.
+"""
+
+
+@pytest.mark.parametrize("experiment_config", experiment_configs)
+def test_experiment_config_is_tested(experiment_config: str):
+    select_experiment_command = f"experiment={experiment_config}"
+
+    for test_command in experiment_commands_to_test:
+        if isinstance(test_command, ParameterSet):
+            assert len(test_command.values) == 1
+            assert isinstance(test_command.values[0], str), test_command.values
+            test_command = test_command.values[0]
+
+        if select_experiment_command in test_command:
+            return  # success.
+
+    pytest.fail(
+        f"Experiment config {experiment_config!r} is not covered by any of the tests!\n"
+        f"Consider adding an example of an experiment command that uses this config to the "
+        # This is a 'nameof' hack to get the name of the variable so we don't hard-code it.
+        + ("`" + f"{experiment_commands_to_test=}".partition("=")[0] + "` list")
+        + " list.\n"
+        f"For example: 'experiment={experiment_config} trainer.max_epochs=1'."
+    )
 
 
 def test_jax_can_use_the_GPU():
@@ -63,20 +105,6 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
     return mock_eval
 
 
-experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
-"""The list of all experiments configs in the `configs/experiment` directory.
-
-This is used to check that all the experiment configs are covered by tests.
-"""
-
-experiment_commands_to_test: list[str | ParameterSet] = []
-"""List of experiment commands to run for testing.
-
-Consider adding a command that runs simple sanity check for your algorithm, something like one step
-of training or something similar.
-"""
-
-
 @pytest.mark.parametrize(
     command_line_overrides.__name__,
     experiment_commands_to_test,
@@ -101,6 +129,28 @@ def test_can_load_experiment_configs(
 
     mock_train.assert_called_once()
     mock_evaluate.assert_called_once()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    command_line_overrides.__name__,
+    experiment_commands_to_test,
+    indirect=True,
+)
+def test_can_run_experiment(
+    command_line_overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Launches the sanity check experiments using the commands from the list above."""
+    # Mock out some part of the `main` function to not actually run anything.
+    # Get a unique hash id:
+    # todo: Set a unique name to avoid collisions between tests and reusing previous results.
+    name = f"{request.function.__name__}_{uuid.uuid4().hex}"
+    command_line_args = ["project/main.py"] + list(command_line_overrides) + [f"name={name}"]
+    logger.info(f"Launching sanity check experiment with command: {command_line_args}")
+    monkeypatch.setattr(sys, "argv", command_line_args)
+    project.main.main()
 
 
 @skip_on_macOS_in_CI
