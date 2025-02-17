@@ -146,6 +146,32 @@ _tasks:
       rm --verbose {{project_name}}/configs/algorithm/network/jax_fcnet.yaml
     when: "{{ 'jax_image_classifier' not in examples_to_include }}"
 
+  # Remove unnecessary image classification datamodules and configs
+  - command: |
+      rm --verbose {{project_name}}/datamodules/image_classification/mnist*.py
+      rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
+      rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
+      rm --verbose {{project_name}}/configs/datamodule/cifar10.yaml
+      rm --verbose {{project_name}}/datamodules/image_classification/fashion_mnist*.py
+      rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
+      rm --verbose {{project_name}}/datamodules/image_classification/imagenet*.py
+      rm --verbose {{project_name}}/configs/datamodule/imagenet.yaml
+      rm --verbose {{project_name}}/datamodules/image_classification/inaturalist*.py
+      rm --verbose {{project_name}}/configs/datamodule/inaturalist.yaml
+      rm --verbose {{project_name}}/datamodules/vision.yaml
+      rm --verbose {{project_name}}/configs/datamodule/vision.yaml
+    when: |
+      {{ 'image_classifier' not in examples_to_include and
+         'jax_image_classifier' not in examples_to_include }}
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/text_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
+      rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
+      rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
+      rm --recursive --verbose {{project_name}}/datamodules/text
+    when: "{{ 'text_classifier' not in examples_to_include }}"
+
   - command: |
       rm --verbose {{project_name}}/algorithms/jax_ppo*.py
       rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
@@ -157,14 +183,6 @@ _tasks:
       rm --verbose {{project_name}}/configs/algorithm/llm_finetuning.yaml
       rm --verbose {{project_name}}/configs/experiment/llm_finetuning_example.yaml
     when: "{{ 'llm_finetuning' not in examples_to_include }}"
-
-  - command: |
-      rm --verbose {{project_name}}/algorithms/text_classifier*.py
-      rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
-      rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
-      rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
-      rm --recursive --verbose {{project_name}}/datamodules/text
-    when: "{{ 'text_classifier' not in examples_to_include }}"
 
   # Remove unneeded dependencies:
 
