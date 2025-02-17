@@ -99,7 +99,6 @@ from project.main import (
     instantiate_algorithm,
     setup_logging,
 )
-from project.trainers.jax_trainer import JaxTrainer
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
@@ -113,7 +112,8 @@ from project.utils.typing_utils import is_sequence_of
 if typing.TYPE_CHECKING:
     from _pytest.mark.structures import ParameterSet
 
-    Param = str | tuple[str, ...] | ParameterSet
+    # TODO: Might not be present if the Jax examples aren't included.
+    from project.trainers.jax_trainer import JaxTrainer
 
 
 logger = get_logger(__name__)
@@ -328,7 +328,7 @@ def algorithm(
     seed: int,
     device: torch.device,
 ):
-    """Fixture that creates the "algorithm" (a
+    """Fixture that creates the "algorithm" (usually a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
     algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
@@ -490,7 +490,7 @@ def devices(
     yield 1  # Use only one GPU by default if not distributed.
 
 
-def _override_param_id(override: Param) -> str:
+def _override_param_id(override: str | tuple[str, ...] | ParameterSet) -> str:
     if not override:
         return ""
     if isinstance(override, str):
