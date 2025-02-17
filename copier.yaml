@@ -10,7 +10,7 @@ project_name:
   question: "What is the name of this new research project?"
   required: true
   validator: "{% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}"
-  default: "{{ _copier_conf._folder_name }}"
+  default: project
 
 your_name:
   type: str
@@ -117,6 +117,7 @@ _tasks:
   - "rm -r docs"
   - "rm mkdocs.yml"
   - "rm .github/workflows/docs.yml"
+  - "rm tests/test_template.py"
 
   # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
   - command: mv project {{project_name}}

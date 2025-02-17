@@ -36,6 +36,7 @@ jobs:
   # todo: turn off in the projects created from the template.
   check_docs:
     needs: [linting]
+    if: github.repository == 'mila-iqia/ResearchTemplate'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -79,51 +80,6 @@ jobs:
         with:
           name: coverage-reports-unit-tests-${{ matrix.platform }}-${{ matrix.python-version }}
           path: ./coverage.xml
-
-  template_tests:
-    needs: [unit_tests]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
-        example_to_include:
-          - "image_classifier"
-          - "jax_image_classifier"
-          - "jax_ppo"
-          - "llm_finetuning"
-          - "text_classifier"
-          - ""
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"
-      - name: Write the choices into a yaml file to be passed to Copier
-        run: |
-          echo 'project_name: "new_project"' > choices.yaml
-          echo 'your_name: "John Doe"' >> choices.yaml
-          echo 'github_username: "johndoe"' >> choices.yaml
-          echo 'python_version: "${{ matrix.python-version }}"' >> choices.yaml
-      - name: Add the examples to include to the choices file
-        if: ${{ matrix.example_to_include != '' }}
-        run: |
-          echo "examples_to_include:" >> choices.yaml
-          echo '  - "${{ matrix.example_to_include }}"' >> choices.yaml
-      - name: Add an empty list to the choices file (no examples included)
-        if: ${{ matrix.example_to_include == '' }}
-        run: |
-          echo 'examples_to_include: []' >> choices.yaml
-      - name: display the file contents
-        run: cat choices.yaml
-      - name: Create a new project from the template with Copier
-        run: |
-          uvx copier copy --trust --defaults -r HEAD --data-file choices.yaml . ${{ github.workspace }}/new_project
-      - name: Run tests with pytest in generated project.
-        working-directory: ${{ github.workspace }}/new_project
-        env:
-          JAX_PLATFORMS: cpu
-        run: uv run --frozen pytest -v --gen-missing
 
   launch-slurm-actions-runner:
     needs: [unit_tests, check_docs]
