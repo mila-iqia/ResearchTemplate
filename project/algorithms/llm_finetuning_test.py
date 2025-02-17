@@ -13,8 +13,18 @@ from project.algorithms.llm_finetuning import (
 from project.algorithms.testsuites.lightning_module_tests import (
     LightningModuleTests,
 )
+from project.main_test import experiment_commands_to_test
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
+
+experiment_commands_to_test.append(
+    pytest.param(
+        "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/logger=[]",
+        marks=pytest.mark.skipif(
+            SLURM_JOB_ID is None, reason="Can only be run on a slurm cluster."
+        ),
+    )
+)
 
 
 @pytest.mark.parametrize(

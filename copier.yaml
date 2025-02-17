@@ -162,6 +162,8 @@ _tasks:
       rm --verbose {{project_name}}/algorithms/text_classifier*.py
       rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
       rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
+      rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
+      rm --recursive --verbose {{project_name}}/datamodules/text
     when: "{{ 'text_classifier' not in examples_to_include }}"
 
   # Remove unneeded dependencies:

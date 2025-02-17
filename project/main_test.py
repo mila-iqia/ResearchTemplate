@@ -10,6 +10,7 @@ from unittest.mock import Mock
 import omegaconf.errors
 import pytest
 import torch
+from _pytest.mark.structures import ParameterSet
 from hydra.types import RunMode
 from omegaconf import DictConfig
 from pytest_regressions.file_regression import FileRegressionFixture
@@ -18,9 +19,8 @@ import project.configs
 import project.experiment
 import project.main
 from project.conftest import command_line_overrides, skip_on_macOS_in_CI
-from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
+from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.testutils import IN_GITHUB_CI
 
 CONFIG_DIR = Path(project.configs.__file__).parent
 
@@ -64,53 +64,17 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
 
 
 experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
-experiment_commands_to_test = [
-    "experiment=example trainer.fast_dev_run=True",
-    "experiment=text_classification_example trainer.fast_dev_run=True",
-    # "experiment=jax_example trainer.fast_dev_run=True",
-    "experiment=jax_rl_example trainer.max_epochs=1",
-    pytest.param(
-        f"experiment=cluster_sweep_example "
-        f"trainer/logger=[] "  # disable logging.
-        f"trainer.fast_dev_run=True "  # make each job quicker to run
-        f"hydra.sweeper.worker.max_trials=1 "  # limit the number of jobs that get launched.
-        f"resources=gpu "
-        f"cluster={'current' if SLURM_JOB_ID else 'mila'} ",
-        marks=[
-            pytest.mark.slow,
-            pytest.mark.skipif(
-                IN_GITHUB_CI,
-                reason="Remote launcher tries to do a git push, doesn't work in github CI.",
-            ),
-        ],
-    ),
-    pytest.param(
-        "experiment=local_sweep_example "
-        "trainer/logger=[] "  # disable logging.
-        "trainer.fast_dev_run=True "  # make each job quicker to run
-        "hydra.sweeper.worker.max_trials=2 ",  # Run a small number of trials.
-        marks=pytest.mark.slow,
-    ),
-    pytest.param(
-        "experiment=profiling "
-        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
-        "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
-        "trainer.fast_dev_run=True ",  # make each job quicker to run
-        marks=pytest.mark.slow,
-    ),
-    (
-        "experiment=profiling algorithm=no_op "
-        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
-        "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
-        "trainer.fast_dev_run=True "  # make each job quicker to run
-    ),
-    pytest.param(
-        "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/logger=[]",
-        marks=pytest.mark.skipif(
-            SLURM_JOB_ID is None, reason="Can only be run on a slurm cluster."
-        ),
-    ),
-]
+"""The list of all experiments configs in the `configs/experiment` directory.
+
+This is used to check that all the experiment configs are covered by tests.
+"""
+
+experiment_commands_to_test: list[str | ParameterSet] = []
+"""List of experiment commands to run for testing.
+
+Consider adding a command that runs simple sanity check for your algorithm, something like one step
+of training or something similar.
+"""
 
 
 @pytest.mark.parametrize(
