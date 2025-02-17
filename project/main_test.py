@@ -199,3 +199,9 @@ def test_run_auto_schema_via_cli_without_errors():
             "-vv",
         ]
     )
+
+
+# TODO: Add some more integration tests:
+# - running sweeps from Hydra!
+# - using the slurm launcher!
+# - Test offline mode for narval and such.
