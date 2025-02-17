@@ -92,14 +92,13 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.datamodules.vision import VisionDataModule, num_cpus_on_node
 from project.experiment import instantiate_datamodule, instantiate_trainer
 from project.main import (
     PROJECT_NAME,
     instantiate_algorithm,
     setup_logging,
 )
-from project.utils.env_vars import REPO_ROOTDIR
+from project.utils.env_vars import NUM_WORKERS, REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
     IN_GITHUB_CI,
@@ -354,7 +353,7 @@ def trainer(
 def train_dataloader(
     datamodule: lightning.LightningDataModule | None, request: pytest.FixtureRequest
 ) -> DataLoader:
-    if isinstance(datamodule, VisionDataModule) or hasattr(datamodule, "num_workers"):
+    if hasattr(datamodule, "num_workers"):
         datamodule.num_workers = 0  # type: ignore
     if datamodule is None:
         raise NotImplementedError(
@@ -461,7 +460,7 @@ def devices(
     worker_index = int(os.environ.get("PYTEST_XDIST_WORKER", "gw0").removeprefix("gw"))
 
     if accelerator == "cpu" or (accelerator == "auto" and not torch.cuda.is_available()):
-        n_cpus = num_cpus_on_node()
+        n_cpus = NUM_WORKERS
         # Split the CPUS as evenly as possible (last worker might get less).
         if num_pytest_workers == 1:
             yield "auto"

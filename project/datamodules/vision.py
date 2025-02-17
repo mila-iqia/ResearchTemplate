@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import os
 from abc import abstractmethod
 from collections.abc import Callable
 from logging import getLogger as get_logger
@@ -325,12 +324,6 @@ def _has_constructor_argument(cls: type[VisionDataset], arg: str) -> bool:
     if any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()) and cls.__base__ is not None:
         return _has_constructor_argument(cls.__base__, arg)
     return False
-
-
-def num_cpus_on_node() -> int:
-    if hasattr(os, "sched_getaffinity"):
-        return len(os.sched_getaffinity(0))
-    return torch.multiprocessing.cpu_count()
 
 
 def _contains_normalization_transform(transforms: Callable) -> bool:

@@ -150,6 +150,7 @@ _tasks:
 
   # Remove unwanted image classification datamodules and configs
   - command: |
+      rm --verbose {{project_name}}/datamodules/image_classification/image_classification.py
       rm --verbose {{project_name}}/datamodules/image_classification/mnist*.py
       rm --verbose {{project_name}}/datamodules/image_classification/fashion_mnist*.py
       rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
