@@ -19,6 +19,8 @@ examples: list[str] = [
 def examples_to_include(request: pytest.FixtureRequest):
     """Fixture that provides the examples that would be selected by the users."""
     example = request.param
+    # For now, we run with either no examples, or a single example from the list. We don't test
+    # combinations of examples.
     return [] if example is None else [example]
 
 
@@ -31,14 +33,22 @@ def examples_to_include(request: pytest.FixtureRequest):
         "3.12",
         pytest.param(
             "3.13",
-            marks=pytest.mark.xfail(
-                reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13"
-            ),
+            marks=[
+                pytest.mark.slow,
+                pytest.mark.xfail(
+                    raises=subprocess.CalledProcessError,
+                    reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13",
+                ),
+            ],
         ),
     ],
 )
 def test_template(examples_to_include: list[str], python_version: str, tmp_path: Path):
-    """Run Copier programmatically to test the the setup for new projects."""
+    """Run Copier programmatically to test the the setup for new projects.
+
+    NOTE: This test is slow at first, as it might fill up your UV cache with torch / jax / etc for
+    each python version!
+    """
     tmp_project_dir = tmp_path / "new_project"
 
     # This is like doing `copier copy --trust gh:mila-iqia/ResearchTemplate new_project`
