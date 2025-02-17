@@ -21,7 +21,9 @@ from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
-from project.datamodules.image_classification import ImageClassificationDataModule
+from project.datamodules.image_classification.image_classification import (
+    ImageClassificationDataModule,
+)
 from project.utils.typing_utils import HydraConfigFor
 
 logger = getLogger(__name__)

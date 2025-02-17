@@ -8,8 +8,11 @@ from torchvision.datasets import INaturalist
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-
-from .inaturalist import INaturalistDataModule, TargetType, Version2021
+from project.datamodules.image_classification.inaturalist import (
+    INaturalistDataModule,
+    TargetType,
+    Version2021,
+)
 
 
 @pytest.mark.slow

@@ -118,6 +118,8 @@ _tasks:
   - "rm .github/workflows/docs.yml"
   - "rm tests/test_template.py"
 
+  # TODO: Might want to not run certain tasks when updating an existing project!
+
   # Pin the selected Python version
   - "uv python pin {{python_version}}"
 
@@ -146,20 +148,21 @@ _tasks:
       rm --verbose {{project_name}}/configs/algorithm/network/jax_fcnet.yaml
     when: "{{ 'jax_image_classifier' not in examples_to_include }}"
 
-  # Remove unnecessary image classification datamodules and configs
+  # Remove unwanted image classification datamodules and configs
   - command: |
       rm --verbose {{project_name}}/datamodules/image_classification/mnist*.py
-      rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
-      rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
-      rm --verbose {{project_name}}/configs/datamodule/cifar10.yaml
       rm --verbose {{project_name}}/datamodules/image_classification/fashion_mnist*.py
-      rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
+      rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
       rm --verbose {{project_name}}/datamodules/image_classification/imagenet*.py
-      rm --verbose {{project_name}}/configs/datamodule/imagenet.yaml
       rm --verbose {{project_name}}/datamodules/image_classification/inaturalist*.py
+      rm --verbose {{project_name}}/datamodules/vision.py
+      rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
+      rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
+      rm --verbose {{project_name}}/configs/datamodule/cifar10.yaml
+      rm --verbose {{project_name}}/configs/datamodule/imagenet.yaml
       rm --verbose {{project_name}}/configs/datamodule/inaturalist.yaml
-      rm --verbose {{project_name}}/datamodules/vision.yaml
       rm --verbose {{project_name}}/configs/datamodule/vision.yaml
+      rmdir {{project_name}}/datamodules/image_classification
     when: |
       {{ 'image_classifier' not in examples_to_include and
          'jax_image_classifier' not in examples_to_include }}
@@ -169,9 +172,11 @@ _tasks:
       rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
       rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
       rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
-      rm --recursive --verbose {{project_name}}/datamodules/text
+      rm --verbose {{project_name}}/datamodules/text/text_classification*.py
+      rmdir {{project_name}}/datamodules/text
     when: "{{ 'text_classifier' not in examples_to_include }}"
 
+  # todo: remove JaxTrainer and project/trainers folder if the JaxPPO example is removed?
   - command: |
       rm --verbose {{project_name}}/algorithms/jax_ppo*.py
       rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
