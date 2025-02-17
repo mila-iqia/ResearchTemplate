@@ -118,6 +118,9 @@ _tasks:
   - "rm .github/workflows/docs.yml"
   - "rm tests/test_template.py"
 
+  # Pin the selected Python version
+  - "uv python pin {{python_version}}"
+
   # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
   - command: mv project {{project_name}}
     when: "{{ project_name != 'project' }}"
