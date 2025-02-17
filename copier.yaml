@@ -12,29 +12,29 @@ project_name:
   validator: "{% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}"
   default: project
 
-your_name:
+user_name:
   type: str
   question: "What is your name?"
   required: true
   placeholder: "FirstName LastName"
 
-github_username:
+github_user:
   type: str
   question: "What is your GitHub username?"
   required: true
-  validator: "{% if github_username == '' %}Please enter your username on github.{% endif %}"
+  validator: "{% if github_user == '' %}Please enter your username on github.{% endif %}"
   help: |
     What is your GitHub username?
 
     NOTE: This script does not create a GitHub repository for you, but a link will be printed below
     to help you set that up yourself.
-  placeholder: "{{ your_name | lower | replace(' ', '') }}"
+  placeholder: "{{ user_name | lower | replace(' ', '') }}"
 
-your_email:
+user_email:
   type: str
   question: "What is your email address?"
   required: false
-  default: "{{ your_name | lower | replace(' ', '.') }}@mila.quebec"
+  default: "{{ user_name | lower | replace(' ', '.') }}@mila.quebec"
 
 project_description:
   type: str
@@ -103,7 +103,7 @@ examples_to_include:
 _tasks:
   # Initialize a git repository.
   - "git init"
-  - "git remote add origin https://www.github.com/{{github_username}}/{{project_name}} || true"
+  - "git remote add origin https://www.github.com/{{github_user}}/{{project_name}} || true"
 
   # Write an error message and exit if this is being run from Windows. Suggest running from WSL instead.
   - command: |
@@ -244,11 +244,11 @@ _message_after_copy: |
 
   2. Create a new Github Repository for this project by clicking on this URL:
 
-      https://github.com/new?name={{project_name}}&description="{{project_description}}"&visibility=private
+      https://github.com/new?name={{project_name}}&visibility=private
 
   3. Push this project to this new github repository:
 
-      $ git remote add origin https://www.github.com/{{github_username}}/{{project_name}}
+      $ git remote add origin https://www.github.com/{{github_user}}/{{project_name}}
       $ git fetch origin
       $ git branch --set-upstream-to=origin/master master
       $ git push
