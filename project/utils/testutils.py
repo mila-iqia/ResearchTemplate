@@ -17,8 +17,6 @@ import torch
 import torchvision.models
 from hydra.core.config_store import ConfigStore
 
-from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
-from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.env_vars import NETWORK_DIR, SLURM_JOB_ID
 from project.utils.hydra_utils import get_outer_class
 
@@ -261,9 +259,7 @@ default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDec
         ]
         for resnet_config, mnist_dataset_config in itertools.product(
             get_all_configs_in_group_of_type("algorithm/network", torchvision.models.ResNet),
-            get_all_configs_in_group_of_type(
-                "datamodule", (MNISTDataModule, FashionMNISTDataModule)
-            ),
+            ["mnist", "fashion_mnist"],
         )
     },
 }
