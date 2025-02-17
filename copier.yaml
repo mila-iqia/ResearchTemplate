@@ -11,7 +11,7 @@ project_name:
   required: true
   validator: "{% if ' ' in project_name %}Please enter a project name without spaces.{% endif %}"
   # todo: add a task below that replaces all instances of 'project' in Python files with this?
-  default: "project"
+  default: "{{ _folder_name }}"
 
 your_name:
   type: str
