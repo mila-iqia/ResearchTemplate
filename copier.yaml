@@ -214,7 +214,7 @@ _tasks:
   #        'text_classifier' not in examples_to_include }}
 
   # Fix the import order in Python files with ruff
-  - "uvx ruff check . --fix"
+  - "uvx ruff check . --fix || true"
   - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
   - "git add ."
   - "git commit -m 'Initial commit'"
