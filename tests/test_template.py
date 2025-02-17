@@ -17,11 +17,27 @@ examples: list[str] = [
 
 @pytest.fixture(params=[None] + sorted(examples))
 def examples_to_include(request: pytest.FixtureRequest):
+    """Fixture that provides the examples that would be selected by the users."""
     example = request.param
     return [] if example is None else [example]
 
 
-def test_template(examples_to_include: list[str], tmp_path: Path):
+@pytest.mark.parametrize(
+    "python_version",
+    [
+        # don't run these unless --slow argument is passed to pytest, to save some time.
+        pytest.param("3.10", marks=pytest.mark.slow),
+        pytest.param("3.11", marks=pytest.mark.slow),
+        "3.12",
+        pytest.param(
+            "3.13",
+            marks=pytest.mark.xfail(
+                reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13"
+            ),
+        ),
+    ],
+)
+def test_template(examples_to_include: list[str], python_version: str, tmp_path: Path):
     """Run Copier programmatically to test the the setup for new projects."""
     tmp_project_dir = tmp_path / "new_project"
 
@@ -38,6 +54,7 @@ def test_template(examples_to_include: list[str], tmp_path: Path):
             "your_name": "John Doe",
             "examples_to_include": examples_to_include,
             "github_username": "johndoe",
+            "python_version": python_version,
         },
         unsafe=True,
     ) as worker:
