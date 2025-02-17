@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ def examples_to_include(request: pytest.FixtureRequest):
     return [] if example is None else [example]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="The template isn't supported on Windows.")
 @pytest.mark.parametrize(
     "python_version",
     [
