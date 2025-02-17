@@ -9,9 +9,8 @@ project_name:
   type: str
   question: "What is the name of this new research project?"
   required: true
-  validator: "{% if ' ' in project_name %}Please enter a project name without spaces.{% endif %}"
-  # todo: add a task below that replaces all instances of 'project' in Python files with this?
-  default: "{{ _folder_name }}"
+  validator: "{% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}"
+  default: "{{ _copier_conf._folder_name }}"
 
 your_name:
   type: str
