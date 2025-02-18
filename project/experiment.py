@@ -9,13 +9,13 @@ from typing import Any
 import hydra
 import lightning
 import rich
-from hydra_zen.typing import Builds
 from omegaconf import DictConfig
 
 from project.configs.config import Config
 
 if typing.TYPE_CHECKING:
     import lightning
+    from hydra_zen.typing import Builds
 
     from project.trainers.jax_trainer import JaxTrainer
 

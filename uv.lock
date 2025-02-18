@@ -3963,30 +3963,25 @@ dependencies = [
     { name = "hydra-zen" },
     { name = "jax" },
     { name = "jaxlib" },
-    { name = "kaleido" },
     { name = "lightning" },
     { name = "matplotlib" },
-    { name = "mkdocs" },
-    { name = "mkdocstrings", extra = ["python"] },
     { name = "pydantic" },
     { name = "rejax" },
     { name = "remote-slurm-executor" },
     { name = "rich" },
-    { name = "scikit-learn" },
-    { name = "simple-parsing" },
     { name = "torch" },
     { name = "torch-jax-interop" },
     { name = "torchvision" },
     { name = "tqdm" },
     { name = "transformers" },
     { name = "wandb" },
-    { name = "watchdog" },
     { name = "xtils", extra = ["jitpp"] },
 ]
 
 [package.optional-dependencies]
 docs = [
     { name = "black" },
+    { name = "mkdocs" },
     { name = "mkdocs-autoref-plugin" },
     { name = "mkdocs-awesome-pages-plugin" },
     { name = "mkdocs-gen-files" },
@@ -3995,6 +3990,7 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocs-section-index" },
     { name = "mkdocs-video" },
+    { name = "mkdocstrings", extra = ["python"] },
 ]
 gpu = [
     { name = "jax", extra = ["cuda12"] },
@@ -4035,10 +4031,9 @@ requires-dist = [
     { name = "jax", specifier = "==0.4.33" },
     { name = "jax", extras = ["cuda12"], marker = "extra == 'gpu'", specifier = ">=0.4.31" },
     { name = "jaxlib", specifier = "==0.4.33" },
-    { name = "kaleido", specifier = "==0.2.1" },
     { name = "lightning", specifier = ">=2.4.0" },
     { name = "matplotlib", specifier = ">=3.9.2" },
-    { name = "mkdocs", specifier = ">=1.6.1" },
+    { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },
     { name = "mkdocs-autoref-plugin", marker = "extra == 'docs'", git = "https://github.com/lebrice/mkdocs-autoref-plugin" },
     { name = "mkdocs-awesome-pages-plugin", marker = "extra == 'docs'", specifier = ">=2.9.3" },
     { name = "mkdocs-gen-files", marker = "extra == 'docs'", specifier = ">=0.5.0" },
@@ -4047,20 +4042,17 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5.31" },
     { name = "mkdocs-section-index", marker = "extra == 'docs'", specifier = ">=0.3.9" },
     { name = "mkdocs-video", marker = "extra == 'docs'", specifier = ">=1.5.0" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.26.2" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.26.2" },
     { name = "pydantic", specifier = ">=2.8.2" },
     { name = "rejax", specifier = ">=0.1.0" },
     { name = "remote-slurm-executor", git = "https://github.com/lebrice/remote-slurm-executor?branch=master" },
     { name = "rich", specifier = ">=13.7.1" },
-    { name = "scikit-learn", specifier = ">=1.5.1" },
-    { name = "simple-parsing", specifier = ">=0.1.5" },
     { name = "torch", specifier = "==2.4.1" },
     { name = "torch-jax-interop", specifier = ">=0.0.7" },
     { name = "torchvision", specifier = ">=0.19.0" },
     { name = "tqdm", specifier = ">=4.66.5" },
     { name = "transformers", specifier = ">=4.44.0" },
     { name = "wandb", specifier = ">=0.17.6" },
-    { name = "watchdog", specifier = ">=5.0.3" },
     { name = "xtils", extras = ["jitpp"], git = "https://github.com/jessefarebro/xtils" },
 ]
 
@@ -4358,19 +4350,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/07/37/b31be7e4b9f13b59cde9dcaeff112d401d49e0dc5b37ed4a9fc8fb12f409/setuptools-75.2.0.tar.gz", hash = "sha256:753bb6ebf1f465a1912e19ed1d41f403a79173a9acf66a42e7e6aec45c3c16ec", size = 1350308 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/31/2d/90165d51ecd38f9a02c6832198c13a4e48652485e2ccf863ebb942c531b6/setuptools-75.2.0-py3-none-any.whl", hash = "sha256:a7fcb66f68b4d9e8e66b42f9876150a3371558f98fa32222ffaa5bced76406f8", size = 1249825 },
-]
-
-[[package]]
-name = "simple-parsing"
-version = "0.1.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "docstring-parser" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/41/8b/7c7efbdc3eef7040b2d6219f966c68d3366f36947c93f8e12875a63bca00/simple_parsing-0.1.6.tar.gz", hash = "sha256:dad192e9633515a5627e343106636590a39a5ce85f6c47ced43507044ed98956", size = 97666 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/62/0194ea1d8245d76bfd2d5c6bebec7f824af00a6e03bec22697d12712fff0/simple_parsing-0.1.6-py3-none-any.whl", hash = "sha256:2a6e74b061fb754cc441559e8dcea9d108286d9e0ffaa9cca4eea6bbe85372e1", size = 112626 },
 ]
 
 [[package]]
