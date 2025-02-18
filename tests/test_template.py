@@ -77,12 +77,13 @@ def test_template(
     ) as worker:
         worker.run_copy()
         # Note: here we just collect tests.
-        run = subprocess.check_call(
+        result = subprocess.run(
             ["uv", "run", "pytest", "-v", "--collect-only"],
             cwd=tmp_project_dir,
             text=True,
-            # capture_output=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
         )
-        assert run == 0
+        if result.returncode != 0:
+            print("STDOUT: ", result.stdout)
+            print("STDERR: ", result.stderr)
+            pytest.fail(f"Failed to collect tests in the new project: {result.stdout}")
