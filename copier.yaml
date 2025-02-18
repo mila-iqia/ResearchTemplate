@@ -178,6 +178,8 @@ _tasks:
   # todo: remove JaxTrainer and project/trainers folder if the JaxPPO example is removed?
   - command: |
       rm --verbose {{project_name}}/algorithms/jax_ppo*.py
+      rm --verbose {{project_name}}/trainers/jax_trainer*.py
+      rmdir {{project_name}}/trainers
       rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
       rm --verbose {{project_name}}/configs/experiment/jax_rl_example.yaml
     when: "{{ 'jax_ppo' not in examples_to_include }}"
