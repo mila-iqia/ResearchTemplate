@@ -13,9 +13,6 @@ We achieve this like so: All the components of an experiment are created using f
 The first fixtures to be invoked are the ones that would correspond to command-line arguments.
 The fixtures for command-line arguments
 
-
-For example, one of the fixtures which is created first is [datamodule_config][project.conftest.datamodule_config].
-
 The first fixtures to be created are the [datamodule_config][project.conftest.datamodule_config], `network_config` and `algorithm_config`, along with `overrides`.
 From these, the `experiment_dictconfig` is created
 

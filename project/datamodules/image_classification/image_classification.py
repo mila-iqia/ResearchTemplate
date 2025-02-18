@@ -13,7 +13,7 @@ ImageBatchType = TypeVar(
 )
 
 
-# todo: this should probably be a protocol. The only issue with that is that we do `issubclass` in
+# NOTE: this should probably be a protocol. The only issue with that is that we do `issubclass` in
 # tests to determine which datamodule configs are for image classification, so we can't do that
 # with a Protocol.
 

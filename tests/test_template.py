@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from logging import getLogger
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,8 @@ from copier import Worker
 
 import project
 import project.algorithms
+
+logger = getLogger(__name__)
 
 example_folder = Path(project.algorithms.__file__).parent
 examples: list[str] = [
@@ -78,7 +81,7 @@ def test_template(
         worker.run_copy()
         # Note: here we just collect tests.
         command = ["uv", "run", "pytest", "-v", "--collect-only"]
-        print(f"Running: command {' '.join(command)}")
+        logger.info(f"Running: command `{' '.join(command)}`")
         result = subprocess.run(
             command,
             cwd=tmp_project_dir,

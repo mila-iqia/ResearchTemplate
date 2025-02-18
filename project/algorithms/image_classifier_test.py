@@ -59,14 +59,14 @@ experiment_commands_to_test.extend(
 
 
 @setup_with_overrides("algorithm=image_classifier datamodule=cifar10")
-def test_example_experiment_defaults(experiment_config: Config) -> None:
+def test_example_experiment_defaults(config: Config) -> None:
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
 
-    assert experiment_config.algorithm["_target_"] == (
+    assert config.algorithm["_target_"] == (
         ImageClassifier.__module__ + "." + ImageClassifier.__qualname__
     )
 
-    assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
+    assert isinstance(config.datamodule, CIFAR10DataModule)
 
 
 # When the `transformers` library is installed, for example when NLP-related examples are included,
