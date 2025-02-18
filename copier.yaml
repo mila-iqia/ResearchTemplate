@@ -150,13 +150,13 @@ _tasks:
 
   # Remove unwanted image classification datamodules and configs
   - command: |
-      rm --verbose {{project_name}}/datamodules/image_classification/image_classification.py
+      rm --verbose {{project_name}}/datamodules/image_classification/image_classification*.py
       rm --verbose {{project_name}}/datamodules/image_classification/mnist*.py
       rm --verbose {{project_name}}/datamodules/image_classification/fashion_mnist*.py
       rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
       rm --verbose {{project_name}}/datamodules/image_classification/imagenet*.py
       rm --verbose {{project_name}}/datamodules/image_classification/inaturalist*.py
-      rm --verbose {{project_name}}/datamodules/vision.py
+      rm --verbose {{project_name}}/datamodules/vision*.py
       rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
       rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
       rm --verbose {{project_name}}/configs/datamodule/cifar10.yaml
