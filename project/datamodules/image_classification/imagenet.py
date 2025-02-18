@@ -25,7 +25,7 @@ from torchvision.transforms import v2 as transforms
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
-from project.utils.env_vars import DATA_DIR, NETWORK_DIR, NUM_WORKERS
+from project.utils.env_vars import DATA_DIR, NETWORK_DATASETS_DIR, NUM_WORKERS
 from project.utils.typing_utils import C, H, W
 
 logger = get_logger(__name__)
@@ -120,13 +120,13 @@ class ImageNetDataModule(ImageClassificationDataModule):
 
     def prepare_data(self) -> None:
         if (
-            not NETWORK_DIR
-            or not (network_imagenet_dir := NETWORK_DIR / "datasets" / "imagenet").exists()
+            not NETWORK_DATASETS_DIR
+            or not (network_imagenet_dir := NETWORK_DATASETS_DIR / "imagenet").exists()
         ):
             raise NotImplementedError(
                 "Assuming that the imagenet dataset can be found at "
-                "${NETWORK_DIR:-/network}/datasets/imagenet, (using $NETWORK_DIR if set, else "
-                "'/network'), but this path doesn't exist!"
+                "${NETWORK_DIR:-/network/datasets}/imagenet, (using $NETWORK_DIR if set, else "
+                "'/network/datasets'), but this path doesn't exist!"
             )
 
         logger.debug(f"Preparing ImageNet train split in {self.data_dir}...")

@@ -17,7 +17,7 @@ import torch
 import torchvision.models
 from hydra.core.config_store import ConfigStore
 
-from project.utils.env_vars import NETWORK_DIR, SLURM_JOB_ID
+from project.utils.env_vars import NETWORK_DATASETS_DIR, SLURM_JOB_ID
 from project.utils.hydra_utils import get_outer_class
 
 logger = get_logger(__name__)
@@ -35,7 +35,7 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "inaturalist": [
         pytest.mark.slow,
         pytest.mark.skipif(
-            not (NETWORK_DIR and (NETWORK_DIR / "datasets/inat").exists()),
+            not (NETWORK_DATASETS_DIR and (NETWORK_DATASETS_DIR / "inat").exists()),
             # strict=True,
             # raises=hydra.errors.InstantiationException,
             reason="Expects to be run on the Mila cluster for now",
@@ -44,7 +44,7 @@ default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "imagenet": [
         pytest.mark.slow,
         pytest.mark.skipif(
-            not (NETWORK_DIR and (NETWORK_DIR / "datasets/imagenet").exists()),
+            not (NETWORK_DATASETS_DIR and (NETWORK_DATASETS_DIR / "imagenet").exists()),
             # strict=True,
             # raises=hydra.errors.InstantiationException,
             reason="Expects to be run on a cluster with the ImageNet dataset.",
