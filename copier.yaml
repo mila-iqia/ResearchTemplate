@@ -164,9 +164,7 @@ _tasks:
       rm --verbose {{project_name}}/configs/datamodule/inaturalist.yaml
       rm --verbose {{project_name}}/configs/datamodule/vision.yaml
       rmdir {{project_name}}/datamodules/image_classification
-    when: |
-      {{ 'image_classifier' not in examples_to_include and
-         'jax_image_classifier' not in examples_to_include }}
+    when: "{{ 'image_classifier' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   - command: |
       rm --verbose {{project_name}}/algorithms/text_classifier*.py
