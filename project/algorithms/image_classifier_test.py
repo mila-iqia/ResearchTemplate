@@ -2,7 +2,6 @@
 
 import pytest
 import torch
-from transformers import PreTrainedModel
 
 from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs import Config
@@ -70,10 +69,20 @@ def test_example_experiment_defaults(experiment_config: Config) -> None:
     assert isinstance(experiment_config.datamodule, CIFAR10DataModule)
 
 
+# When the `transformers` library is installed, for example when NLP-related examples are included,
+# then we don't want this "run for all subclasses of nn.Module" to match these NLP models.
+try:
+    from transformers import PreTrainedModel
+
+    excluding = PreTrainedModel
+except ImportError:
+    excluding = ()
+
+
 @skip_on_macOS_in_CI
 @run_for_all_configs_of_type("algorithm", ImageClassifier)
 @run_for_all_configs_of_type("datamodule", ImageClassificationDataModule)
-@run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=PreTrainedModel)
+@run_for_all_configs_of_type("algorithm/network", torch.nn.Module, excluding=excluding)
 class TestImageClassifier(LightningModuleTests[ImageClassifier]):
     """Tests for the `ImageClassifier`.
 

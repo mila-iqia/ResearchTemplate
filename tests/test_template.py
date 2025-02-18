@@ -77,8 +77,10 @@ def test_template(
     ) as worker:
         worker.run_copy()
         # Note: here we just collect tests.
+        command = ["uv", "run", "pytest", "-v", "--collect-only"]
+        print(f"Running: command {' '.join(command)}")
         result = subprocess.run(
-            ["uv", "run", "pytest", "-v", "--collect-only"],
+            command,
             cwd=tmp_project_dir,
             text=True,
             capture_output=True,
