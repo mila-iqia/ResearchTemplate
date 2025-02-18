@@ -45,7 +45,12 @@ def examples_to_include(request: pytest.FixtureRequest):
         ),
     ],
 )
-def test_template(examples_to_include: list[str], python_version: str, tmp_path: Path):
+def test_template(
+    examples_to_include: list[str],
+    python_version: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Run Copier programmatically to test the the setup for new projects.
 
     NOTE: This test is slow at first, as it might fill up your UV cache with torch / jax / etc for
@@ -63,21 +68,21 @@ def test_template(examples_to_include: list[str], python_version: str, tmp_path:
         defaults=True,
         data={
             "project_name": "new_project",
-            "your_name": "John Doe",
+            "user_name": "John Doe",
             "examples_to_include": examples_to_include,
-            "github_username": "johndoe",
+            "github_user": "johndoe",
             "python_version": python_version,
         },
         unsafe=True,
     ) as worker:
         worker.run_copy()
         # Note: here we just collect tests.
-        out = subprocess.check_output(
+        run = subprocess.check_call(
             ["uv", "run", "pytest", "-v", "--collect-only"],
             cwd=tmp_project_dir,
             text=True,
             # capture_output=True,
-            # stdout=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        print(out)
+        assert run == 0
