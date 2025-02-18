@@ -22,8 +22,10 @@ from project.datamodules.image_classification.fashion_mnist import FashionMNISTD
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.datamodules.image_classification.imagenet import ImageNetDataModule
 from project.datamodules.image_classification.inaturalist import INaturalistDataModule
 from project.datamodules.image_classification.mnist import MNISTDataModule
+from project.utils.testutils import needs_network_dataset_dir
 
 DataModuleType = TypeVar("DataModuleType", bound=LightningDataModule)
 
@@ -197,3 +199,9 @@ class TestCIFAR10DataModule(ImageClassificationDataModuleTests[CIFAR10DataModule
 @pytest.mark.slow
 @setup_with_overrides("algorithm=no_op datamodule=inaturalist")
 class TestINaturalistDataModule(ImageClassificationDataModuleTests[INaturalistDataModule]): ...
+
+
+@pytest.mark.slow
+@needs_network_dataset_dir("imagenet")
+@setup_with_overrides("algorithm=no_op datamodule=imagenet")
+class TestImageNetDataModule(ImageClassificationDataModuleTests[ImageNetDataModule]): ...

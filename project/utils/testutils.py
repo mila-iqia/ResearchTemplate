@@ -31,24 +31,27 @@ IN_GITHUB_CLOUD_CI = IN_GITHUB_CI and not IN_SELF_HOSTED_GITHUB_CI
 PARAM_WHEN_USED_MARK_NAME = "parametrize_when_used"
 
 
+def needs_network_dataset_dir(dataset_name: str | None = None):
+    """Gives a mark that skips the test if the predownloaded dataset directory is not available."""
+    return pytest.mark.skipif(
+        not (NETWORK_DATASETS_DIR and (NETWORK_DATASETS_DIR / (dataset_name or "")).exists()),
+        # strict=True,
+        # raises=hydra.errors.InstantiationException,
+        reason=(
+            "Expects to be run on a cluster where a shared network datasets directory"
+            + ("exists." if dataset_name is None else f"contains a {dataset_name} subdirectory.")
+        ),
+    )
+
+
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "inaturalist": [
         pytest.mark.slow,
-        pytest.mark.skipif(
-            not (NETWORK_DATASETS_DIR and (NETWORK_DATASETS_DIR / "inat").exists()),
-            # strict=True,
-            # raises=hydra.errors.InstantiationException,
-            reason="Expects to be run on the Mila cluster for now",
-        ),
+        needs_network_dataset_dir("inat"),
     ],
     "imagenet": [
         pytest.mark.slow,
-        pytest.mark.skipif(
-            not (NETWORK_DATASETS_DIR and (NETWORK_DATASETS_DIR / "imagenet").exists()),
-            # strict=True,
-            # raises=hydra.errors.InstantiationException,
-            reason="Expects to be run on a cluster with the ImageNet dataset.",
-        ),
+        needs_network_dataset_dir("inat"),
     ],
     "vision": [pytest.mark.skip(reason="Base class, shouldn't be instantiated.")],
 }
