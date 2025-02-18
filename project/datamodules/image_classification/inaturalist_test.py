@@ -5,6 +5,7 @@ from torch.utils.data import Subset
 from torchvision import transforms as T
 from torchvision.datasets import INaturalist
 
+from project.conftest import setup_with_overrides
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
@@ -13,6 +14,14 @@ from project.datamodules.image_classification.inaturalist import (
     TargetType,
     Version2021,
 )
+from project.datamodules.vision_test import VisionDataModuleTests
+
+
+# inat is special. It usually is an ImageClassificationDataModule, but it can also be a
+# VisionDataModule (when there aren't integer labels for each image.)
+@pytest.mark.slow
+@setup_with_overrides("datamodule=inaturalist")
+class TestINaturalistDataModule(VisionDataModuleTests[INaturalistDataModule]): ...
 
 
 @pytest.mark.slow
@@ -73,12 +82,5 @@ def test_dataset_download_works(target_type: TargetType, version: Version2021):
             if i > 100:
                 break
 
-        min(all_labels)
-        max(all_labels)
-
-        # assert False, (
-        #     min_label,
-        #     max_label,
-        #     len(set(range(min_label, max_label + 1)) - all_labels),
-        #     list(itertools.islice(all_labels, 10)),
-        # )
+        print(min(all_labels))
+        print(max(all_labels))

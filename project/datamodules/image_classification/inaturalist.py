@@ -42,6 +42,8 @@ class INaturalistDataModule(VisionDataModule):
     dims: tuple[C, H, W] = (C(3), H(224), W(224))
     """A tuple describing the shape of the data."""
 
+    num_classes: int | None
+
     def __init__(
         self,
         data_dir: str | Path = DATA_DIR,
