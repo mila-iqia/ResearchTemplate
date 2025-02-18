@@ -12,7 +12,7 @@ from project.conftest import (  # noqa: F401
     command_line_arguments,
     command_line_overrides,
     datamodule_config,
-    experiment_dictconfig,
+    dict_config,
 )
 from project.experiment import instantiate_datamodule, instantiate_trainer
 from project.main import (
@@ -113,9 +113,9 @@ from project.utils.hydra_utils import resolve_dictconfig
     ],
     indirect=True,
 )
-def test_notebook_commands_dont_cause_errors(experiment_dictconfig: DictConfig):  # noqa
+def test_notebook_commands_dont_cause_errors(dict_config: DictConfig):  # noqa
     # check for any errors related to OmegaConf interpolations and such
-    config = resolve_dictconfig(experiment_dictconfig)
+    config = resolve_dictconfig(dict_config)
     # check for any errors when actually instantiating the components.
     # _experiment = _setup_experiment(config)
     setup_logging(log_level=config.log_level)

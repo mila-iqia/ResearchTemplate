@@ -55,10 +55,10 @@ class LightningModuleTests(Generic[LightningModuleType], ABC):
     @pytest.fixture(scope="class")
     def experiment_config(
         self,
-        experiment_dictconfig: DictConfig,
+        dict_config: DictConfig,
     ) -> Config:
         """The experiment configuration, with all interpolations resolved."""
-        config = resolve_dictconfig(copy.deepcopy(experiment_dictconfig))
+        config = resolve_dictconfig(copy.deepcopy(dict_config))
         return config
 
     @pytest.fixture(scope="class")

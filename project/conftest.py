@@ -267,10 +267,12 @@ def command_line_arguments(
 
 
 @pytest.fixture(scope="session")
-def experiment_dictconfig(
+def dict_config(
     command_line_arguments: tuple[str, ...], tmp_path_factory: pytest.TempPathFactory
 ) -> DictConfig:
     """The `omegaconf.DictConfig` that is created by Hydra from the command-line arguments.
+
+    This fixture returns exactly what would be the input to the `main` function.
 
     Any interpolations in the configs will *not* have been resolved at this point.
     """
@@ -278,7 +280,7 @@ def experiment_dictconfig(
         "This test will run as if this was passed on the command-line:\n"
         + "\n"
         + "```\n"
-        + ("python main.py " + " ".join(command_line_arguments) + "\n")
+        + ("python project/main.py " + " ".join(command_line_arguments) + "\n")
         + "```\n"
     )
 
@@ -296,11 +298,11 @@ def experiment_dictconfig(
 
 
 @pytest.fixture(scope="function")
-def experiment_config(
-    experiment_dictconfig: DictConfig,
+def config(
+    dict_config: DictConfig,
 ) -> Config:
     """The experiment configuration, with all interpolations resolved."""
-    config = resolve_dictconfig(copy.deepcopy(experiment_dictconfig))
+    config = resolve_dictconfig(copy.deepcopy(dict_config))
     return config
 
 
@@ -313,15 +315,15 @@ def experiment_config(
 
 
 @pytest.fixture(scope="session")
-def datamodule(experiment_dictconfig: DictConfig) -> lightning.LightningDataModule | None:
+def datamodule(dict_config: DictConfig) -> lightning.LightningDataModule | None:
     """Fixture that creates the datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(experiment_dictconfig["datamodule"])
+    return instantiate_datamodule(dict_config["datamodule"])
 
 
 @pytest.fixture(scope="function")
 def algorithm(
-    experiment_config: Config,
+    config: Config,
     datamodule: lightning.LightningDataModule | None,
     trainer: lightning.Trainer | JaxTrainer,
     seed: int,
@@ -329,7 +331,7 @@ def algorithm(
 ):
     """Fixture that creates the "algorithm" (usually a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule)
+    algorithm = instantiate_algorithm(config, datamodule=datamodule)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
         with trainer.init_module(), device:
             # A bit hacky, but we have to do this because the lightningmodule isn't associated
@@ -341,12 +343,12 @@ def algorithm(
 
 @pytest.fixture(scope="function")
 def trainer(
-    experiment_config: Config,
+    config: Config,
 ) -> pl.Trainer | JaxTrainer:
-    setup_logging(log_level=experiment_config.log_level)
+    setup_logging(log_level=config.log_level)
     # put here to copy what's done in main.py
-    lightning.seed_everything(experiment_config.seed, workers=True)
-    return instantiate_trainer(experiment_config.trainer)
+    lightning.seed_everything(config.seed, workers=True)
+    return instantiate_trainer(config.trainer)
 
 
 @pytest.fixture(scope="session")
@@ -514,6 +516,47 @@ def command_line_overrides(request: pytest.FixtureRequest) -> tuple[str, ...]:
     cmdline_overrides = tuple(cmdline_overrides)
     assert all(isinstance(override, str) for override in cmdline_overrides)
     return cmdline_overrides
+
+
+def setup_with_overrides(
+    overrides: str | ParameterSet | list[str] | list[ParameterSet] | list[str | ParameterSet],
+):
+    """Configures tests to run with the hydra configs that are loaded with these command-line args.
+
+    The command-line arguments are used to create the Hydra config (the input to the `main`
+    function). From there the different components (trainer, algorithm, callbacks, optionally
+    datamodule) are created by fixtures with the same names.
+
+    This should be applied on tests that use some of these components created from Hydra configs,
+    for example:
+
+    ```python
+    @setup_with_overrides("algorithm=example trainer.max_epochs=1")
+    def test_something(dict_config: omegaconf.DictConfig):
+        '''This test receives the `dict_config` loaded from Hydra with the given overrides.'''
+        assert dict_config["algorithm"]["_target_"] == "project.algorithm.image_classifier.ImageClassifier"
+        assert dict_config["trainer"]["max_epochs"] == 1
+    ```
+    """
+    overrides = [overrides] if not isinstance(overrides, list) else overrides
+    return pytest.mark.parametrize(command_line_overrides.__name__, overrides, indirect=True)
+
+
+# def setup_with_command_line_args(
+#     full_command_line_arguments: str
+#     | ParameterSet
+#     | list[str]
+#     | list[ParameterSet]
+#     | list[str | ParameterSet],
+# ):
+#     """Configures a test to run with the hydra config from given command-line arguments.
+
+#     This should be applied on tests that use components created from Hydra configs, like the
+#     `experiment_config` (the object that is passed to the `main` function).
+#     """
+#     return pytest.mark.parametrize(
+#         command_line_arguments.__name__, [full_command_line_arguments], indirect=True
+#     )
 
 
 @contextmanager

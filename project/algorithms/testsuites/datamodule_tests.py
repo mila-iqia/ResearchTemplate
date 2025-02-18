@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from torchvision.tv_tensors import Image
 
 from project.algorithms.testsuites.lightning_module_tests import convert_list_and_tuples_to_dicts
-from project.conftest import command_line_arguments, command_line_overrides
+from project.conftest import command_line_overrides, setup_with_overrides
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
 from project.datamodules.image_classification.image_classification import (
@@ -48,9 +48,9 @@ class DataModuleTests(Generic[DataModuleType], abc.ABC):
         return getattr(request, "param", RunningStage.TRAINING)
 
     @pytest.fixture(scope="class")
-    def datamodule(self, experiment_dictconfig: omegaconf.DictConfig) -> DataModuleType:
+    def datamodule(self, dict_config: omegaconf.DictConfig) -> DataModuleType:
         """Fixture that creates the datamodule instance, given the current Hydra config."""
-        datamodule = hydra_zen.instantiate(experiment_dictconfig["datamodule"])
+        datamodule = hydra_zen.instantiate(dict_config["datamodule"])
         return datamodule
 
     @pytest.fixture(scope="class")
@@ -181,27 +181,19 @@ class ImageClassificationDataModuleTests(DataModuleTests[ImageClassificationData
                 )
 
 
-@pytest.mark.parametrize(
-    command_line_arguments.__name__, ["algorithm=no_op datamodule=mnist"], indirect=True
-)
+@setup_with_overrides("algorithm=no_op datamodule=mnist")
 class TestMNISTDataModule(ImageClassificationDataModuleTests[MNISTDataModule]): ...
 
 
-@pytest.mark.parametrize(
-    command_line_arguments.__name__, ["algorithm=no_op datamodule=fashion_mnist"], indirect=True
-)
+@setup_with_overrides("algorithm=no_op datamodule=fashion_mnist")
 class TestFashionMNISTDataModule(ImageClassificationDataModuleTests[FashionMNISTDataModule]): ...
 
 
-@pytest.mark.parametrize(
-    command_line_arguments.__name__, ["algorithm=no_op datamodule=cifar10"], indirect=True
-)
+@setup_with_overrides("algorithm=no_op datamodule=cifar10")
 class TestCIFAR10DataModule(ImageClassificationDataModuleTests[CIFAR10DataModule]): ...
 
 
 # todo: add the marks from the `conftest` "default_marks_for_config_name" or similar.
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    command_line_arguments.__name__, ["algorithm=no_op datamodule=inaturalist"], indirect=True
-)
+@setup_with_overrides("algorithm=no_op datamodule=inaturalist")
 class TestINaturalistDataModule(ImageClassificationDataModuleTests[INaturalistDataModule]): ...

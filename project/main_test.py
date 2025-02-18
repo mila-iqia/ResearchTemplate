@@ -21,7 +21,7 @@ from pytest_regressions.file_regression import FileRegressionFixture
 import project.configs
 import project.experiment
 import project.main
-from project.conftest import command_line_overrides, skip_on_macOS_in_CI
+from project.conftest import setup_with_overrides, skip_on_macOS_in_CI
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 
@@ -105,18 +105,14 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
     return mock_eval
 
 
-@pytest.mark.parametrize(
-    command_line_overrides.__name__,
-    experiment_commands_to_test,
-    indirect=True,
-)
+@setup_with_overrides(experiment_commands_to_test)
 def test_can_load_experiment_configs(
-    experiment_dictconfig: DictConfig,
+    dict_config: DictConfig,
     mock_train: Mock,
     mock_evaluate: Mock,
 ):
     # Mock out some part of the `main` function to not actually run anything.
-    if experiment_dictconfig["hydra"]["mode"] == RunMode.MULTIRUN:
+    if dict_config["hydra"]["mode"] == RunMode.MULTIRUN:
         # NOTE: Can't pass a dictconfig to `main` function when doing a multirun (seems to just do
         # a single run). If we try to call `main` without arguments and with the right arguments on\
         # the command-line, with the right functions mocked out, those might not get used at all
@@ -124,7 +120,7 @@ def test_can_load_experiment_configs(
         # Pretty gnarly stuff.
         pytest.skip(reason="Config is a multi-run config (e.g. a sweep). ")
     else:
-        results = project.main.main(experiment_dictconfig)
+        results = project.main.main(dict_config)
         assert results is not None
 
     mock_train.assert_called_once()
@@ -132,11 +128,7 @@ def test_can_load_experiment_configs(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    command_line_overrides.__name__,
-    experiment_commands_to_test,
-    indirect=True,
-)
+@setup_with_overrides(experiment_commands_to_test)
 def test_can_run_experiment(
     command_line_overrides: tuple[str, ...],
     request: pytest.FixtureRequest,
@@ -154,10 +146,8 @@ def test_can_run_experiment(
 
 
 @skip_on_macOS_in_CI
-@pytest.mark.parametrize(
-    command_line_overrides.__name__, ["algorithm=image_classifier"], indirect=True
-)
-def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
+@setup_with_overrides("algorithm=image_classifier")
+def test_setting_just_algorithm_isnt_enough(dict_config: DictConfig) -> None:
     """Test to check that the datamodule is required (even when just the example algorithm is set).
 
     TODO: We could probably move the `datamodule` config under `algorithm/datamodule`. Maybe that
@@ -167,7 +157,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
         omegaconf.errors.InterpolationResolutionError,
         match="Did you forget to set a value for the 'datamodule' config?",
     ):
-        _ = resolve_dictconfig(experiment_dictconfig)
+        _ = resolve_dictconfig(dict_config)
 
 
 @pytest.mark.xfail(strict=False, reason="Regression files aren't necessarily present.")
@@ -199,6 +189,13 @@ def test_run_auto_schema_via_cli_without_errors():
             "-vv",
         ]
     )
+
+
+@setup_with_overrides("algorithm=no_op trainer.max_epochs=1")
+def test_setup_with_overrides_works(dict_config: omegaconf.DictConfig):
+    """This test receives the `dict_config` loaded from Hydra with the given overrides."""
+    assert dict_config["algorithm"]["_target_"] == "project.algorithm.no_op.NoOp"
+    assert dict_config["trainer"]["max_epochs"] == 1
 
 
 # TODO: Add some more integration tests:

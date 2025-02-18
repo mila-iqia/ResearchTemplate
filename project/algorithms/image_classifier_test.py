@@ -6,7 +6,7 @@ from transformers import PreTrainedModel
 
 from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
 from project.configs import Config
-from project.conftest import command_line_overrides, skip_on_macOS_in_CI
+from project.conftest import setup_with_overrides, skip_on_macOS_in_CI
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
@@ -59,11 +59,7 @@ experiment_commands_to_test.extend(
 )
 
 
-@pytest.mark.parametrize(
-    command_line_overrides.__name__,
-    ["algorithm=image_classifier datamodule=cifar10"],
-    indirect=True,
-)
+@setup_with_overrides("algorithm=image_classifier datamodule=cifar10")
 def test_example_experiment_defaults(experiment_config: Config) -> None:
     """Test to check that the datamodule is required (even when just an algorithm is set?!)."""
 
