@@ -153,7 +153,8 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             )
             self.test_dataset_cls(str(self.data_dir), **test_kwargs)
 
-    def setup(self, stage: Literal["fit", "validate", "test", "predict"] | None = None) -> None:
+    # Pytorch-Lightning doesn't use the `Literal` type annotation on the `setup` method.
+    def setup(self, stage: Literal["fit", "validate", "test", "predict"]) -> None:  # type: ignore
         if stage in ["fit", "validate"] or stage is None:
             logger.debug(f"creating training dataset with kwargs {self.train_kwargs}")
             dataset_train = self.dataset_cls(
