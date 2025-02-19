@@ -42,7 +42,6 @@ def examples_to_include(request: pytest.FixtureRequest):
             marks=[
                 pytest.mark.slow,
                 pytest.mark.xfail(
-                    raises=subprocess.CalledProcessError,
                     reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13",
                 ),
             ],
