@@ -156,6 +156,7 @@ _tasks:
       rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
       rm --verbose {{project_name}}/datamodules/image_classification/imagenet*.py
       rm --verbose {{project_name}}/datamodules/image_classification/inaturalist*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/__init__.py
       rm --verbose {{project_name}}/datamodules/vision*.py
       rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
       rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
@@ -172,6 +173,7 @@ _tasks:
       rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
       rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
       rm --verbose {{project_name}}/datamodules/text/text_classification*.py
+      rm --verbose {{project_name}}/datamodules/text/__init__.py
       rmdir {{project_name}}/datamodules/text
     when: "{{ 'text_classifier' not in examples_to_include }}"
 
