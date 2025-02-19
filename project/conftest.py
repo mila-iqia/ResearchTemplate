@@ -32,12 +32,12 @@ command_line_overrides[
 ] -- 'seed=123' --> command_line_arguments
 command_line_arguments[
     <a href="#project.conftest.command_line_arguments">command_line_arguments</a>
-] -- load configs for 'datamodule=A algorithm=B seed=123' --> experiment_dictconfig
-experiment_dictconfig[
-    <a href="#project.conftest.experiment_dictconfig">experiment_dictconfig</a>
-] -- instantiate objects from configs --> experiment_config
-experiment_config[
-    <a href="#project.conftest.experiment_config">experiment_config</a>
+] -- load configs for 'datamodule=A algorithm=B seed=123' --> dict_config
+dict_config[
+    <a href="#project.conftest.dict_config">dict_config</a>
+] -- instantiate objects from configs --> config
+config[
+    <a href="#project.conftest.config">config</a>
 ] --> datamodule & algorithm
 datamodule[
     <a href="#project.conftest.datamodule">datamodule</a>
