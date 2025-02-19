@@ -35,8 +35,14 @@ def examples_to_include(request: pytest.FixtureRequest):
     [
         # don't run these unless --slow argument is passed to pytest, to save some time.
         pytest.param("3.10", marks=pytest.mark.slow),
-        pytest.param("3.11", marks=pytest.mark.slow),
-        "3.12",
+        "3.11",
+        pytest.param(
+            "3.12",
+            marks=[
+                pytest.mark.slow,
+                pytest.mark.xfail(reason="TODO: Issues with pytinyrenderer?"),
+            ],
+        ),
         pytest.param(
             "3.13",
             marks=[
