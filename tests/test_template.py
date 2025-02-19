@@ -4,6 +4,7 @@ from logging import getLogger
 from pathlib import Path
 
 import pytest
+import tomli
 from copier import Worker
 
 import project
@@ -92,3 +93,13 @@ def test_template(
             print("STDOUT: ", result.stdout)
             print("STDERR: ", result.stderr)
             pytest.fail(f"Failed to collect tests in the new project: {result.stdout}")
+
+
+def test_templated_dependencies_are_same_as_in_project():
+    """Test that the dependencies listed in the `pyproject.toml` of the template are the same as in
+    the templated pyproject.toml."""
+    project_toml = tomli.loads(Path("pyproject.toml").read_text())
+    project_toml_template = tomli.loads(Path("pyproject.toml.jinja").read_text())
+    assert sorted(project_toml["project"]["dependencies"]) == sorted(
+        project_toml_template["project"]["dependencies"]
+    )
