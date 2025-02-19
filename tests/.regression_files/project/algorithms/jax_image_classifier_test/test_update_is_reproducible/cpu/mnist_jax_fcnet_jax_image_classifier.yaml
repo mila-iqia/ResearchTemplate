@@ -1,0 +1,34 @@
+network.params.0:
+  device: cpu
+  max: '1.135e-05'
+  mean: '-7.16e-07'
+  min: '-1.272e-05'
+  shape:
+  - 256
+  sum: '-1.833e-04'
+network.params.1:
+  device: cpu
+  max: '8.120e-02'
+  mean: '-2.561e-05'
+  min: '-8.120e-02'
+  shape:
+  - 784
+  - 256
+  sum: '-5.141e+00'
+network.params.2:
+  device: cpu
+  max: '7.950e-05'
+  mean: '-1.259e-12'
+  min: '-4.535e-05'
+  shape:
+  - 10
+  sum: '-1.259e-11'
+network.params.3:
+  device: cpu
+  max: '1.421e-01'
+  mean: '7.197e-04'
+  min: '-1.416e-01'
+  shape:
+  - 256
+  - 10
+  sum: '1.842e+00'

@@ -1,0 +1,72 @@
+network.params.0:
+  device: cpu
+  max: '9.400e-06'
+  mean: '-1.768e-06'
+  min: '-1.631e-05'
+  shape:
+  - 32
+  sum: '-5.657e-05'
+network.params.1:
+  device: cpu
+  max: '7.276e-01'
+  mean: '-9.758e-04'
+  min: '-7.453e-01'
+  shape:
+  - 3
+  - 3
+  - 1
+  - 32
+  sum: '-2.810e-01'
+network.params.2:
+  device: cpu
+  max: '1.943e-05'
+  mean: '-1.279e-06'
+  min: '-1.839e-05'
+  shape:
+  - 64
+  sum: '-8.189e-05'
+network.params.3:
+  device: cpu
+  max: '1.337e-01'
+  mean: '4.508e-04'
+  min: '-1.34e-01'
+  shape:
+  - 3
+  - 3
+  - 32
+  - 64
+  sum: '8.31e+00'
+network.params.4:
+  device: cpu
+  max: '1.649e-05'
+  mean: '-4.503e-07'
+  min: '-2.015e-05'
+  shape:
+  - 256
+  sum: '-1.153e-04'
+network.params.5:
+  device: cpu
+  max: '4.060e-02'
+  mean: '1.948e-05'
+  min: '-4.060e-02'
+  shape:
+  - 3136
+  - 256
+  sum: '1.564e+01'
+network.params.6:
+  device: cpu
+  max: '7.932e-05'
+  mean: '1.137e-12'
+  min: '-6.867e-05'
+  shape:
+  - 10
+  sum: '1.137e-11'
+network.params.7:
+  device: cpu
+  max: '1.421e-01'
+  mean: '7.197e-04'
+  min: '-1.416e-01'
+  shape:
+  - 256
+  - 10
+  sum: '1.842e+00'

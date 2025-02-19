@@ -1,5 +1,5 @@
 input.0.0:
-  device: cuda:0
+  device: cpu
   max: '2.821e+00'
   mean: '4.772e-01'
   min: '-4.242e-01'
@@ -10,11 +10,11 @@ input.0.0:
   - 28
   sum: '4.789e+04'
 out:
-  device: cuda:0
-  max: '8.907e-01'
-  mean: '-1.669e-02'
-  min: '-6.486e-01'
+  device: cpu
+  max: '1.149e+00'
+  mean: '-3.327e-02'
+  min: '-1.114e+00'
   shape:
   - 128
   - 10
-  sum: '-2.136e+01'
+  sum: '-4.258e+01'

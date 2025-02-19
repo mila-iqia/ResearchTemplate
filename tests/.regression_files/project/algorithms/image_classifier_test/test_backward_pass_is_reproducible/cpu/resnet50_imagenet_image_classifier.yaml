@@ -1,0 +1,1491 @@
+batch.0:
+  device: cpu
+  max: '2.640e+00'
+  mean: '-6.142e-02'
+  min: '-2.118e+00'
+  shape:
+  - 64
+  - 3
+  - 224
+  - 224
+  sum: '-5.917e+05'
+batch.1:
+  device: cpu
+  max: 988
+  mean: '5.182e+02'
+  min: 0
+  shape:
+  - 64
+  sum: 33166
+grads.network.bn1.bias:
+  device: cpu
+  max: '2.943e-01'
+  mean: '1.631e-02'
+  min: '-3.047e-01'
+  shape:
+  - 64
+  sum: '1.044e+00'
+grads.network.bn1.weight:
+  device: cpu
+  max: '5.595e-01'
+  mean: '-7.958e-07'
+  min: '-4.032e-01'
+  shape:
+  - 64
+  sum: '-5.093e-05'
+grads.network.conv1.weight:
+  device: cpu
+  max: '3.994e+00'
+  mean: '-5.077e-02'
+  min: '-7.709e+00'
+  shape:
+  - 64
+  - 3
+  - 7
+  - 7
+  sum: '-4.777e+02'
+grads.network.fc.bias:
+  device: cpu
+  max: '6.470e-03'
+  mean: '-2.608e-11'
+  min: '-3.04e-02'
+  shape:
+  - 1000
+  sum: '-2.608e-08'
+grads.network.fc.weight:
+  device: cpu
+  max: '1.438e-02'
+  mean: '-1.583e-11'
+  min: '-1.425e-01'
+  shape:
+  - 1000
+  - 2048
+  sum: '-3.242e-05'
+grads.network.layer1.0.bn1.bias:
+  device: cpu
+  max: '3.555e-01'
+  mean: '1.006e-02'
+  min: '-1.838e-01'
+  shape:
+  - 64
+  sum: '6.437e-01'
+grads.network.layer1.0.bn1.weight:
+  device: cpu
+  max: '3.165e-01'
+  mean: '-2.328e-09'
+  min: '-3.099e-01'
+  shape:
+  - 64
+  sum: '-1.490e-07'
+grads.network.layer1.0.bn2.bias:
+  device: cpu
+  max: '1.788e-01'
+  mean: '-9.75e-04'
+  min: '-1.791e-01'
+  shape:
+  - 64
+  sum: '-6.24e-02'
+grads.network.layer1.0.bn2.weight:
+  device: cpu
+  max: '2.182e-01'
+  mean: '-4.144e-08'
+  min: '-1.521e-01'
+  shape:
+  - 64
+  sum: '-2.652e-06'
+grads.network.layer1.0.bn3.bias:
+  device: cpu
+  max: '7.116e-02'
+  mean: '-1.479e-03'
+  min: '-8.807e-02'
+  shape:
+  - 256
+  sum: '-3.786e-01'
+grads.network.layer1.0.bn3.weight:
+  device: cpu
+  max: '1.207e-01'
+  mean: '6.441e-04'
+  min: '-8.983e-02'
+  shape:
+  - 256
+  sum: '1.649e-01'
+grads.network.layer1.0.conv1.weight:
+  device: cpu
+  max: '5.087e-01'
+  mean: '-5.604e-03'
+  min: '-4.382e-01'
+  shape:
+  - 64
+  - 64
+  - 1
+  - 1
+  sum: '-2.296e+01'
+grads.network.layer1.0.conv2.weight:
+  device: cpu
+  max: '3.287e-01'
+  mean: '-1.501e-03'
+  min: '-3.516e-01'
+  shape:
+  - 64
+  - 64
+  - 3
+  - 3
+  sum: '-5.533e+01'
+grads.network.layer1.0.conv3.weight:
+  device: cpu
+  max: '2.881e-01'
+  mean: '-1.106e-04'
+  min: '-2.951e-01'
+  shape:
+  - 256
+  - 64
+  - 1
+  - 1
+  sum: '-1.813e+00'
+grads.network.layer1.0.downsample.0.weight:
+  device: cpu
+  max: '3.677e-01'
+  mean: '1.297e-03'
+  min: '-3.44e-01'
+  shape:
+  - 256
+  - 64
+  - 1
+  - 1
+  sum: '2.124e+01'
+grads.network.layer1.0.downsample.1.bias:
+  device: cpu
+  max: '7.116e-02'
+  mean: '-1.479e-03'
+  min: '-8.807e-02'
+  shape:
+  - 256
+  sum: '-3.786e-01'
+grads.network.layer1.0.downsample.1.weight:
+  device: cpu
+  max: '8.358e-02'
+  mean: '-1.997e-03'
+  min: '-9.584e-02'
+  shape:
+  - 256
+  sum: '-5.113e-01'
+grads.network.layer1.1.bn1.bias:
+  device: cpu
+  max: '1.694e-01'
+  mean: '1.048e-02'
+  min: '-1.174e-01'
+  shape:
+  - 64
+  sum: '6.704e-01'
+grads.network.layer1.1.bn1.weight:
+  device: cpu
+  max: '1.463e-01'
+  mean: '-4.889e-09'
+  min: '-1.556e-01'
+  shape:
+  - 64
+  sum: '-3.129e-07'
+grads.network.layer1.1.bn2.bias:
+  device: cpu
+  max: '1.346e-01'
+  mean: '-9.095e-04'
+  min: '-1.013e-01'
+  shape:
+  - 64
+  sum: '-5.821e-02'
+grads.network.layer1.1.bn2.weight:
+  device: cpu
+  max: '1.041e-01'
+  mean: '3.527e-08'
+  min: '-1.327e-01'
+  shape:
+  - 64
+  sum: '2.258e-06'
+grads.network.layer1.1.bn3.bias:
+  device: cpu
+  max: '4.023e-02'
+  mean: '-1.087e-03'
+  min: '-4.910e-02'
+  shape:
+  - 256
+  sum: '-2.782e-01'
+grads.network.layer1.1.bn3.weight:
+  device: cpu
+  max: '6.369e-02'
+  mean: '1.132e-04'
+  min: '-6.743e-02'
+  shape:
+  - 256
+  sum: '2.899e-02'
+grads.network.layer1.1.conv1.weight:
+  device: cpu
+  max: '1.358e-01'
+  mean: '3.290e-04'
+  min: '-1.300e-01'
+  shape:
+  - 64
+  - 256
+  - 1
+  - 1
+  sum: '5.391e+00'
+grads.network.layer1.1.conv2.weight:
+  device: cpu
+  max: '2.292e-01'
+  mean: '-5.258e-04'
+  min: '-2.472e-01'
+  shape:
+  - 64
+  - 64
+  - 3
+  - 3
+  sum: '-1.938e+01'
+grads.network.layer1.1.conv3.weight:
+  device: cpu
+  max: '1.575e-01'
+  mean: '1.404e-05'
+  min: '-1.566e-01'
+  shape:
+  - 256
+  - 64
+  - 1
+  - 1
+  sum: '2.300e-01'
+grads.network.layer1.2.bn1.bias:
+  device: cpu
+  max: '6.257e-02'
+  mean: '-9.062e-03'
+  min: '-7.077e-02'
+  shape:
+  - 64
+  sum: '-5.8e-01'
+grads.network.layer1.2.bn1.weight:
+  device: cpu
+  max: '1.161e-01'
+  mean: '-1.537e-08'
+  min: '-1.088e-01'
+  shape:
+  - 64
+  sum: '-9.835e-07'
+grads.network.layer1.2.bn2.bias:
+  device: cpu
+  max: '4.663e-02'
+  mean: '-1.126e-03'
+  min: '-6.902e-02'
+  shape:
+  - 64
+  sum: '-7.206e-02'
+grads.network.layer1.2.bn2.weight:
+  device: cpu
+  max: '7.897e-02'
+  mean: '3.709e-07'
+  min: '-6.661e-02'
+  shape:
+  - 64
+  sum: '2.374e-05'
+grads.network.layer1.2.bn3.bias:
+  device: cpu
+  max: '2.172e-02'
+  mean: '-3.787e-04'
+  min: '-2.529e-02'
+  shape:
+  - 256
+  sum: '-9.694e-02'
+grads.network.layer1.2.bn3.weight:
+  device: cpu
+  max: '5.129e-02'
+  mean: '1.240e-03'
+  min: '-4.022e-02'
+  shape:
+  - 256
+  sum: '3.175e-01'
+grads.network.layer1.2.conv1.weight:
+  device: cpu
+  max: '8.727e-02'
+  mean: '2.818e-05'
+  min: '-8.996e-02'
+  shape:
+  - 64
+  - 256
+  - 1
+  - 1
+  sum: '4.618e-01'
+grads.network.layer1.2.conv2.weight:
+  device: cpu
+  max: '1.329e-01'
+  mean: '-1.109e-04'
+  min: '-1.196e-01'
+  shape:
+  - 64
+  - 64
+  - 3
+  - 3
+  sum: '-4.09e+00'
+grads.network.layer1.2.conv3.weight:
+  device: cpu
+  max: '1.050e-01'
+  mean: '2.658e-04'
+  min: '-1.158e-01'
+  shape:
+  - 256
+  - 64
+  - 1
+  - 1
+  sum: '4.355e+00'
+grads.network.layer2.0.bn1.bias:
+  device: cpu
+  max: '5.127e-02'
+  mean: '7.756e-04'
+  min: '-4.740e-02'
+  shape:
+  - 128
+  sum: '9.928e-02'
+grads.network.layer2.0.bn1.weight:
+  device: cpu
+  max: '5.223e-02'
+  mean: '-8.149e-10'
+  min: '-6.301e-02'
+  shape:
+  - 128
+  sum: '-1.043e-07'
+grads.network.layer2.0.bn2.bias:
+  device: cpu
+  max: '4.401e-02'
+  mean: '-2.918e-04'
+  min: '-4.827e-02'
+  shape:
+  - 128
+  sum: '-3.735e-02'
+grads.network.layer2.0.bn2.weight:
+  device: cpu
+  max: '5.515e-02'
+  mean: '1.066e-07'
+  min: '-4.108e-02'
+  shape:
+  - 128
+  sum: '1.365e-05'
+grads.network.layer2.0.bn3.bias:
+  device: cpu
+  max: '2.124e-02'
+  mean: '2.977e-04'
+  min: '-2.324e-02'
+  shape:
+  - 512
+  sum: '1.524e-01'
+grads.network.layer2.0.bn3.weight:
+  device: cpu
+  max: '3.403e-02'
+  mean: '5.555e-04'
+  min: '-2.536e-02'
+  shape:
+  - 512
+  sum: '2.844e-01'
+grads.network.layer2.0.conv1.weight:
+  device: cpu
+  max: '7.441e-02'
+  mean: '-1.635e-04'
+  min: '-6.623e-02'
+  shape:
+  - 128
+  - 256
+  - 1
+  - 1
+  sum: '-5.358e+00'
+grads.network.layer2.0.conv2.weight:
+  device: cpu
+  max: '7.220e-02'
+  mean: '-3.971e-04'
+  min: '-8.72e-02'
+  shape:
+  - 128
+  - 128
+  - 3
+  - 3
+  sum: '-5.856e+01'
+grads.network.layer2.0.conv3.weight:
+  device: cpu
+  max: '6.475e-02'
+  mean: '3.331e-05'
+  min: '-6.619e-02'
+  shape:
+  - 512
+  - 128
+  - 1
+  - 1
+  sum: '2.183e+00'
+grads.network.layer2.0.downsample.0.weight:
+  device: cpu
+  max: '4.985e-02'
+  mean: '-1.346e-05'
+  min: '-5.256e-02'
+  shape:
+  - 512
+  - 256
+  - 1
+  - 1
+  sum: '-1.764e+00'
+grads.network.layer2.0.downsample.1.bias:
+  device: cpu
+  max: '2.124e-02'
+  mean: '2.977e-04'
+  min: '-2.324e-02'
+  shape:
+  - 512
+  sum: '1.524e-01'
+grads.network.layer2.0.downsample.1.weight:
+  device: cpu
+  max: '2.366e-02'
+  mean: '-6.404e-04'
+  min: '-3.419e-02'
+  shape:
+  - 512
+  sum: '-3.279e-01'
+grads.network.layer2.1.bn1.bias:
+  device: cpu
+  max: '3.327e-02'
+  mean: '9.055e-04'
+  min: '-4.023e-02'
+  shape:
+  - 128
+  sum: '1.159e-01'
+grads.network.layer2.1.bn1.weight:
+  device: cpu
+  max: '4.144e-02'
+  mean: '2.183e-09'
+  min: '-3.604e-02'
+  shape:
+  - 128
+  sum: '2.794e-07'
+grads.network.layer2.1.bn2.bias:
+  device: cpu
+  max: '2.807e-02'
+  mean: '-4.167e-04'
+  min: '-2.307e-02'
+  shape:
+  - 128
+  sum: '-5.334e-02'
+grads.network.layer2.1.bn2.weight:
+  device: cpu
+  max: '4.115e-02'
+  mean: '-4.744e-09'
+  min: '-3.413e-02'
+  shape:
+  - 128
+  sum: '-6.072e-07'
+grads.network.layer2.1.bn3.bias:
+  device: cpu
+  max: '1.324e-02'
+  mean: '1.896e-04'
+  min: '-1.279e-02'
+  shape:
+  - 512
+  sum: '9.707e-02'
+grads.network.layer2.1.bn3.weight:
+  device: cpu
+  max: '1.467e-02'
+  mean: '-4.802e-07'
+  min: '-1.776e-02'
+  shape:
+  - 512
+  sum: '-2.459e-04'
+grads.network.layer2.1.conv1.weight:
+  device: cpu
+  max: '3.518e-02'
+  mean: '-8.228e-05'
+  min: '-3.479e-02'
+  shape:
+  - 128
+  - 512
+  - 1
+  - 1
+  sum: '-5.392e+00'
+grads.network.layer2.1.conv2.weight:
+  device: cpu
+  max: '5.355e-02'
+  mean: '1.226e-04'
+  min: '-5.719e-02'
+  shape:
+  - 128
+  - 128
+  - 3
+  - 3
+  sum: '1.808e+01'
+grads.network.layer2.1.conv3.weight:
+  device: cpu
+  max: '4.288e-02'
+  mean: '8.834e-05'
+  min: '-4.186e-02'
+  shape:
+  - 512
+  - 128
+  - 1
+  - 1
+  sum: '5.79e+00'
+grads.network.layer2.2.bn1.bias:
+  device: cpu
+  max: '1.938e-02'
+  mean: '2.609e-04'
+  min: '-3.144e-02'
+  shape:
+  - 128
+  sum: '3.340e-02'
+grads.network.layer2.2.bn1.weight:
+  device: cpu
+  max: '2.953e-02'
+  mean: '5.821e-11'
+  min: '-2.295e-02'
+  shape:
+  - 128
+  sum: '7.451e-09'
+grads.network.layer2.2.bn2.bias:
+  device: cpu
+  max: '2.318e-02'
+  mean: '1.054e-04'
+  min: '-1.912e-02'
+  shape:
+  - 128
+  sum: '1.349e-02'
+grads.network.layer2.2.bn2.weight:
+  device: cpu
+  max: '3.086e-02'
+  mean: '-5.355e-09'
+  min: '-1.883e-02'
+  shape:
+  - 128
+  sum: '-6.855e-07'
+grads.network.layer2.2.bn3.bias:
+  device: cpu
+  max: '8.237e-03'
+  mean: '5.368e-05'
+  min: '-9.03e-03'
+  shape:
+  - 512
+  sum: '2.748e-02'
+grads.network.layer2.2.bn3.weight:
+  device: cpu
+  max: '1.253e-02'
+  mean: '-3.755e-05'
+  min: '-1.104e-02'
+  shape:
+  - 512
+  sum: '-1.922e-02'
+grads.network.layer2.2.conv1.weight:
+  device: cpu
+  max: '2.286e-02'
+  mean: '9.054e-05'
+  min: '-2.161e-02'
+  shape:
+  - 128
+  - 512
+  - 1
+  - 1
+  sum: '5.934e+00'
+grads.network.layer2.2.conv2.weight:
+  device: cpu
+  max: '3.428e-02'
+  mean: '-5.278e-05'
+  min: '-4.143e-02'
+  shape:
+  - 128
+  - 128
+  - 3
+  - 3
+  sum: '-7.783e+00'
+grads.network.layer2.2.conv3.weight:
+  device: cpu
+  max: '2.959e-02'
+  mean: '-4.568e-05'
+  min: '-2.925e-02'
+  shape:
+  - 512
+  - 128
+  - 1
+  - 1
+  sum: '-2.994e+00'
+grads.network.layer2.3.bn1.bias:
+  device: cpu
+  max: '1.29e-02'
+  mean: '-1.333e-04'
+  min: '-2.139e-02'
+  shape:
+  - 128
+  sum: '-1.707e-02'
+grads.network.layer2.3.bn1.weight:
+  device: cpu
+  max: '2.196e-02'
+  mean: '-4.293e-10'
+  min: '-3.542e-02'
+  shape:
+  - 128
+  sum: '-5.495e-08'
+grads.network.layer2.3.bn2.bias:
+  device: cpu
+  max: '1.503e-02'
+  mean: '4.790e-04'
+  min: '-1.455e-02'
+  shape:
+  - 128
+  sum: '6.131e-02'
+grads.network.layer2.3.bn2.weight:
+  device: cpu
+  max: '3.006e-02'
+  mean: '2.843e-08'
+  min: '-1.984e-02'
+  shape:
+  - 128
+  sum: '3.64e-06'
+grads.network.layer2.3.bn3.bias:
+  device: cpu
+  max: '4.050e-03'
+  mean: '-4.139e-05'
+  min: '-4.810e-03'
+  shape:
+  - 512
+  sum: '-2.119e-02'
+grads.network.layer2.3.bn3.weight:
+  device: cpu
+  max: '9.334e-03'
+  mean: '1.229e-04'
+  min: '-1.126e-02'
+  shape:
+  - 512
+  sum: '6.293e-02'
+grads.network.layer2.3.conv1.weight:
+  device: cpu
+  max: '1.798e-02'
+  mean: '-2.373e-05'
+  min: '-1.662e-02'
+  shape:
+  - 128
+  - 512
+  - 1
+  - 1
+  sum: '-1.555e+00'
+grads.network.layer2.3.conv2.weight:
+  device: cpu
+  max: '2.596e-02'
+  mean: '-1.678e-05'
+  min: '-2.67e-02'
+  shape:
+  - 128
+  - 128
+  - 3
+  - 3
+  sum: '-2.474e+00'
+grads.network.layer2.3.conv3.weight:
+  device: cpu
+  max: '2.072e-02'
+  mean: '-2.218e-05'
+  min: '-2.246e-02'
+  shape:
+  - 512
+  - 128
+  - 1
+  - 1
+  sum: '-1.453e+00'
+grads.network.layer3.0.bn1.bias:
+  device: cpu
+  max: '9.780e-03'
+  mean: '-1.446e-04'
+  min: '-1.281e-02'
+  shape:
+  - 256
+  sum: '-3.702e-02'
+grads.network.layer3.0.bn1.weight:
+  device: cpu
+  max: '1.264e-02'
+  mean: '-5.093e-10'
+  min: '-1.333e-02'
+  shape:
+  - 256
+  sum: '-1.304e-07'
+grads.network.layer3.0.bn2.bias:
+  device: cpu
+  max: '9.833e-03'
+  mean: '-2.376e-04'
+  min: '-8.526e-03'
+  shape:
+  - 256
+  sum: '-6.084e-02'
+grads.network.layer3.0.bn2.weight:
+  device: cpu
+  max: '1.101e-02'
+  mean: '-3.056e-10'
+  min: '-1.054e-02'
+  shape:
+  - 256
+  sum: '-7.823e-08'
+grads.network.layer3.0.bn3.bias:
+  device: cpu
+  max: '4.732e-03'
+  mean: '5.465e-05'
+  min: '-4.671e-03'
+  shape:
+  - 1024
+  sum: '5.596e-02'
+grads.network.layer3.0.bn3.weight:
+  device: cpu
+  max: '6.214e-03'
+  mean: '1.099e-05'
+  min: '-6.427e-03'
+  shape:
+  - 1024
+  sum: '1.125e-02'
+grads.network.layer3.0.conv1.weight:
+  device: cpu
+  max: '1.735e-02'
+  mean: '-1.155e-05'
+  min: '-1.514e-02'
+  shape:
+  - 256
+  - 512
+  - 1
+  - 1
+  sum: '-1.514e+00'
+grads.network.layer3.0.conv2.weight:
+  device: cpu
+  max: '2.008e-02'
+  mean: '9.477e-05'
+  min: '-1.967e-02'
+  shape:
+  - 256
+  - 256
+  - 3
+  - 3
+  sum: '5.590e+01'
+grads.network.layer3.0.conv3.weight:
+  device: cpu
+  max: '1.709e-02'
+  mean: '-2.8e-07'
+  min: '-1.605e-02'
+  shape:
+  - 1024
+  - 256
+  - 1
+  - 1
+  sum: '-7.34e-02'
+grads.network.layer3.0.downsample.0.weight:
+  device: cpu
+  max: '1.172e-02'
+  mean: '5.847e-06'
+  min: '-1.316e-02'
+  shape:
+  - 1024
+  - 512
+  - 1
+  - 1
+  sum: '3.066e+00'
+grads.network.layer3.0.downsample.1.bias:
+  device: cpu
+  max: '4.732e-03'
+  mean: '5.465e-05'
+  min: '-4.671e-03'
+  shape:
+  - 1024
+  sum: '5.596e-02'
+grads.network.layer3.0.downsample.1.weight:
+  device: cpu
+  max: '5.985e-03'
+  mean: '-1.301e-05'
+  min: '-6.077e-03'
+  shape:
+  - 1024
+  sum: '-1.332e-02'
+grads.network.layer3.1.bn1.bias:
+  device: cpu
+  max: '1.133e-02'
+  mean: '-4.356e-05'
+  min: '-1.127e-02'
+  shape:
+  - 256
+  sum: '-1.115e-02'
+grads.network.layer3.1.bn1.weight:
+  device: cpu
+  max: '9.099e-03'
+  mean: '6.075e-10'
+  min: '-1.337e-02'
+  shape:
+  - 256
+  sum: '1.555e-07'
+grads.network.layer3.1.bn2.bias:
+  device: cpu
+  max: '6.594e-03'
+  mean: '-3.555e-05'
+  min: '-6.698e-03'
+  shape:
+  - 256
+  sum: '-9.1e-03'
+grads.network.layer3.1.bn2.weight:
+  device: cpu
+  max: '7.958e-03'
+  mean: '-1.399e-09'
+  min: '-8.842e-03'
+  shape:
+  - 256
+  sum: '-3.581e-07'
+grads.network.layer3.1.bn3.bias:
+  device: cpu
+  max: '3.569e-03'
+  mean: '2.478e-05'
+  min: '-2.651e-03'
+  shape:
+  - 1024
+  sum: '2.538e-02'
+grads.network.layer3.1.bn3.weight:
+  device: cpu
+  max: '3.948e-03'
+  mean: '-1.127e-05'
+  min: '-5.187e-03'
+  shape:
+  - 1024
+  sum: '-1.154e-02'
+grads.network.layer3.1.conv1.weight:
+  device: cpu
+  max: '7.673e-03'
+  mean: '-3.906e-05'
+  min: '-9.093e-03'
+  shape:
+  - 256
+  - 1024
+  - 1
+  - 1
+  sum: '-1.024e+01'
+grads.network.layer3.1.conv2.weight:
+  device: cpu
+  max: '1.310e-02'
+  mean: '-5.704e-05'
+  min: '-1.278e-02'
+  shape:
+  - 256
+  - 256
+  - 3
+  - 3
+  sum: '-3.364e+01'
+grads.network.layer3.1.conv3.weight:
+  device: cpu
+  max: '1.118e-02'
+  mean: '4.89e-06'
+  min: '-1.145e-02'
+  shape:
+  - 1024
+  - 256
+  - 1
+  - 1
+  sum: '1.282e+00'
+grads.network.layer3.2.bn1.bias:
+  device: cpu
+  max: '4.938e-03'
+  mean: '-3.771e-05'
+  min: '-5.464e-03'
+  shape:
+  - 256
+  sum: '-9.655e-03'
+grads.network.layer3.2.bn1.weight:
+  device: cpu
+  max: '8.322e-03'
+  mean: '1.965e-10'
+  min: '-6.439e-03'
+  shape:
+  - 256
+  sum: '5.029e-08'
+grads.network.layer3.2.bn2.bias:
+  device: cpu
+  max: '6.153e-03'
+  mean: '-2.782e-05'
+  min: '-5.373e-03'
+  shape:
+  - 256
+  sum: '-7.123e-03'
+grads.network.layer3.2.bn2.weight:
+  device: cpu
+  max: '5.841e-03'
+  mean: '-2.692e-09'
+  min: '-5.972e-03'
+  shape:
+  - 256
+  sum: '-6.892e-07'
+grads.network.layer3.2.bn3.bias:
+  device: cpu
+  max: '2.150e-03'
+  mean: '1.657e-05'
+  min: '-1.890e-03'
+  shape:
+  - 1024
+  sum: '1.696e-02'
+grads.network.layer3.2.bn3.weight:
+  device: cpu
+  max: '2.792e-03'
+  mean: '-1.714e-05'
+  min: '-2.804e-03'
+  shape:
+  - 1024
+  sum: '-1.755e-02'
+grads.network.layer3.2.conv1.weight:
+  device: cpu
+  max: '5.682e-03'
+  mean: '4.298e-06'
+  min: '-6.156e-03'
+  shape:
+  - 256
+  - 1024
+  - 1
+  - 1
+  sum: '1.127e+00'
+grads.network.layer3.2.conv2.weight:
+  device: cpu
+  max: '1.066e-02'
+  mean: '3.388e-06'
+  min: '-9.721e-03'
+  shape:
+  - 256
+  - 256
+  - 3
+  - 3
+  sum: '1.998e+00'
+grads.network.layer3.2.conv3.weight:
+  device: cpu
+  max: '7.507e-03'
+  mean: '-2.116e-05'
+  min: '-8.394e-03'
+  shape:
+  - 1024
+  - 256
+  - 1
+  - 1
+  sum: '-5.547e+00'
+grads.network.layer3.3.bn1.bias:
+  device: cpu
+  max: '4.598e-03'
+  mean: '-3.115e-05'
+  min: '-4.613e-03'
+  shape:
+  - 256
+  sum: '-7.975e-03'
+grads.network.layer3.3.bn1.weight:
+  device: cpu
+  max: '6.450e-03'
+  mean: '-1.073e-10'
+  min: '-6.835e-03'
+  shape:
+  - 256
+  sum: '-2.747e-08'
+grads.network.layer3.3.bn2.bias:
+  device: cpu
+  max: '3.451e-03'
+  mean: '3.265e-06'
+  min: '-3.724e-03'
+  shape:
+  - 256
+  sum: '8.359e-04'
+grads.network.layer3.3.bn2.weight:
+  device: cpu
+  max: '4.486e-03'
+  mean: '2.892e-10'
+  min: '-4.527e-03'
+  shape:
+  - 256
+  sum: '7.404e-08'
+grads.network.layer3.3.bn3.bias:
+  device: cpu
+  max: '1.425e-03'
+  mean: '2.363e-05'
+  min: '-1.497e-03'
+  shape:
+  - 1024
+  sum: '2.42e-02'
+grads.network.layer3.3.bn3.weight:
+  device: cpu
+  max: '2.131e-03'
+  mean: '3.46e-06'
+  min: '-2.213e-03'
+  shape:
+  - 1024
+  sum: '3.543e-03'
+grads.network.layer3.3.conv1.weight:
+  device: cpu
+  max: '4.712e-03'
+  mean: '-2.470e-05'
+  min: '-4.039e-03'
+  shape:
+  - 256
+  - 1024
+  - 1
+  - 1
+  sum: '-6.475e+00'
+grads.network.layer3.3.conv2.weight:
+  device: cpu
+  max: '7.756e-03'
+  mean: '-5.112e-05'
+  min: '-6.836e-03'
+  shape:
+  - 256
+  - 256
+  - 3
+  - 3
+  sum: '-3.015e+01'
+grads.network.layer3.3.conv3.weight:
+  device: cpu
+  max: '5.876e-03'
+  mean: '-2.903e-06'
+  min: '-6.118e-03'
+  shape:
+  - 1024
+  - 256
+  - 1
+  - 1
+  sum: '-7.609e-01'
+grads.network.layer3.4.bn1.bias:
+  device: cpu
+  max: '3.064e-03'
+  mean: '-1.056e-04'
+  min: '-3.124e-03'
+  shape:
+  - 256
+  sum: '-2.704e-02'
+grads.network.layer3.4.bn1.weight:
+  device: cpu
+  max: '4.314e-03'
+  mean: '-9.277e-11'
+  min: '-3.887e-03'
+  shape:
+  - 256
+  sum: '-2.375e-08'
+grads.network.layer3.4.bn2.bias:
+  device: cpu
+  max: '2.938e-03'
+  mean: '6.133e-05'
+  min: '-2.650e-03'
+  shape:
+  - 256
+  sum: '1.57e-02'
+grads.network.layer3.4.bn2.weight:
+  device: cpu
+  max: '3.486e-03'
+  mean: '4.246e-09'
+  min: '-3.735e-03'
+  shape:
+  - 256
+  sum: '1.087e-06'
+grads.network.layer3.4.bn3.bias:
+  device: cpu
+  max: '1.060e-03'
+  mean: '2.626e-05'
+  min: '-1.132e-03'
+  shape:
+  - 1024
+  sum: '2.689e-02'
+grads.network.layer3.4.bn3.weight:
+  device: cpu
+  max: '2.234e-03'
+  mean: '2.345e-05'
+  min: '-1.706e-03'
+  shape:
+  - 1024
+  sum: '2.402e-02'
+grads.network.layer3.4.conv1.weight:
+  device: cpu
+  max: '3.835e-03'
+  mean: '1.868e-05'
+  min: '-3.909e-03'
+  shape:
+  - 256
+  - 1024
+  - 1
+  - 1
+  sum: '4.896e+00'
+grads.network.layer3.4.conv2.weight:
+  device: cpu
+  max: '5.721e-03'
+  mean: '-3.131e-06'
+  min: '-5.902e-03'
+  shape:
+  - 256
+  - 256
+  - 3
+  - 3
+  sum: '-1.847e+00'
+grads.network.layer3.4.conv3.weight:
+  device: cpu
+  max: '4.522e-03'
+  mean: '-1.417e-05'
+  min: '-4.474e-03'
+  shape:
+  - 1024
+  - 256
+  - 1
+  - 1
+  sum: '-3.715e+00'
+grads.network.layer3.5.bn1.bias:
+  device: cpu
+  max: '2.478e-03'
+  mean: '-1.856e-06'
+  min: '-2.870e-03'
+  shape:
+  - 256
+  sum: '-4.751e-04'
+grads.network.layer3.5.bn1.weight:
+  device: cpu
+  max: '3.468e-03'
+  mean: '2.547e-11'
+  min: '-3.602e-03'
+  shape:
+  - 256
+  sum: '6.519e-09'
+grads.network.layer3.5.bn2.bias:
+  device: cpu
+  max: '2.127e-03'
+  mean: '5.728e-05'
+  min: '-2.174e-03'
+  shape:
+  - 256
+  sum: '1.466e-02'
+grads.network.layer3.5.bn2.weight:
+  device: cpu
+  max: '2.524e-03'
+  mean: '8.768e-10'
+  min: '-2.53e-03'
+  shape:
+  - 256
+  sum: '2.244e-07'
+grads.network.layer3.5.bn3.bias:
+  device: cpu
+  max: '6.576e-04'
+  mean: '1.485e-05'
+  min: '-6.332e-04'
+  shape:
+  - 1024
+  sum: '1.520e-02'
+grads.network.layer3.5.bn3.weight:
+  device: cpu
+  max: '1.795e-03'
+  mean: '3.515e-06'
+  min: '-1.553e-03'
+  shape:
+  - 1024
+  sum: '3.6e-03'
+grads.network.layer3.5.conv1.weight:
+  device: cpu
+  max: '3.834e-03'
+  mean: '5.716e-06'
+  min: '-3.394e-03'
+  shape:
+  - 256
+  - 1024
+  - 1
+  - 1
+  sum: '1.498e+00'
+grads.network.layer3.5.conv2.weight:
+  device: cpu
+  max: '4.511e-03'
+  mean: '-8.454e-06'
+  min: '-4.613e-03'
+  shape:
+  - 256
+  - 256
+  - 3
+  - 3
+  sum: '-4.987e+00'
+grads.network.layer3.5.conv3.weight:
+  device: cpu
+  max: '4.724e-03'
+  mean: '-5.048e-06'
+  min: '-4.196e-03'
+  shape:
+  - 1024
+  - 256
+  - 1
+  - 1
+  sum: '-1.323e+00'
+grads.network.layer4.0.bn1.bias:
+  device: cpu
+  max: '2.523e-03'
+  mean: '4.852e-05'
+  min: '-2.259e-03'
+  shape:
+  - 512
+  sum: '2.484e-02'
+grads.network.layer4.0.bn1.weight:
+  device: cpu
+  max: '2.518e-03'
+  mean: '-2.206e-11'
+  min: '-2.935e-03'
+  shape:
+  - 512
+  sum: '-1.129e-08'
+grads.network.layer4.0.bn2.bias:
+  device: cpu
+  max: '1.872e-03'
+  mean: '2.765e-05'
+  min: '-2.36e-03'
+  shape:
+  - 512
+  sum: '1.416e-02'
+grads.network.layer4.0.bn2.weight:
+  device: cpu
+  max: '2.498e-03'
+  mean: '9.114e-09'
+  min: '-2.656e-03'
+  shape:
+  - 512
+  sum: '4.666e-06'
+grads.network.layer4.0.bn3.bias:
+  device: cpu
+  max: '2.678e-03'
+  mean: '6.794e-05'
+  min: '-2.459e-03'
+  shape:
+  - 2048
+  sum: '1.391e-01'
+grads.network.layer4.0.bn3.weight:
+  device: cpu
+  max: '2.185e-03'
+  mean: '3.7e-05'
+  min: '-1.898e-03'
+  shape:
+  - 2048
+  sum: '7.578e-02'
+grads.network.layer4.0.conv1.weight:
+  device: cpu
+  max: '3.769e-03'
+  mean: '-1.016e-05'
+  min: '-3.445e-03'
+  shape:
+  - 512
+  - 1024
+  - 1
+  - 1
+  sum: '-5.328e+00'
+grads.network.layer4.0.conv2.weight:
+  device: cpu
+  max: '4.335e-03'
+  mean: '-1.586e-05'
+  min: '-4.555e-03'
+  shape:
+  - 512
+  - 512
+  - 3
+  - 3
+  sum: '-3.742e+01'
+grads.network.layer4.0.conv3.weight:
+  device: cpu
+  max: '4.078e-03'
+  mean: '3.273e-06'
+  min: '-5.843e-03'
+  shape:
+  - 2048
+  - 512
+  - 1
+  - 1
+  sum: '3.432e+00'
+grads.network.layer4.0.downsample.0.weight:
+  device: cpu
+  max: '3.504e-03'
+  mean: '3.207e-06'
+  min: '-3.452e-03'
+  shape:
+  - 2048
+  - 1024
+  - 1
+  - 1
+  sum: '6.726e+00'
+grads.network.layer4.0.downsample.1.bias:
+  device: cpu
+  max: '2.678e-03'
+  mean: '6.794e-05'
+  min: '-2.459e-03'
+  shape:
+  - 2048
+  sum: '1.391e-01'
+grads.network.layer4.0.downsample.1.weight:
+  device: cpu
+  max: '2.201e-03'
+  mean: '3.994e-05'
+  min: '-2.241e-03'
+  shape:
+  - 2048
+  sum: '8.18e-02'
+grads.network.layer4.1.bn1.bias:
+  device: cpu
+  max: '1.468e-03'
+  mean: '1.074e-05'
+  min: '-1.545e-03'
+  shape:
+  - 512
+  sum: '5.499e-03'
+grads.network.layer4.1.bn1.weight:
+  device: cpu
+  max: '1.951e-03'
+  mean: '6.048e-11'
+  min: '-2.127e-03'
+  shape:
+  - 512
+  sum: '3.097e-08'
+grads.network.layer4.1.bn2.bias:
+  device: cpu
+  max: '1.680e-03'
+  mean: '8.528e-07'
+  min: '-1.535e-03'
+  shape:
+  - 512
+  sum: '4.366e-04'
+grads.network.layer4.1.bn2.weight:
+  device: cpu
+  max: '2.674e-03'
+  mean: '1.350e-08'
+  min: '-2.202e-03'
+  shape:
+  - 512
+  sum: '6.913e-06'
+grads.network.layer4.1.bn3.bias:
+  device: cpu
+  max: '3.308e-03'
+  mean: '9.677e-05'
+  min: '-3.343e-03'
+  shape:
+  - 2048
+  sum: '1.982e-01'
+grads.network.layer4.1.bn3.weight:
+  device: cpu
+  max: '2.129e-03'
+  mean: '5.471e-05'
+  min: '-2.339e-03'
+  shape:
+  - 2048
+  sum: '1.120e-01'
+grads.network.layer4.1.conv1.weight:
+  device: cpu
+  max: '2.050e-03'
+  mean: '-7.359e-07'
+  min: '-2.141e-03'
+  shape:
+  - 512
+  - 2048
+  - 1
+  - 1
+  sum: '-7.717e-01'
+grads.network.layer4.1.conv2.weight:
+  device: cpu
+  max: '4.133e-03'
+  mean: '-4.579e-06'
+  min: '-4.703e-03'
+  shape:
+  - 512
+  - 512
+  - 3
+  - 3
+  sum: '-1.080e+01'
+grads.network.layer4.1.conv3.weight:
+  device: cpu
+  max: '3.661e-03'
+  mean: '7.898e-06'
+  min: '-3.894e-03'
+  shape:
+  - 2048
+  - 512
+  - 1
+  - 1
+  sum: '8.282e+00'
+grads.network.layer4.2.bn1.bias:
+  device: cpu
+  max: '1.406e-03'
+  mean: '-2.987e-06'
+  min: '-1.362e-03'
+  shape:
+  - 512
+  sum: '-1.529e-03'
+grads.network.layer4.2.bn1.weight:
+  device: cpu
+  max: '2.531e-03'
+  mean: '-1.41e-11'
+  min: '-2.550e-03'
+  shape:
+  - 512
+  sum: '-7.218e-09'
+grads.network.layer4.2.bn2.bias:
+  device: cpu
+  max: '1.456e-03'
+  mean: '1.464e-06'
+  min: '-1.775e-03'
+  shape:
+  - 512
+  sum: '7.497e-04'
+grads.network.layer4.2.bn2.weight:
+  device: cpu
+  max: '4.243e-03'
+  mean: '1.12e-08'
+  min: '-3.264e-03'
+  shape:
+  - 512
+  sum: '5.733e-06'
+grads.network.layer4.2.bn3.bias:
+  device: cpu
+  max: '4.23e-03'
+  mean: '1.204e-04'
+  min: '-4.401e-03'
+  shape:
+  - 2048
+  sum: '2.466e-01'
+grads.network.layer4.2.bn3.weight:
+  device: cpu
+  max: '2.290e-03'
+  mean: '4.768e-05'
+  min: '-2.096e-03'
+  shape:
+  - 2048
+  sum: '9.764e-02'
+grads.network.layer4.2.conv1.weight:
+  device: cpu
+  max: '1.916e-03'
+  mean: '-1.025e-06'
+  min: '-1.896e-03'
+  shape:
+  - 512
+  - 2048
+  - 1
+  - 1
+  sum: '-1.075e+00'
+grads.network.layer4.2.conv2.weight:
+  device: cpu
+  max: '4.505e-03'
+  mean: '5.104e-06'
+  min: '-4.105e-03'
+  shape:
+  - 512
+  - 512
+  - 3
+  - 3
+  sum: '1.204e+01'
+grads.network.layer4.2.conv3.weight:
+  device: cpu
+  max: '5.096e-03'
+  mean: '9.765e-06'
+  min: '-4.327e-03'
+  shape:
+  - 2048
+  - 512
+  - 1
+  - 1
+  sum: '1.024e+01'
+outputs.logits:
+  device: cpu
+  max: '4.848e+00'
+  mean: '1.928e-02'
+  min: '-3.903e+00'
+  shape:
+  - 64
+  - 1000
+  sum: '1.234e+03'
+outputs.loss:
+  device: cpu
+  max: '7.075e+00'
+  mean: '7.075e+00'
+  min: '7.075e+00'
+  shape: []
+  sum: '7.075e+00'
+outputs.y:
+  device: cpu
+  max: 988
+  mean: '5.182e+02'
+  min: 0
+  shape:
+  - 64
+  sum: 33166
