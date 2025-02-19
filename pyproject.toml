@@ -19,6 +19,7 @@ dependencies = [
     "hydra-colorlog>=1.2.0",
     "matplotlib>=3.9.2",
     # Orion:
+    "orion==0.2.6",
     "hydra-orion-sweeper>=1.6.4",
     # # Pin the version to work around https://github.com/plotly/Kaleido/issues/156.
     # # Only pinning this so that we can install the hydra-orion-sweeper.
