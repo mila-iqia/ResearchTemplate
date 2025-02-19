@@ -190,6 +190,9 @@ _tasks:
       rm --verbose {{project_name}}/configs/experiment/llm_finetuning_example.yaml
     when: "{{ 'llm_finetuning' not in examples_to_include }}"
 
+  # Pin the selected Python version
+  - "uv python pin {{python_version}}"
+
   # Remove unneeded dependencies:
 
   ## Jax-related dependencies:
@@ -207,9 +210,6 @@ _tasks:
   - command: |
       uv remove transformers datasets
     when: "{{ 'text_classifier' not in examples_to_include and 'llm_finetuning' not in examples_to_include }}"
-
-  # Pin the selected Python version
-  - "uv python pin {{python_version}}"
 
   ## Lightning-related dependencies
   ## TODO: Potentially even remove pytorch-lightning as a dependency if no examples are selected.
