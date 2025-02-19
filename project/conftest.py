@@ -10,11 +10,18 @@ as closely as possible how they are created normally in a real run.
 For example, when running `python project/main.py algorithm=image_classifier`.
 
 We achieve this like so: All the components of an experiment are created using fixtures.
-The first fixtures to be invoked are the ones that would correspond to command-line arguments.
-The fixtures for command-line arguments
+The first fixtures to be invoked are the ones that feed the command-line arguments given the
+choice of configs.
 
-The first fixtures to be created are the [datamodule_config][project.conftest.datamodule_config], `network_config` and `algorithm_config`, along with `overrides`.
-From these, the `experiment_dictconfig` is created
+Then, the `dict_config` fixture is created, which is the Hydra config that is created from loading
+the configs with the command-line arguments.
+This is the same as the input to the `main` function: an `omegaconf.DictConfig`.
+
+If there are interpolations in the configs, they are resolved and the result is the `config` fixture.
+
+From there, the different components are created using the `config` fixture, like the `datamodule`,
+`trainer`, `algorithm`, etc.
+
 
 ```mermaid
 ---
