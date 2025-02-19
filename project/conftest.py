@@ -63,7 +63,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, TypeVar
 
 import hydra.errors
 import jax
@@ -536,7 +536,38 @@ def setup_with_overrides(
     ```
     """
     overrides = [overrides] if not isinstance(overrides, list) else overrides
-    return pytest.mark.parametrize(command_line_overrides.__name__, overrides, indirect=True)
+
+    # idea: if there's a single override, then use "" as the id. If there are multiple overrides,
+    # remove the longest common prefix between them, and use the rest as ids.
+    def _longest_common_prefix(strings: list[str]):
+        if not strings:
+            return ""
+        shortest = min(strings, key=len)
+        for i, char in enumerate(shortest):
+            for string in strings:
+                if string[i] != char:
+                    return shortest[:i]
+        return shortest
+
+    T = TypeVar("T")
+
+    def _assert_type(v: Any, t: type[T]) -> T:
+        assert isinstance(v, t)
+        return v
+
+    if len(overrides) == 1:
+        ids = [""]
+    else:
+        override_strings = [
+            override if isinstance(override, str) else _assert_type(override.values[0], str)
+            for override in overrides
+        ]
+        common_prefix = _longest_common_prefix(override_strings)
+        ids = [override.removeprefix(common_prefix) for override in override_strings]
+
+    return pytest.mark.parametrize(
+        command_line_overrides.__name__, overrides, indirect=True, ids=ids
+    )
 
 
 # def setup_with_command_line_args(
