@@ -21,6 +21,7 @@ from pytest_regressions.file_regression import FileRegressionFixture
 import project.configs
 import project.experiment
 import project.main
+from project.algorithms.no_op import NoOp
 from project.conftest import setup_with_overrides, skip_on_macOS_in_CI
 from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
@@ -194,7 +195,7 @@ def test_run_auto_schema_via_cli_without_errors():
 @setup_with_overrides("algorithm=no_op trainer.max_epochs=1")
 def test_setup_with_overrides_works(dict_config: omegaconf.DictConfig):
     """This test receives the `dict_config` loaded from Hydra with the given overrides."""
-    assert dict_config["algorithm"]["_target_"] == "project.algorithm.no_op.NoOp"
+    assert dict_config["algorithm"]["_target_"] == NoOp.__module__ + "." + NoOp.__name__
     assert dict_config["trainer"]["max_epochs"] == 1
 
 
