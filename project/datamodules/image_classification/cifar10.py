@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import torch
+import torchvision.transforms.v2 as transforms
 from torchvision.datasets import CIFAR10
-from torchvision.transforms import v2 as transforms
 
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
