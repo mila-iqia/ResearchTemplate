@@ -9,6 +9,7 @@ from copier import Worker
 
 import project
 import project.algorithms
+from project.utils.testutils import IN_GITHUB_CLOUD_CI
 
 logger = getLogger(__name__)
 
@@ -29,6 +30,11 @@ def examples_to_include(request: pytest.FixtureRequest):
     return [] if example is None else [example]
 
 
+# todo: issues on GitHub CI!
+@pytest.mark.skipif(
+    IN_GITHUB_CLOUD_CI,
+    reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
+)
 @pytest.mark.skipif(sys.platform == "win32", reason="The template isn't supported on Windows.")
 @pytest.mark.parametrize(
     "python_version",

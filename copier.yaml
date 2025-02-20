@@ -120,7 +120,6 @@ _tasks:
 
   # TODO: Might want to not run certain tasks when updating an existing project!
 
-
   # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
   - command: mv project {{project_name}}
     when: "{{ project_name != 'project' }}"
@@ -226,7 +225,8 @@ _tasks:
   - "uvx ruff check . --fix || true"
   - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
   - "git add ."
-  - "git commit -m 'Initial commit'"
+  # todo: Causes issues on GitHub CI (asking for user)
+  - command: "git commit -m 'Initial commit'"
   - "uvx pre-commit install"
   - "uv python pin {{python_version}}"
   - "uv sync --all-extras"
