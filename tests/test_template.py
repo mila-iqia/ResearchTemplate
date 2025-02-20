@@ -30,7 +30,6 @@ def examples_to_include(request: pytest.FixtureRequest):
     return [] if example is None else [example]
 
 
-# todo: issues on GitHub CI!
 @pytest.mark.skipif(
     IN_GITHUB_CLOUD_CI,
     reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",

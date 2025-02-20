@@ -112,6 +112,8 @@ _tasks:
       exit 1
     when: "{{ _copier_conf.os == 'windows' }}"
 
+  - "uv self update"
+
   # Remove stuff from the template that isn't necessary for the new projects.
   - "rm -r docs"
   - "rm mkdocs.yml"

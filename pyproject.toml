@@ -121,10 +121,3 @@ managed = true
 [tool.uv.sources]
 remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", branch = "master" }
 mkdocs-autoref-plugin = { git = "https://github.com/lebrice/mkdocs-autoref-plugin" }
-
-# [tool.uv.tasks]
-# serve-docs = "mkdocs serve"
-# check_torch_gpu = "python -c 'import torch; print(torch.cuda.is_available())'"
-# check_jax_gpu = "python -c 'import jax.numpy as jnp; print(jnp.zeros(1).devices())'"
-# tests = "pytest -x -v"
-# auto_schema = "python project/utils/auto_schema.py ."
