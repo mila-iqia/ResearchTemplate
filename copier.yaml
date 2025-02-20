@@ -112,7 +112,7 @@ _tasks:
       exit 1
     when: "{{ _copier_conf.os == 'windows' }}"
 
-  - "uv self update"
+  - "uv self update 0.6.2"
 
   # Remove stuff from the template that isn't necessary for the new projects.
   - "rm -r docs"

@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version < '3.11' and sys_platform != 'linux'",
@@ -1492,10 +1493,10 @@ name = "hydra-orion-sweeper"
 version = "1.6.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "hydra-core" },
-    { name = "omegaconf" },
-    { name = "orion" },
-    { name = "typing-extensions" },
+    { name = "hydra-core", marker = "python_full_version < '3.11'" },
+    { name = "omegaconf", marker = "python_full_version < '3.11'" },
+    { name = "orion", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cf/16/9f7ae23cd7ec5d05da29064925858fe475148fdc8f0017f2153d21fceda5/hydra-orion-sweeper-1.6.4.tar.gz", hash = "sha256:f2632886a6424d61d71ab537f4ee4e9b6dfce565536e63bc8862ccb99ef2eb6a", size = 10437 }
 wheels = [
@@ -2130,8 +2131,8 @@ wheels = [
 
 [[package]]
 name = "mkdocs-autoref-plugin"
-version = "0.0.1"
-source = { git = "https://github.com/lebrice/mkdocs-autoref-plugin#92e6d2f8d07d2b79317a0222c89714fd06e8330a" }
+version = "0.0.0.post13+11cf3f1"
+source = { git = "https://github.com/lebrice/mkdocs-autoref-plugin?branch=master#11cf3f1ba59f96fd5e4a16c58040a18ed29e14b1" }
 dependencies = [
     { name = "mkdocs-autorefs" },
     { name = "mkdocstrings", extra = ["python"] },
@@ -3916,13 +3917,14 @@ dependencies = [
     { name = "hydra-auto-schema" },
     { name = "hydra-colorlog" },
     { name = "hydra-core" },
-    { name = "hydra-orion-sweeper" },
+    { name = "hydra-orion-sweeper", marker = "python_full_version < '3.11'" },
     { name = "hydra-submitit-launcher" },
     { name = "hydra-zen" },
     { name = "jax" },
     { name = "jaxlib" },
     { name = "lightning" },
     { name = "matplotlib" },
+    { name = "orion" },
     { name = "rejax" },
     { name = "remote-slurm-executor" },
     { name = "rich" },
@@ -3981,7 +3983,7 @@ requires-dist = [
     { name = "hydra-auto-schema", specifier = ">=0.0.7" },
     { name = "hydra-colorlog", specifier = ">=1.2.0" },
     { name = "hydra-core", specifier = ">=1.3.2" },
-    { name = "hydra-orion-sweeper", specifier = ">=1.6.4" },
+    { name = "hydra-orion-sweeper", marker = "python_full_version < '3.11'", specifier = ">=1.6.4" },
     { name = "hydra-submitit-launcher", specifier = ">=1.2.0" },
     { name = "hydra-zen", specifier = "==0.13.1rc1" },
     { name = "jax", specifier = "==0.4.33" },
@@ -3990,7 +3992,7 @@ requires-dist = [
     { name = "lightning", specifier = ">=2.4.0" },
     { name = "matplotlib", specifier = ">=3.9.2" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },
-    { name = "mkdocs-autoref-plugin", marker = "extra == 'docs'", git = "https://github.com/lebrice/mkdocs-autoref-plugin" },
+    { name = "mkdocs-autoref-plugin", marker = "extra == 'docs'", git = "https://github.com/lebrice/mkdocs-autoref-plugin?branch=master" },
     { name = "mkdocs-awesome-pages-plugin", marker = "extra == 'docs'", specifier = ">=2.9.3" },
     { name = "mkdocs-gen-files", marker = "extra == 'docs'", specifier = ">=0.5.0" },
     { name = "mkdocs-literate-nav", marker = "extra == 'docs'", specifier = ">=0.6.1" },
@@ -3999,6 +4001,7 @@ requires-dist = [
     { name = "mkdocs-section-index", marker = "extra == 'docs'", specifier = ">=0.3.9" },
     { name = "mkdocs-video", marker = "extra == 'docs'", specifier = ">=1.5.0" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.26.2" },
+    { name = "orion", specifier = ">=0.2.6" },
     { name = "rejax", specifier = ">=0.1.0" },
     { name = "remote-slurm-executor", git = "https://github.com/lebrice/remote-slurm-executor?branch=master" },
     { name = "rich", specifier = ">=13.7.1" },
@@ -4010,6 +4013,7 @@ requires-dist = [
     { name = "wandb", specifier = ">=0.17.6" },
     { name = "xtils", extras = ["jitpp"], git = "https://github.com/jessefarebro/xtils" },
 ]
+provides-extras = ["docs", "gpu"]
 
 [package.metadata.requires-dev]
 dev = [

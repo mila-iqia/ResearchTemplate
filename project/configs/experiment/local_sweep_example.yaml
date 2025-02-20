@@ -1,4 +1,5 @@
 # @package _global_
+# NOTE: If you get config 'orion' not found, run `uv add hydra-orion-sweeper`
 defaults:
   - example.yaml # A configuration for a single run (that works!)
   - override /hydra/sweeper: orion # Select the orion sweeper plugin

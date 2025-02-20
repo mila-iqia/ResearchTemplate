@@ -39,8 +39,10 @@ def examples_to_include(request: pytest.FixtureRequest):
     "python_version",
     [
         # don't run these unless --slow argument is passed to pytest, to save some time.
-        # TODO: This seems to be the only one that works in the CI atm...
-        "3.10",
+        # TODO: This seems to be the only one that works in the CI atm, because:
+        # - UV seems unable to download other python versions?
+        # - Python 3.11 and 3.12 aren't able to install orion atm.
+        pytest.param("3.10", marks=pytest.mark.slow),
         pytest.param("3.11", marks=pytest.mark.slow),
         pytest.param(
             "3.12",
