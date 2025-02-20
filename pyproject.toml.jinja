@@ -6,20 +6,17 @@ authors = [
     { name = "{{user_name}}", email = "{{user_email}}" },
 ]
 dependencies = [
+
     "torch==2.4.1",
     "hydra-core>=1.3.2",
     "hydra-submitit-launcher>=1.2.0",
     "wandb>=0.17.6",
-    "lightning>=2.4.0",
+    "lightning>=2.4.0",               # todo: would probably be hard to remove as a dependency.
     "torchvision>=0.19.0",
     "rich>=13.7.1",
     "tqdm>=4.66.5",
     "hydra-zen==0.13.1rc1",
-    "hydra-colorlog>=1.2.0",
     "matplotlib>=3.9.2",
-    # Orion:
-    "orion==0.2.6",
-    "hydra-orion-sweeper>=1.6.4",
     # Hugging Face dependencies:
     "evaluate>=0.4.2",
     "transformers>=4.44.0",
@@ -32,8 +29,11 @@ dependencies = [
     "rejax>=0.1.0",
     "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
     "gymnasium[classic-control]>=0.29.1",
+    # Hydra / submitit plugins
+    "hydra-colorlog>=1.2.0",
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
+    "hydra-orion-sweeper>=1.6.4 ; python_full_version < '3.11'",
 ]
 readme = "README.md"
 requires-python = ">= {{python_version}}"
