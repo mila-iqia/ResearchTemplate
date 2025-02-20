@@ -6,13 +6,13 @@ import contextlib
 import dataclasses
 import datetime
 import functools
-import inspect
 import logging
 import os
 import sys
+import typing
 from collections.abc import Callable
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypeGuard, TypeVar, overload
 
 import hydra
 import hydra_zen
@@ -20,13 +20,14 @@ import rich.logging
 import simple_parsing
 import submitit
 import submitit.core.utils
+import submitit.slurm
+import submitit.slurm.slurm
 from hydra._internal.core_plugins.basic_sweeper import BasicSweeper
-from hydra._internal.hydra import Hydra
-from hydra._internal.utils import _get_completion_help, create_automatic_config_search_path
+from hydra._internal.utils import _get_completion_help
 from hydra.core.override_parser.overrides_parser import OverridesParser
-from hydra.types import RunMode
-from omegaconf import OmegaConf
-from submitit.slurm.slurm import _make_sbatch_string
+from remote_slurm_executor import RemoteSlurmExecutor
+from remote_slurm_executor.slurm_remote import RemoteSlurmJob
+from submitit.slurm.slurm import SlurmJob, _make_sbatch_string
 
 from project.conftest import command_line_overrides  # noqa
 
@@ -38,37 +39,6 @@ def split_arguments_for_each_run(multirun_overrides: list[str]) -> list[list[str
     batches = BasicSweeper.split_arguments(overrides_objects, max_batch_size=None)
     assert len(batches) == 1  # all jobs in a single batch, since `max_batch_size=None`.
     return batches[0]
-
-
-def parse_args_into_config(
-    args: list[str],
-    task_function: Callable,
-):
-    """Super hacky way to get Hydra to just give us the config for a given set of command-line
-    arguments."""
-    overrides = args
-
-    # Retrieve the args passed to the `hydra.main` decorator around the task function.
-    closure_vars = inspect.getclosurevars(task_function)
-    config_name = closure_vars.nonlocals["config_name"]
-    config_path = closure_vars.nonlocals["config_path"]
-    actual_task_function = closure_vars.nonlocals["task_function"]
-    calling_file = inspect.getfile(actual_task_function)
-
-    config_search_path = create_automatic_config_search_path(
-        calling_file=calling_file, calling_module=None, config_path=config_path
-    )
-    hyd = Hydra.create_main_hydra2(task_name="dummy", config_search_path=config_search_path)
-    config = hyd.compose_config(
-        config_name=config_name,
-        overrides=overrides,
-        with_log_configuration=True,
-        run_mode=RunMode.RUN,
-    )
-    # This should be the same as `args` I think.
-    task_overrides = OmegaConf.to_container(config.hydra.overrides.task, resolve=False)
-    assert task_overrides == args
-    return config, hyd
 
 
 SCRATCH = Path(os.environ["SCRATCH"])
@@ -177,45 +147,168 @@ class SlurmExecutorArgs:
         default=SCRATCH / "logs" / datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
     )
     max_num_timeout: int = 0
-    python: str = "uv run --all-extras python"
+
+    # probably unused, actually:
+    python: str = "uv run --all-extras --frozen python"
 
 
-def launch():
-    args = None
-    # argv = sys.argv[1:]
-    # parser = get_hydra_args_parser()
-    parser = simple_parsing.ArgumentParser(
-        add_option_string_dash_variants=simple_parsing.DashVariant.DASH, add_help=False
+@dataclasses.dataclass(frozen=True)
+class Dependency:
+    job: SlurmJob | list[SlurmJob]
+    type: Literal["afterok", "afterany", "afternotok", "afterburstbuffer", "aftercorr"]
+
+    def to_str(self):
+        job_ids = (
+            [self.job.job_id]
+            if isinstance(self.job, SlurmJob)
+            else [job.job_id for job in self.job]
+        )
+        return f"{self.type}:{':'.join(job_ids)}"
+
+
+@overload
+def launch(
+    job_commands: list[str],
+    executor_args: SlurmExecutorArgs,
+    resources: SbatchArgs,
+    cluster: Literal["current"] = "current",
+    dependency: Literal["singleton"] | Dependency | None = ...,
+) -> SlurmJob[str]: ...
+
+
+@overload
+def launch(
+    job_commands: list[str],
+    executor_args: SlurmExecutorArgs,
+    resources: SbatchArgs,
+    cluster: Literal["mila", "narval", "beluga", "cedar", "graham"] | str,
+    dependency: Literal["singleton"] | Dependency | None = None,
+) -> RemoteSlurmJob[str]: ...
+
+
+def launch(
+    job_commands: list[str],
+    executor_args: SlurmExecutorArgs,
+    resources: SbatchArgs,
+    cluster: str = "current",
+    dependency: Literal["singleton"] | Dependency | None = None,
+) -> SlurmJob[str] | RemoteSlurmJob[str]:
+    job = _launch(
+        job_commands,
+        executor_args=executor_args,
+        resources=resources,
+        cluster=cluster,
+        dependency=dependency,
     )
-    parser.add_arguments(HydraArgs, "hydra")
+    assert not isinstance(job, list)
+    return job
 
-    parser.add_argument(
-        "--cluster",
-        type=str,
-        default="current",
-        help=(
-            "Which cluster to run the job on. Use 'current' if you are already connected to a "
-            "SLURM cluster and want to run your jobs there."
-        ),
+
+def launch_array(
+    job_commands: list[list[str]],
+    *,
+    executor_args: SlurmExecutorArgs,
+    resources: SbatchArgs,
+    cluster: str = "current",
+    dependency: Dependency | None = None,
+) -> list[SlurmJob[str]] | list[RemoteSlurmJob[str]]:
+    jobs = _launch(
+        job_commands,
+        executor_args=executor_args,
+        resources=resources,
+        cluster=cluster,
+        dependency=dependency,
     )
-    parser.add_argument(
-        "-v", "--verbose", action="count", default=0, help="Enable verbose output."
-    )
-    parser.add_arguments(SlurmExecutorArgs, "executor")
-    parser.add_arguments(SbatchArgs, "resources")
+    assert isinstance(jobs, list)
+    return jobs
 
-    args = parser.parse_args()
 
-    verbose = args.verbose
+def _launch(
+    job_commands: list[str] | list[list[str]],
+    executor_args: SlurmExecutorArgs,
+    resources: SbatchArgs,
+    cluster: str = "current",
+    dependency: Literal["singleton"] | Dependency | None = None,
+) -> SlurmJob[str] | RemoteSlurmJob[str] | list[SlurmJob[str]] | list[RemoteSlurmJob[str]]:
+    """Launches a single job or a job array."""
+    with (
+        submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder / "code", root_dir=None)
+        if cluster == "current"
+        else contextlib.nullcontext()
+    ):
+        executor: submitit.SlurmExecutor = hydra_zen.instantiate(executor_args)
+        executor.update_parameters(
+            **{k: v for k, v in dataclasses.asdict(resources).items() if k != "_target_"}
+        )
 
-    overrides: list[str] = args.hydra.overrides
-    # todo: use this with the RemoteSlurmExecutor to maybe run the jobs on a remote cluster.
-    # todo: maybe use a subgroup action to either parse the remote slurm executor args or regular Executor args.
-    # from remote_slurm_executor import RemoteSlurmExecutor  # noqa
-    cluster: str = args.cluster
-    resources: SbatchArgs = args.resources
-    executor_args: SlurmExecutorArgs = args.executor
+        if dependency:
+            additional_parameters = (executor.parameters.get("additional_parameters") or {}).copy()
+            additional_parameters["kill-on-invalid-dep"] = "yes"
+            executor.update_parameters(
+                **{
+                    "dependency": dependency
+                    if isinstance(dependency, str)
+                    else dependency.to_str(),
+                    "additional_parameters": additional_parameters,
+                }
+            )
 
+        offline = False
+        if isinstance(executor, RemoteSlurmExecutor):
+            offline = not executor.internet_access_on_compute_nodes
+
+        ## Launch the test job
+        logging.info(f"Working directory: {executor.folder}")
+
+        # idea: Could run tests specific to that particular config (that use some of the job_args?)
+        uv_command = ["uv", "run", "--all-extras", "--frozen"]
+        if offline:
+            # todo: also do a `uv sync` on the login node before submitting the job so we have all the dependencies pre-downloaded.
+            uv_command.append("--offline")
+
+        if _is_list_of(job_commands, str):
+            command_args = uv_command + job_commands
+            job = executor.submit(submitit.helpers.CommandFunction(command_args))
+            logger.info(f"Submitted job {job.job_id}: {command_args}")
+            assert isinstance(job, SlurmJob | RemoteSlurmJob)
+            return job
+
+        job_commands = typing.cast(list[list[str]], job_commands)
+        commands = [uv_command + job_command for job_command in job_commands]
+        jobs = executor.submit_array(
+            [submitit.helpers.CommandFunction(command) for command in commands]
+        )
+        assert _is_list_of(jobs, SlurmJob) or _is_list_of(jobs, RemoteSlurmJob)
+        for i, (job, command) in enumerate(zip(jobs, commands)):
+            logger.info(f"Submitted job {jobs[i].job_id}: {command}")
+        return jobs
+
+
+T = TypeVar("T")
+
+
+def _is_list_of(v, t: type[T]) -> TypeGuard[list[T]]:
+    return isinstance(v, list) and all(isinstance(x, t) for x in v)
+
+
+@dataclasses.dataclass
+class Args:
+    hydra: HydraArgs
+
+    executor: SlurmExecutorArgs
+    resources: SbatchArgs
+
+    cluster: str = "current"
+    """Which cluster to run the job on.
+
+    Use 'current' if you are already connected to a SLURM cluster and want to run your jobs there.
+    """
+
+    verbose: int = simple_parsing.field(default=0, action="count")
+    """Enable verbose output."""
+
+
+def _setup_logging(verbose: int):
     logging.basicConfig(
         level=logging.DEBUG if verbose >= 2 else logging.INFO if verbose == 1 else logging.WARNING,
         # format="%(asctime)s - %(levelname)s - %(message)s",
@@ -232,69 +325,52 @@ def launch():
         ],
     )
 
-    args_for_each_job = split_arguments_for_each_run(overrides)
 
-    sweep_jobs = []
-    # snapshot_dir =
-    with (
-        submitit.helpers.RsyncSnapshot(snapshot_dir=executor_args.folder / "code", root_dir=None)
-        if cluster == "current"
-        else contextlib.nullcontext()
-    ):
-        executor: submitit.SlurmExecutor = hydra_zen.instantiate(executor_args)
-        executor.update_parameters(
-            **{k: v for k, v in dataclasses.asdict(resources).items() if k != "_target_"}
-        )
+def main():
+    args = simple_parsing.parse(
+        Args,
+        add_option_string_dash_variants=simple_parsing.DashVariant.DASH,
+        add_help=False,
+        # args=argv,
+    )
 
-        ## Launch the test job
-        logging.info(f"Working directory: {executor.folder}")
+    _setup_logging(args.verbose)
 
-        # idea: Could run tests specific to that particular config (that use some of the job_args?)
-        test_command = ["uv", "run", "--all-extras", "pytest", "-x", "-v", "--gen-missing"]
-        test_job = executor.submit(submitit.helpers.CommandFunction(test_command))
-        logger.info(f"Test job ({test_job.job_id}): {test_command}")
+    args_for_each_job = split_arguments_for_each_run(args.hydra.overrides)
 
-        ## Launch the Sweep
+    test_job = launch(
+        ["pytest", "-x", "-v", "--gen-missing"],
+        executor_args=args.executor,
+        resources=args.resources,
+        cluster=args.cluster,
+    )
 
-        # Kind-of weird that we have to change the executor in-place here.
-        additional_parameters = (executor.parameters.get("additional_parameters") or {}).copy()
-        additional_parameters["kill-on-invalid-dep"] = "yes"
-        executor.update_parameters(
-            **{
-                "dependency": f"afterok:{test_job.job_id}",
-                "additional_parameters": additional_parameters,
-            }
-        )
+    sweep_jobs = launch_array(
+        [["python", "project/main.py"] + job_args for job_args in args_for_each_job],
+        executor_args=args.executor,
+        resources=args.resources,
+        cluster=args.cluster,
+        dependency=Dependency(test_job, type="afterok"),
+    )
 
-        # todo: look into executor._submit_command.
-        sweep_jobs = executor.submit_array(
-            [
-                submitit.helpers.CommandFunction(
-                    ["uv", "run", "--all-extras", "python", "project/main.py", *job_args]
-                )
-                for job_args in args_for_each_job
-            ]
-        )
-        for i, (job, job_args) in enumerate(zip(sweep_jobs, args_for_each_job)):
-            logger.info(f"Job #{i} ({job.job_id}): {job_args}")
+    for i, (job, job_args) in enumerate(zip(sweep_jobs, args_for_each_job)):
+        logger.info(f"Job #{i} ({job.job_id}): {job_args}")
 
-        try:
-            logger.debug("Test job results:\n", test_job.result())
-        except submitit.core.utils.UncompletedJobError as err:
-            logger.error(
-                "[bold red blink]Test job failed! Aborting Sweep![/]", extra={"markup": True}
-            )
-            logger.error(err)
-            return
+    try:
+        logger.debug("Test job results:\n", test_job.result())
+    except submitit.core.utils.UncompletedJobError as err:
+        logger.error("[bold red blink]Test job failed! Aborting Sweep![/]", extra={"markup": True})
+        logger.error(err)
+        return
 
-        try:
-            job_results = [job.result() for job in sweep_jobs]
-            for i, result in enumerate(job_results):
-                print(f"Job {i} result: {result}")
-        except submitit.core.utils.UncompletedJobError as err:
-            logger.error(f"Uncompleted jobs: {err}")
-            logger.error(test_job.stderr())
-        ## TODO: Launch the final job that uses the best hparams from the sweep and no val split.
+    try:
+        job_results = [job.result() for job in sweep_jobs]
+        for i, result in enumerate(job_results):
+            print(f"Job {i} result: {result}")
+    except submitit.core.utils.UncompletedJobError as err:
+        logger.error(f"Uncompleted jobs: {err}")
+        logger.error(test_job.stderr())
+    ## TODO: Launch the final job that uses the best hparams from the sweep and no val split.
 
 
 def run_with_command_line_args(main_fn: Callable, command_line_args: list[str]):
@@ -310,4 +386,4 @@ def run_with_command_line_args(main_fn: Callable, command_line_args: list[str]):
 
 
 if __name__ == "__main__":
-    launch()
+    main()
