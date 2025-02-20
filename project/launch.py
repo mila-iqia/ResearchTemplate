@@ -2,7 +2,6 @@
 # from hydra.main import   # noqa
 
 import argparse
-import collections
 import contextlib
 import dataclasses
 import datetime
@@ -13,9 +12,11 @@ import sys
 import typing
 from collections.abc import Callable
 from pathlib import Path
-from typing import Literal, TypeGuard, TypeVar, overload
+from typing import Any, Literal, TypeGuard, TypeVar, overload
 
 import hydra
+import hydra.core
+import hydra.core.config_store
 import hydra_zen
 import rich.logging
 import simple_parsing
@@ -159,6 +160,10 @@ class RemoteSlurmExecutorArgs:
         default=Path("logs") / datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
     )
     max_num_timeout: int = 0
+
+    remote_folder: str | Path = (
+        Path("scratch") / "logs" / datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
+    )
 
     # probably unused, actually:
     python: str = "uv run --all-extras --frozen python"
@@ -310,15 +315,15 @@ class Args:
     hydra: HydraArgs
     resources: SbatchArgs
 
-    executor: SlurmExecutorArgs | RemoteSlurmExecutorArgs = simple_parsing.subgroups(
-        # IDEA: Hack simple-parsing to enable dynamic subgroups. Either that, or switch to Hydra
-        # itself for this script as well.
-        collections.defaultdict(
-            lambda: RemoteSlurmExecutorArgs,
-            **{"slurm": SlurmExecutorArgs, "remote": RemoteSlurmExecutorArgs},
-        ),
-        default="slurm",
-    )
+    executor: Any = dataclasses.field(default_factory=dict)  # simple_parsing.subgroups(
+    #     # IDEA: Hack simple-parsing to enable dynamic subgroups. Either that, or switch to Hydra
+    #     # itself for this script as well.
+    #     collections.defaultdict(
+    #         lambda: RemoteSlurmExecutorArgs,
+    #         **{"slurm": SlurmExecutorArgs, "remote": RemoteSlurmExecutorArgs},
+    #     ),
+    #     default="slurm",
+    # )
     """Which cluster to run the job on.
 
     Use 'current' if you are already connected to a SLURM cluster and want to run your jobs there.
@@ -348,6 +353,19 @@ def _setup_logging(verbose: int):
     )
 
 
+# IDEA: use Hydra for the config of this script, with only structured configs for sake of simplicity?
+
+# cs = hydra.core.config_store.ConfigStore.instance()
+# cs.store("args", Args)
+
+# cs.store(group="executor", name="slurm", node=SlurmExecutorArgs)
+# cs.store(group="executor", name="remote", node=RemoteSlurmExecutorArgs)
+
+# # cs.store(group="resources", name="cpu", node=SbatchArgs(gpus_per_task=None))  # type: ignore
+# cs.store(group="resources", name="gpu", node=SbatchArgs)
+
+
+# @hydra.main(config_path="pkg:project.configs", config_name="args", version_base="1.2")
 def main():
     args = simple_parsing.parse(
         Args,
