@@ -2,6 +2,7 @@
 # from hydra.main import   # noqa
 
 import argparse
+import collections
 import contextlib
 import dataclasses
 import datetime
@@ -152,6 +153,17 @@ class SlurmExecutorArgs:
     python: str = "uv run --all-extras --frozen python"
 
 
+@hydra_zen.hydrated_dataclass(RemoteSlurmExecutor)
+class RemoteSlurmExecutorArgs:
+    folder: str | Path = dataclasses.field(
+        default=Path("logs") / datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
+    )
+    max_num_timeout: int = 0
+
+    # probably unused, actually:
+    python: str = "uv run --all-extras --frozen python"
+
+
 @dataclasses.dataclass(frozen=True)
 class Dependency:
     job: SlurmJob | list[SlurmJob]
@@ -159,9 +171,7 @@ class Dependency:
 
     def to_str(self):
         job_ids = (
-            [self.job.job_id]
-            if isinstance(self.job, SlurmJob)
-            else [job.job_id for job in self.job]
+            [job.job_id for job in self.job] if isinstance(self.job, list) else [self.job.job_id]
         )
         return f"{self.type}:{':'.join(job_ids)}"
 
@@ -236,7 +246,11 @@ def _launch(
         if cluster == "current"
         else contextlib.nullcontext()
     ):
-        executor: submitit.SlurmExecutor = hydra_zen.instantiate(executor_args)
+        executor: submitit.SlurmExecutor | RemoteSlurmExecutor
+        if cluster == "current":
+            executor = hydra_zen.instantiate(executor_args)
+        else:
+            executor = hydra_zen.instantiate(executor_args, cluster_hostname=cluster)
         executor.update_parameters(
             **{k: v for k, v in dataclasses.asdict(resources).items() if k != "_target_"}
         )
@@ -294,15 +308,23 @@ def _is_list_of(v, t: type[T]) -> TypeGuard[list[T]]:
 @dataclasses.dataclass
 class Args:
     hydra: HydraArgs
-
-    executor: SlurmExecutorArgs
     resources: SbatchArgs
 
-    cluster: str = "current"
+    executor: SlurmExecutorArgs | RemoteSlurmExecutorArgs = simple_parsing.subgroups(
+        # IDEA: Hack simple-parsing to enable dynamic subgroups. Either that, or switch to Hydra
+        # itself for this script as well.
+        collections.defaultdict(
+            lambda: RemoteSlurmExecutorArgs,
+            **{"slurm": SlurmExecutorArgs, "remote": RemoteSlurmExecutorArgs},
+        ),
+        default="slurm",
+    )
     """Which cluster to run the job on.
 
     Use 'current' if you are already connected to a SLURM cluster and want to run your jobs there.
     """
+
+    cluster: str = "current"
 
     verbose: int = simple_parsing.field(default=0, action="count")
     """Enable verbose output."""
@@ -330,7 +352,6 @@ def main():
     args = simple_parsing.parse(
         Args,
         add_option_string_dash_variants=simple_parsing.DashVariant.DASH,
-        add_help=False,
         # args=argv,
     )
 
