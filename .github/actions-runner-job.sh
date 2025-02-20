@@ -44,9 +44,11 @@ tar xzf ./actions-runner-linux-x64-$action_runner_version.tar.gz
 #   "expires_at": "2020-01-22T12:13:35.123-08:00"
 # }
 
-# todo: probably not useful!
-# source ~/.bash_aliases
-# module load python/3.10
+# note: This is where we get the `SH_TOKEN` secret.
+source ~/.bash_aliases
+
+# Temporarily load python 3.10 to parse the JSON output.
+module load python/3.10
 
 TOKEN=`curl -L \
   -X POST \
@@ -55,6 +57,7 @@ TOKEN=`curl -L \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/$repo/actions/runners/registration-token | \
   python -c "import sys, json; print(json.load(sys.stdin)['token'])"`
+module unload python/3.10
 
 # Create the runner and configure it programmatically with the token we just got from the GitHub API.
 cluster=$SLURM_CLUSTER_NAME
