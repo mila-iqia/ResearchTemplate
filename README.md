@@ -24,22 +24,19 @@ First, follow the instructions [here](https://docs.astral.sh/uv/getting-started/
 
 Once you have `uv` installed locally, use this command to create a new project from this template:
 
-Replace `new_project` with the path where you'd like to create the new project.
-
 ```bash
 uvx copier copy --trust gh:mila-iqia/ResearchTemplate new_project
 ```
 
-This will ask you a few questions and setup your project.
-
-Navigate to this new project, open up your favorite IDE, and voila! You're all setup! 🎊
+This will ask you a few questions to help set things up.
+Navigate to the new directory, open up your favorite IDE, and voila! You're all setup! 🎊
 
 Use this command to see all available options:
 
 ```bash
 cd new_project  # replace with your folder.
 . .venv/bin/activate
-uv run python project/main.py --help
+python project/main.py --help
 ```
 
 For more detailed instructions, take a look at [this page](https://mila-iqia.github.io/ResearchTemplate/#setting-up-your-environment).
