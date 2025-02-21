@@ -1,14 +1,16 @@
 """An example of a simple fully connected network."""
 
+import dataclasses
 from dataclasses import field
 
 import numpy as np
-import pydantic
 from torch import nn
 
 
 class FcNet(nn.Sequential):
-    @pydantic.dataclasses.dataclass
+    """Simple fully-connected network."""
+
+    @dataclasses.dataclass
     class HParams:
         """Dataclass containing the network hyper-parameters.
 
@@ -16,7 +18,7 @@ class FcNet(nn.Sequential):
         arguments.
         """
 
-        hidden_dims: list[pydantic.PositiveInt] = field(default_factory=[128, 128].copy)
+        hidden_dims: list[int] = field(default_factory=[128, 128].copy)
 
         use_bias: bool = True
 

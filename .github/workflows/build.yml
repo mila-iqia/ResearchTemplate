@@ -18,6 +18,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  UV_VERSION: "0.6.2"
+
+
+
 jobs:
   linting:
     name: Run linting/pre-commit checks
@@ -28,7 +33,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "latest"
+          version: ${{ env.UV_VERSION }}
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: uvx pre-commit run --all-files --show-diff-on-failure
@@ -36,6 +41,7 @@ jobs:
   # todo: turn off in the projects created from the template.
   check_docs:
     needs: [linting]
+    if: github.repository == 'mila-iqia/ResearchTemplate'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -43,7 +49,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "latest"
+          version: ${{ env.UV_VERSION }}
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
@@ -64,7 +70,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "latest"
+          version: ${{ env.UV_VERSION }}
           python-version: ${{ matrix.python-version }}
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -79,7 +85,6 @@ jobs:
         with:
           name: coverage-reports-unit-tests-${{ matrix.platform }}-${{ matrix.python-version }}
           path: ./coverage.xml
-
 
   launch-slurm-actions-runner:
     needs: [unit_tests, check_docs]

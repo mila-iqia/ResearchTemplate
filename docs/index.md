@@ -65,45 +65,38 @@ For more context, see [this  introduction to the project.](intro.md).
 
 ## Starting a new project
 
-To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate).
+<!-- To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate). -->
 
 
 ## Setting up your environment
 
-Here are two recommended ways to setup your development environment:
-
-* Using the [uv](https://rye.astral.sh/) package manager
-* Using a development container (recommended if you are able to install Docker on your machine)
-
 
 === "Locally (Linux / Mac)"
 
-    1. Clone your new repo and navigate into it
+
+    1. Install `uv`:
 
         ```bash
-        git clone https://www.github.com/your-username/your-repo-name
-        cd your-repo-name
-        ```
-
-    2. Install the package manager
-
-        ```bash
-        # Install uv
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        source $HOME/.cargo/env
         ```
 
-    3. Install dependencies
+    2. Create your new project
+
+        Use this command to create a new project from this template:
+        (Replace `research_project` with the path to the new project root folder.)
 
         ```bash
-        uv sync  # Creates a virtual environment and installs dependencies in it.
+        uvx copier copy --trust gh:mila-iqia/ResearchTemplate research_project
         ```
+
+        This will ask you a few questions and help setup your project.
 
 === "Locally (Windows)"
 
     1. Install WSL following [this guide](https://learn.microsoft.com/en-us/windows/wsl/install)
     2. Follow the installation instructions for Linux
 
+<!--
 === "On a SLURM cluster"
 
     1. Clone your new repo and navigate into it
@@ -120,6 +113,19 @@ Here are two recommended ways to setup your development environment:
         ```console
         srun --pty --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=00:10:00 scripts/mila_setup.sh
         ```
+ -->
+
+
+Navigate to this new project, open up your favorite IDE, and voila! You're all setup! 🎊
+
+Use this command to see all available options:
+
+```bash
+. .venv/bin/activate  # activate the virtual environment
+python project/main.py --help
+```
+
+
 
 
 ## Usage
@@ -127,36 +133,7 @@ Here are two recommended ways to setup your development environment:
 To see all available options:
 
 ```bash
-uv run python project/main.py --help
+python project/main.py --help
 ```
 
 For a detailed list of examples, see the [examples page](examples/index.md).
-
-
-## Developing inside a container (advanced)
-
-This repo provides a [Devcontainer](https://code.visualstudio.com/docs/remote/containers) configuration for [Visual Studio Code](https://code.visualstudio.com/) to use a Docker container as a pre-configured development environment. This avoids struggles setting up a development environment and makes them reproducible and consistent.
-
-If that sounds useful to you, we recommend you first make yourself familiar with the [container tutorials](https://code.visualstudio.com/docs/remote/containers-tutorial) if you want to use them. The devcontainer.json file assumes that you have a GPU locally by default. If not, you can simply comment out the "--gpus" flag in the `.devcontainer/devcontainer.json` file.
-
-
-1. Setup Docker on your local machine
-
-    On an Linux machine where you have root access, you can install Docker using the following commands:
-
-    ```bash
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    ```
-
-    On Windows or Mac, follow [these installation instructions](https://code.visualstudio.com/docs/remote/containers#_installation)
-
-2. (optional) Install the [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to use your local machine's GPU(s).
-
-3. Install the [Dev Containers extension](vscode:extension/ms-vscode-remote.remote-containers) for Visual Studio Code.
-
-4. When opening repository in Visual Studio Code, you should be prompted to reopen the repository in a container:
-
-    ![VsCode popup image](https://github.com/mila-iqia/ResearchTemplate/assets/13387299/37d00ce7-1214-44b2-b1d6-411ee286999f)
-
-    Alternatively, you can open the command palette (Ctrl+Shift+P) and select `Dev Containers: Rebuild and Reopen in Container`.

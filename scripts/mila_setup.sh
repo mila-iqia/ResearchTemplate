@@ -35,7 +35,7 @@ else
     echo "✅ ~/.bash_aliases already contains 'module load libffi OpenSSL'"
 fi
 
-
+# todo: This is only a good default option if the cache is in $SCRATCH instead of in $HOME.
 if ! grep -q 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' ~/.bash_aliases; then
     echo "Adding a line with 'export UV_LINK_MODE=\${UV_LINK_MODE:-"symlink"}' to ~/.bash_aliases"
     echo '# Setting UV_LINK_MODE to symlink (so that uv can use a cache dir on $SCRATCH)' >> ~/.bash_aliases

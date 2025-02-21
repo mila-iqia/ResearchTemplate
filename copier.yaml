@@ -1,0 +1,261 @@
+# questions
+
+_message_before_copy: |
+  🧪 Thanks for generating a project using the Mila Research Project template! 😎
+
+  You'll be asked a few questions. This will be used to generate a tailored project for you.
+
+project_name:
+  type: str
+  question: "What is the name of this new research project?"
+  required: true
+  validator: "{% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}"
+  default: project
+
+user_name:
+  type: str
+  question: "What is your name?"
+  required: true
+  placeholder: "FirstName LastName"
+
+github_user:
+  type: str
+  question: "What is your GitHub username?"
+  required: true
+  validator: "{% if github_user == '' %}Please enter your username on github.{% endif %}"
+  help: |
+    What is your GitHub username?
+
+    NOTE: This script does not create a GitHub repository for you, but a link will be printed below
+    to help you set that up yourself.
+  placeholder: "{{ user_name | lower | replace(' ', '') }}"
+
+user_email:
+  type: str
+  question: "What is your email address?"
+  required: false
+  default: "{{ user_name | lower | replace(' ', '.') }}@mila.quebec"
+
+project_description:
+  type: str
+  question: "What is this project about?"
+  required: false
+  default: "{{project_name}}: A new research project at Mila."
+
+python_version:
+  type: str
+  question: "What Python version do you want to use?"
+  required: true
+  choices:
+    - "3.10"
+    - "3.11"
+    - "3.12"
+    # - "3.13" # todo: There seem to be some dependency issues with python 3.13 that need fixing.
+  default: "3.10"
+
+# IDEA: Simplify the repo creation part of the form for new users.
+# However, does that maybe make too many assumptions about how people will use this?
+# For example, what if they want to apply this template to their existing repo / project?
+# create_github_repo:
+#   type: bool
+#   question: "Would you like to create a GitHub repository for this project?"
+#   required: true
+#   default: true
+#   help: |
+#     Click the following link to create a new private repository on GitHub:
+#     ```
+#     https://github.com/new?name={{project_name}}&description="{{project_description}}"&visibility=private
+#     ```
+#     Once that is done, press Enter to continue.
+
+# Adds an option with a nice selector to choose which examples to keep.
+# TODO: Also add integration tests to make sure that the repo still works when those files are deleted.
+examples_to_include:
+  type: str
+  multiselect: true
+  choices:
+    Image Classification (PyTorch): "image_classifier"
+    Image Classification (Jax): "jax_image_classifier"
+    Proximal Policy Optimization (Jax): "jax_ppo"
+    LLM Fine-tuning (PyTorch, 🤗): "llm_finetuning"
+    Text classification (PyTorch, 🤗): "text_classifier"
+  default:
+    [
+      "image_classifier",
+      "jax_image_classifier",
+      "jax_ppo",
+      "llm_finetuning",
+      "text_classifier",
+    ]
+  help: |
+    Choose which examples to include in your project. (Use space to toggle, and Enter to confirm).
+    By default, keeps all the examples.
+
+    Please note that you may have a few minor errors to correct (e.g. import statements) if you
+    unselect some examples. This will be fixed eventually.
+
+# todo: Should we also add a question to select which datasets/datamodules to include?
+
+# note: https://copier.readthedocs.io/en/stable/configuring/#templates_suffix
+# This could maybe be useful!
+# _templates_suffix: ""
+
+_tasks:
+  # Initialize a git repository.
+  - "git init"
+  - "git remote add origin https://www.github.com/{{github_user}}/{{project_name}} || true"
+
+  # Write an error message and exit if this is being run from Windows. Suggest running from WSL instead.
+  - command: |
+      echo "This template is not supported on Windows. Please run this template from WSL instead."
+      echo "See https://learn.microsoft.com/en-us/windows/wsl/install for more information."
+      exit 1
+    when: "{{ _copier_conf.os == 'windows' }}"
+
+  - "uv self update 0.6.2"
+
+  # Remove stuff from the template that isn't necessary for the new projects.
+  - "rm -r docs"
+  - "rm mkdocs.yml"
+  - "rm .github/workflows/docs.yml"
+  - "rm tests/test_template.py"
+
+  # TODO: Might want to not run certain tasks when updating an existing project!
+
+  # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
+  - command: mv project {{project_name}}
+    when: "{{ project_name != 'project' }}"
+  - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ project_name }}/g'
+    when: "{{ project_name != 'project' and _copier_conf.os == 'linux' }}"
+  - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ project_name }}/g'
+    when: "{{ project_name != 'project' and _copier_conf.os == 'macos' }}"
+
+  # Remove unwanted examples:
+  - command: |
+      rm --verbose {{project_name}}/algorithms/image_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/image_classifier.yaml
+      rm --verbose {{project_name}}/configs/experiment/example.yaml
+      rm --verbose {{project_name}}/configs/experiment/cluster_sweep_example.yaml
+      rm --verbose {{project_name}}/configs/experiment/local_sweep_example.yaml
+      rm --verbose {{project_name}}/configs/experiment/profiling.yaml
+    when: "{{ 'image_classifier' not in examples_to_include }}"
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/jax_image_classifier.yaml
+      rm --verbose {{project_name}}/configs/algorithm/network/jax_cnn.yaml
+      rm --verbose {{project_name}}/configs/algorithm/network/jax_fcnet.yaml
+    when: "{{ 'jax_image_classifier' not in examples_to_include }}"
+
+  # Remove unwanted image classification datamodules and configs
+  - command: |
+      rm --verbose {{project_name}}/datamodules/image_classification/image_classification*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/mnist*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/fashion_mnist*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/imagenet*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/inaturalist*.py
+      rm --verbose {{project_name}}/datamodules/image_classification/__init__.py
+      rm --verbose {{project_name}}/datamodules/vision*.py
+      rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
+      rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
+      rm --verbose {{project_name}}/configs/datamodule/cifar10.yaml
+      rm --verbose {{project_name}}/configs/datamodule/imagenet.yaml
+      rm --verbose {{project_name}}/configs/datamodule/inaturalist.yaml
+      rm --verbose {{project_name}}/configs/datamodule/vision.yaml
+      rmdir {{project_name}}/datamodules/image_classification
+    when: "{{ 'image_classifier' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/text_classifier*.py
+      rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
+      rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
+      rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
+      rm --verbose {{project_name}}/datamodules/text/text_classification*.py
+      rm --verbose {{project_name}}/datamodules/text/__init__.py
+      rmdir {{project_name}}/datamodules/text
+    when: "{{ 'text_classifier' not in examples_to_include }}"
+
+  # todo: remove JaxTrainer and project/trainers folder if the JaxPPO example is removed?
+  - command: |
+      rm --verbose {{project_name}}/algorithms/jax_ppo*.py
+      rm --verbose {{project_name}}/trainers/jax_trainer*.py
+      rmdir {{project_name}}/trainers
+      rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
+      rm --verbose {{project_name}}/configs/experiment/jax_rl_example.yaml
+    when: "{{ 'jax_ppo' not in examples_to_include }}"
+
+  - command: |
+      rm --verbose {{project_name}}/algorithms/llm_finetuning*.py
+      rm --verbose {{project_name}}/configs/algorithm/llm_finetuning.yaml
+      rm --verbose {{project_name}}/configs/experiment/llm_finetuning_example.yaml
+    when: "{{ 'llm_finetuning' not in examples_to_include }}"
+
+  # Pin the selected Python version
+  - "uv python pin {{python_version}}"
+
+  # Remove unneeded dependencies:
+
+  ## Jax-related dependencies:
+  - command: |
+      uv remove rejax gymnax gymnasium xtils
+    when: "{{ 'jax_ppo' not in examples_to_include }}"
+  - command: |
+      uv remove jax jaxlib torch-jax-interop
+    when: "{{ 'jax_ppo' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
+
+  ## Huggingface-related dependencies:
+  - command: |
+      uv remove evaluate
+    when: "{{ 'text_classifier' not in examples_to_include }}"
+  - command: |
+      uv remove transformers datasets
+    when: "{{ 'text_classifier' not in examples_to_include and 'llm_finetuning' not in examples_to_include }}"
+
+  ## Lightning-related dependencies
+  ## TODO: Potentially even remove pytorch-lightning as a dependency if no examples are selected.
+  ## This currently would completely break the project. There are lots of references to
+  ## Pytorch-Lightning everywhere. Using a generic "TrainerLike" protocol or similar might help.
+  # - command: |
+  #     uv remove lightning
+  #   when: |
+  #     {{ 'image_classifier' not in examples_to_include and \
+  #        'llm_finetuning' not in examples_to_include and \
+  #        'text_classifier' not in examples_to_include }}
+
+  # Fix the import order in Python files with ruff
+  - "uvx ruff check . --fix || true"
+  - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
+  - "git add ."
+  # todo: Causes issues on GitHub CI (asking for user)
+  - command: "git commit -m 'Initial commit'"
+  - "uvx pre-commit install"
+  - "uv python pin {{python_version}}"
+  - "uv sync --all-extras"
+
+# TODO: How to link this project to a new github repo? Could we create the repo from the CLI
+# somehow?
+
+_message_after_copy: |
+  ----------------------------------------------------------------------
+
+  🎊 Your project "{{ project_name }}" has been created successfully! 🎊
+
+  Recommended Next steps:
+
+  1. Change directory to the project root:
+
+      $ cd {{ _copier_conf.dst_path }}
+
+  2. Create a new Github Repository for this project by clicking on this URL:
+
+      https://github.com/new?name={{project_name}}&visibility=private
+
+  3. Push this project to this new github repository:
+
+      $ git remote add origin https://www.github.com/{{github_user}}/{{project_name}}
+      $ git fetch origin
+      $ git branch --set-upstream-to=origin/master master
+      $ git push
+
+  4. Open up your favorite code editor (e.g. VsCode) and start coding! 🚀

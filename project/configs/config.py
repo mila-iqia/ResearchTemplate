@@ -3,12 +3,6 @@ from dataclasses import dataclass, field
 from logging import getLogger as get_logger
 from typing import Any, Literal, Optional
 
-from omegaconf import OmegaConf
-
-from project.utils.env_vars import get_constant
-
-OmegaConf.register_new_resolver("constant", get_constant)
-
 logger = get_logger(__name__)
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
@@ -57,8 +51,8 @@ class Config:
     If None, a random seed is generated.
     """
 
-    # Name for the experiment.
     name: str = "default"
+    """Name for the experiment."""
 
     debug: bool = False
 

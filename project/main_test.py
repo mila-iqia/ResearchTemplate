@@ -4,12 +4,16 @@ from __future__ import annotations
 import shlex
 import shutil
 import subprocess
+import sys
+import uuid
+from logging import getLogger
 from pathlib import Path
 from unittest.mock import Mock
 
 import omegaconf.errors
 import pytest
 import torch
+from _pytest.mark.structures import ParameterSet
 from hydra.types import RunMode
 from omegaconf import DictConfig
 from pytest_regressions.file_regression import FileRegressionFixture
@@ -17,12 +21,51 @@ from pytest_regressions.file_regression import FileRegressionFixture
 import project.configs
 import project.experiment
 import project.main
-from project.conftest import command_line_overrides, skip_on_macOS_in_CI
-from project.utils.env_vars import REPO_ROOTDIR, SLURM_JOB_ID
+from project.algorithms.no_op import NoOp
+from project.conftest import setup_with_overrides, skip_on_macOS_in_CI
+from project.utils.env_vars import REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
-from project.utils.testutils import IN_GITHUB_CI
+
+logger = getLogger(__name__)
 
 CONFIG_DIR = Path(project.configs.__file__).parent
+
+
+experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
+"""The list of all experiments configs in the `configs/experiment` directory.
+
+This is used to check that all the experiment configs are covered by tests.
+"""
+
+experiment_commands_to_test: list[str | ParameterSet] = []
+"""List of experiment commands to run for testing.
+
+Consider adding a command that runs simple sanity check for your algorithm, something like one step
+of training or something similar.
+"""
+
+
+@pytest.mark.parametrize("experiment_config", experiment_configs)
+def test_experiment_config_is_tested(experiment_config: str):
+    select_experiment_command = f"experiment={experiment_config}"
+
+    for test_command in experiment_commands_to_test:
+        if isinstance(test_command, ParameterSet):
+            assert len(test_command.values) == 1
+            assert isinstance(test_command.values[0], str), test_command.values
+            test_command = test_command.values[0]
+
+        if select_experiment_command in test_command:
+            return  # success.
+
+    pytest.fail(
+        f"Experiment config {experiment_config!r} is not covered by any of the tests!\n"
+        f"Consider adding an example of an experiment command that uses this config to the "
+        # This is a 'nameof' hack to get the name of the variable so we don't hard-code it.
+        + ("`" + f"{experiment_commands_to_test=}".partition("=")[0] + "` list")
+        + " list.\n"
+        f"For example: 'experiment={experiment_config} trainer.max_epochs=1'."
+    )
 
 
 def test_jax_can_use_the_GPU():
@@ -63,68 +106,14 @@ def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
     return mock_eval
 
 
-experiment_configs = [p.stem for p in (CONFIG_DIR / "experiment").glob("*.yaml")]
-experiment_commands_to_test = [
-    "experiment=example trainer.fast_dev_run=True",
-    "experiment=text_classification_example trainer.fast_dev_run=True",
-    # "experiment=jax_example trainer.fast_dev_run=True",
-    "experiment=jax_rl_example trainer.max_epochs=1",
-    pytest.param(
-        f"experiment=cluster_sweep_example "
-        f"trainer/logger=[] "  # disable logging.
-        f"trainer.fast_dev_run=True "  # make each job quicker to run
-        f"hydra.sweeper.worker.max_trials=1 "  # limit the number of jobs that get launched.
-        f"resources=gpu "
-        f"cluster={'current' if SLURM_JOB_ID else 'mila'} ",
-        marks=[
-            pytest.mark.slow,
-            pytest.mark.skipif(
-                IN_GITHUB_CI,
-                reason="Remote launcher tries to do a git push, doesn't work in github CI.",
-            ),
-        ],
-    ),
-    pytest.param(
-        "experiment=local_sweep_example "
-        "trainer/logger=[] "  # disable logging.
-        "trainer.fast_dev_run=True "  # make each job quicker to run
-        "hydra.sweeper.worker.max_trials=2 ",  # Run a small number of trials.
-        marks=pytest.mark.slow,
-    ),
-    pytest.param(
-        "experiment=profiling "
-        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
-        "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
-        "trainer.fast_dev_run=True ",  # make each job quicker to run
-        marks=pytest.mark.slow,
-    ),
-    (
-        "experiment=profiling algorithm=no_op "
-        "datamodule=cifar10 "  # Run a small dataset instead of ImageNet (would take ~6min to process on a compute node..)
-        "trainer/logger=tensorboard "  # Use Tensorboard logger because DeviceStatsMonitor requires a logger being used.
-        "trainer.fast_dev_run=True "  # make each job quicker to run
-    ),
-    pytest.param(
-        "experiment=llm_finetuning_example trainer.fast_dev_run=True trainer/logger=[]",
-        marks=pytest.mark.skipif(
-            SLURM_JOB_ID is None, reason="Can only be run on a slurm cluster."
-        ),
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    command_line_overrides.__name__,
-    experiment_commands_to_test,
-    indirect=True,
-)
+@setup_with_overrides(experiment_commands_to_test)
 def test_can_load_experiment_configs(
-    experiment_dictconfig: DictConfig,
+    dict_config: DictConfig,
     mock_train: Mock,
     mock_evaluate: Mock,
 ):
     # Mock out some part of the `main` function to not actually run anything.
-    if experiment_dictconfig["hydra"]["mode"] == RunMode.MULTIRUN:
+    if dict_config["hydra"]["mode"] == RunMode.MULTIRUN:
         # NOTE: Can't pass a dictconfig to `main` function when doing a multirun (seems to just do
         # a single run). If we try to call `main` without arguments and with the right arguments on\
         # the command-line, with the right functions mocked out, those might not get used at all
@@ -132,18 +121,34 @@ def test_can_load_experiment_configs(
         # Pretty gnarly stuff.
         pytest.skip(reason="Config is a multi-run config (e.g. a sweep). ")
     else:
-        results = project.main.main(experiment_dictconfig)
+        results = project.main.main(dict_config)
         assert results is not None
 
     mock_train.assert_called_once()
     mock_evaluate.assert_called_once()
 
 
+@pytest.mark.slow
+@setup_with_overrides(experiment_commands_to_test)
+def test_can_run_experiment(
+    command_line_overrides: tuple[str, ...],
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Launches the sanity check experiments using the commands from the list above."""
+    # Mock out some part of the `main` function to not actually run anything.
+    # Get a unique hash id:
+    # todo: Set a unique name to avoid collisions between tests and reusing previous results.
+    name = f"{request.function.__name__}_{uuid.uuid4().hex}"
+    command_line_args = ["project/main.py"] + list(command_line_overrides) + [f"name={name}"]
+    logger.info(f"Launching sanity check experiment with command: {command_line_args}")
+    monkeypatch.setattr(sys, "argv", command_line_args)
+    project.main.main()
+
+
 @skip_on_macOS_in_CI
-@pytest.mark.parametrize(
-    command_line_overrides.__name__, ["algorithm=image_classifier"], indirect=True
-)
-def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -> None:
+@setup_with_overrides("algorithm=image_classifier")
+def test_setting_just_algorithm_isnt_enough(dict_config: DictConfig) -> None:
     """Test to check that the datamodule is required (even when just the example algorithm is set).
 
     TODO: We could probably move the `datamodule` config under `algorithm/datamodule`. Maybe that
@@ -153,7 +158,7 @@ def test_setting_just_algorithm_isnt_enough(experiment_dictconfig: DictConfig) -
         omegaconf.errors.InterpolationResolutionError,
         match="Did you forget to set a value for the 'datamodule' config?",
     ):
-        _ = resolve_dictconfig(experiment_dictconfig)
+        _ = resolve_dictconfig(dict_config)
 
 
 @pytest.mark.xfail(strict=False, reason="Regression files aren't necessarily present.")
@@ -185,3 +190,16 @@ def test_run_auto_schema_via_cli_without_errors():
             "-vv",
         ]
     )
+
+
+@setup_with_overrides("algorithm=no_op trainer.max_epochs=1")
+def test_setup_with_overrides_works(dict_config: omegaconf.DictConfig):
+    """This test receives the `dict_config` loaded from Hydra with the given overrides."""
+    assert dict_config["algorithm"]["_target_"] == NoOp.__module__ + "." + NoOp.__name__
+    assert dict_config["trainer"]["max_epochs"] == 1
+
+
+# TODO: Add some more integration tests:
+# - running sweeps from Hydra!
+# - using the slurm launcher!
+# - Test offline mode for narval and such.

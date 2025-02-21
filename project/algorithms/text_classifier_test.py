@@ -13,10 +13,15 @@ from typing_extensions import override
 
 from project.algorithms.text_classifier import TextClassifier
 from project.datamodules.text.text_classification import TextClassificationDataModule
+from project.main_test import experiment_commands_to_test
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 
-from .testsuites.lightning_module_tests import GetStuffFromFirstTrainingStep, LightningModuleTests
+from .testsuites.lightning_module_tests import LightningModuleTests, StuffFromFirstTrainingStep
+
+experiment_commands_to_test.append(
+    "experiment=text_classification_example trainer.fast_dev_run=True",
+)
 
 
 class RecordTrainingLossCb(lightning.Callback):
@@ -48,11 +53,9 @@ class TestTextClassifier(LightningModuleTests[TextClassifier]):
         reason="Weird reproducibility issue with HuggingFace model/dataset?",
         raises=AssertionError,
     )
-    def test_backward_pass_is_reproducible(  # type: ignore
+    def test_backward_pass_is_reproducible(
         self,
-        training_step_content: tuple[
-            TextClassifier, GetStuffFromFirstTrainingStep, list[Any], list[Any]
-        ],
+        training_step_content: StuffFromFirstTrainingStep,
         tensor_regression: TensorRegressionFixture,
         accelerator: str,
     ):

@@ -1,3 +1,8 @@
+"""A simplified version of the `lightning.Trainer` with a fully jitted training loop.
+
+This is used by the `JaxRLExample` algorithm (PPO) in the `jax_ppo.py` module.
+"""
+
 from __future__ import annotations
 
 import dataclasses

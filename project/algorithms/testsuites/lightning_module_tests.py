@@ -53,35 +53,29 @@ class LightningModuleTests(Generic[LightningModuleType], ABC):
     # algorithm_config: ParametrizedFixture[str]
 
     @pytest.fixture(scope="class")
-    def experiment_config(
-        self,
-        experiment_dictconfig: DictConfig,
-    ) -> Config:
+    def config(self, dict_config: DictConfig) -> Config:
         """The experiment configuration, with all interpolations resolved."""
-        config = resolve_dictconfig(copy.deepcopy(experiment_dictconfig))
+        config = resolve_dictconfig(copy.deepcopy(dict_config))
         return config
 
     @pytest.fixture(scope="class")
-    def trainer(
-        self,
-        experiment_config: Config,
-    ) -> lightning.Trainer:
-        setup_logging(log_level=experiment_config.log_level)
-        lightning.seed_everything(experiment_config.seed, workers=True)
-        trainer = instantiate_trainer(experiment_config.trainer)
+    def trainer(self, config: Config) -> lightning.Trainer:
+        setup_logging(log_level=config.log_level)
+        lightning.seed_everything(config.seed, workers=True)
+        trainer = instantiate_trainer(config.trainer)
         assert isinstance(trainer, lightning.Trainer)
         return trainer
 
     @pytest.fixture(scope="class")
     def algorithm(
         self,
-        experiment_config: Config,
+        config: Config,
         datamodule: lightning.LightningDataModule | None,
         trainer: lightning.Trainer,
         device: torch.device,
     ):
-        """Fixture that creates the "algorithm" (a `LightningModule`)."""
-        algorithm = instantiate_algorithm(experiment_config, datamodule=datamodule)
+        """Fixture that creates the "algorithm" (usually a `LightningModule`)."""
+        algorithm = instantiate_algorithm(config, datamodule=datamodule)
         assert isinstance(algorithm, LightningModule)
         with trainer.init_module(), device:
             # A bit hacky, but we have some tests that don't use a Trainer, and need the weights to

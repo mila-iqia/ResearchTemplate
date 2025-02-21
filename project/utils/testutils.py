@@ -17,9 +17,7 @@ import torch
 import torchvision.models
 from hydra.core.config_store import ConfigStore
 
-from project.datamodules.image_classification.fashion_mnist import FashionMNISTDataModule
-from project.datamodules.image_classification.mnist import MNISTDataModule
-from project.utils.env_vars import NETWORK_DIR, SLURM_JOB_ID
+from project.utils.env_vars import NETWORK_DATASETS_DIR, SLURM_JOB_ID
 from project.utils.hydra_utils import get_outer_class
 
 logger = get_logger(__name__)
@@ -33,24 +31,27 @@ IN_GITHUB_CLOUD_CI = IN_GITHUB_CI and not IN_SELF_HOSTED_GITHUB_CI
 PARAM_WHEN_USED_MARK_NAME = "parametrize_when_used"
 
 
+def needs_network_dataset_dir(dataset_name: str | None = None):
+    """Gives a mark that skips the test if the predownloaded dataset directory is not available."""
+    return pytest.mark.skipif(
+        not (NETWORK_DATASETS_DIR and (NETWORK_DATASETS_DIR / (dataset_name or "")).exists()),
+        # strict=True,
+        # raises=hydra.errors.InstantiationException,
+        reason=(
+            "Expects to be run on a cluster where a shared network datasets directory"
+            + ("exists." if dataset_name is None else f"contains a {dataset_name} subdirectory.")
+        ),
+    )
+
+
 default_marks_for_config_name: dict[str, list[pytest.MarkDecorator]] = {
     "inaturalist": [
         pytest.mark.slow,
-        pytest.mark.skipif(
-            not (NETWORK_DIR and (NETWORK_DIR / "datasets/inat").exists()),
-            # strict=True,
-            # raises=hydra.errors.InstantiationException,
-            reason="Expects to be run on the Mila cluster for now",
-        ),
+        needs_network_dataset_dir("inat"),
     ],
     "imagenet": [
         pytest.mark.slow,
-        pytest.mark.skipif(
-            not (NETWORK_DIR and (NETWORK_DIR / "datasets/imagenet").exists()),
-            # strict=True,
-            # raises=hydra.errors.InstantiationException,
-            reason="Expects to be run on a cluster with the ImageNet dataset.",
-        ),
+        needs_network_dataset_dir("inat"),
     ],
     "vision": [pytest.mark.skip(reason="Base class, shouldn't be instantiated.")],
 }
@@ -261,9 +262,7 @@ default_marks_for_config_combinations: dict[tuple[str, ...], list[pytest.MarkDec
         ]
         for resnet_config, mnist_dataset_config in itertools.product(
             get_all_configs_in_group_of_type("algorithm/network", torchvision.models.ResNet),
-            get_all_configs_in_group_of_type(
-                "datamodule", (MNISTDataModule, FashionMNISTDataModule)
-            ),
+            ["mnist", "fashion_mnist"],
         )
     },
 }

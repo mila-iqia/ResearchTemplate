@@ -42,6 +42,8 @@ class INaturalistDataModule(VisionDataModule):
     dims: tuple[C, H, W] = (C(3), H(224), W(224))
     """A tuple describing the shape of the data."""
 
+    num_classes: int | None
+
     def __init__(
         self,
         data_dir: str | Path = DATA_DIR,
@@ -140,6 +142,7 @@ class INaturalistDataModule(VisionDataModule):
 
         try:
             logger.debug(f"Checking if the dataset has already been created in {self.data_dir}.")
+            assert issubclass(self.dataset_cls, INaturalist)
             self.dataset_cls(str(self.data_dir), download=False, **self.EXTRA_ARGS)
         except RuntimeError:
             logger.debug(f"The dataset has not already been created in {self.data_dir}.")

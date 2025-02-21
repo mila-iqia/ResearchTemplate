@@ -61,12 +61,6 @@ class NetworkConfig:
     case, this creates pulls the pretrained network weights from the HuggingFace model hub.
     """
 
-    __doc__ = """Configuration options related to the choice of network.
-
-When instantiated by Hydra, this calls the `target` function passed to the decorator. In this
-case, this creates pulls the pretrained network weights from the HuggingFace model hub.
-"""
-
     pretrained_model_name_or_path: str
     trust_remote_code: bool = False
     torch_dtype: torch.dtype | None = None

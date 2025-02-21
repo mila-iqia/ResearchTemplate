@@ -12,30 +12,48 @@ env:
   SOURCE_BRANCH: master
   SOURCE_REPOSITORY: mila-iqia/ResearchTemplate
 
+# https://github.com/orgs/copier-org/discussions/1905#discussioncomment-11669253
 jobs:
-  repo-sync:
-    runs-on: ubuntu-latest
+  update:
+    if: github.repository != 'mila-iqia/ResearchTemplate'
     # https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
     permissions:
       contents: write
       pull-requests: write
-
+    runs-on: ubuntu-latest
     steps:
-      # To use this repository's private action, you must check out the repository
-      - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v4
-        if: github.repository != env.SOURCE_REPOSITORY
-        # https://github.com/actions/checkout#usage
-        # uncomment if you use submodules within the repository
-        # with:
-        #   submodules: true
-
-      - name: actions-template-sync
-        uses: AndreasAugustin/actions-template-sync@v2
-        if: github.repository != env.SOURCE_REPOSITORY
-        with:
-          source_repo_path: mila-iqia/ResearchTemplate
-          upstream_branch: master # defaults to main
-          pr_labels: template_sync # defaults to template_sync
-          pr_title: "Add new features from the template repository"
-          pr_body: "This is an automated PR to update the repository with changes from the template."
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout new branch
+      run: |
+        git branch -D copier-update || true
+        git push origin --delete copier-update || true
+        git checkout -b copier-update
+    - name: Run Copier update
+      run: |
+        uvx --from copier==9.3.* --with copier-templates-extensions copier update --trust --skip-answered --defaults
+        git diff --name-only --diff-filter=U | while read -r file; do git checkout --theirs "$file"; done
+    - name: Commit changes and create PR
+      run: |
+        git config --global user.name "Github Bot"
+        git config --global user.email "github_bot@users.noreply.github.com"
+        git add -A .
+        if git commit -am "automation: Add new features from the template"; then \
+          git push --set-upstream origin copier-update; \
+          gh pr create -B main -H copier-update --title 'Add new features from the template repository' --body 'This is an automated PR to update the repository with changes from the template.'; \
+        fi
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

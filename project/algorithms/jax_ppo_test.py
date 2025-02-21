@@ -29,6 +29,7 @@ from torch.utils.data import DataLoader
 from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
+from project.main_test import experiment_commands_to_test
 from project.trainers.jax_trainer import JaxTrainer, hparams_to_dict
 from project.utils.testutils import IN_GITHUB_CI
 
@@ -43,6 +44,10 @@ from .jax_ppo import (
     TrajectoryWithLastObs,
     _actor,
     render_episode,
+)
+
+experiment_commands_to_test.append(
+    "experiment=jax_rl_example trainer.max_epochs=1",
 )
 
 logger = getLogger(__name__)

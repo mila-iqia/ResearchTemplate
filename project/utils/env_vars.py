@@ -47,16 +47,18 @@ See https://docs.mila.quebec/Information.html#archive for more information.
 """
 
 
-NETWORK_DIR = (
+NETWORK_DATASETS_DIR = (
     Path(os.environ["NETWORK_DIR"])
     if "NETWORK_DIR" in os.environ
-    else _network_dir
-    if (_network_dir := Path("/network")).exists()
+    else _mila_network_datasets_dir
+    if (_mila_network_datasets_dir := Path("/network/datasets")).exists()
+    else _drac_network_datasets_dir
+    if (
+        _drac_network_datasets_dir := Path.home() / "projects/rrg-bengioy-ad/data/curated"
+    ).exists()
     else None
 )
-"""The (read-only) network directory that contains datasets/weights/etc.
-
-todo: adapt this for the DRAC clusters.
+"""The (read-only) network directory that contains pre-downloaded datasets.
 
 When running outside of the mila/DRAC clusters, this will be `None`, but can be mocked by setting the `NETWORK_DIR` environment variable.
 """
@@ -77,8 +79,8 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", (SLURM_TMPDIR or SCRATCH or REPO_ROOT
 torchvision_dir: Path | None = None
 """Network directory with torchvision datasets."""
 if (
-    NETWORK_DIR
-    and (_torchvision_dir := NETWORK_DIR / "datasets/torchvision").exists()
+    NETWORK_DATASETS_DIR
+    and (_torchvision_dir := NETWORK_DATASETS_DIR / "torchvision").exists()
     and _torchvision_dir.is_dir()
 ):
     torchvision_dir = _torchvision_dir

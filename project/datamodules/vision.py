@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import os
 from abc import abstractmethod
 from collections.abc import Callable
 from logging import getLogger as get_logger
@@ -154,7 +153,8 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             )
             self.test_dataset_cls(str(self.data_dir), **test_kwargs)
 
-    def setup(self, stage: Literal["fit", "validate", "test", "predict"] | None = None) -> None:
+    # Pytorch-Lightning doesn't use the `Literal` type annotation on the `setup` method.
+    def setup(self, stage: Literal["fit", "validate", "test", "predict"]) -> None:  # type: ignore
         if stage in ["fit", "validate"] or stage is None:
             logger.debug(f"creating training dataset with kwargs {self.train_kwargs}")
             dataset_train = self.dataset_cls(
@@ -325,12 +325,6 @@ def _has_constructor_argument(cls: type[VisionDataset], arg: str) -> bool:
     if any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()) and cls.__base__ is not None:
         return _has_constructor_argument(cls.__base__, arg)
     return False
-
-
-def num_cpus_on_node() -> int:
-    if hasattr(os, "sched_getaffinity"):
-        return len(os.sched_getaffinity(0))
-    return torch.multiprocessing.cpu_count()
 
 
 def _contains_normalization_transform(transforms: Callable) -> bool:

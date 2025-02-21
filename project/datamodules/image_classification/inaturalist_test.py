@@ -1,18 +1,29 @@
-import sys
-from pathlib import Path
 
 import pytest
 from torch.utils.data import Subset
 from torchvision import transforms as T
 from torchvision.datasets import INaturalist
 
+from project.conftest import setup_with_overrides
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
+from project.datamodules.image_classification.inaturalist import (
+    INaturalistDataModule,
+    TargetType,
+    Version2021,
+)
+from project.datamodules.vision_test import VisionDataModuleTests
+from project.utils.testutils import needs_network_dataset_dir
 
-from .inaturalist import INaturalistDataModule, TargetType, Version2021
 
-slow = pytest.mark.skipif("-vvv" not in sys.argv, reason="Slow. Only runs when -vvv is passed.")
+# inat is special. It usually is an ImageClassificationDataModule, but it can also be a
+# VisionDataModule (when there aren't integer labels for each image.)
+@pytest.mark.slow
+@pytest.mark.xfail(raises=RuntimeError, reason="TODO: Some error with 2021_train on Mila cluster?")
+@needs_network_dataset_dir("inat")
+@setup_with_overrides("datamodule=inaturalist")
+class TestINaturalistDataModule(VisionDataModuleTests[INaturalistDataModule]): ...
 
 
 @pytest.mark.slow
@@ -20,12 +31,7 @@ slow = pytest.mark.skipif("-vvv" not in sys.argv, reason="Slow. Only runs when -
 @pytest.mark.parametrize(
     "target_type", ["full", "kingdom", "phylum", "class", "order", "family", "genus"]
 )
-@pytest.mark.xfail(
-    not Path("/network/datasets/inat").exists(),
-    strict=True,
-    raises=NotImplementedError,
-    reason="Expects to run on the Mila cluster",
-)
+@needs_network_dataset_dir("inat")
 def test_dataset_download_works(target_type: TargetType, version: Version2021):
     batch_size = 64
     datamodule = INaturalistDataModule(
@@ -73,12 +79,5 @@ def test_dataset_download_works(target_type: TargetType, version: Version2021):
             if i > 100:
                 break
 
-        min(all_labels)
-        max(all_labels)
-
-        # assert False, (
-        #     min_label,
-        #     max_label,
-        #     len(set(range(min_label, max_label + 1)) - all_labels),
-        #     list(itertools.islice(all_labels, 10)),
-        # )
+        print(min(all_labels))
+        print(max(all_labels))
