@@ -30,11 +30,6 @@ def examples_to_include(request: pytest.FixtureRequest):
     return [] if example is None else [example]
 
 
-run_if_on_self_hosted_CI_or_if_slow_flag_is_set = (
-    [pytest.mark.slow] if not IN_SELF_HOSTED_GITHUB_CI else []
-)
-
-
 @pytest.mark.skipif(
     IN_GITHUB_CLOUD_CI,
     reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
@@ -43,23 +38,21 @@ run_if_on_self_hosted_CI_or_if_slow_flag_is_set = (
 @pytest.mark.parametrize(
     "python_version",
     [
+        # These can be very slow but are super important!
         # don't run these unless --slow argument is passed to pytest, to save some time.
         # TODO: This seems to be the only one that works in the CI atm, because:
         # - UV seems unable to download other python versions?
         # - Python 3.11 and 3.12 aren't able to install orion atm.
         "3.10",
-        pytest.param("3.11", marks=run_if_on_self_hosted_CI_or_if_slow_flag_is_set),
+        pytest.param("3.11", marks=pytest.mark.slow),
         pytest.param(
             "3.12",
-            marks=[
-                *run_if_on_self_hosted_CI_or_if_slow_flag_is_set,
-                # pytest.mark.xfail(reason="TODO: Issues with pytinyrenderer?"),
-            ],
+            marks=[] if IN_SELF_HOSTED_GITHUB_CI else pytest.mark.slow,
         ),
         pytest.param(
             "3.13",
             marks=[
-                *run_if_on_self_hosted_CI_or_if_slow_flag_is_set,
+                pytest.mark.slow,
                 pytest.mark.xfail(
                     reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13",
                     strict=True,
