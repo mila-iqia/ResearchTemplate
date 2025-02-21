@@ -9,7 +9,7 @@ from copier import Worker
 
 import project
 import project.algorithms
-from project.utils.testutils import IN_GITHUB_CLOUD_CI, IN_SELF_HOSTED_GITHUB_CI
+from project.utils.testutils import IN_GITHUB_CLOUD_CI
 
 logger = getLogger(__name__)
 
@@ -45,10 +45,7 @@ def examples_to_include(request: pytest.FixtureRequest):
         # - Python 3.11 and 3.12 aren't able to install orion atm.
         "3.10",
         pytest.param("3.11", marks=pytest.mark.slow),
-        pytest.param(
-            "3.12",
-            marks=[] if IN_SELF_HOSTED_GITHUB_CI else pytest.mark.slow,
-        ),
+        pytest.param("3.12", marks=pytest.mark.slow),
         pytest.param(
             "3.13",
             marks=[
