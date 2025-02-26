@@ -18,7 +18,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
     ---
 
-    [Get started quickly](#starting-a-new-project) with [a single installation script](#) and get up
+    [Get started quickly](#starting-a-new-project) with an interactive installation script and get up
     and running in minutes
 
     [:octicons-arrow-right-24: Getting started](#starting-a-new-project)
@@ -95,25 +95,6 @@ For more context, see [this  introduction to the project.](intro.md).
 
     1. Install WSL following [this guide](https://learn.microsoft.com/en-us/windows/wsl/install)
     2. Follow the installation instructions for Linux
-
-<!--
-=== "On a SLURM cluster"
-
-    1. Clone your new repo and navigate into it
-
-        ```bash
-        git clone https://www.github.com/your-username/your-repo-name
-        cd your-repo-name
-        ```
-
-    2. (Mila cluster) - Launch the setup script
-
-        If you're on the `mila` cluster, you can run the setup script on a *compute* node, just to be nice:
-
-        ```console
-        srun --pty --gres=gpu:1 --cpus-per-task=4 --mem=16G --time=00:10:00 scripts/mila_setup.sh
-        ```
- -->
 
 
 Navigate to this new project, open up your favorite IDE, and voila! You're all setup! 🎊
