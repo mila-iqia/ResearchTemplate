@@ -272,7 +272,7 @@ _migrations:
   # Rename the {{project_name}} folder and all references (e.g. import statements) to {{project_name}}
   - command: |
       echo "Running migration"
-      mv {{project_name}} {{module_name}}
+      git mv {{project_name}} {{module_name}}
       find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/{{ project_name }}/{{ module_name }}/g'
     when: "{{ module_name != project_name and module_name != 'project' and _stage == 'after'}}"
     version: v0.0.1
