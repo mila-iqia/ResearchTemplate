@@ -59,7 +59,7 @@ dev = [
 gpu = ["jax[cuda12]>=0.4.31"]
 
 [tool.pytest.ini_options]
-testpaths = ["{{project_name}}", "tests"]
+testpaths = ["{{module_name}}", "tests"]
 norecursedirs = [".venv"]
 
 # Required to use torch deterministic mode.
