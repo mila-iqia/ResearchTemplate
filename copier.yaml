@@ -274,7 +274,7 @@ _migrations:
       echo "Running migration"
       git mv {{project_name}} {{module_name}}
       find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/{{ project_name }}/{{ module_name }}/g'
-    when: "{{ module_name != project_name and module_name != 'project' and _stage == 'after'}}"
+    when: "{{ module_name != project_name and module_name != 'project' and _stage == 'before'}}"
     version: v0.0.1
 
 _message_after_copy: |
