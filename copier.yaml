@@ -267,7 +267,7 @@ _tasks:
   - command: "git commit -m 'Initial commit'"
   - "uvx pre-commit install"
 
-migrations:
+_migrations:
   # Add the `module_name` question, which was previously the same as  the 'project' folder and all references (e.g. import statements) to {{project_name}}
   # Rename the {{project_name}} folder and all references (e.g. import statements) to {{project_name}}
   - command: |
