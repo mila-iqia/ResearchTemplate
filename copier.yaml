@@ -112,6 +112,11 @@ _tasks:
       exit 1
     when: "{{ _copier_conf.os == 'windows' }}"
 
+  # NOTE: UV is a prerequisite. Could we install it here if it isn't already installed?
+  # TODO: Doesn't seem possible to use commands as the condition for a task (the 'when' key here).
+  # - command: curl -LsSf https://astral.sh/uv/install.sh | sh
+  #   when: which uv > /dev/null
+
   - "uv self update 0.6.2"
 
   # Remove stuff from the template that isn't necessary for the new projects.
@@ -223,6 +228,26 @@ _tasks:
   #        'llm_finetuning' not in examples_to_include and \
   #        'text_classifier' not in examples_to_include }}
 
+  - command: |
+      if [ "$LOADEDMODULES" = "mila" ]; then
+        echo "On the Mila cluster."
+        # todo: This is only a good default option if the cache is in $SCRATCH instead of in $HOME.
+        if ! grep -q 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' ~/.bash_aliases; then
+            echo '# Setting UV_LINK_MODE to symlink (so that uv can use a cache dir on $SCRATCH)' >> ~/.bash_aliases
+            echo 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' >> ~/.bash_aliases
+            echo "✅ Added a line with 'export UV_LINK_MODE=\${UV_LINK_MODE:-"symlink"}' to ~/.bash_aliases"
+        else
+            echo "✅ ~/.bash_aliases already contains 'export UV_LINK_MODE="symlink"'"
+        fi
+        if [ ! -f logs ]; then
+            mkdir -p $SCRATCH/logs
+            ln -s $SCRATCH/logs logs
+            echo "✅ Created a symlink at `pwd`/logs --> $SCRATCH/logs"
+        else
+            echo "✅ 'logs' directory or symlink already exists."
+        fi
+      fi
+
   # Fix the import order in Python files with ruff
   - "uvx ruff check . --fix || true"
   - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
@@ -233,29 +258,30 @@ _tasks:
   - "uv python pin {{python_version}}"
   - "uv sync --all-extras"
 
-# TODO: How to link this project to a new github repo? Could we create the repo from the CLI
-# somehow?
-
 _message_after_copy: |
   ----------------------------------------------------------------------
 
   🎊 Your project "{{ project_name }}" has been created successfully! 🎊
 
-  Recommended Next steps:
+  📝 Recommended Next steps:
 
-  1. Change directory to the project root:
-
-      $ cd {{ _copier_conf.dst_path }}
-
-  2. Create a new Github Repository for this project by clicking on this URL:
+  1. Create a new Github Repository for this project by clicking on this URL:
 
       https://github.com/new?name={{project_name}}&visibility=private
 
-  3. Push this project to this new github repository:
+  2. Push this project to this new github repository:
 
       $ git remote add origin https://www.github.com/{{github_user}}/{{project_name}}
       $ git fetch origin
       $ git branch --set-upstream-to=origin/master master
       $ git push
 
-  4. Open up your favorite code editor (e.g. VsCode) and start coding! 🚀
+  2. Open up your favorite code editor (e.g. VsCode) and start coding! 🚀
+
+      $ code {{ _copier_conf.dst_path }}
+
+  🙏 If you encounter any issues, please let us know here: 🙏
+
+      https://github.com/mila-iqia/ResearchTemplate/issues/new/choose
+
+  🚀 Happy coding! 🚀
