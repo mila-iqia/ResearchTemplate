@@ -262,9 +262,9 @@ _tasks:
   - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
   - "uv python pin {{python_version}}"
   - "uv sync --all-extras"
-  - "git add ."
-  # todo: Causes issues on GitHub CI (asking for user)
-  - command: "git commit -m 'Initial commit'"
+  # - "git add ."
+  # # todo: Causes issues on GitHub CI (asking for user)
+  # - command: "git commit -m 'Initial commit'"
   - "uvx pre-commit install"
 
 _migrations:
@@ -275,7 +275,7 @@ _migrations:
       git mv {{project_name}} {{module_name}}
       find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/{{ project_name }}/{{ module_name }}/g'
     when: "{{ module_name != project_name and module_name != 'project' and _stage == 'before'}}"
-    version: v0.0.1
+    version: v0.0.2
 
 _message_after_copy: |
   ----------------------------------------------------------------------

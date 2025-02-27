@@ -337,6 +337,7 @@ def test_update_project(
         "copy",
         "--trust",
         "--defaults",
+        "--skip-answered",
         "--data-file",
         str(data_file),
         f"--vcs-ref={template_version_used}",
