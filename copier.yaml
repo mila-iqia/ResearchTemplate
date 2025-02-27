@@ -270,11 +270,13 @@ _tasks:
 _migrations:
   # Add the `module_name` question, which was previously the same as  the 'project' folder and all references (e.g. import statements) to {{project_name}}
   # Rename the {{project_name}} folder and all references (e.g. import statements) to {{project_name}}
+  # TODO: This is kind of a test to figure out how to use migrations. It isn't firing at all atm. Unsure why.
   - command: |
       echo "Running migration"
       git mv {{project_name}} {{module_name}}
       find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/{{ project_name }}/{{ module_name }}/g'
-    when: "{{ module_name != project_name and module_name != 'project' and _stage == 'before'}}"
+    # todo: unclear what the 'stage' means here, or when this gets run!
+    when: "{{ _stage == 'after'}}"
     version: v0.0.2
 
 _message_after_copy: |

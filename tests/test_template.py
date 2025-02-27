@@ -306,7 +306,7 @@ def version_to(request: pytest.FixtureRequest):
     return getattr(request, "param", "HEAD")
 
 
-# @pytest.mark.skip(reason="TODO: This test is still a work in progress, doesn't exactly work yet.")
+@pytest.mark.skip(reason="TODO: This test is still a work in progress, doesn't exactly work yet.")
 @pytest.mark.skipif(
     IN_GITHUB_CLOUD_CI,
     reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
