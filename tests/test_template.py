@@ -192,7 +192,10 @@ def test_setup_project(
     assert answers_file.exists()
     copier_content = yaml.safe_load(answers_file.read_text())
     for key, value in dataclasses.asdict(copier_answers).items():
-        assert copier_content[key] == value
+        if isinstance(value, list):
+            assert sorted(copier_content[key]) == sorted(value)
+        else:
+            assert copier_content[key] == value
 
     # Check that tests can be collected without errors. This is usually a good "smoke" test to
     # check for package import errors and such.
