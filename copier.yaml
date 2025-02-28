@@ -125,8 +125,9 @@ _tasks:
   # TODO: Doesn't seem possible to use commands as the condition for a task (the 'when' key here).
   # - command: curl -LsSf https://astral.sh/uv/install.sh | sh
   #   when: which uv > /dev/null
-
-  - "uv self update 0.6.2"
+  # todo: Use a fixed version of uv?
+  - "uv --version"
+  # - "uv self update 0.6.3"
 
   # Remove stuff from the template that isn't necessary for the new projects.
   - "rm -r docs"
