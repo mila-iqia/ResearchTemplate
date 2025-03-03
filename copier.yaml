@@ -12,6 +12,15 @@ project_name:
   validator: "{% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}"
   default: project
 
+module_name:
+  type: str
+  question: "Name for the python package to create in this project (snake_case)"
+  required: true
+  validator: |
+    {% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}
+    {% if module_name != module_name | lower | replace('-', '_') %}Please enter a module name in snake_case.{% endif %}
+  default: "{{ project_name | lower | replace('-', '_') }}"
+
 user_name:
   type: str
   question: "What is your name?"
@@ -116,8 +125,9 @@ _tasks:
   # TODO: Doesn't seem possible to use commands as the condition for a task (the 'when' key here).
   # - command: curl -LsSf https://astral.sh/uv/install.sh | sh
   #   when: which uv > /dev/null
-
-  - "uv self update 0.6.2"
+  # todo: Use a fixed version of uv?
+  - "uv --version"
+  # - "uv self update 0.6.3"
 
   # Remove stuff from the template that isn't necessary for the new projects.
   - "rm -r docs"
@@ -127,73 +137,73 @@ _tasks:
 
   # TODO: Might want to not run certain tasks when updating an existing project!
 
-  # Rename the 'project' folder and all references (e.g. import statements) to {{project_name}}
-  - command: mv project {{project_name}}
-    when: "{{ project_name != 'project' }}"
-  - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ project_name }}/g'
-    when: "{{ project_name != 'project' and _copier_conf.os == 'linux' }}"
-  - command: find {{project_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ project_name }}/g'
-    when: "{{ project_name != 'project' and _copier_conf.os == 'macos' }}"
+  # Rename the 'project' folder and all references (e.g. import statements) to {{module_name}}
+  - command: mv project {{module_name}}
+    when: "{{ module_name != 'project' }}"
+  - command: find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ module_name }}/g'
+    when: "{{ module_name != 'project' and _copier_conf.os == 'linux' }}"
+  - command: find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ module_name }}/g'
+    when: "{{ module_name != 'project' and _copier_conf.os == 'macos' }}"
 
   # Remove unwanted examples:
   - command: |
-      rm --verbose {{project_name}}/algorithms/image_classifier*.py
-      rm --verbose {{project_name}}/configs/algorithm/image_classifier.yaml
-      rm --verbose {{project_name}}/configs/experiment/example.yaml
-      rm --verbose {{project_name}}/configs/experiment/cluster_sweep_example.yaml
-      rm --verbose {{project_name}}/configs/experiment/local_sweep_example.yaml
-      rm --verbose {{project_name}}/configs/experiment/profiling.yaml
+      rm --verbose {{module_name}}/algorithms/image_classifier*.py
+      rm --verbose {{module_name}}/configs/algorithm/image_classifier.yaml
+      rm --verbose {{module_name}}/configs/experiment/example.yaml
+      rm --verbose {{module_name}}/configs/experiment/cluster_sweep_example.yaml
+      rm --verbose {{module_name}}/configs/experiment/local_sweep_example.yaml
+      rm --verbose {{module_name}}/configs/experiment/profiling.yaml
     when: "{{ 'image_classifier' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{project_name}}/algorithms/jax_image_classifier*.py
-      rm --verbose {{project_name}}/configs/algorithm/jax_image_classifier.yaml
-      rm --verbose {{project_name}}/configs/algorithm/network/jax_cnn.yaml
-      rm --verbose {{project_name}}/configs/algorithm/network/jax_fcnet.yaml
+      rm --verbose {{module_name}}/algorithms/jax_image_classifier*.py
+      rm --verbose {{module_name}}/configs/algorithm/jax_image_classifier.yaml
+      rm --verbose {{module_name}}/configs/algorithm/network/jax_cnn.yaml
+      rm --verbose {{module_name}}/configs/algorithm/network/jax_fcnet.yaml
     when: "{{ 'jax_image_classifier' not in examples_to_include }}"
 
   # Remove unwanted image classification datamodules and configs
   - command: |
-      rm --verbose {{project_name}}/datamodules/image_classification/image_classification*.py
-      rm --verbose {{project_name}}/datamodules/image_classification/mnist*.py
-      rm --verbose {{project_name}}/datamodules/image_classification/fashion_mnist*.py
-      rm --verbose {{project_name}}/datamodules/image_classification/cifar10*.py
-      rm --verbose {{project_name}}/datamodules/image_classification/imagenet*.py
-      rm --verbose {{project_name}}/datamodules/image_classification/inaturalist*.py
-      rm --verbose {{project_name}}/datamodules/image_classification/__init__.py
-      rm --verbose {{project_name}}/datamodules/vision*.py
-      rm --verbose {{project_name}}/configs/datamodule/mnist.yaml
-      rm --verbose {{project_name}}/configs/datamodule/fashion_mnist.yaml
-      rm --verbose {{project_name}}/configs/datamodule/cifar10.yaml
-      rm --verbose {{project_name}}/configs/datamodule/imagenet.yaml
-      rm --verbose {{project_name}}/configs/datamodule/inaturalist.yaml
-      rm --verbose {{project_name}}/configs/datamodule/vision.yaml
-      rmdir {{project_name}}/datamodules/image_classification
+      rm --verbose {{module_name}}/datamodules/image_classification/image_classification*.py
+      rm --verbose {{module_name}}/datamodules/image_classification/mnist*.py
+      rm --verbose {{module_name}}/datamodules/image_classification/fashion_mnist*.py
+      rm --verbose {{module_name}}/datamodules/image_classification/cifar10*.py
+      rm --verbose {{module_name}}/datamodules/image_classification/imagenet*.py
+      rm --verbose {{module_name}}/datamodules/image_classification/inaturalist*.py
+      rm --verbose {{module_name}}/datamodules/image_classification/__init__.py
+      rm --verbose {{module_name}}/datamodules/vision*.py
+      rm --verbose {{module_name}}/configs/datamodule/mnist.yaml
+      rm --verbose {{module_name}}/configs/datamodule/fashion_mnist.yaml
+      rm --verbose {{module_name}}/configs/datamodule/cifar10.yaml
+      rm --verbose {{module_name}}/configs/datamodule/imagenet.yaml
+      rm --verbose {{module_name}}/configs/datamodule/inaturalist.yaml
+      rm --verbose {{module_name}}/configs/datamodule/vision.yaml
+      rmdir {{module_name}}/datamodules/image_classification
     when: "{{ 'image_classifier' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{project_name}}/algorithms/text_classifier*.py
-      rm --verbose {{project_name}}/configs/algorithm/text_classifier.yaml
-      rm --verbose {{project_name}}/configs/experiment/text_classification_example.yaml
-      rm --verbose {{project_name}}/configs/datamodule/glue_cola.yaml
-      rm --verbose {{project_name}}/datamodules/text/text_classification*.py
-      rm --verbose {{project_name}}/datamodules/text/__init__.py
-      rmdir {{project_name}}/datamodules/text
+      rm --verbose {{module_name}}/algorithms/text_classifier*.py
+      rm --verbose {{module_name}}/configs/algorithm/text_classifier.yaml
+      rm --verbose {{module_name}}/configs/experiment/text_classification_example.yaml
+      rm --verbose {{module_name}}/configs/datamodule/glue_cola.yaml
+      rm --verbose {{module_name}}/datamodules/text/text_classification*.py
+      rm --verbose {{module_name}}/datamodules/text/__init__.py
+      rmdir {{module_name}}/datamodules/text
     when: "{{ 'text_classifier' not in examples_to_include }}"
 
   # todo: remove JaxTrainer and project/trainers folder if the JaxPPO example is removed?
   - command: |
-      rm --verbose {{project_name}}/algorithms/jax_ppo*.py
-      rm --verbose {{project_name}}/trainers/jax_trainer*.py
-      rmdir {{project_name}}/trainers
-      rm --verbose {{project_name}}/configs/algorithm/jax_ppo.yaml
-      rm --verbose {{project_name}}/configs/experiment/jax_rl_example.yaml
+      rm --verbose {{module_name}}/algorithms/jax_ppo*.py
+      rm --verbose {{module_name}}/trainers/jax_trainer*.py
+      rmdir {{module_name}}/trainers
+      rm --verbose {{module_name}}/configs/algorithm/jax_ppo.yaml
+      rm --verbose {{module_name}}/configs/experiment/jax_rl_example.yaml
     when: "{{ 'jax_ppo' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{project_name}}/algorithms/llm_finetuning*.py
-      rm --verbose {{project_name}}/configs/algorithm/llm_finetuning.yaml
-      rm --verbose {{project_name}}/configs/experiment/llm_finetuning_example.yaml
+      rm --verbose {{module_name}}/algorithms/llm_finetuning*.py
+      rm --verbose {{module_name}}/configs/algorithm/llm_finetuning.yaml
+      rm --verbose {{module_name}}/configs/experiment/llm_finetuning_example.yaml
     when: "{{ 'llm_finetuning' not in examples_to_include }}"
 
   # Pin the selected Python version
@@ -228,10 +238,10 @@ _tasks:
   #        'llm_finetuning' not in examples_to_include and \
   #        'text_classifier' not in examples_to_include }}
 
+  # todo: perhaps not the most reliable way of telling if we're on the Mila cluster.
   - command: |
       if [ "$LOADEDMODULES" = "mila" ]; then
         echo "On the Mila cluster."
-        # todo: This is only a good default option if the cache is in $SCRATCH instead of in $HOME.
         if ! grep -q 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' ~/.bash_aliases; then
             echo '# Setting UV_LINK_MODE to symlink (so that uv can use a cache dir on $SCRATCH)' >> ~/.bash_aliases
             echo 'export UV_LINK_MODE=${UV_LINK_MODE:-"symlink"}' >> ~/.bash_aliases
@@ -251,12 +261,24 @@ _tasks:
   # Fix the import order in Python files with ruff
   - "uvx ruff check . --fix || true"
   - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
-  - "git add ."
-  # todo: Causes issues on GitHub CI (asking for user)
-  - command: "git commit -m 'Initial commit'"
-  - "uvx pre-commit install"
   - "uv python pin {{python_version}}"
   - "uv sync --all-extras"
+  # - "git add ."
+  # # todo: Causes issues on GitHub CI (asking for user)
+  # - command: "git commit -m 'Initial commit'"
+  - "uvx pre-commit install"
+
+_migrations:
+  # Add the `module_name` question, which was previously the same as  the 'project' folder and all references (e.g. import statements) to {{project_name}}
+  # Rename the {{project_name}} folder and all references (e.g. import statements) to {{project_name}}
+  # TODO: This is kind of a test to figure out how to use migrations. It isn't firing at all atm. Unsure why.
+  - command: |
+      echo "Running migration"
+      git mv {{project_name}} {{module_name}}
+      find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/{{ project_name }}/{{ module_name }}/g'
+    # todo: unclear what the 'stage' means here, or when this gets run!
+    when: "{{ _stage == 'after'}}"
+    version: v0.0.2
 
 _message_after_copy: |
   ----------------------------------------------------------------------
@@ -267,7 +289,7 @@ _message_after_copy: |
 
   1. Create a new Github Repository for this project by clicking on this URL:
 
-      https://github.com/new?name={{project_name}}&visibility=private
+      https://github.com/new?name={{project_name}}&description={{project_description|urlencode}}&visibility=private
 
   2. Push this project to this new github repository:
 
@@ -281,7 +303,6 @@ _message_after_copy: |
       $ code {{ _copier_conf.dst_path }}
 
   🙏 If you encounter any issues, please let us know here: 🙏
-
-      https://github.com/mila-iqia/ResearchTemplate/issues/new/choose
+  ➡️➡️ https://github.com/mila-iqia/ResearchTemplate/issues/new/choose ⬅️⬅️
 
   🚀 Happy coding! 🚀

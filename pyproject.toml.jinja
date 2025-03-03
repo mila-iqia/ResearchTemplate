@@ -59,7 +59,7 @@ dev = [
 gpu = ["jax[cuda12]>=0.4.31"]
 
 [tool.pytest.ini_options]
-testpaths = ["{{project_name}}", "tests"]
+testpaths = ["{{module_name}}", "tests"]
 norecursedirs = [".venv"]
 
 # Required to use torch deterministic mode.
@@ -93,7 +93,7 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["{{project_name}}"]
+packages = ["{{module_name}}"]
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
