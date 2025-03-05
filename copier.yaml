@@ -305,9 +305,10 @@ _tasks:
   # - command: "git commit -m 'Initial commit'"
   - "uvx pre-commit install"
 
-  #  - Open the new project in vscode into the project if the `code` command is available.
+  #  - Open the new project in vscode into the project if the `code` command is available and if
+  #    this isn't being run as part of a test.
   - command: |
-      if command -v code 2>&1 >/dev/null; then
+      if (command -v code 2>&1 >/dev/null) && [-z $PYTEST_VERSION]; then
           code --new-window --goto "{{ _copier_conf.dst_path }}/README.md" "{{ _copier_conf.dst_path }}"
       fi
     when: "{{run_setup}}"
