@@ -5,12 +5,20 @@ _message_before_copy: |
 
   You'll be asked a few questions. This will be used to generate a tailored project for you.
 
+# https://github.com/copier-org/copier/issues/1574#issuecomment-2067980359
+run_setup:
+  # computed value to determine whether to prompt the setup questions
+  type: bool
+  default: "{{recorded_setup is not defined or recorded_setup is false}}"
+  when: false
+
 project_name:
   type: str
   question: "What is the name of this new research project?"
   required: true
   validator: "{% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}"
   default: project
+  when: "{{run_setup}}"
 
 module_name:
   type: str
@@ -20,6 +28,7 @@ module_name:
     {% if ' ' in project_name or project_name == '' %}Please enter a project name without spaces.{% endif %}
     {% if module_name != module_name | lower | replace('-', '_') %}Please enter a module name in snake_case.{% endif %}
   default: "{{ project_name | lower | replace('-', '_') }}"
+  when: "{{run_setup}}"
 
 user_name:
   type: str
@@ -110,16 +119,24 @@ examples_to_include:
 # _templates_suffix: ""
 
 _tasks:
-  # Initialize a git repository.
-  - "git init"
-  - "git remote add origin https://www.github.com/{{github_user}}/{{project_name}} || true"
-
   # Write an error message and exit if this is being run from Windows. Suggest running from WSL instead.
   - command: |
       echo "This template is not supported on Windows. Please run this template from WSL instead."
       echo "See https://learn.microsoft.com/en-us/windows/wsl/install for more information."
       exit 1
-    when: "{{ _copier_conf.os == 'windows' }}"
+    when: "{{ run_setup and _copier_conf.os == 'windows' }}"
+
+  # Initialize a git repository.
+  - command: git init
+    when: "{{run_setup}}"
+  - command: |
+      git remote add origin https://www.github.com/{{github_user}}/{{project_name}}
+      git remote add template https://www.github.com/mila-iqia/ResearchTemplate
+    when: "{{run_setup}}"
+  - command: |
+      git add .
+      git commit -m "Initial commit."
+    when: "{{run_setup}}"
 
   # NOTE: UV is a prerequisite. Could we install it here if it isn't already installed?
   # TODO: Doesn't seem possible to use commands as the condition for a task (the 'when' key here).
@@ -130,103 +147,120 @@ _tasks:
   # - "uv self update 0.6.3"
 
   # Remove stuff from the template that isn't necessary for the new projects.
-  - "rm -r docs"
-  - "rm mkdocs.yml"
-  - "rm .github/workflows/docs.yml"
-  - "rm tests/test_template.py"
-
-  # TODO: Might want to not run certain tasks when updating an existing project!
+  - command: git rm -r docs
+    when: "{{run_setup}}"
+  - command: git rm mkdocs.yml
+    when: "{{run_setup}}"
+  - command: git rm .github/workflows/docs.yml
+    when: "{{run_setup}}"
+  - command: git rm tests/test_template.py
+    when: "{{run_setup}}"
 
   # Rename the 'project' folder and all references (e.g. import statements) to {{module_name}}
-  - command: mv project {{module_name}}
-    when: "{{ module_name != 'project' }}"
-  - command: find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/project/{{ module_name }}/g'
-    when: "{{ module_name != 'project' and _copier_conf.os == 'linux' }}"
-  - command: find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i '' -e 's/project/{{ module_name }}/g'
-    when: "{{ module_name != 'project' and _copier_conf.os == 'macos' }}"
+  - command: |
+      git mv project {{module_name}}
+    when: "{{run_setup and module_name != 'project' }}"
+  - command: |
+      find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 \
+        | xargs -0 sed -i 's/project/{{ module_name }}/g'
+      git add {{module_name}} tests
+      git commit -m "Renaming 'project' to '{{ module_name }}'"
+    when: "{{ run_setup and module_name != 'project' and _copier_conf.os == 'linux' }}"
+  - command: |
+      find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 \
+        | xargs -0 sed -i '' -e 's/project/{{ module_name }}/g'
+      git add {{module_name}} tests
+      git commit -m "Renaming 'project' to '{{ module_name }}'"
+    when: "{{ run_setup and module_name != 'project' and _copier_conf.os == 'macos' }}"
 
   # Remove unwanted examples:
   - command: |
-      rm --verbose {{module_name}}/algorithms/image_classifier*.py
-      rm --verbose {{module_name}}/configs/algorithm/image_classifier.yaml
-      rm --verbose {{module_name}}/configs/experiment/example.yaml
-      rm --verbose {{module_name}}/configs/experiment/cluster_sweep_example.yaml
-      rm --verbose {{module_name}}/configs/experiment/local_sweep_example.yaml
-      rm --verbose {{module_name}}/configs/experiment/profiling.yaml
-    when: "{{ 'image_classifier' not in examples_to_include }}"
+      git rm {{module_name}}/algorithms/image_classifier*.py
+      git rm {{module_name}}/configs/algorithm/image_classifier.yaml
+      git rm {{module_name}}/configs/experiment/example.yaml
+      git rm {{module_name}}/configs/experiment/cluster_sweep_example.yaml
+      git rm {{module_name}}/configs/experiment/local_sweep_example.yaml
+      git rm {{module_name}}/configs/experiment/profiling.yaml
+      git commit -m "Remove image classification example."
+    when: "{{ run_setup and 'image_classifier' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{module_name}}/algorithms/jax_image_classifier*.py
-      rm --verbose {{module_name}}/configs/algorithm/jax_image_classifier.yaml
-      rm --verbose {{module_name}}/configs/algorithm/network/jax_cnn.yaml
-      rm --verbose {{module_name}}/configs/algorithm/network/jax_fcnet.yaml
-    when: "{{ 'jax_image_classifier' not in examples_to_include }}"
+      git rm {{module_name}}/algorithms/jax_image_classifier*.py
+      git rm {{module_name}}/configs/algorithm/jax_image_classifier.yaml
+      git rm {{module_name}}/configs/algorithm/network/jax_cnn.yaml
+      git rm {{module_name}}/configs/algorithm/network/jax_fcnet.yaml
+      git commit -m "Remove jax image classification example."
+    when: "{{ run_setup and 'jax_image_classifier' not in examples_to_include }}"
 
   # Remove unwanted image classification datamodules and configs
   - command: |
-      rm --verbose {{module_name}}/datamodules/image_classification/image_classification*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/mnist*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/fashion_mnist*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/cifar10*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/imagenet*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/inaturalist*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/__init__.py
-      rm --verbose {{module_name}}/datamodules/vision*.py
-      rm --verbose {{module_name}}/configs/datamodule/mnist.yaml
-      rm --verbose {{module_name}}/configs/datamodule/fashion_mnist.yaml
-      rm --verbose {{module_name}}/configs/datamodule/cifar10.yaml
-      rm --verbose {{module_name}}/configs/datamodule/imagenet.yaml
-      rm --verbose {{module_name}}/configs/datamodule/inaturalist.yaml
-      rm --verbose {{module_name}}/configs/datamodule/vision.yaml
+      git rm {{module_name}}/datamodules/image_classification/image_classification*.py
+      git rm {{module_name}}/datamodules/image_classification/mnist*.py
+      git rm {{module_name}}/datamodules/image_classification/fashion_mnist*.py
+      git rm {{module_name}}/datamodules/image_classification/cifar10*.py
+      git rm {{module_name}}/datamodules/image_classification/imagenet*.py
+      git rm {{module_name}}/datamodules/image_classification/inaturalist*.py
+      git rm {{module_name}}/datamodules/image_classification/__init__.py
+      git rm {{module_name}}/datamodules/vision*.py
+      git rm {{module_name}}/configs/datamodule/mnist.yaml
+      git rm {{module_name}}/configs/datamodule/fashion_mnist.yaml
+      git rm {{module_name}}/configs/datamodule/cifar10.yaml
+      git rm {{module_name}}/configs/datamodule/imagenet.yaml
+      git rm {{module_name}}/configs/datamodule/inaturalist.yaml
+      git rm {{module_name}}/configs/datamodule/vision.yaml
       rmdir {{module_name}}/datamodules/image_classification
-    when: "{{ 'image_classifier' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
+      git commit -m "Remove image classification datamodules and configs."
+    when: "{{ run_setup and 'image_classifier' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{module_name}}/algorithms/text_classifier*.py
-      rm --verbose {{module_name}}/configs/algorithm/text_classifier.yaml
-      rm --verbose {{module_name}}/configs/experiment/text_classification_example.yaml
-      rm --verbose {{module_name}}/configs/datamodule/glue_cola.yaml
-      rm --verbose {{module_name}}/datamodules/text/text_classification*.py
-      rm --verbose {{module_name}}/datamodules/text/__init__.py
+      git rm {{module_name}}/algorithms/text_classifier*.py
+      git rm {{module_name}}/configs/algorithm/text_classifier.yaml
+      git rm {{module_name}}/configs/experiment/text_classification_example.yaml
+      git rm {{module_name}}/configs/datamodule/glue_cola.yaml
+      git rm {{module_name}}/datamodules/text/text_classification*.py
+      git rm {{module_name}}/datamodules/text/__init__.py
       rmdir {{module_name}}/datamodules/text
-    when: "{{ 'text_classifier' not in examples_to_include }}"
+      git commit -m "Remove text classification example."
+    when: "{{ run_setup and 'text_classifier' not in examples_to_include }}"
 
   # todo: remove JaxTrainer and project/trainers folder if the JaxPPO example is removed?
   - command: |
-      rm --verbose {{module_name}}/algorithms/jax_ppo*.py
-      rm --verbose {{module_name}}/trainers/jax_trainer*.py
+      git rm {{module_name}}/algorithms/jax_ppo*.py
+      git rm {{module_name}}/trainers/jax_trainer*.py
       rmdir {{module_name}}/trainers
-      rm --verbose {{module_name}}/configs/algorithm/jax_ppo.yaml
-      rm --verbose {{module_name}}/configs/experiment/jax_rl_example.yaml
-    when: "{{ 'jax_ppo' not in examples_to_include }}"
+      git rm {{module_name}}/configs/algorithm/jax_ppo.yaml
+      git rm {{module_name}}/configs/experiment/jax_rl_example.yaml
+      git commit -m "Remove Jax PPO example and lightning Trainer."
+    when: "{{ run_setup and 'jax_ppo' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{module_name}}/algorithms/llm_finetuning*.py
-      rm --verbose {{module_name}}/configs/algorithm/llm_finetuning.yaml
-      rm --verbose {{module_name}}/configs/experiment/llm_finetuning_example.yaml
-    when: "{{ 'llm_finetuning' not in examples_to_include }}"
+      git rm {{module_name}}/algorithms/llm_finetuning*.py
+      git rm {{module_name}}/configs/algorithm/llm_finetuning.yaml
+      git rm {{module_name}}/configs/experiment/llm_finetuning_example.yaml
+      git commit -m "Remove LLM fine-tuning example."
+    when: "{{ run_setup and 'llm_finetuning' not in examples_to_include }}"
 
   # Pin the selected Python version
-  - "uv python pin {{python_version}}"
+  - command: uv python pin {{python_version}}
+    when: "{{run_setup}}"
 
   # Remove unneeded dependencies:
 
   ## Jax-related dependencies:
-  - command: |
-      uv remove rejax gymnax gymnasium xtils
-    when: "{{ 'jax_ppo' not in examples_to_include }}"
-  - command: |
-      uv remove jax jaxlib torch-jax-interop
-    when: "{{ 'jax_ppo' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
+  - command: uv remove rejax gymnax gymnasium xtils
+    when: "{{ run_setup and 'jax_ppo' not in examples_to_include }}"
+  - command: uv remove jax jaxlib torch-jax-interop
+    when: "{{ run_setup and 'jax_ppo' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   ## Huggingface-related dependencies:
+  - command: uv remove evaluate
+    when: "{{run_setup and 'text_classifier' not in examples_to_include }}"
+  - command: uv remove transformers datasets
+    when: "{{ run_setup and 'text_classifier' not in examples_to_include and 'llm_finetuning' not in examples_to_include }}"
   - command: |
-      uv remove evaluate
-    when: "{{ 'text_classifier' not in examples_to_include }}"
-  - command: |
-      uv remove transformers datasets
-    when: "{{ 'text_classifier' not in examples_to_include and 'llm_finetuning' not in examples_to_include }}"
-
+      git add .python-version pyproject.toml uv.lock
+      git commit -m "Remove unneeded dependencies"
+    when: "{{ run_setup and ( examples_to_include | length < 5 ) }}"
   ## Lightning-related dependencies
   ## TODO: Potentially even remove pytorch-lightning as a dependency if no examples are selected.
   ## This currently would completely break the project. There are lots of references to
@@ -257,28 +291,31 @@ _tasks:
             echo "✅ 'logs' directory or symlink already exists."
         fi
       fi
+    when: "{{run_setup}}"
 
   # Fix the import order in Python files with ruff
   - "uvx ruff check . --fix || true"
   - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
-  - "uv python pin {{python_version}}"
   - "uv sync --all-extras"
-  # - "git add ."
-  # # todo: Causes issues on GitHub CI (asking for user)
+  # todo: Causes issues on GitHub CI (asking for user)
+  - command: |
+      git add .
+      git commit -m "Clean project from template"
+    when: "{{run_setup}}"
   # - command: "git commit -m 'Initial commit'"
   - "uvx pre-commit install"
 
-_migrations:
-  # Add the `module_name` question, which was previously the same as  the 'project' folder and all references (e.g. import statements) to {{project_name}}
-  # Rename the {{project_name}} folder and all references (e.g. import statements) to {{project_name}}
-  # TODO: This is kind of a test to figure out how to use migrations. It isn't firing at all atm. Unsure why.
+  #  - Open the new project in vscode into the project if the `code` command is available and if
+  #    this isn't being run as part of a test.
   - command: |
-      echo "Running migration"
-      git mv {{project_name}} {{module_name}}
-      find {{module_name}} tests -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \) -print0 | xargs -0 sed -i 's/{{ project_name }}/{{ module_name }}/g'
-    # todo: unclear what the 'stage' means here, or when this gets run!
-    when: "{{ _stage == 'after'}}"
-    version: v0.0.2
+      if (command -v code 2>&1 >/dev/null) && [-z $PYTEST_VERSION]; then
+          code --new-window --goto "{{ _copier_conf.dst_path }}/README.md" "{{ _copier_conf.dst_path }}"
+      fi
+    when: "{{run_setup}}"
+  # todos / ideas:
+  # - Ask the user if they would like to also clone the project on the cluster?
+  #    - Hmm probably not. Would be tricky, we'd need to have a github repo to be able to push to.
+  #
 
 _message_after_copy: |
   ----------------------------------------------------------------------
