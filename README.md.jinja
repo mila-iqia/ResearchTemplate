@@ -17,54 +17,5 @@ uv sync
 
 ```console
 . .venv/bin/activate
-python {{project_module}}/main.py --help
+python {{module_name}}/main.py --help
 ```
-
-## Examples of how to launch experiments
-
-<details>
-<summary><b>Override any config parameter from command line</b></summary>
-
-```bash
-python train.py trainer.max_epochs=20 algorithm.optimizer.lr=1e-4
-```
-
-> **Note**: You can also add new parameters with `+` sign.
-
-```bash
-python train.py +algorithm.new_param="owo"
-```
-
-</details>
-
-<details>
-<summary><b>Train on CPU, GPU, multi-GPU and TPU</b></summary>
-
-```bash
-# train on CPU
-python train.py resources=cpu
-
-# train on 1 GPU
-python train.py resources=gpu
-
-# train on TPU (if you're already on a TPU node somehow?)
-python train.py +trainer.tpu_cores=8
-
-# train with DDP (Distributed Data Parallel) (4 GPUs)
-python train.py resources=gpu hydra.launcher. trainer.strategy=ddp trainer.devices=4
-
-# train with DDP (Distributed Data Parallel) (8 GPUs, 2 nodes)
-python train.py trainer=ddp trainer.devices=4 trainer.num_nodes=2
-```
-
-</details>
-
-<details>
-<summary><b>Train with mixed precision</b></summary>
-
-```bash
-# train with pytorch native automatic mixed precision (AMP)
-python train.py trainer=gpu +trainer.precision=16
-```
-
-</details>
