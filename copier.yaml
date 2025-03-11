@@ -126,6 +126,10 @@ _tasks:
       exit 1
     when: "{{ run_setup and _copier_conf.os == 'windows' }}"
 
+  # Increment this counter so I can know how many people used this template.
+  - command: curl -X GET https://api.counterapi.dev/v1/mila/ResearchTemplate/up
+    when: "{{run_setup}}"
+
   # Initialize a git repository.
   - command: git init
     when: "{{run_setup}}"
