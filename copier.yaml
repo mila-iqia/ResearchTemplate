@@ -128,7 +128,7 @@ _tasks:
 
   # Increment this counter so I can know how many people used this template.
   - command: |
-      if [ ! -z $PYTEST_VERSION ];
+      if [ ! -z $PYTEST_VERSION ]; then
         curl -X GET https://api.counterapi.dev/v1/mila/ResearchTemplate/up
       fi
     when: "{{run_setup}}"
