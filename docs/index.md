@@ -12,6 +12,9 @@ This is a research project template. It is meant to be a starting point for ML r
 
 For more context, see [this  introduction to the project.](intro.md).
 
+
+
+
 <div class="grid cards" markdown>
 
 - :material-clock-fast:{ .lg .middle } __Set up in 5 minutes__
@@ -65,7 +68,7 @@ For more context, see [this  introduction to the project.](intro.md).
 
 ## Starting a new project
 
-<!-- To create a new project using this template, [_*Click Here*_](https://github.com/new?template_name=ResearchTemplate&template_owner=mila-iqia) or on the green "Use this template" button on [the template's GitHub repository](https://github.com/mila-iqia/ResearchTemplate). -->
+<script src="https://asciinema.org/a/708495.js" id="asciicast-708495" async="true"></script>
 
 
 ## Setting up your environment

@@ -29,6 +29,8 @@ Once you have `uv` installed locally, use this command to create a new project f
 uvx copier copy --trust gh:mila-iqia/ResearchTemplate new_project
 ```
 
+[![asciicast](https://asciinema.org/a/708495.svg)](https://asciinema.org/a/708495)
+
 This will ask you a few questions to help set things up.
 Navigate to the new directory, open up your favorite IDE, and voila! You're all setup! 🎊
 
