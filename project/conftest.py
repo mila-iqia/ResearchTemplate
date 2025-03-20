@@ -96,12 +96,8 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from project.configs.config import Config
-from project.experiment import instantiate_datamodule, instantiate_trainer
-from project.main import (
-    PROJECT_NAME,
-    instantiate_algorithm,
-    setup_logging,
-)
+from project.experiment import instantiate_trainer
+from project.main import PROJECT_NAME, instantiate_algorithm, setup_logging
 from project.utils.env_vars import NUM_WORKERS, REPO_ROOTDIR
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.testutils import (
@@ -322,7 +318,12 @@ def config(
 def datamodule(dict_config: DictConfig) -> lightning.LightningDataModule | None:
     """Fixture that creates the datamodule for the given config."""
     # NOTE: creating the datamodule by itself instead of with everything else.
-    return instantiate_datamodule(dict_config["datamodule"])
+    datamodule_config = dict_config["datamodule"]
+    if datamodule_config is None:
+        return None
+    if isinstance(datamodule_config, lightning.LightningDataModule):
+        return datamodule_config
+    return hydra.utils.instantiate(datamodule_config)
 
 
 @pytest.fixture(scope="function")
@@ -335,7 +336,7 @@ def algorithm(
 ):
     """Fixture that creates the "algorithm" (usually a
     [LightningModule][lightning.pytorch.core.module.LightningModule])."""
-    algorithm = instantiate_algorithm(config, datamodule=datamodule)
+    algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
     if isinstance(trainer, lightning.Trainer) and isinstance(algorithm, lightning.LightningModule):
         with trainer.init_module(), device:
             # A bit hacky, but we have to do this because the lightningmodule isn't associated

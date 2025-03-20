@@ -75,7 +75,7 @@ class LightningModuleTests(Generic[LightningModuleType], ABC):
         device: torch.device,
     ):
         """Fixture that creates the "algorithm" (usually a `LightningModule`)."""
-        algorithm = instantiate_algorithm(config, datamodule=datamodule)
+        algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
         assert isinstance(algorithm, LightningModule)
         with trainer.init_module(), device:
             # A bit hacky, but we have some tests that don't use a Trainer, and need the weights to

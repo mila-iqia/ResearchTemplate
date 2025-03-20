@@ -14,7 +14,7 @@ from project.conftest import (  # noqa: F401
     datamodule_config,
     dict_config,
 )
-from project.experiment import instantiate_datamodule, instantiate_trainer
+from project.experiment import instantiate_trainer
 from project.main import (
     instantiate_algorithm,
     setup_logging,
@@ -121,7 +121,10 @@ def test_notebook_commands_dont_cause_errors(dict_config: DictConfig):  # noqa
     setup_logging(log_level=config.log_level)
     lightning.seed_everything(config.seed, workers=True)
     _trainer = instantiate_trainer(config.trainer)
-    datamodule = instantiate_datamodule(config.datamodule)
-    _algorithm = instantiate_algorithm(config, datamodule=datamodule)
+    if isinstance(config.datamodule, DictConfig):
+        datamodule = hydra.utils.instantiate(config.datamodule)
+    else:
+        datamodule = config.datamodule
+    _algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
 
     # Note: Here we don't actually do anything with the objects.
