@@ -15,7 +15,6 @@ from project.configs.config import Config
 
 if typing.TYPE_CHECKING:
     import lightning
-    from hydra_zen.typing import Builds
 
     from project.trainers.jax_trainer import JaxTrainer
 
@@ -81,9 +80,36 @@ def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
     return [v for v in objects_dict.values() if v is not None]
 
 
-MetricName = str
-
 import lightning  # noqa
+
+
+@train.register
+def train_lightningmodule(
+    algorithm: lightning.LightningModule,
+    /,
+    *,
+    trainer: lightning.Trainer | None,
+    datamodule: lightning.LightningDataModule | None = None,
+    config: Config,
+):
+    # Create the Trainer from the config.
+    if trainer is None:
+        _trainer = instantiate_trainer(config.trainer)
+        assert isinstance(_trainer, lightning.Trainer)
+        trainer = _trainer
+
+    # Train the model using the dataloaders of the datamodule:
+    # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
+    # example in RL, where we need to set the actor to use in the environment, as well as
+    # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
+    if datamodule is None:
+        if hasattr(algorithm, "datamodule"):
+            datamodule = getattr(algorithm, "datamodule")
+        elif config.datamodule is not None:
+            datamodule = instantiate_datamodule(config.datamodule)
+    trainer.fit(algorithm, datamodule=datamodule, ckpt_path=config.ckpt_path)
+    train_results = None  # todo: get the train results from the trainer.
+    return algorithm, train_results
 
 
 @evaluate.register(lightning.LightningModule)
@@ -95,7 +121,7 @@ def evaluate_lightningmodule(
     datamodule: lightning.LightningDataModule | None = None,
     config: Config,
     train_results: Any = None,
-) -> tuple[MetricName, float | None, dict]:
+) -> tuple[str, float | None, dict]:
     """Evaluates the algorithm and returns the metrics.
 
     By default, if validation is to be performed, returns the validation error. Returns the
@@ -152,56 +178,3 @@ def evaluate_lightningmodule(
         )
 
     return metric_name, error, metrics
-
-
-def instantiate_datamodule(
-    datamodule_config: Builds[type[lightning.LightningDataModule]]
-    | lightning.LightningDataModule
-    | None,
-) -> lightning.LightningDataModule | None:
-    """Instantiate the datamodule from the configuration dict.
-
-    Any interpolations in the config will have already been resolved by the time we get here.
-    """
-    if not datamodule_config:
-        return None
-    import lightning
-
-    if isinstance(datamodule_config, lightning.LightningDataModule):
-        logger.info(
-            f"Datamodule was already instantiated (probably to interpolate a field value). "
-            f"{datamodule_config=}"
-        )
-        return datamodule_config
-
-    logger.debug(f"Instantiating datamodule from config: {datamodule_config}")
-    return hydra.utils.instantiate(datamodule_config)
-
-
-@train.register
-def train_lightningmodule(
-    algorithm: lightning.LightningModule,
-    /,
-    *,
-    trainer: lightning.Trainer | None,
-    datamodule: lightning.LightningDataModule | None = None,
-    config: Config,
-):
-    # Create the Trainer from the config.
-    if trainer is None:
-        _trainer = instantiate_trainer(config.trainer)
-        assert isinstance(_trainer, lightning.Trainer)
-        trainer = _trainer
-
-    # Train the model using the dataloaders of the datamodule:
-    # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
-    # example in RL, where we need to set the actor to use in the environment, as well as
-    # potentially adding Wrappers on top of the environment, or having a replay buffer, etc.
-    if datamodule is None:
-        if hasattr(algorithm, "datamodule"):
-            datamodule = getattr(algorithm, "datamodule")
-        elif config.datamodule is not None:
-            datamodule = instantiate_datamodule(config.datamodule)
-    trainer.fit(algorithm, datamodule=datamodule, ckpt_path=config.ckpt_path)
-    train_results = None  # todo: get the train results from the trainer.
-    return algorithm, train_results

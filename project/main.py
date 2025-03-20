@@ -28,8 +28,9 @@ from omegaconf import DictConfig
 import project
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.experiment import evaluate, instantiate_datamodule, instantiate_trainer, train
+from project.experiment import evaluate, instantiate_trainer, train
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.typing_utils import HydraConfigFor
 from project.utils.utils import print_config
 
 if typing.TYPE_CHECKING:
@@ -86,8 +87,17 @@ def main(dict_config: DictConfig) -> dict:
     # constructed are deterministic and reproducible.
     lightning.seed_everything(seed=config.seed, workers=True)
 
+    if config.datamodule is None:
+        datamodule = None
+    elif isinstance(config.datamodule, lightning.LightningDataModule):
+        # The datamodule was already instantiated for the `instance_attr` resolver to
+        # get an attribute like `num_classes` when instantiating a network config.
+        datamodule = config.datamodule
+    else:
+        datamodule = hydra.utils.instantiate(config.datamodule)
+
     # Create the algo.
-    algorithm = instantiate_algorithm(config)
+    algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
 
     # Create the trainer
     trainer = instantiate_trainer(config.trainer)
@@ -145,7 +155,8 @@ def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
 
 
 def instantiate_algorithm(
-    config: Config, datamodule: lightning.LightningDataModule | None = None
+    algorithm_config: HydraConfigFor[lightning.LightningModule | JaxModule],
+    datamodule: lightning.LightningDataModule | None = None,
 ) -> lightning.LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
@@ -157,11 +168,7 @@ def instantiate_algorithm(
     """
 
     # Create the algorithm
-    algo_config = config.algorithm
-
-    # Create the datamodule (if present) from the config
-    if datamodule is None and config.datamodule is not None:
-        datamodule = instantiate_datamodule(config.datamodule)
+    algo_config = algorithm_config
 
     if datamodule:
         algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)
