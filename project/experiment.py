@@ -105,8 +105,10 @@ def train_lightningmodule(
     if datamodule is None:
         if hasattr(algorithm, "datamodule"):
             datamodule = getattr(algorithm, "datamodule")
+        elif isinstance(config.datamodule, lightning.LightningDataModule):
+            datamodule = config.datamodule
         elif config.datamodule is not None:
-            datamodule = instantiate_datamodule(config.datamodule)
+            datamodule = hydra.utils.instantiate(config.datamodule)
     trainer.fit(algorithm, datamodule=datamodule, ckpt_path=config.ckpt_path)
     train_results = None  # todo: get the train results from the trainer.
     return algorithm, train_results
