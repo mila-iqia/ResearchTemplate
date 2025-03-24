@@ -54,7 +54,7 @@ def test_experiment_config_is_tested(experiment_config: str, pytestconfig: pytes
     )
     if executing_subset_of_repo:
         warnings.warn(
-            "This test might fail when running only a subset of the tests. "
+            "This test might fail when running only a subset of the tests "
             "(for example when using the 'Test Explorer' panel in VsCode)."
         )
         # pytest.xfail(
@@ -106,7 +106,9 @@ def test_torch_can_use_the_GPU():
 @pytest.fixture
 def mock_train(monkeypatch: pytest.MonkeyPatch):
     mock_train_fn = Mock(spec=project.experiment.train_lightning, return_value=None)
-    monkeypatch.setattr(project.main, project.experiment.train_lightning.__name__, mock_train_fn)
+    monkeypatch.setattr(
+        project.experiment, project.experiment.train_lightning.__name__, mock_train_fn
+    )
     return mock_train_fn
 
 
@@ -114,7 +116,7 @@ def mock_train(monkeypatch: pytest.MonkeyPatch):
 def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
     mock_eval = Mock(spec=project.experiment.evaluate_lightning, return_value=("fake", 0.0, {}))
     monkeypatch.setattr(
-        project.main,
+        project.experiment,
         project.experiment.evaluate_lightning.__name__,
         mock_eval,
     )
