@@ -110,14 +110,14 @@ def train_and_evaluate(
     metric_name, error, _metrics = evaluate_lightning(
         algorithm,
         trainer=trainer,
-        config=config,
         datamodule=datamodule,
     )
+
     return metric_name, error
 
 
 def train_lightning(
-    algorithm,
+    algorithm: lightning.LightningModule,
     /,
     *,
     trainer: lightning.Trainer | None,
@@ -146,12 +146,11 @@ def train_lightning(
 
 
 def evaluate_lightning(
-    algorithm,
+    algorithm: lightning.LightningModule,
     /,
     *,
     trainer: lightning.Trainer,
     datamodule: lightning.LightningDataModule | None = None,
-    config: Config,
 ) -> tuple[str, float | None, dict]:
     """Evaluates the algorithm and returns the metrics.
 

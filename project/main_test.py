@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import uuid
+import warnings
 from logging import getLogger
 from pathlib import Path
 from unittest.mock import Mock
@@ -46,8 +47,22 @@ of training or something similar.
 
 
 @pytest.mark.parametrize("experiment_config", experiment_configs)
-def test_experiment_config_is_tested(experiment_config: str):
+def test_experiment_config_is_tested(experiment_config: str, pytestconfig: pytest.Config):
     select_experiment_command = f"experiment={experiment_config}"
+    executing_subset_of_repo = any(
+        "project/" in arg for arg in pytestconfig.invocation_params.args
+    )
+    if executing_subset_of_repo:
+        warnings.warn(
+            "This test might fail when running only a subset of the tests. "
+            "(for example when using the 'Test Explorer' panel in VsCode)."
+        )
+        # pytest.xfail(
+        #     reason=(
+        #         "Running a subset of the tests, so the changes to `experiment_commands_to_test` "
+        #         "made by test modules aren't collected."
+        #     )
+        # )
 
     for test_command in experiment_commands_to_test:
         if isinstance(test_command, ParameterSet):
@@ -90,8 +105,8 @@ def test_torch_can_use_the_GPU():
 
 @pytest.fixture
 def mock_train(monkeypatch: pytest.MonkeyPatch):
-    mock_train_fn = Mock(spec=project.main.train, return_value=(None, None))
-    monkeypatch.setattr(project.main, project.main.train.__name__, mock_train_fn)
+    mock_train_fn = Mock(spec=project.experiment.train_lightning, return_value=None)
+    monkeypatch.setattr(project.main, project.experiment.train_lightning.__name__, mock_train_fn)
     return mock_train_fn
 
 
