@@ -24,6 +24,10 @@ import gymnax.experimental.rollout
 import jax
 import jax.experimental
 import jax.numpy as jnp
+import lightning
+import lightning.pytorch
+import lightning.pytorch.loggers
+import lightning.pytorch.loggers.wandb
 import numpy as np
 import optax
 from flax.training.train_state import TrainState
@@ -511,7 +515,7 @@ class JaxRLExample(
         render_episode(
             actor=actor,
             env=self.env,
-            env_params=self.env_params,
+            env_params=jax.tree.map(lambda v: v.item() if v.ndim == 0 else v, self.env_params),
             gif_path=Path(gif_path),
             rng=eval_rng if eval_rng is not None else ts.rng,
         )
@@ -813,3 +817,22 @@ class RenderEpisodesCallback(JaxCallback):
         gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
         jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
+
+    def on_fit_end(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
+        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        assert log_dir is not None
+        gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
+        with jax.disable_jit():
+            module.visualize(ts=ts, gif_path=gif_path)
+        # jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
+        # if wandb.run:
+        #     wandb.log(
+        #         {"render_episode": wandb.Image(str(gif_path))},
+        #         step=ts.data_collection_state.global_step,
+        #     )
+
+        for logger in trainer.loggers:
+            if isinstance(logger, lightning.pytorch.loggers.wandb.WandbLogger):
+                logger.log_image(
+                    "render_episode", [str(gif_path)], step=ts.data_collection_state.global_step
+                )
