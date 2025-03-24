@@ -104,30 +104,17 @@ def test_torch_can_use_the_GPU():
 
 
 @pytest.fixture
-def mock_train(monkeypatch: pytest.MonkeyPatch):
-    mock_train_fn = Mock(spec=project.experiment.train_lightning, return_value=None)
-    monkeypatch.setattr(
-        project.experiment, project.experiment.train_lightning.__name__, mock_train_fn
-    )
+def mock_train_and_evaluate(monkeypatch: pytest.MonkeyPatch):
+    fn = project.experiment.train_and_evaluate
+    mock_train_fn = Mock(spec=fn, return_value=("fake", 0.0))
+    monkeypatch.setattr(project.experiment, fn.__name__, mock_train_fn)
     return mock_train_fn
-
-
-@pytest.fixture
-def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
-    mock_eval = Mock(spec=project.experiment.evaluate_lightning, return_value=("fake", 0.0, {}))
-    monkeypatch.setattr(
-        project.experiment,
-        project.experiment.evaluate_lightning.__name__,
-        mock_eval,
-    )
-    return mock_eval
 
 
 @setup_with_overrides(experiment_commands_to_test)
 def test_can_load_experiment_configs(
     dict_config: DictConfig,
-    mock_train: Mock,
-    mock_evaluate: Mock,
+    mock_train_and_evaluate: Mock,
 ):
     # Mock out some part of the `main` function to not actually run anything.
     if dict_config["hydra"]["mode"] == RunMode.MULTIRUN:
@@ -141,8 +128,7 @@ def test_can_load_experiment_configs(
         results = project.main.main(dict_config)
         assert results is not None
 
-    mock_train.assert_called_once()
-    mock_evaluate.assert_called_once()
+    mock_train_and_evaluate.assert_called_once()
 
 
 @pytest.mark.slow
