@@ -265,11 +265,9 @@ class JaxTrainer(flax.struct.PyTreeNode):
         train_state: Ts | None = None,
         skip_initial_evaluation: bool = False,
     ) -> tuple[Ts, _MetricsT]:
-        """Full training loop in pure jax (a lot faster than when using pytorch-lightning).
+        """Full training loop in pure jax (a lot faster than pytorch-lightning).
 
-        Unfolded version of `rejax.PPO.train`.
-
-        Training loop in pure jax (a lot faster than when using pytorch-lightning).
+        Some of the lightning Callbacks can be used with this Trainer.
         """
 
         if train_state is None and rng is None:
