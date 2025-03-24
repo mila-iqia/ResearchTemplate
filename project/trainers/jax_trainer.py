@@ -25,7 +25,7 @@ from hydra.core.hydra_config import HydraConfig
 from typing_extensions import TypeVar
 
 from project.configs.config import Config
-from project.experiment import train
+from project.experiment import instantiate_trainer, train_and_evaluate
 from project.utils.typing_utils.jax_typing_utils import jit
 
 Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
@@ -34,12 +34,23 @@ Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
 _B = TypeVar("_B", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
 """Type Variable for the batches produced (and consumed) by the algorithm."""
 
+
 _MetricsT = TypeVar(
     "_MetricsT", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode, covariant=True
 )
 """Type Variable for the metrics produced by the algorithm."""
 
-__all__ = ["JaxModule", "JaxCallback", "JaxTrainer"]
+
+# __all__ = ["JaxModule", "JaxCallback", "JaxTrainer"]
+
+
+@functools.singledispatch
+def get_error_from_metrics(metrics: Any) -> tuple[str, float]:
+    """Return the 'error' to minimize for hyperparameter optimization from a set of metrics."""
+    raise NotImplementedError(
+        f"Don't know how to get the 'error' to minimize from metrics {metrics}! "
+        f"Consider adding a handler for type {type(metrics)}?"
+    )
 
 
 @runtime_checkable
@@ -69,35 +80,51 @@ class JaxModule(Protocol[Ts, _B, _MetricsT]):
         raise NotImplementedError
 
 
-@train.register(JaxModule)
-def train_jax_module(
+@train_and_evaluate.register(JaxModule)
+def train_and_evaluate_jax_module(
     algorithm: JaxModule,
     /,
     *,
-    trainer: JaxTrainer,
+    datamodule: lightning.LightningDataModule | None = None,
     config: Config,
-    datamodule: None = None,
 ):
+    trainer = instantiate_trainer(config.trainer)
+    if not isinstance(trainer, JaxTrainer):
+        raise NotImplementedError(
+            f"Algorithm {algorithm} that inherits from `JaxModule` needs to be trained with a "
+            f"{JaxTrainer.__name__}, but got trainer {trainer} of type {type(trainer)}. "
+        )
+
     if datamodule is not None:
         raise NotImplementedError(
-            "The JaxTrainer doesn't yet support using a datamodule. For now, you should "
-            f"return a batch of data from the {JaxModule.get_batch.__name__} method in your "
-            f"algorithm."
+            f"For now if you want to use a fully-jitted training loop in Jax, you can't use a "
+            f"datamodule. "
+            f"You should instead return a batch of data from the {JaxModule.get_batch.__name__} "
+            f"method in your algorithm. Take a look at the Jax PPO example for more details."
         )
 
-    if not isinstance(algorithm, JaxModule):
-        raise TypeError(
-            f"The selected algorithm ({algorithm}) doesn't implement the required methods of "
-            f"a {JaxModule.__name__}, so it can't be used with the `{JaxTrainer.__name__}`. "
-            f"Try to subclass {JaxModule.__name__} and implement the missing methods."
-        )
-    import jax
+    assert isinstance(algorithm, JaxModule)
 
     rng = jax.random.key(config.seed)
+    # TODO: Use safetensors or some checkpointing thing to save the training state to disk.
     # TODO: Use ckpt_path argument to load the training state and resume the training run.
     assert config.ckpt_path is None
-    ts, train_metrics = trainer.fit(algorithm, rng=rng)
-    return algorithm, (ts, train_metrics)
+    train_state, train_metrics = trainer.fit(algorithm, rng=rng, train_state=None)
+
+    # todo: Add a `val_batch` or `test_batch` and `validation_step` / `test_step` methods on
+    # JaxModule and use those to get the equivalent of the `evaluate` method of lightning.Trainer.
+    # metric_name, error, _metrics = evaluate_jax_Module(
+    #     algorithm,
+    #     trainer=trainer,
+    #     config=config,
+    #     datamodule=datamodule,
+    # )
+
+    # Get the 'error' value and its name from the metrics collected during training.
+    # This method has a registered handler in the jax-ppo example.
+    error_name, error = get_error_from_metrics(train_metrics)
+
+    return error_name, error
 
 
 class JaxCallback(flax.struct.PyTreeNode):

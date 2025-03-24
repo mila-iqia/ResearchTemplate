@@ -97,10 +97,10 @@ def mock_train(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.fixture
 def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
-    mock_eval = Mock(spec=project.experiment.evaluate, return_value=("fake", 0.0, {}))
+    mock_eval = Mock(spec=project.experiment.evaluate_lightning, return_value=("fake", 0.0, {}))
     monkeypatch.setattr(
         project.main,
-        project.experiment.evaluate.__name__,
+        project.experiment.evaluate_lightning.__name__,
         mock_eval,
     )
     return mock_eval

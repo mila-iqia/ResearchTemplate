@@ -12,13 +12,11 @@ from __future__ import annotations
 
 import functools
 import logging
-import os
 import typing
 from pathlib import Path
 
 import hydra
 import lightning
-import omegaconf
 import rich
 import rich.logging
 import wandb
@@ -28,7 +26,7 @@ from omegaconf import DictConfig
 import project
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.experiment import evaluate, instantiate_trainer, train
+from project.experiment import train_and_evaluate
 from project.utils.hydra_utils import resolve_dictconfig
 from project.utils.typing_utils import HydraConfigFor
 from project.utils.utils import print_config
@@ -59,19 +57,7 @@ add_configs_to_hydra_store()
     version_base="1.2",
 )
 def main(dict_config: DictConfig) -> dict:
-    """Main entry point for training a model.
-
-    This does roughly the same thing as
-    https://github.com/ashleve/lightning-hydra-template/blob/main/src/train.py
-
-    1. Instantiates the experiment components from the Hydra configuration:
-        - trainer
-        - algorithm
-        - datamodule (optional)
-    2. Calls `train` to train the algorithm
-    3. Calls `evaluation` to evaluate the model
-    4. Returns the evaluation metrics.
-    """
+    """Main entry point for training a model."""
 
     print_config(dict_config, resolve=False)
     assert dict_config["algorithm"] is not None
@@ -99,29 +85,8 @@ def main(dict_config: DictConfig) -> dict:
     # Create the algo.
     algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
 
-    # Create the trainer
-    trainer = instantiate_trainer(config.trainer)
-
-    if wandb.run:
-        wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
-        wandb.run.config.update(
-            omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
-        )
-
-    # Train the algorithm.
-    algorithm, train_results = train(
-        algorithm,
-        trainer=trainer,
-        config=config,
-    )
-
-    # Evaluate the algorithm.
-    metric_name, error, _metrics = evaluate(
-        algorithm,
-        trainer=trainer,
-        train_results=train_results,
-        config=config,
-    )
+    # Do the training and evaluation, returns the metric name and the overall 'error' to minimize.
+    metric_name, error = train_and_evaluate(algorithm, config=config, datamodule=datamodule)
 
     if wandb.run:
         wandb.finish()

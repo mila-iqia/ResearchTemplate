@@ -1,7 +1,11 @@
+"""Functions for training and evaluating algorithms."""
+
 from __future__ import annotations
 
+import dataclasses
 import functools
 import logging
+import os
 import typing
 import warnings
 from typing import Any
@@ -23,69 +27,97 @@ logger = logging.getLogger(__name__)
 
 
 @functools.singledispatch
-def train(
+def train_and_evaluate(
     algorithm,
     /,
-    **kwargs,
-) -> tuple[Any, Any]:
-    raise NotImplementedError(
-        f"There is no registered handler for training algorithm {algorithm} of type "
-        f"{type(algorithm)}! (kwargs: {kwargs})."
-        f"Registered handlers: "
-        + "\n\t".join([f"- {k}: {v.__name__}" for k, v in train.registry.items()])
+    *,
+    datamodule: lightning.LightningDataModule | None = None,
+    config: Config,
+):
+    """Generic function that trains and evaluates a learning algorithm.
+
+    This by default assumes that the algorithm is a LightningModule, but can be extended to
+    implement specific training / evaluation procedures for different algorithms.
+
+    The default implementation here does roughly the same thing as
+    https://github.com/ashleve/lightning-hydra-template/blob/main/src/train.py
+
+    1. Instantiates the experiment components from the Hydra configuration:
+        - trainer
+        - algorithm
+        - datamodule (optional)
+    2. Calls `trainer.fit` to train the algorithm
+    3. Calls `trainer.evaluate` to evaluate the model
+    4. Returns the evaluation metrics.
+
+    ## Extending to other algorithms or training procedures
+
+
+    For example, if your algorithm has to be trained in two distinct phases, or if you want to use
+    a different kind of Trainer that does something other than just call `.fit` and `.evaluate`,
+    you could do something like this:
+
+    ```python
+    @train_and_evaluate.register(MyAlgorithm)
+    def train_and_evaluate_my_algo(algorithm: MyAlgorithm, /, *, trainer, datamodule)
+        # Train and evaluate the algorithm in some particular way.
+
+        # making this up, this isn't supported atm.
+        datamodule.set_task(1)
+        trainer.fit(algorithm, datamodule)
+
+        datamodule.set_task(2)
+        trainer.fit(algorithm, datamodule)
+
+
+    ```
+    """
+
+    # Create the trainer
+    trainer = instantiate_trainer(config.trainer)
+
+    for logger in trainer.loggers:
+        # note: this has to be done here, because the wandb Logger is now instantiated.
+        logger.log_hyperparams(dataclasses.asdict(config))
+        logger.log_hyperparams({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
+        # wandb.run.config.update(
+        #     omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
+        # )
+
+    if not (
+        isinstance(algorithm, lightning.LightningModule) and isinstance(trainer, lightning.Trainer)
+    ):
+        _this_fn_name = train_and_evaluate.__name__  # type: ignore
+        raise NotImplementedError(
+            f"The `{_this_fn_name} function assumes that the algorithm is a "
+            f"lightning.LightningModule and that the trainer is a lightning.Trainer, but got "
+            f"algorithm {algorithm} and trainer {trainer}!\n"
+            f"You can register a new handler for that algorithm type using "
+            f"`@{_this_fn_name}.register`.\n"
+            f"Registered handlers: "
+            + "\n\t".join([f"- {k}: {v.__name__}" for k, v in train_and_evaluate.registry.items()])
+        )
+
+    # Train the algorithm.
+    algorithm = train_lightning(
+        algorithm,
+        trainer=trainer,
+        config=config,
+        datamodule=datamodule,
     )
 
-
-@functools.singledispatch
-def evaluate(algorithm: Any, /, **kwargs) -> tuple[str, float | None, dict]:
-    """Evaluates the algorithm.
-
-    Returns the name of the 'error' metric for this run, its value, and a dict of metrics.
-    """
-    raise NotImplementedError(
-        f"There is no registered handler for evaluating algorithm {algorithm} of type "
-        f"{type(algorithm)}! (kwargs: {kwargs})"
+    # Evaluate the algorithm.
+    metric_name, error, _metrics = evaluate_lightning(
+        algorithm,
+        trainer=trainer,
+        config=config,
+        datamodule=datamodule,
     )
+    return metric_name, error
 
 
-def instantiate_trainer(trainer_config: dict | DictConfig) -> lightning.Trainer | JaxTrainer:
-    # NOTE: Need to do a bit of sneaky type tricks to convince the outside world that these
-    # fields have the right type.
-    # Create the Trainer
-    trainer_config = trainer_config.copy()  # Avoid mutating the config.
-    callbacks: list | None = instantiate_values(trainer_config.pop("callbacks", None))
-    logger: list | None = instantiate_values(trainer_config.pop("logger", None))
-    trainer = hydra.utils.instantiate(trainer_config, callbacks=callbacks, logger=logger)
-    return trainer
-
-
-def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
-    """Returns the list of objects at the values in this dict of configs.
-
-    This is used for the config of the `trainer/logger` and `trainer/callbacks` fields, where
-    we can combine multiple config groups by adding entries in a dict.
-
-    For example, using `trainer/logger=wandb` and `trainer/logger=tensorboard` would result in a
-    dict with `wandb` and `tensorboard` as keys, and the corresponding config groups as values.
-
-    This would then return a list with the instantiated WandbLogger and TensorBoardLogger objects.
-    """
-    if not config_dict:
-        return None
-    objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
-    if objects_dict is None:
-        return None
-
-    assert isinstance(objects_dict, dict | DictConfig)
-    return [v for v in objects_dict.values() if v is not None]
-
-
-import lightning  # noqa
-
-
-@train.register
-def train_lightningmodule(
-    algorithm: lightning.LightningModule,
+def train_lightning(
+    algorithm,
     /,
     *,
     trainer: lightning.Trainer | None,
@@ -110,19 +142,16 @@ def train_lightningmodule(
         elif config.datamodule is not None:
             datamodule = hydra.utils.instantiate(config.datamodule)
     trainer.fit(algorithm, datamodule=datamodule, ckpt_path=config.ckpt_path)
-    train_results = None  # todo: get the train results from the trainer.
-    return algorithm, train_results
+    return algorithm
 
 
-@evaluate.register(lightning.LightningModule)
-def evaluate_lightningmodule(
-    algorithm: lightning.LightningModule,
+def evaluate_lightning(
+    algorithm,
     /,
     *,
     trainer: lightning.Trainer,
     datamodule: lightning.LightningDataModule | None = None,
     config: Config,
-    train_results: Any = None,
 ) -> tuple[str, float | None, dict]:
     """Evaluates the algorithm and returns the metrics.
 
@@ -130,6 +159,7 @@ def evaluate_lightningmodule(
     training error when `trainer.overfit_batches != 0` (e.g. when debugging or testing). Otherwise,
     if `trainer.limit_val_batches == 0`, returns the test error.
     """
+
     datamodule = datamodule or getattr(algorithm, "datamodule", None)
 
     # exp.trainer.logger.log_hyperparams()
@@ -178,5 +208,34 @@ def evaluate_lightningmodule(
             f"Here are the available metric names:\n"
             f"{list(metrics.keys())}"
         )
-
     return metric_name, error, metrics
+
+
+def instantiate_trainer(trainer_config: dict | DictConfig) -> lightning.Trainer | JaxTrainer:
+    """Instantiates the callbacks and loggers first, then creates the trainer from its config."""
+    trainer_config = trainer_config.copy()  # Avoid mutating the config.
+    callbacks: list | None = instantiate_values(trainer_config.pop("callbacks", None))
+    logger: list | None = instantiate_values(trainer_config.pop("logger", None))
+    trainer = hydra.utils.instantiate(trainer_config, callbacks=callbacks, logger=logger)
+    return trainer
+
+
+def instantiate_values(config_dict: DictConfig | None) -> list[Any] | None:
+    """Returns the list of objects at the values in this dict of configs.
+
+    This is used for the config of the `trainer/logger` and `trainer/callbacks` fields, where
+    we can combine multiple config groups by adding entries in a dict.
+
+    For example, using `trainer/logger=wandb` and `trainer/logger=tensorboard` would result in a
+    dict with `wandb` and `tensorboard` as keys, and the corresponding config groups as values.
+
+    This would then return a list with the instantiated WandbLogger and TensorBoardLogger objects.
+    """
+    if not config_dict:
+        return None
+    objects_dict = hydra.utils.instantiate(config_dict, _recursive_=True)
+    if objects_dict is None:
+        return None
+
+    assert isinstance(objects_dict, dict | DictConfig)
+    return [v for v in objects_dict.values() if v is not None]
