@@ -32,13 +32,14 @@ from project.utils.typing_utils import HydraConfigFor
 from project.utils.utils import print_config
 
 if typing.TYPE_CHECKING:
+    # Doing this in this type-checking-only block to avoid circular import issues.
     from project.trainers.jax_trainer import JaxModule
 
 PROJECT_NAME = project.__name__
 REPO_ROOTDIR = Path(__file__).parent.parent
 logger = logging.getLogger(__name__)
 
-
+# todo: remove, or configure in some other way (e.g. a config file).
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
@@ -57,7 +58,7 @@ add_configs_to_hydra_store()
     version_base="1.2",
 )
 def main(dict_config: DictConfig) -> dict:
-    """Main entry point for training a model."""
+    """Main entry point: trains & evaluates a learning algorithm."""
 
     print_config(dict_config, resolve=False)
     assert dict_config["algorithm"] is not None
@@ -129,9 +130,8 @@ def instantiate_algorithm(
     as arguments, to make it easier to swap out different networks and datamodules during
     experiments.
 
-    The instantiated datamodule and network will be passed to the algorithm's constructor.
+    The instantiated datamodule will be passed to the algorithm's constructor.
     """
-
     # Create the algorithm
     algo_config = algorithm_config
 

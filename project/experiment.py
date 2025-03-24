@@ -1,13 +1,16 @@
-"""Functions for training and evaluating algorithms."""
+"""The training and evaluation functions.
 
-from __future__ import annotations
+NOTE: This has to be in a different file than `main` because we want to allow registering different
+variants of the `train_and_evaluate` function for different algorithms with
+`functools.singledispatch`. If we have everything in `main.py`, the registration doesn't happen
+correctly.
+"""
 
 import dataclasses
 import functools
-import logging
 import os
-import typing
 import warnings
+from logging import getLogger
 from typing import Any
 
 import hydra
@@ -17,13 +20,7 @@ from omegaconf import DictConfig
 
 from project.configs.config import Config
 
-if typing.TYPE_CHECKING:
-    import lightning
-
-    from project.trainers.jax_trainer import JaxTrainer
-
-
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 @functools.singledispatch
@@ -43,12 +40,12 @@ def train_and_evaluate(
     https://github.com/ashleve/lightning-hydra-template/blob/main/src/train.py
 
     1. Instantiates the experiment components from the Hydra configuration:
+        - algorithm (already instantiated)
         - trainer
-        - algorithm
         - datamodule (optional)
     2. Calls `trainer.fit` to train the algorithm
-    3. Calls `trainer.evaluate` to evaluate the model
-    4. Returns the evaluation metrics.
+    3. Calls `trainer.evaluate` or `trainer.test` to evaluate the model
+    4. Returns the metrics.
 
     ## Extending to other algorithms or training procedures
 
@@ -60,36 +57,31 @@ def train_and_evaluate(
     ```python
     @train_and_evaluate.register(MyAlgorithm)
     def train_and_evaluate_my_algo(algorithm: MyAlgorithm, /, *, trainer, datamodule)
-        # Train and evaluate the algorithm in some particular way.
-
-        # making this up, this isn't supported atm.
+        # making this up, this isn't doable with any of the datamodules at the moment.
         datamodule.set_task(1)
         trainer.fit(algorithm, datamodule)
 
         datamodule.set_task(2)
         trainer.fit(algorithm, datamodule)
-
-
     ```
     """
 
     # Create the trainer
     trainer = instantiate_trainer(config.trainer)
 
-    for logger in trainer.loggers:
-        # note: this has to be done here, because the wandb Logger is now instantiated.
-        logger.log_hyperparams(dataclasses.asdict(config))
-        logger.log_hyperparams({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
-        # wandb.run.config.update(
-        #     omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
-        # )
+    for lightning_logger in trainer.loggers:
+        # This has to be done here because the Logger is now instantiated.
+        lightning_logger.log_hyperparams(dataclasses.asdict(config))
+        lightning_logger.log_hyperparams(
+            {k: v for k, v in os.environ.items() if k.startswith("SLURM")}
+        )
 
     if not (
         isinstance(algorithm, lightning.LightningModule) and isinstance(trainer, lightning.Trainer)
     ):
         _this_fn_name = train_and_evaluate.__name__  # type: ignore
         raise NotImplementedError(
-            f"The `{_this_fn_name} function assumes that the algorithm is a "
+            f"The `{_this_fn_name}` function assumes that the algorithm is a "
             f"lightning.LightningModule and that the trainer is a lightning.Trainer, but got "
             f"algorithm {algorithm} and trainer {trainer}!\n"
             f"You can register a new handler for that algorithm type using "
@@ -161,7 +153,6 @@ def evaluate_lightning(
 
     datamodule = datamodule or getattr(algorithm, "datamodule", None)
 
-    # exp.trainer.logger.log_hyperparams()
     # When overfitting on a single batch or only training, we return the train error.
     if (trainer.limit_val_batches == trainer.limit_test_batches == 0) or (
         trainer.overfit_batches == 1  # type: ignore
@@ -210,7 +201,7 @@ def evaluate_lightning(
     return metric_name, error, metrics
 
 
-def instantiate_trainer(trainer_config: dict | DictConfig) -> lightning.Trainer | JaxTrainer:
+def instantiate_trainer(trainer_config: dict | DictConfig) -> lightning.Trainer | Any:
     """Instantiates the callbacks and loggers first, then creates the trainer from its config."""
     trainer_config = trainer_config.copy()  # Avoid mutating the config.
     callbacks: list | None = instantiate_values(trainer_config.pop("callbacks", None))
