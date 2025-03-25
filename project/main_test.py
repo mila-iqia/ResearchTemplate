@@ -108,6 +108,7 @@ def mock_train_and_evaluate(monkeypatch: pytest.MonkeyPatch):
     fn = project.experiment.train_and_evaluate
     mock_train_fn = Mock(spec=fn, return_value=("fake", 0.0))
     monkeypatch.setattr(project.experiment, fn.__name__, mock_train_fn)
+    monkeypatch.setattr(project.main, fn.__name__, mock_train_fn)
     return mock_train_fn
 
 
