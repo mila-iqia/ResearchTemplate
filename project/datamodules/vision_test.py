@@ -10,7 +10,7 @@ from tensor_regression.fixture import TensorRegressionFixture, get_test_source_a
 from torch import Tensor
 from torchvision.tv_tensors import Image
 
-from project.algorithms.testsuites.datamodule_tests import DataModuleTests
+from project.datamodules.datamodule_tests import DataModuleTests
 from project.datamodules.vision import VisionDataModule
 
 logger = getLogger(__name__)

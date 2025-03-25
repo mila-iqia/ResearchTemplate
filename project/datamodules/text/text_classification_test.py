@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from project.algorithms.testsuites.datamodule_tests import DataModuleTests
 from project.conftest import setup_with_overrides
+from project.datamodules.datamodule_tests import DataModuleTests
 from project.datamodules.text.text_classification import TextClassificationDataModule
 
 text_datamodule_configs = ["glue_cola"]

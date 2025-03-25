@@ -55,7 +55,7 @@ The built-in tests cover the following:
     - forward pass is deterministic & reproducibile;
     - backward pass is deterministic & reproducibile;
 
-Take a look at [project.algorithms.testsuites.lightning_module_tests][] to see the included base tests for algorithms.
+Take a look at [project.algorithms.lightning_module_tests][] to see the included base tests for algorithms.
 
 If you use [Visual Studio Code](https://code.visualstudio.com/), you may want to look into adding
 the "test explorer" tab to your editor. Then, you'll be able to see and debug the tests using the GUI.
@@ -93,7 +93,7 @@ pytest -x -v --slow
 ## Continuous Integration
 
 <!--
-::: project.algorithms.testsuites.lightning_module_tests
+::: project.algorithms.lightning_module_tests
     options:
         show_bases: false
         show_source: true

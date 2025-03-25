@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from project.algorithms.testsuites.lightning_module_tests import LightningModuleTests
+from project.algorithms.lightning_module_tests import LightningModuleTests
 from project.configs import Config
 from project.conftest import setup_with_overrides, skip_on_macOS_in_CI
 from project.datamodules.image_classification.cifar10 import CIFAR10DataModule

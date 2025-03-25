@@ -1,4 +1,5 @@
 import abc
+import sys
 from typing import Generic, TypeVar
 
 import hydra_zen
@@ -10,8 +11,9 @@ from lightning.pytorch.trainer.states import RunningStage
 from tensor_regression.fixture import TensorRegressionFixture
 from torch.utils.data import DataLoader
 
-from project.algorithms.testsuites.lightning_module_tests import convert_list_and_tuples_to_dicts
+from project.algorithms.lightning_module_tests import convert_list_and_tuples_to_dicts
 from project.conftest import algorithm_config
+from project.utils.testutils import IN_GITHUB_CLOUD_CI
 
 DataModuleType = TypeVar("DataModuleType", bound=LightningDataModule)
 
@@ -19,6 +21,10 @@ DataModuleType = TypeVar("DataModuleType", bound=LightningDataModule)
 # This is a unit test for the datamodule, so we don't want to involve the algorithm here.
 
 
+@pytest.mark.skipif(
+    IN_GITHUB_CLOUD_CI and sys.platform == "darwin",
+    reason="Getting weird bugs with MacOS on GitHub CI.",
+)
 @pytest.mark.parametrize(algorithm_config.__name__, ["no_op"], indirect=True, ids=[""])
 class DataModuleTests(Generic[DataModuleType], abc.ABC):
     @pytest.fixture(

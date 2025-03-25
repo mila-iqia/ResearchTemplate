@@ -4,14 +4,12 @@ import copy
 
 import pytest
 
+from project.algorithms.lightning_module_tests import LightningModuleTests
 from project.algorithms.llm_finetuning import (
     DatasetConfig,
     LLMFinetuningExample,
     TokenizerConfig,
     get_hash_of,
-)
-from project.algorithms.testsuites.lightning_module_tests import (
-    LightningModuleTests,
 )
 from project.main_test import experiment_commands_to_test
 from project.utils.env_vars import SLURM_JOB_ID
