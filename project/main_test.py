@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import uuid
+import warnings
 from logging import getLogger
 from pathlib import Path
 from unittest.mock import Mock
@@ -46,8 +47,22 @@ of training or something similar.
 
 
 @pytest.mark.parametrize("experiment_config", experiment_configs)
-def test_experiment_config_is_tested(experiment_config: str):
+def test_experiment_config_is_tested(experiment_config: str, pytestconfig: pytest.Config):
     select_experiment_command = f"experiment={experiment_config}"
+    executing_subset_of_repo = any(
+        "project/" in arg for arg in pytestconfig.invocation_params.args
+    )
+    if executing_subset_of_repo:
+        warnings.warn(
+            "This test might fail when running only a subset of the tests "
+            "(for example when using the 'Test Explorer' panel in VsCode)."
+        )
+        # pytest.xfail(
+        #     reason=(
+        #         "Running a subset of the tests, so the changes to `experiment_commands_to_test` "
+        #         "made by test modules aren't collected."
+        #     )
+        # )
 
     for test_command in experiment_commands_to_test:
         if isinstance(test_command, ParameterSet):
@@ -89,28 +104,18 @@ def test_torch_can_use_the_GPU():
 
 
 @pytest.fixture
-def mock_train(monkeypatch: pytest.MonkeyPatch):
-    mock_train_fn = Mock(spec=project.main.train, return_value=(None, None))
-    monkeypatch.setattr(project.main, project.main.train.__name__, mock_train_fn)
+def mock_train_and_evaluate(monkeypatch: pytest.MonkeyPatch):
+    fn = project.experiment.train_and_evaluate
+    mock_train_fn = Mock(spec=fn, return_value=("fake", 0.0))
+    monkeypatch.setattr(project.experiment, fn.__name__, mock_train_fn)
+    monkeypatch.setattr(project.main, fn.__name__, mock_train_fn)
     return mock_train_fn
-
-
-@pytest.fixture
-def mock_evaluate(monkeypatch: pytest.MonkeyPatch):
-    mock_eval = Mock(spec=project.experiment.evaluate, return_value=("fake", 0.0, {}))
-    monkeypatch.setattr(
-        project.main,
-        project.experiment.evaluate.__name__,
-        mock_eval,
-    )
-    return mock_eval
 
 
 @setup_with_overrides(experiment_commands_to_test)
 def test_can_load_experiment_configs(
     dict_config: DictConfig,
-    mock_train: Mock,
-    mock_evaluate: Mock,
+    mock_train_and_evaluate: Mock,
 ):
     # Mock out some part of the `main` function to not actually run anything.
     if dict_config["hydra"]["mode"] == RunMode.MULTIRUN:
@@ -124,8 +129,7 @@ def test_can_load_experiment_configs(
         results = project.main.main(dict_config)
         assert results is not None
 
-    mock_train.assert_called_once()
-    mock_evaluate.assert_called_once()
+    mock_train_and_evaluate.assert_called_once()
 
 
 @pytest.mark.slow

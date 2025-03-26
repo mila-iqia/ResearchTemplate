@@ -1,10 +1,9 @@
 import random
 from dataclasses import dataclass, field
 from logging import getLogger as get_logger
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 logger = get_logger(__name__)
-LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
 
 @dataclass
@@ -24,13 +23,6 @@ class Config:
     For more info, see the [instantiate_algorithm][project.main.instantiate_algorithm] function.
     """
 
-    datamodule: Any | None = None
-    """Configuration for the datamodule (dataset + transforms + dataloader creation).
-
-    This should normally create a [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule].
-    See the [MNISTDataModule][project.datamodules.image_classification.mnist.MNISTDataModule] for an example.
-    """
-
     datamodule: Optional[Any] = None  # noqa
     """Configuration for the datamodule (dataset + transforms + dataloader creation).
 
@@ -39,7 +31,7 @@ class Config:
     """
 
     trainer: dict = field(default_factory=dict)
-    """Keyword arguments for the Trainer constructor."""
+    """Configuration for the 'Trainer'."""
 
     log_level: str = "info"
     """Logging level."""

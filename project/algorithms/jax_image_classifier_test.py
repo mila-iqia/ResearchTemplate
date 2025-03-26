@@ -11,7 +11,7 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.utils.testutils import IN_GITHUB_CI, run_for_all_configs_of_type
 
-from .testsuites.lightning_module_tests import LightningModuleTests
+from .lightning_module_tests import LightningModuleTests
 
 
 @pytest.mark.xfail(

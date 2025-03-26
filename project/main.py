@@ -12,13 +12,11 @@ from __future__ import annotations
 
 import functools
 import logging
-import os
 import typing
 from pathlib import Path
 
 import hydra
 import lightning
-import omegaconf
 import rich
 import rich.logging
 import wandb
@@ -28,18 +26,20 @@ from omegaconf import DictConfig
 import project
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
-from project.experiment import evaluate, instantiate_datamodule, instantiate_trainer, train
+from project.experiment import train_and_evaluate
 from project.utils.hydra_utils import resolve_dictconfig
+from project.utils.typing_utils import HydraConfigFor
 from project.utils.utils import print_config
 
 if typing.TYPE_CHECKING:
+    # Doing this in this type-checking-only block to avoid circular import issues.
     from project.trainers.jax_trainer import JaxModule
 
 PROJECT_NAME = project.__name__
 REPO_ROOTDIR = Path(__file__).parent.parent
 logger = logging.getLogger(__name__)
 
-
+# todo: remove, or configure in some other way (e.g. a config file).
 auto_schema_plugin.config = auto_schema_plugin.AutoSchemaPluginConfig(
     schemas_dir=REPO_ROOTDIR / ".schemas",
     regen_schemas=False,
@@ -58,19 +58,7 @@ add_configs_to_hydra_store()
     version_base="1.2",
 )
 def main(dict_config: DictConfig) -> dict:
-    """Main entry point for training a model.
-
-    This does roughly the same thing as
-    https://github.com/ashleve/lightning-hydra-template/blob/main/src/train.py
-
-    1. Instantiates the experiment components from the Hydra configuration:
-        - trainer
-        - algorithm
-        - datamodule (optional)
-    2. Calls `train` to train the algorithm
-    3. Calls `evaluation` to evaluate the model
-    4. Returns the evaluation metrics.
-    """
+    """Main entry point: trains & evaluates a learning algorithm."""
 
     print_config(dict_config, resolve=False)
     assert dict_config["algorithm"] is not None
@@ -86,32 +74,20 @@ def main(dict_config: DictConfig) -> dict:
     # constructed are deterministic and reproducible.
     lightning.seed_everything(seed=config.seed, workers=True)
 
+    if config.datamodule is None:
+        datamodule = None
+    elif isinstance(config.datamodule, lightning.LightningDataModule):
+        # The datamodule was already instantiated for the `instance_attr` resolver to
+        # get an attribute like `num_classes` when instantiating a network config.
+        datamodule = config.datamodule
+    else:
+        datamodule = hydra.utils.instantiate(config.datamodule)
+
     # Create the algo.
-    algorithm = instantiate_algorithm(config)
+    algorithm = instantiate_algorithm(config.algorithm, datamodule=datamodule)
 
-    # Create the trainer
-    trainer = instantiate_trainer(config.trainer)
-
-    if wandb.run:
-        wandb.run.config.update({k: v for k, v in os.environ.items() if k.startswith("SLURM")})
-        wandb.run.config.update(
-            omegaconf.OmegaConf.to_container(dict_config, resolve=False, throw_on_missing=True)
-        )
-
-    # Train the algorithm.
-    algorithm, train_results = train(
-        algorithm,
-        trainer=trainer,
-        config=config,
-    )
-
-    # Evaluate the algorithm.
-    metric_name, error, _metrics = evaluate(
-        algorithm,
-        trainer=trainer,
-        train_results=train_results,
-        config=config,
-    )
+    # Do the training and evaluation, returns the metric name and the overall 'error' to minimize.
+    metric_name, error = train_and_evaluate(algorithm, config=config, datamodule=datamodule)
 
     if wandb.run:
         wandb.finish()
@@ -145,7 +121,8 @@ def setup_logging(log_level: str, global_log_level: str = "WARNING") -> None:
 
 
 def instantiate_algorithm(
-    config: Config, datamodule: lightning.LightningDataModule | None = None
+    algorithm_config: HydraConfigFor[lightning.LightningModule | JaxModule],
+    datamodule: lightning.LightningDataModule | None = None,
 ) -> lightning.LightningModule | JaxModule:
     """Function used to instantiate the algorithm.
 
@@ -153,15 +130,10 @@ def instantiate_algorithm(
     as arguments, to make it easier to swap out different networks and datamodules during
     experiments.
 
-    The instantiated datamodule and network will be passed to the algorithm's constructor.
+    The instantiated datamodule will be passed to the algorithm's constructor.
     """
-
     # Create the algorithm
-    algo_config = config.algorithm
-
-    # Create the datamodule (if present) from the config
-    if datamodule is None and config.datamodule is not None:
-        datamodule = instantiate_datamodule(config.datamodule)
+    algo_config = algorithm_config
 
     if datamodule:
         algo_or_algo_partial = hydra.utils.instantiate(algo_config, datamodule=datamodule)

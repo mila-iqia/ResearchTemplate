@@ -17,7 +17,7 @@ from project.main_test import experiment_commands_to_test
 from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import run_for_all_configs_of_type, total_vram_gb
 
-from .testsuites.lightning_module_tests import LightningModuleTests, StuffFromFirstTrainingStep
+from .lightning_module_tests import LightningModuleTests, StuffFromFirstTrainingStep
 
 experiment_commands_to_test.append(
     "experiment=text_classification_example trainer.fast_dev_run=True",

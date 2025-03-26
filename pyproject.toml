@@ -83,7 +83,10 @@ addopts = [
     "--doctest-modules",
     "--stats-rounding-precision=3",
     # "--slow",
-    # "--regen-all",
+    # Uncomment for tests to generate missing regression files by default.
+    # This also means that you should use a stable hardware configuration (e.g. the same GPU)
+    # between test runs.
+    # "--gen-missing",
 ]
 markers = [
     "incremental: incremental testing support",

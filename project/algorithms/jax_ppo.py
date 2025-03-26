@@ -7,7 +7,6 @@ See the `JaxRLExample` class for a description of the differences w.r.t. `rejax.
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import functools
 import operator
 from collections.abc import Callable, Sequence
@@ -38,9 +37,7 @@ from rejax.networks import DiscretePolicy, GaussianPolicy, VNetwork
 from typing_extensions import TypeVar
 from xtils.jitpp import Static
 
-from project import experiment
-from project.configs.config import Config
-from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer
+from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer, get_error_from_metrics
 from project.utils.typing_utils.jax_typing_utils import field, jit
 
 logger = get_logger(__name__)
@@ -151,6 +148,19 @@ class TrainStepMetrics(flax.struct.PyTreeNode):
 class EvalMetrics(flax.struct.PyTreeNode):
     episode_length: jax.Array
     cumulative_reward: jax.Array
+
+
+@get_error_from_metrics.register(EvalMetrics)
+def get_error_from_ppo_eval_metrics(metrics: EvalMetrics) -> tuple[str, float]:
+    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
+    assert isinstance(last_epoch_metrics, EvalMetrics)
+    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
+    # vmap).
+    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
+    return (
+        "-avg_cumulative_reward",
+        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
+    )
 
 
 class JaxRLExample(
@@ -318,7 +328,6 @@ class JaxRLExample(
             data_collection_state=collection_state,
         )
 
-    # @jit
     def training_step(self, batch_idx: int, ts: PPOState[TEnvState], batch: TrajectoryWithLastObs):
         """Training step in pure jax."""
         trajectories = batch
@@ -329,13 +338,9 @@ class JaxRLExample(
             xs=jnp.arange(self.hp.num_epochs),  # type: ignore
             length=self.hp.num_epochs,
         )
-        # todo: perhaps we could have a callback that updates a progress bar?
-        # jax.debug.print("actor_losses {}: {}", iteration, actor_losses.mean())
-        # jax.debug.print("critic_losses {}: {}", iteration, critic_losses.mean())
 
         return ts, TrainStepMetrics(actor_losses=actor_losses, critic_losses=critic_losses)
 
-    # @jit
     def ppo_update_epoch(
         self, ts: PPOState[TEnvState], epoch_index: int, trajectories: TrajectoryWithLastObs
     ):
@@ -365,7 +370,6 @@ class JaxRLExample(
         )
         return jax.lax.scan(self.ppo_update, ts, minibatches, length=self.hp.num_minibatches)
 
-    # @jit
     def ppo_update(self, ts: PPOState[TEnvState], batch: AdvantageMinibatch):
         actor_loss, actor_grads = jax.value_and_grad(actor_loss_fn)(
             ts.actor_ts.params,
@@ -384,7 +388,6 @@ class JaxRLExample(
         )
         assert isinstance(critic_loss, jax.Array)
 
-        # TODO: to log the loss here?
         actor_ts = ts.actor_ts.apply_gradients(grads=actor_grads)
         critic_ts = ts.critic_ts.apply_gradients(grads=critic_grads)
 
@@ -424,20 +427,10 @@ class JaxRLExample(
         actor_params: FrozenVariableDict,
         critic_params: FrozenVariableDict,
     ):
-        env_step_fn = functools.partial(
-            self.env_step,
-            # env=self.env,
-            # env_params=self.env_params,
-            # actor=self.actor,
-            # critic=self.critic,
-            # num_envs=self.hp.num_envs,
-            actor_params=actor_params,
-            critic_params=critic_params,
-            # discrete=self.discrete,
-            # normalize_observations=self.hp.normalize_observations,
-        )
         collection_state, trajectories = jax.lax.scan(
-            env_step_fn,
+            lambda state, step: self.env_step(
+                state, step, actor_params=actor_params, critic_params=critic_params
+            ),
             collection_state,
             xs=jnp.arange(self.hp.num_steps),
             length=self.hp.num_steps,
@@ -569,7 +562,6 @@ class JaxRLExample(
 
         return ts, evaluation
 
-    # @jit
     def _training_epoch(
         self, ts: PPOState[TEnvState], epoch: int
     ) -> tuple[PPOState[TEnvState], EvalMetrics]:
@@ -586,7 +578,6 @@ class JaxRLExample(
         # Run evaluation
         return ts, self.eval_callback(ts)
 
-    # @jit
     def _fused_training_step(self, iteration: int, ts: PPOState[TEnvState]):
         """Fused training step in jax (joined data collection + training).
 
@@ -595,17 +586,9 @@ class JaxRLExample(
         """
 
         data_collection_state, trajectories = self.collect_trajectories(
-            # env=self.env,
-            # env_params=self.env_params,
-            # actor=self.actor,
-            # critic=self.critic,
             collection_state=ts.data_collection_state,
             actor_params=ts.actor_ts.params,
             critic_params=ts.critic_ts.params,
-            # num_envs=self.hp.num_envs,
-            # num_steps=self.hp.num_steps,
-            # discrete=discrete,
-            # normalize_observations=self.hp.normalize_observations,
         )
         ts = ts.replace(data_collection_state=data_collection_state)
         return self.training_step(iteration, ts, trajectories)
@@ -830,32 +813,3 @@ class RenderEpisodesCallback(JaxCallback):
         gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
         jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
-
-
-@experiment.evaluate.register
-def evaluate_ppo_example(
-    algorithm: JaxRLExample,
-    /,
-    *,
-    trainer: JaxTrainer,
-    train_results: tuple[PPOState, EvalMetrics],
-    config: Config,
-    datamodule: None = None,
-):
-    """Override for the `evaluate` function used by `main.py`, in the case of this algorithm."""
-    # todo: there isn't yet a `validate` method on the jax trainer.
-    assert isinstance(algorithm, JaxModule)
-    assert isinstance(trainer, JaxTrainer)
-    assert train_results is not None
-    metrics = train_results[1]
-
-    last_epoch_metrics = jax.tree.map(operator.itemgetter(-1), metrics)
-    assert isinstance(last_epoch_metrics, EvalMetrics)
-    # Average across eval seeds (we're doing evaluation in multiple environments in parallel with
-    # vmap).
-    last_epoch_average_cumulative_reward = last_epoch_metrics.cumulative_reward.mean().item()
-    return (
-        "-avg_cumulative_reward",
-        -last_epoch_average_cumulative_reward,  # need to return an "error" to minimize for HPO.
-        dataclasses.asdict(last_epoch_metrics),
-    )
