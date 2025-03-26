@@ -1,3 +1,11 @@
+---
+title: "Mila Research Project Template intro"
+sub_title: A new project from Mila IDT
+author: Fabrice Normandin
+---
+
+
+
 
 ===
 # Project Structure
@@ -89,7 +97,6 @@ def main(config)
     metrics = trainer.evaluate(algorithm, datamodule=datamodule)
     return metrics
 ```
-
 
 <!-- end_slide -->
 
