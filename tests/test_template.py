@@ -27,7 +27,12 @@ example_folder = Path(project.algorithms.__file__).parent
 examples: list[str] = [
     p.relative_to(example_folder).stem
     for p in example_folder.glob("*.py")
-    if not (p.name == "no_op.py" or p.name.endswith("_test.py") or p.name.startswith("_"))
+    if not (
+        p.name == "no_op.py"
+        or p.name.endswith("_test.py")
+        or p.name.endswith("_tests.py")
+        or p.name.startswith("_")
+    )
 ]
 
 _DEFAULT_PYTHON_VERSION = "3.10"
