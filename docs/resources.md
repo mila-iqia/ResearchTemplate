@@ -20,14 +20,12 @@ For everything that has to do with Hydra and PyTorch-Lightning, their documentat
 
 ### [yet-another-lightning-hydra-template](https://github.com/gorodnitskiy/yet-another-lightning-hydra-template)
 
-    - Excellent template.  based on the lightning-hydra-template. Great documentation, which is referenced extensively in this project.
-    - - Has a **great** Readme with lots of information
-    - - Is really well organized
-    - - doesn't support Jax
-    - - doesn't have a devcontainer
-    - Great blog: https://hackernoon.com/yet-another-lightning-hydra-template-for-ml-experiments
+- Excellent template.  based on the lightning-hydra-template. Great documentation, which is referenced extensively in this project.
+    - Has a **great** Readme with lots of information
+    - Well organized
+- Great blog: https://hackernoon.com/yet-another-lightning-hydra-template-for-ml-experiments
 
 ### [cookiecutter-data-science](https://github.com/drivendataorg/cookiecutter-data-science)
 
-    - Awesome library for data science.
-    - Related projects: https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/docs/related.md#links-to-related-projects-and-references
+- Awesome library for data science.
+- Related projects: https://github.com/drivendataorg/cookiecutter-data-science/blob/master/docs/docs/related.md#links-to-related-projects-and-references

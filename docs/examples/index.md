@@ -18,4 +18,4 @@ This template includes examples that use either Jax, PyTorch, or both!
 | [Image Classification (Jax)](jax_image_classification.md) | Supervised Learning (image classification) | `JaxImageClassifier`   | Torch + Jax + ⚡ |
 | [Text Classification](text_classification.md)             | NLP (text classification)                  | `TextClassifier`       | Torch + 🤗 + ⚡   |
 | [Reinforcement Learning (Jax)](jax_rl.md)                 | RL                                         | `JaxRLExample`         | Jax             |
-| [LLM Fine-tuning](llm_finetuning.md)                      | NLP (Causal language modeling)             | `LLMFineTuningExample` | Torch + 🤗 + ⚡   |
+| [LLM Fine-tuning](llm_finetuning.md)                      | NLP (Causal language modeling)             | `LLMFinetuningExample` | Torch + 🤗 + ⚡   |
