@@ -24,7 +24,7 @@ if [ -z "${SH_TOKEN:-}" ]; then
     echo "To create this token, Follow the docs here: "
     echo " - https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token"
     echo " - and click here to create the new token: https://github.com/settings/personal-access-tokens/new"
-    echo "The fine-grained token must have the '"Administration" repository permissions (write)' scope."
+    echo "The fine-grained token must have the 'Administration - repository permissions (write)' scope."
     exit 1
 fi
 
@@ -56,14 +56,25 @@ tar xzf $archive
 #   "token": "XXXXX",
 #   "expires_at": "2020-01-22T12:13:35.123-08:00"
 # }
+t=$(tempfile) || exit
+trap "rm -f -- '$t'" EXIT
+
+# Write headers to the tempfile
+cat <<EOF > "$t"
+Accept: application/vnd.github+json
+Authorization: Bearer $SH_TOKEN
+X-GitHub-Api-Version: 2022-11-28
+EOF
+
 # Uses `uvx python` to just get python. Assumes that `uv` is already installed.
 TOKEN=`curl --fail -L \
   -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $SH_TOKEN" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
+  -H @$t \
   https://api.github.com/repos/$repo/actions/runners/registration-token | \
   uvx python -c "import sys, json; print(json.load(sys.stdin)['token'])"`
+
+rm -f -- "$t"
+trap - EXIT
 
 
 # Create the runner and configure it programmatically with the token we just got
