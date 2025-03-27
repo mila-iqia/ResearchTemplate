@@ -104,7 +104,7 @@ jobs:
         # note: The script will be overwritten by different CI runs, but it shouldn't really
         # change, so not a big deal.
         # todo: there are some assumptions about the GPU type to use in that script.
-        run: "scp .github/actions-runner-job.sh ${{ matrix.cluster }}:actions-runner-job.sh"
+        run: "scp .github/launch_actions_runner.sh ${{ matrix.cluster }}:launch_actions_runner.sh"
 
       - name: Launch Slurm Actions Runner
         id: sbatch
@@ -115,7 +115,7 @@ jobs:
         # TODO: Hard-coded mila-specific GPU to use for the tests.
         # This isn't great, but currently necessary for reproducibility tests.
         run: |
-          job_id=`ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --gpus=rtx8000:1 --parsable $HOME/actions-runner-job.sh'`
+          job_id=`ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --gpus=rtx8000:1 --parsable $HOME/launch_actions_runner.sh'`
           echo "Submitted job $job_id on the ${{ matrix.cluster }} cluster!"
           echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
 

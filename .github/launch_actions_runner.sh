@@ -1,4 +1,14 @@
 #!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
+#SBATCH --gpus=1
+#SBATCH --time=00:30:00
+#SBATCH --dependency=singleton
+#SBATCH --output=logs/runner_%j.out
+
+set -euo pipefail
 ## This script can be used to launch a new self-hosted GitHub runner.
 ## It assumes that the SH_TOKEN environment variable contains a GitHub token
 ## that is used to authenticate with the GitHub API in order to allow launching a new runner.
@@ -6,7 +16,7 @@ set -euo pipefail
 set -o errexit
 set -o nounset
 
-readonly repo="{{github_user}}/{{project_name}}"
+readonly repo="mila-iqia/ResearchTemplate"
 readonly action_runner_version="2.317.0"
 readonly expected_checksum_for_version="9e883d210df8c6028aff475475a457d380353f9d01877d51cc01a17b2a91161d"
 
@@ -75,6 +85,7 @@ TOKEN=`curl --fail -L \
 
 rm -f -- "$t"
 trap - EXIT
+
 
 # Create the runner and configure it programmatically with the token we just got
 # from the GitHub API.
