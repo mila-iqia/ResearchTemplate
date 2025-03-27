@@ -314,21 +314,18 @@ class JaxTrainer(flax.struct.PyTreeNode):
             )
 
         (train_state, evaluations) = jax.block_until_ready((train_state, evaluations))
-        jax.debug.print("Evaluations: {}", evaluations)
-
-        if self.logger is not None:
-            # jax.debug.print("Saving...")
-            for logger in self.loggers:
-                jax.experimental.io_callback(
-                    functools.partial(logger.finalize, status="success"),
-                    (),
-                )
 
         self._callback_hook("on_fit_end", self, algo, ts=train_state)
         self._callback_hook("on_train_end", self, algo, ts=train_state)
         self._callback_hook(
             "teardown", self, algo, ts=train_state, partial_kwargs={"stage": "fit"}
         )
+        for logger in self.loggers:
+            jax.experimental.io_callback(
+                functools.partial(logger.finalize, status="success"),
+                (),
+            )
+        # jax.debug.print("Evaluations: {}", evaluations)
 
         return train_state, evaluations
 
@@ -445,7 +442,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
     # Compat for RichProgressBar
     @property
     def is_global_zero(self) -> bool:
-        return True
+        """Check if the current process is the global zero process in a distributed setup."""
+        return jax.process_index() == 0
 
     @property
     def num_training_batches(self) -> int:
