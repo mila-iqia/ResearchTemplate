@@ -108,12 +108,11 @@ jobs:
 
       - name: Launch Slurm Actions Runner
         id: sbatch
-        # TODO: for DRAC clusters, the account would need to be passed somehow (and obviously not be hard-coded here).
-        # Maybe the account name on DRAC could be stored as a GitHub secret? But this is fishy.
-        # Output the job ID to a file so that the next step can use it.
-        # NOTE: Could also use the --wait flag to wait for the job to finish (and have this run at the same time as the other step).
-        # TODO: Hard-coded mila-specific GPU to use for the tests.
+        # TODO: for DRAC clusters, we could set the default slurm account to use with a
+        # export SLURM_ACCOUNT=... in ~/.bash_aliases.
+        # TODO: Hard-coded mila-specific GPU to use for running tests.
         # This isn't great, but currently necessary for reproducibility tests.
+        # Output the job ID to a file so that the next step can use it.
         run: |
           job_id=`ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --gpus=rtx8000:1 --parsable $HOME/launch_actions_runner.sh'`
           echo "Submitted job $job_id on the ${{ matrix.cluster }} cluster!"
