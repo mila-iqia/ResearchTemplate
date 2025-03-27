@@ -1,6 +1,7 @@
 # IDEA: Replacement for the --multirun option of Hydra.
 # from hydra.main import   # noqa
 
+import copy
 import datetime as dt
 import logging
 import os
@@ -13,8 +14,6 @@ from absl import app
 from hydra._internal.core_plugins.basic_sweeper import BasicSweeper
 from hydra.core.override_parser.overrides_parser import OverridesParser
 from xmanager import xm
-
-from project.conftest import command_line_overrides  # noqa
 
 # TODO: Look into Fiddle
 
@@ -57,8 +56,8 @@ async def main(_):
 
         workdir = pathlib.Path(f"$SCRATCH/xm-slurm-examples/{experiment.experiment_id}")
 
-        # Step 4: Schedule train job
-        train_executor = xm_slurm.Slurm(
+        # Step 3: Schedule test job
+        executor = xm_slurm.Slurm(
             requirements=xm_slurm.JobRequirements(
                 CPU=1,
                 RAM=1.0 * xm.GiB,
@@ -68,9 +67,12 @@ async def main(_):
             ),
             time=dt.timedelta(hours=1),
         )
+        train_executor = copy.deepcopy(executor)
+        test_executor = copy.deepcopy(executor)
+
         test_job = xm.Job(
             executable=test_executable,
-            executor=train_executor,
+            executor=test_executor,
             args=["-x", "-v", "--gen-missing"],
         )
         train_job = xm.Job(
