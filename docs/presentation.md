@@ -92,3 +92,9 @@ def main(config)
 
 
 <!-- end_slide -->
+
+# Demo commands:
+
+```bash +exec
+python project/main.py experiment=cluster_sweep_example cluster=current
+```

@@ -59,11 +59,12 @@ class ImageClassifier(LightningModule):
 
         # Save hyper-parameters.
         self.save_hyperparameters(ignore=["datamodule"])
-        # Used by Pytorch-Lightning to compute the input/output shapes of the network.
 
         self.network: torch.nn.Module | None = None
 
     def configure_model(self):
+        if self.network is not None:
+            return  # should be idempotent (more than one call is same as just one call).
         # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
         self.example_input_array = torch.zeros((self.datamodule.batch_size, *self.datamodule.dims))
         with torch.random.fork_rng():
