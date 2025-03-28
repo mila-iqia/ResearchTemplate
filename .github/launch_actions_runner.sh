@@ -87,14 +87,15 @@ rm -f -- "$t"
 trap - EXIT
 
 
+cluster=$SLURM_CLUSTER_NAME
+
 # Create the runner and configure it programmatically with the token we just got
 # from the GitHub API.
 # For now, don't exit if the runner is already configured, and enable more than one job.
 # NOTE: Could also use --ephemeral to run only one job and exit.
 ./config.sh --url https://github.com/$repo --token $TOKEN \
-  --unattended --replace --labels self-hosted || true
+  --unattended --replace --labels $cluster self-hosted || true
 
-cluster=$SLURM_CLUSTER_NAME
 # BUG: Seems weird that we'd have to export those ourselves. Shouldn't they be set already?
 export GITHUB_ACTIONS="true"
 export RUNNER_LABELS="self-hosted,$cluster"
