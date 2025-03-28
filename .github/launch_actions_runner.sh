@@ -87,7 +87,8 @@ rm -f -- "$t"
 trap - EXIT
 
 
-cluster=$SLURM_CLUSTER_NAME
+export cluster=$SLURM_CLUSTER_NAME
+echo "Cluster name: $cluster"
 
 # Create the runner and configure it programmatically with the token we just got
 # from the GitHub API.
