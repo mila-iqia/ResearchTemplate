@@ -89,15 +89,15 @@ trap - EXIT
 
 # Create the runner and configure it programmatically with the token we just got
 # from the GitHub API.
-# TODO: Reconfigure it if it doesn't already exist? Or only configure it once?
-# TODO: use --ephemeral to run only one job and exit? Or set it up to keep running?
 # For now, don't exit if the runner is already configured, and enable more than one job.
+# NOTE: Could also use --ephemeral to run only one job and exit.
 ./config.sh --url https://github.com/$repo --token $TOKEN \
   --unattended --replace --labels self-hosted || true
 
+cluster=$SLURM_CLUSTER_NAME
 # BUG: Seems weird that we'd have to export those ourselves. Shouldn't they be set already?
 export GITHUB_ACTIONS="true"
-export RUNNER_LABELS="self-hosted"
+export RUNNER_LABELS="self-hosted,$cluster"
 
 # Launch the actions runner.
 exec ./run.sh
