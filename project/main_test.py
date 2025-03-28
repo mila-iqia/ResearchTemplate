@@ -142,7 +142,7 @@ def test_can_run_experiment(
     """Launches the sanity check experiments using the commands from the list above."""
     # Mock out some part of the `main` function to not actually run anything.
     # Get a unique hash id:
-    # todo: Set a unique name to avoid collisions between tests and reusing previous results.
+    # Sets a unique name to avoid collisions between tests and reusing previous results.
     name = f"{request.function.__name__}_{uuid.uuid4().hex}"
     command_line_args = ["project/main.py"] + list(command_line_overrides) + [f"name={name}"]
     logger.info(f"Launching sanity check experiment with command: {command_line_args}")
@@ -153,11 +153,7 @@ def test_can_run_experiment(
 @skip_on_macOS_in_CI
 @setup_with_overrides("algorithm=image_classifier")
 def test_setting_just_algorithm_isnt_enough(dict_config: DictConfig) -> None:
-    """Test to check that the datamodule is required (even when just the example algorithm is set).
-
-    TODO: We could probably move the `datamodule` config under `algorithm/datamodule`. Maybe that
-    would be better?
-    """
+    """Check that the datamodule is required on the command-line if the algorithm needs one."""
     with pytest.raises(
         omegaconf.errors.InterpolationResolutionError,
         match="Did you forget to set a value for the 'datamodule' config?",
