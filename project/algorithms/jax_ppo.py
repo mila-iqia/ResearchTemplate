@@ -804,8 +804,6 @@ class RenderEpisodesCallback(JaxCallback):
     on_every_epoch: bool = False
 
     def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
-        if not self.on_every_epoch:
-            return
         log_dir = _get_log_dir(trainer)
         assert log_dir is not None
         gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
