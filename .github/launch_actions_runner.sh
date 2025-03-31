@@ -8,17 +8,25 @@
 #SBATCH --dependency=singleton
 #SBATCH --output=logs/runner_%j.out
 
-set -euo pipefail
 ## This script can be used to launch a new self-hosted GitHub runner.
 ## It assumes that the SH_TOKEN environment variable contains a GitHub token
 ## that is used to authenticate with the GitHub API in order to allow launching a new runner.
 set -euo pipefail
 set -o errexit
+# todo: might cause issues if running this script on a local machine since $SCRATCH and
+# $SLURM_TMPDIR won't be set.
 set -o nounset
+
 
 readonly repo="mila-iqia/ResearchTemplate"
 readonly action_runner_version="2.317.0"
 readonly expected_checksum_for_version="9e883d210df8c6028aff475475a457d380353f9d01877d51cc01a17b2a91161d"
+
+# Seems to be required for the `uvx` to be found. (adds $HOME/.cargo/bin to PATH)
+# Also a bit weird, the environment variables from ~/.bash_aliases are not being loaded.
+source $HOME/.cargo/env
+# This is where the SH_TOKEN secret environment variable is set.
+source $HOME/.bash_aliases
 
 # Check for required commands.
 for cmd in curl tar uvx; do
@@ -38,20 +46,35 @@ if [ -z "${SH_TOKEN:-}" ]; then
     exit 1
 fi
 
-# If we're on a SLURM cluster, download the archive to SCRATCH, but use the SLURM_TMPDIR as the working directory.
-# Otherwise, use $HOME/scratch as the working directory.
-WORKDIR="${SCRATCH:-$HOME}/actions-runners/$repo"
-mkdir -p "$WORKDIR"
-cd "$WORKDIR"
-
-echo "Setting up self-hosted runner in $WORKDIR"
 archive="actions-runner-linux-x64-$action_runner_version.tar.gz"
 
-# Look for the actions-runner archive. Download it if it doesn't exist.
-if [ ! -f "$archive" ]; then
-    curl --fail -o "$archive" \
-        -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
+# Look for the actions-runner archive.
+# 1. If SLURM_TMPDIR is set:
+#     - set WORKDIR to $SLURM_TMPDIR
+#     - check if the archive doesn't exist in $SCRATCH/actions-runners/$repo.
+#     - if it doesn't exist, download the archive from GitHub.
+#     - Make a symlink to it in $SLURM_TMPDIR.
+# 2. Otherwise, use ~/actions-runners/$repo as the WORKDIR, and download the archive from GitHub if
+#it isn't already there.
+
+if [ -n "${SLURM_TMPDIR:-}" ]; then
+    WORKDIR=$SLURM_TMPDIR
+    if [ ! -f "$SCRATCH/$archive" ]; then
+        curl --fail -o "$SCRATCH/$archive" \
+            -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
+    fi
+    ln -s "$SCRATCH/$archive" "$WORKDIR/$archive"
+else
+    WORKDIR=$HOME/actions-runners/$repo
+    mkdir -p $WORKDIR
+    if [ ! -f "$WORKDIR/$archive" ]; then
+        curl --fail -o "$WORKDIR/$archive" \
+            -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
+    fi
 fi
+echo "Setting up self-hosted runner in $WORKDIR"
+cd $WORKDIR
+
 
 # Check the archive integrity.
 echo "$expected_checksum_for_version  $archive" | shasum -a 256 -c
@@ -87,17 +110,19 @@ rm -f -- "$t"
 trap - EXIT
 
 
+export cluster=$SLURM_CLUSTER_NAME
+echo "Cluster name: $cluster"
+
 # Create the runner and configure it programmatically with the token we just got
 # from the GitHub API.
-# TODO: Reconfigure it if it doesn't already exist? Or only configure it once?
-# TODO: use --ephemeral to run only one job and exit? Or set it up to keep running?
 # For now, don't exit if the runner is already configured, and enable more than one job.
+# NOTE: Could also use --ephemeral to run only one job and exit.
 ./config.sh --url https://github.com/$repo --token $TOKEN \
-  --unattended --replace --labels self-hosted || true
+  --unattended --replace --labels $cluster self-hosted --ephemeral || true
 
 # BUG: Seems weird that we'd have to export those ourselves. Shouldn't they be set already?
 export GITHUB_ACTIONS="true"
-export RUNNER_LABELS="self-hosted"
+export RUNNER_LABELS="self-hosted,$cluster"
 
 # Launch the actions runner.
 exec ./run.sh
