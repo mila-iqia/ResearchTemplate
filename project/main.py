@@ -19,11 +19,11 @@ import hydra
 import lightning
 import rich
 import rich.logging
+import wandb
 from hydra_plugins.auto_schema import auto_schema_plugin
 from omegaconf import DictConfig
 
 import project
-import wandb
 from project.configs import add_configs_to_hydra_store
 from project.configs.config import Config
 from project.experiment import train_and_evaluate
