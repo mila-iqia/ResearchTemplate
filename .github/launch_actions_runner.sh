@@ -59,12 +59,11 @@ archive="actions-runner-linux-x64-$action_runner_version.tar.gz"
 
 if [ -n "${SLURM_TMPDIR:-}" ]; then
     WORKDIR=$SLURM_TMPDIR
-    if [ ! -f "$SCRATCH/actions-runners/$repo/$archive" ]; then
-        mkdir -p "$SCRATCH/actions-runners/$repo"
-        curl --fail -o "$SCRATCH/actions-runners/$repo/$archive" \
+    if [ ! -f "$SCRATCH/$archive" ]; then
+        curl --fail -o "$SCRATCH/$archive" \
             -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
     fi
-    ln -s "$SCRATCH/actions-runners/$repo/$archive" "$WORKDIR/$archive"
+    ln -s "$SCRATCH/$archive" "$WORKDIR/$archive"
 else
     WORKDIR=$HOME/actions-runners/$repo
     mkdir -p $WORKDIR
