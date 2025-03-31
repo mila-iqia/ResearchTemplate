@@ -8,7 +8,6 @@
 #SBATCH --dependency=singleton
 #SBATCH --output=logs/runner_%j.out
 
-set -euo pipefail
 ## This script can be used to launch a new self-hosted GitHub runner.
 ## It assumes that the SH_TOKEN environment variable contains a GitHub token
 ## that is used to authenticate with the GitHub API in order to allow launching a new runner.
@@ -16,9 +15,13 @@ set -euo pipefail
 set -o errexit
 set -o nounset
 
+
 readonly repo="mila-iqia/ResearchTemplate"
 readonly action_runner_version="2.317.0"
 readonly expected_checksum_for_version="9e883d210df8c6028aff475475a457d380353f9d01877d51cc01a17b2a91161d"
+
+# Seems to be required for the `uvx` to be found. (adds $HOME/.cargo/bin to PATH)
+source $HOME/.cargo/env
 
 # Check for required commands.
 for cmd in curl tar uvx; do
@@ -95,7 +98,7 @@ echo "Cluster name: $cluster"
 # For now, don't exit if the runner is already configured, and enable more than one job.
 # NOTE: Could also use --ephemeral to run only one job and exit.
 ./config.sh --url https://github.com/$repo --token $TOKEN \
-  --unattended --replace --labels $cluster self-hosted || true
+  --unattended --replace --labels $cluster self-hosted --ephemeral || true
 
 # BUG: Seems weird that we'd have to export those ourselves. Shouldn't they be set already?
 export GITHUB_ACTIONS="true"

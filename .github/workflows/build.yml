@@ -122,7 +122,7 @@ jobs:
   slurm_integration_tests:
     name: Run integration tests on the ${{ matrix.cluster }} cluster in job ${{ needs.launch-slurm-actions-runner.outputs.job_id}}
     needs: [launch-slurm-actions-runner]
-    runs-on: ${{ matrix.cluster }}
+    runs-on: ["self-hosted", "${{ matrix.cluster }}"]
     timeout-minutes: 30
     strategy:
       max-parallel: 5
