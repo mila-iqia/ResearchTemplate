@@ -46,7 +46,7 @@ archive="actions-runner-linux-x64-$action_runner_version.tar.gz"
 # Look for the actions-runner archive.
 # 1. If SLURM_TMPDIR is set:
 #     - set WORKDIR to $SLURM_TMPDIR
-#     - check if the archive doesn't exist in $SCRATCH/actions-runners/$repo.
+#     - check if the archive doesn't exist in $SCRATCH
 #     - if it doesn't exist, download the archive from GitHub.
 #     - Make a symlink to it in $SLURM_TMPDIR.
 # 2. Otherwise, use ~/actions-runners/$repo as the WORKDIR, and download the archive from GitHub if
