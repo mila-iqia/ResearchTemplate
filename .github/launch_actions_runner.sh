@@ -23,7 +23,10 @@ readonly action_runner_version="2.317.0"
 readonly expected_checksum_for_version="9e883d210df8c6028aff475475a457d380353f9d01877d51cc01a17b2a91161d"
 
 # Seems to be required for the `uvx` to be found. (adds $HOME/.cargo/bin to PATH)
+# Also a bit weird, the environment variables from ~/.bash_aliases are not being loaded.
 source $HOME/.cargo/env
+# This is where the SH_TOKEN secret environment variable is set.
+source $HOME/.bash_aliases
 
 # Check for required commands.
 for cmd in curl tar uvx; do
