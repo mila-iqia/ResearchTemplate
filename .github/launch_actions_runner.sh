@@ -13,6 +13,8 @@
 ## that is used to authenticate with the GitHub API in order to allow launching a new runner.
 set -euo pipefail
 set -o errexit
+# todo: might cause issues if running this script on a local machine since $SCRATCH and
+# $SLURM_TMPDIR won't be set.
 set -o nounset
 
 
@@ -41,20 +43,36 @@ if [ -z "${SH_TOKEN:-}" ]; then
     exit 1
 fi
 
-# If we're on a SLURM cluster, download the archive to SCRATCH, but use the SLURM_TMPDIR as the working directory.
-# Otherwise, use $HOME/scratch as the working directory.
-WORKDIR="${SCRATCH:-$HOME}/actions-runners/$repo"
-mkdir -p "$WORKDIR"
-cd "$WORKDIR"
-
-echo "Setting up self-hosted runner in $WORKDIR"
 archive="actions-runner-linux-x64-$action_runner_version.tar.gz"
 
-# Look for the actions-runner archive. Download it if it doesn't exist.
-if [ ! -f "$archive" ]; then
-    curl --fail -o "$archive" \
-        -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
+# Look for the actions-runner archive.
+# 1. If SLURM_TMPDIR is set:
+#     - set WORKDIR to $SLURM_TMPDIR
+#     - check if the archive doesn't exist in $SCRATCH/actions-runners/$repo.
+#     - if it doesn't exist, download the archive from GitHub.
+#     - Make a symlink to it in $SLURM_TMPDIR.
+# 2. Otherwise, use ~/actions-runners/$repo as the WORKDIR, and download the archive from GitHub if
+#it isn't already there.
+
+if [ -n "${SLURM_TMPDIR:-}" ]; then
+    WORKDIR=$SLURM_TMPDIR
+    if [ ! -f "$SCRATCH/actions-runners/$repo/$archive" ]; then
+        mkdir -p "$SCRATCH/actions-runners/$repo"
+        curl --fail -o "$SCRATCH/actions-runners/$repo/$archive" \
+            -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
+    fi
+    ln -s "$SCRATCH/actions-runners/$repo/$archive" "$WORKDIR/$archive"
+else
+    WORKDIR=$HOME/actions-runners/$repo
+    mkdir -p $WORKDIR
+    if [ ! -f "$WORKDIR/$archive" ]; then
+        curl --fail -o "$WORKDIR/$archive" \
+            -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
+    fi
 fi
+echo "Setting up self-hosted runner in $WORKDIR"
+cd $WORKDIR
+
 
 # Check the archive integrity.
 echo "$expected_checksum_for_version  $archive" | shasum -a 256 -c
