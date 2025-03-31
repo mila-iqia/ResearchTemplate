@@ -61,7 +61,9 @@ if [ -n "${SLURM_TMPDIR:-}" ]; then
         curl --fail -o "$SCRATCH/$archive" \
             -L "https://github.com/actions/runner/releases/download/v$action_runner_version/$archive"
     fi
-    ln -s "$SCRATCH/$archive" "$WORKDIR/$archive"
+    if [ ! -L "$WORKDIR/$archive" ]; then
+        ln -s "$SCRATCH/$archive" "$WORKDIR/$archive"
+    fi
 else
     WORKDIR=$HOME/actions-runners/$repo
     mkdir -p $WORKDIR
@@ -108,17 +110,18 @@ rm -f -- "$t"
 trap - EXIT
 
 
-export cluster=$SLURM_CLUSTER_NAME
+# IF SLURM_CLUSTER_NAME is set, we're on a SLURM cluster, so configure the worker with --ephemeral.
+export cluster=${SLURM_CLUSTER_NAME:-}
 echo "Cluster name: $cluster"
-
 # Create the runner and configure it programmatically with the token we just got
 # from the GitHub API.
-# For now, don't exit if the runner is already configured, and enable more than one job.
-# NOTE: Could also use --ephemeral to run only one job and exit.
-./config.sh --url https://github.com/$repo --token $TOKEN \
-  --unattended --replace --labels $cluster self-hosted --ephemeral || true
 
-# BUG: Seems weird that we'd have to export those ourselves. Shouldn't they be set already?
+# For now, don't exit if the runner is already configured.
+# enable more than one job if this is not running on a compute node of a SLURM cluster.
+./config.sh --url https://github.com/$repo --token $TOKEN \
+  --unattended --replace --labels $cluster self-hosted ${SLURM_CLUSTER_NAME:+--ephemeral} || true
+
+# NOTE: Seems weird that we'd have to export those ourselves. Shouldn't they be set already?
 export GITHUB_ACTIONS="true"
 export RUNNER_LABELS="self-hosted,$cluster"
 
