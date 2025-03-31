@@ -5,7 +5,6 @@
 #SBATCH --mem=32G
 #SBATCH --gpus=1
 #SBATCH --time=00:30:00
-#SBATCH --dependency=singleton
 #SBATCH --output=logs/runner_%j.out
 
 ## This script can be used to launch a new self-hosted GitHub runner.
@@ -17,16 +16,15 @@ set -o errexit
 # $SLURM_TMPDIR won't be set.
 set -o nounset
 
+# Seems to be required for the `uvx` to be found. (adds $HOME/.cargo/bin to PATH)
+source $HOME/.cargo/env
+# This is where the SH_TOKEN secret environment variable is set.
+source $HOME/.bash_aliases
 
 readonly repo="mila-iqia/ResearchTemplate"
 readonly action_runner_version="2.317.0"
 readonly expected_checksum_for_version="9e883d210df8c6028aff475475a457d380353f9d01877d51cc01a17b2a91161d"
 
-# Seems to be required for the `uvx` to be found. (adds $HOME/.cargo/bin to PATH)
-# Also a bit weird, the environment variables from ~/.bash_aliases are not being loaded.
-source $HOME/.cargo/env
-# This is where the SH_TOKEN secret environment variable is set.
-source $HOME/.bash_aliases
 
 # Check for required commands.
 for cmd in curl tar uvx; do
