@@ -269,7 +269,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         Some of the lightning Callbacks can be used with this Trainer.
         """
-
+        # TODO: The WandbLogger with Lightning doesn't currently print the things that it usually
+        # would with Lightning like the run URL and such at the start and end of the run.
         if train_state is None and rng is None:
             raise ValueError("Either train_state or rng must be provided")
 
@@ -284,9 +285,9 @@ class JaxTrainer(flax.struct.PyTreeNode):
         self._callback_hook("on_fit_start", self, algo, ts=train_state)
         self._callback_hook("on_train_start", self, algo, ts=train_state)
 
-        if self.logger:
+        for logger in self.loggers:
             jax.experimental.io_callback(
-                lambda algo: self.logger and self.logger.log_hyperparams(hparams_to_dict(algo)),
+                lambda algo: logger.log_hyperparams(hparams_to_dict(algo)),
                 (),
                 algo,
                 ordered=True,
@@ -298,7 +299,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         # Run the epoch loop `self.max_epoch` times.
         train_state, evaluations = jax.lax.scan(
-            functools.partial(self.epoch_loop, algo=algo),
+            lambda state, epoch: self.epoch_loop(state, epoch, algo=algo),
             init=train_state,
             xs=jnp.arange(self.max_epochs),  # type: ignore
             length=self.max_epochs,
@@ -312,23 +313,24 @@ class JaxTrainer(flax.struct.PyTreeNode):
                 evaluations,
             )
 
-        if self.logger is not None:
-            jax.block_until_ready((train_state, evaluations))
-            # jax.debug.print("Saving...")
-            jax.experimental.io_callback(
-                functools.partial(self.logger.finalize, status="success"), ()
-            )
+        (train_state, evaluations) = jax.block_until_ready((train_state, evaluations))
 
         self._callback_hook("on_fit_end", self, algo, ts=train_state)
         self._callback_hook("on_train_end", self, algo, ts=train_state)
         self._callback_hook(
             "teardown", self, algo, ts=train_state, partial_kwargs={"stage": "fit"}
         )
+        for logger in self.loggers:
+            jax.experimental.io_callback(
+                functools.partial(logger.finalize, status="success"),
+                (),
+            )
+        # jax.debug.print("Evaluations: {}", evaluations)
 
         return train_state, evaluations
 
     # @jit
-    def epoch_loop(self, ts: Ts, epoch: int, algo: JaxModule[Ts, _B, _MetricsT]):
+    def epoch_loop(self, ts: Ts, epoch: jax.Array, algo: JaxModule[Ts, _B, _MetricsT]):
         # todo: Some lightning callbacks try to get the "trainer.current_epoch".
         # FIXME: Hacky: Present a trainer with a different value of `self.current_epoch` to
         # the callbacks.
@@ -351,7 +353,7 @@ class JaxTrainer(flax.struct.PyTreeNode):
             0,
             self.training_steps_per_epoch,
             # drop training metrics for now.
-            functools.partial(self.training_step, algo=algo),
+            lambda i, state: self.training_step(i, state, algo=algo),
             ts,
         )
 
@@ -382,11 +384,9 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
         ts, metrics = algo.training_step(batch_idx=batch_idx, ts=ts, batch=batch)
 
-        if self.logger is not None:
-            # todo: Clean this up. logs metrics.
+        for logger in self.loggers:
             jax.experimental.io_callback(
-                lambda metrics, batch_index: self.logger
-                and self.logger.log_metrics(
+                lambda metrics, batch_index: logger.log_metrics(
                     jax.tree.map(lambda v: v.mean(), metrics), batch_index
                 ),
                 (),
@@ -442,7 +442,8 @@ class JaxTrainer(flax.struct.PyTreeNode):
     # Compat for RichProgressBar
     @property
     def is_global_zero(self) -> bool:
-        return True
+        """Check if the current process is the global zero process in a distributed setup."""
+        return jax.process_index() == 0
 
     @property
     def num_training_batches(self) -> int:

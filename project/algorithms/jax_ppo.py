@@ -15,15 +15,16 @@ from pathlib import Path
 from typing import Any, Generic, TypedDict
 
 import chex
-import flax.core
 import flax.linen
 import flax.struct
 import gymnax
 import gymnax.environments.spaces
-import gymnax.experimental.rollout
 import jax
-import jax.experimental
 import jax.numpy as jnp
+import lightning
+import lightning.pytorch
+import lightning.pytorch.loggers
+import lightning.pytorch.loggers.wandb
 import numpy as np
 import optax
 from flax.training.train_state import TrainState
@@ -511,7 +512,7 @@ class JaxRLExample(
         render_episode(
             actor=actor,
             env=self.env,
-            env_params=self.env_params,
+            env_params=jax.tree.map(lambda v: v.item() if v.ndim == 0 else v, self.env_params),
             gif_path=Path(gif_path),
             rng=eval_rng if eval_rng is not None else ts.rng,
         )
@@ -793,23 +794,41 @@ def render_episode(
     plt.close(vis.fig)
 
 
+def _get_log_dir(trainer: JaxTrainer):
+    for logger in trainer.loggers:
+        return logger.save_dir
+    return trainer.default_root_dir
+
+
 class RenderEpisodesCallback(JaxCallback):
     on_every_epoch: bool = False
 
     def on_fit_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
-        if not self.on_every_epoch:
-            return
-        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        log_dir = _get_log_dir(trainer)
         assert log_dir is not None
         gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
-        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
+        self.log_image(gif_path, trainer, ts.data_collection_state.global_step)
 
     def on_train_epoch_start(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
         if not self.on_every_epoch:
             return
-        log_dir = trainer.logger.save_dir if trainer.logger else trainer.default_root_dir
+        log_dir = _get_log_dir(trainer)
         assert log_dir is not None
         gif_path = Path(log_dir) / f"epoch_{ts.data_collection_state.global_step:05}.gif"
         module.visualize(ts=ts, gif_path=gif_path)
-        jax.debug.print("Saved gif to {gif_path}", gif_path=gif_path)
+        self.log_image(gif_path, trainer, ts.data_collection_state.global_step)
+
+    def on_fit_end(self, trainer: JaxTrainer, module: JaxRLExample, ts: PPOState):  # type: ignore
+        log_dir = _get_log_dir(trainer)
+        assert log_dir is not None
+        gif_path = Path(log_dir) / f"step_{ts.data_collection_state.global_step:05}.gif"
+        # with jax.disable_jit():
+        module.visualize(ts=ts, gif_path=gif_path)
+        self.log_image(gif_path, trainer, ts.data_collection_state.global_step)
+
+    def log_image(self, gif_path: Path, trainer: JaxTrainer, step: int):
+        for logger in trainer.loggers:
+            if isinstance(logger, lightning.pytorch.loggers.wandb.WandbLogger):
+                logger.log_image("render_episode", [str(gif_path)], step=step)
+                return

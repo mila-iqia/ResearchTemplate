@@ -2,10 +2,11 @@
 
 defaults:
   - override /algorithm: jax_ppo
-  - override /trainer: jax_trainer
-  - override /trainer/callbacks: rich_progress_bar
   - override /datamodule: null
-  # - /trainer/logger: tensorboard
+  - override /trainer: jax_trainer
+  # override on the command-line with `trainer/logger=wandb`
+  #BUG: Using the wandb logger seems to cause a hang at the end of the training run.
+  # - override /trainer/logger: wandb
 trainer:
   _convert_: object
   max_epochs: 75
@@ -14,5 +15,3 @@ trainer:
     render_episodes:
       _target_: project.algorithms.jax_ppo.RenderEpisodesCallback
       on_every_epoch: false
-    # progress_bar:
-    #   _target_: lightning.pytorch.callbacks.progress.rich_progress.RichProgressBar
