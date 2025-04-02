@@ -137,16 +137,28 @@ def temporarily_set_git_config_for_commits(project_root: Path):
     # note: doesn't actually change anything to cd to the project root since we modify the global
     # git config (which sucks, but the project root is not yet a git repo at this point, so we
     # can't set the local config).
-    git = get_git().with_cwd(project_root)
-    git_user_name_before = git("config", "--global", "--get", "user.name")
-    git_user_email_before = git("config", "--global", "--get", "user.email")
+    # git = get_git().with_cwd(project_root)
+    # git_user_name_before = git("config", "--get", "user.name")
+    # git_user_email_before = git("config", "--get", "user.email")
+    git_user_name_before = subprocess.getoutput(("config", "--global", "--get", "user.name"))
+    git_user_email_before = subprocess.getoutput(("config", "--global", "--get", "user.email"))
     try:
-        git("config", "--global", "user.name", "your-name")
-        git("config", "--global", "user.email", "your-email@email.com")
+        # git("config", "user.name", "your-name")
+        # git("config", "user.email", "your-email@email.com")
+        subprocess.check_call(("config", "--global", "user.name", "your-name"))
+        subprocess.check_call(("config", "--global", "user.email", "your-email@email.com"))
         yield
     finally:
-        git("config", "--global", "user.name", git_user_name_before)
-        git("config", "--global", "user.email", git_user_email_before)
+        # git("config", "user.name", git_user_name_before)
+        # git("config", "user.email", git_user_email_before)
+        if git_user_email_before:
+            subprocess.check_call(("config", "--global", "user.email", git_user_email_before))
+        else:
+            subprocess.check_call(("config", "--global", "--unset", "user.email"))
+        if git_user_name_before:
+            subprocess.check_call(("config", "--global", "user.name", git_user_name_before))
+        else:
+            subprocess.check_call(("config", "--global", "--unset", "user.name"))
     return
 
 
