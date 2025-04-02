@@ -145,10 +145,10 @@ def project_from_template(
         yield worker.dst_path
 
 
-@pytest.mark.skipif(
-    IN_GITHUB_CLOUD_CI,
-    reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
-)
+# @pytest.mark.skipif(
+#     IN_GITHUB_CLOUD_CI,
+#     reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
+# )
 @pytest.mark.skipif(sys.platform == "win32", reason="The template isn't supported on Windows.")
 @pytest.mark.parametrize(
     examples_to_include.__name__,
