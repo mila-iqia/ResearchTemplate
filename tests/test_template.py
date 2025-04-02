@@ -145,6 +145,27 @@ def project_from_template(
         yield worker.dst_path
 
 
+@pytest.fixture
+def temporarily_set_git_config_for_commits(project_from_template: Path):
+    # On GitHub Actions, we need to set user.name and user.email for the `git commit` commands
+    # to succeed.
+    project_root = project_from_template
+    if not IN_GITHUB_CLOUD_CI:
+        yield
+        return
+    git = get_git().with_cwd(project_root)
+    git_user_name_before = git("config", "--get", "user.name")
+    git_user_email_before = git("config", "--get", "user.email")
+    try:
+        git("config", "user.name", "your-name")
+        git("config", "user.email", "your-email@email.com")
+        yield
+    finally:
+        git("config", "user.name", git_user_name_before)
+        git("config", "user.email", git_user_email_before)
+    return
+
+
 # @pytest.mark.skipif(
 #     IN_GITHUB_CLOUD_CI,
 #     reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
@@ -185,6 +206,7 @@ def test_setup_project(
     copier_answers: CopierAnswers,
     template_version_used: str,
     tmp_path: Path,
+    temporarily_set_git_config_for_commits: None,
 ):
     """Run Copier programmatically to test the the setup for new projects.
 
