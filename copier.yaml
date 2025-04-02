@@ -175,53 +175,53 @@ _tasks:
 
   # Remove unwanted examples:
   - command: |
-      rm --verbose {{module_name}}/algorithms/image_classifier*.py
-      rm --verbose {{module_name}}/configs/algorithm/image_classifier.yaml
-      rm --verbose {{module_name}}/configs/experiment/example.yaml
-      rm --verbose {{module_name}}/configs/experiment/cluster_sweep_example.yaml
-      rm --verbose {{module_name}}/configs/experiment/local_sweep_example.yaml
-      rm --verbose {{module_name}}/configs/experiment/profiling.yaml
+      rm -v {{module_name}}/algorithms/image_classifier*.py
+      rm -v {{module_name}}/configs/algorithm/image_classifier.yaml
+      rm -v {{module_name}}/configs/experiment/example.yaml
+      rm -v {{module_name}}/configs/experiment/cluster_sweep_example.yaml
+      rm -v {{module_name}}/configs/experiment/local_sweep_example.yaml
+      rm -v {{module_name}}/configs/experiment/profiling.yaml
       git add {{module_name}}
       git commit -m "Remove image classification example."
     when: "{{ run_setup and 'image_classifier' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{module_name}}/algorithms/jax_image_classifier*.py
-      rm --verbose {{module_name}}/configs/algorithm/jax_image_classifier.yaml
-      rm --verbose {{module_name}}/configs/algorithm/network/jax_cnn.yaml
-      rm --verbose {{module_name}}/configs/algorithm/network/jax_fcnet.yaml
+      rm -v {{module_name}}/algorithms/jax_image_classifier*.py
+      rm -v {{module_name}}/configs/algorithm/jax_image_classifier.yaml
+      rm -v {{module_name}}/configs/algorithm/network/jax_cnn.yaml
+      rm -v {{module_name}}/configs/algorithm/network/jax_fcnet.yaml
       git add {{module_name}}
       git commit -m "Remove jax image classification example."
     when: "{{ run_setup and 'jax_image_classifier' not in examples_to_include }}"
 
   # Remove unwanted image classification datamodules and configs
   - command: |
-      rm --verbose {{module_name}}/datamodules/image_classification/image_classification*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/mnist*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/fashion_mnist*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/cifar10*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/imagenet*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/inaturalist*.py
-      rm --verbose {{module_name}}/datamodules/image_classification/__init__.py
-      rm --verbose {{module_name}}/datamodules/vision*.py
-      rm --verbose {{module_name}}/configs/datamodule/mnist.yaml
-      rm --verbose {{module_name}}/configs/datamodule/fashion_mnist.yaml
-      rm --verbose {{module_name}}/configs/datamodule/cifar10.yaml
-      rm --verbose {{module_name}}/configs/datamodule/imagenet.yaml
-      rm --verbose {{module_name}}/configs/datamodule/inaturalist.yaml
-      rm --verbose {{module_name}}/configs/datamodule/vision.yaml
+      rm -v {{module_name}}/datamodules/image_classification/image_classification*.py
+      rm -v {{module_name}}/datamodules/image_classification/mnist*.py
+      rm -v {{module_name}}/datamodules/image_classification/fashion_mnist*.py
+      rm -v {{module_name}}/datamodules/image_classification/cifar10*.py
+      rm -v {{module_name}}/datamodules/image_classification/imagenet*.py
+      rm -v {{module_name}}/datamodules/image_classification/inaturalist*.py
+      rm -v {{module_name}}/datamodules/image_classification/__init__.py
+      rm -v {{module_name}}/datamodules/vision*.py
+      rm -v {{module_name}}/configs/datamodule/mnist.yaml
+      rm -v {{module_name}}/configs/datamodule/fashion_mnist.yaml
+      rm -v {{module_name}}/configs/datamodule/cifar10.yaml
+      rm -v {{module_name}}/configs/datamodule/imagenet.yaml
+      rm -v {{module_name}}/configs/datamodule/inaturalist.yaml
+      rm -v {{module_name}}/configs/datamodule/vision.yaml
       rmdir {{module_name}}/datamodules/image_classification
       git add {{module_name}}
       git commit -m "Remove image classification datamodules and configs."
     when: "{{ run_setup and 'image_classifier' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{module_name}}/algorithms/text_classifier*.py
-      rm --verbose {{module_name}}/configs/algorithm/text_classifier.yaml
-      rm --verbose {{module_name}}/configs/experiment/text_classification_example.yaml
-      rm --verbose {{module_name}}/configs/datamodule/glue_cola.yaml
-      rm --verbose {{module_name}}/datamodules/text/text_classification*.py
-      rm --verbose {{module_name}}/datamodules/text/__init__.py
+      rm -v {{module_name}}/algorithms/text_classifier*.py
+      rm -v {{module_name}}/configs/algorithm/text_classifier.yaml
+      rm -v {{module_name}}/configs/experiment/text_classification_example.yaml
+      rm -v {{module_name}}/configs/datamodule/glue_cola.yaml
+      rm -v {{module_name}}/datamodules/text/text_classification*.py
+      rm -v {{module_name}}/datamodules/text/__init__.py
       rmdir {{module_name}}/datamodules/text
       git add {{module_name}}
       git commit -m "Remove text classification example."
@@ -229,19 +229,19 @@ _tasks:
 
   # todo: remove JaxTrainer and project/trainers folder if the JaxPPO example is removed?
   - command: |
-      rm --verbose {{module_name}}/algorithms/jax_ppo*.py
-      rm --verbose {{module_name}}/trainers/jax_trainer*.py
+      rm -v {{module_name}}/algorithms/jax_ppo*.py
+      rm -v {{module_name}}/trainers/jax_trainer*.py
       rmdir {{module_name}}/trainers
-      rm --verbose {{module_name}}/configs/algorithm/jax_ppo.yaml
-      rm --verbose {{module_name}}/configs/experiment/jax_rl_example.yaml
+      rm -v {{module_name}}/configs/algorithm/jax_ppo.yaml
+      rm -v {{module_name}}/configs/experiment/jax_rl_example.yaml
       git add {{module_name}}
       git commit -m "Remove Jax PPO example and lightning Trainer."
     when: "{{ run_setup and 'jax_ppo' not in examples_to_include }}"
 
   - command: |
-      rm --verbose {{module_name}}/algorithms/llm_finetuning*.py
-      rm --verbose {{module_name}}/configs/algorithm/llm_finetuning.yaml
-      rm --verbose {{module_name}}/configs/experiment/llm_finetuning_example.yaml
+      rm -v {{module_name}}/algorithms/llm_finetuning*.py
+      rm -v {{module_name}}/configs/algorithm/llm_finetuning.yaml
+      rm -v {{module_name}}/configs/experiment/llm_finetuning_example.yaml
       git add {{module_name}}
       git commit -m "Remove LLM fine-tuning example."
     when: "{{ run_setup and 'llm_finetuning' not in examples_to_include }}"
