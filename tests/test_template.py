@@ -122,8 +122,8 @@ def copier_answers(
 
 
 @pytest.fixture(scope="function")
-def project_root(template_version_used: str, tmp_path_factory: pytest.TempPathFactory):
-    tmp_project_dir = tmp_path_factory.mktemp(f"project_{template_version_used}_test")
+def project_root(tmp_path: Path):
+    tmp_project_dir = tmp_path / "dummy_project"
     return tmp_project_dir
 
 
