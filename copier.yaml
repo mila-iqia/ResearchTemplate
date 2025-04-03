@@ -253,15 +253,15 @@ _tasks:
   # Remove unneeded dependencies:
 
   ## Jax-related dependencies:
-  - command: uv remove rejax gymnax gymnasium xtils
+  - command: uv remove rejax gymnax gymnasium xtils --no-sync
     when: "{{ run_setup and 'jax_ppo' not in examples_to_include }}"
-  - command: uv remove jax jaxlib torch-jax-interop
+  - command: uv remove jax jaxlib torch-jax-interop --no-sync
     when: "{{ run_setup and 'jax_ppo' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   ## Huggingface-related dependencies:
-  - command: uv remove evaluate
+  - command: uv remove evaluate --no-sync
     when: "{{run_setup and 'text_classifier' not in examples_to_include }}"
-  - command: uv remove transformers datasets
+  - command: uv remove transformers datasets --no-sync
     when: "{{ run_setup and 'text_classifier' not in examples_to_include and 'llm_finetuning' not in examples_to_include }}"
   - command: |
       git add .python-version pyproject.toml uv.lock
