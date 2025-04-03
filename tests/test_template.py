@@ -121,13 +121,13 @@ def copier_answers(
     )
 
 
-@pytest.fixture(scope=_project_fixture_scope)
+@pytest.fixture(scope="function")
 def project_root(template_version_used: str, tmp_path_factory: pytest.TempPathFactory):
     tmp_project_dir = tmp_path_factory.mktemp(f"project_{template_version_used}_test")
     return tmp_project_dir
 
 
-@pytest.fixture(scope=_project_fixture_scope)
+@pytest.fixture(scope="function")
 def temporarily_set_git_config_for_commits(project_root: Path):
     # On GitHub Actions, we need to set user.name and user.email for the `git commit` commands
     # to succeed.
@@ -168,7 +168,7 @@ def temporarily_set_git_config_for_commits(project_root: Path):
     return
 
 
-@pytest.fixture(scope=_project_fixture_scope)
+@pytest.fixture(scope="function")
 def project_from_template(
     template_version_used: str,
     project_root: Path,
