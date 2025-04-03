@@ -70,7 +70,7 @@ docs = [
     "mkdocs-macros-plugin>=1.0.5",
     "mkdocs-autoref-plugin",
 ]
-gpu = ["jax[cuda12]>=0.4.31"]
+gpu = ["jax[cuda12]>=0.4.31; sys_platform == 'linux'"]
 
 
 [tool.pytest.ini_options]
