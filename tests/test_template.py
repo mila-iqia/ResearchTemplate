@@ -193,10 +193,6 @@ def project_from_template(
         yield project_root
 
 
-# @pytest.mark.skipif(
-#     IN_GITHUB_CLOUD_CI,
-#     reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
-# )
 @pytest.mark.skipif(sys.platform == "win32", reason="The template isn't supported on Windows.")
 @pytest.mark.parametrize(
     examples_to_include.__name__,
@@ -205,7 +201,7 @@ def project_from_template(
     ids=["none", *examples, "all"],
 )
 @pytest.mark.parametrize(
-    "python_version",
+    python_version.__name__,
     [
         # These can be very slow but are super important!
         # don't run these unless --slow argument is passed to pytest, to save some time.
