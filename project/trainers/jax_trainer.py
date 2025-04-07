@@ -12,8 +12,6 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 import chex
-import flax.core
-import flax.linen
 import flax.struct
 import jax
 import jax.experimental
@@ -23,10 +21,10 @@ import lightning.pytorch.callbacks
 import lightning.pytorch.loggers
 from hydra.core.hydra_config import HydraConfig
 from typing_extensions import TypeVar
+from xtils.jitpp import Static, jit
 
 from project.configs.config import Config
 from project.experiment import instantiate_trainer, train_and_evaluate
-from project.utils.typing_utils.jax_typing_utils import jit
 
 Ts = TypeVar("Ts", bound=flax.struct.PyTreeNode, default=flax.struct.PyTreeNode)
 """Type Variable for the training state."""
@@ -257,13 +255,13 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
     verbose: bool = flax.struct.field(pytree_node=False, default=False)
 
-    @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
+    @jit
     def fit(
         self,
         algo: JaxModule[Ts, _B, _MetricsT],
         rng: chex.PRNGKey,
         train_state: Ts | None = None,
-        skip_initial_evaluation: bool = False,
+        skip_initial_evaluation: Static[bool] = False,
     ) -> tuple[Ts, _MetricsT]:
         """Full training loop in pure jax (a lot faster than pytorch-lightning).
 
