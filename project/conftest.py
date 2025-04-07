@@ -73,11 +73,11 @@ from pathlib import Path
 from typing import Any, Literal, TypeVar
 
 import hydra.errors
-import jax
 import lightning
 import lightning.pytorch
 import lightning.pytorch as pl
 import lightning.pytorch.utilities
+import optree
 import pytest
 import tensor_regression.stats
 import torch
@@ -377,9 +377,7 @@ def train_dataloader(
 
 # todo: Remove (unused).
 @pytest.fixture(scope="session")
-def training_batch(
-    train_dataloader: DataLoader, device: torch.device
-) -> tuple[Tensor, ...] | dict[str, Tensor]:
+def training_batch(train_dataloader: DataLoader, device: torch.device) -> optree.PyTree[Tensor]:
     # Get a batch of data from the dataloader.
 
     # The batch of data will always be the same because the dataloaders are passed a Generator
@@ -391,8 +389,7 @@ def training_batch(
         # TODO: This ugliness is because torchvision transforms use the global pytorch RNG!
         torch.random.manual_seed(42)
         batch = next(dataloader_iterator)
-
-    return jax.tree.map(operator.methodcaller("to", device=device), batch)
+    return optree.tree_map(operator.methodcaller("to", device=device), batch)
 
 
 @pytest.fixture(autouse=True, scope="function")

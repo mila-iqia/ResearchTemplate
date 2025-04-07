@@ -65,6 +65,13 @@ def test_templated_dependencies_are_same_as_in_project():
     assert sorted(project_toml["project"]["dependencies"]) == sorted(
         project_toml_template["project"]["dependencies"]
     )
+    optional_dependencies: dict[str, list[str]] = project_toml["project"]["optional-dependencies"]
+    optional_dependencies.pop("docs")  # not included in the pyproject.toml.jinja template.
+    optional_dependencies_template: dict[str, list[str]] = project_toml_template["project"][
+        "optional-dependencies"
+    ]
+    for group_name, group_dependencies in optional_dependencies.items():
+        assert sorted(group_dependencies) == sorted(optional_dependencies_template[group_name])
 
 
 all_template_versions: list[str] = subprocess.getoutput("git tag --sort=-creatordate").split("\n")
