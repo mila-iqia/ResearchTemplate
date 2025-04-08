@@ -22,16 +22,13 @@ import gymnax
 import gymnax.environments.spaces
 import jax
 import jax.numpy as jnp
-import lightning
-import lightning.pytorch
-import lightning.pytorch.loggers
-import lightning.pytorch.loggers.wandb
 import numpy as np
 import optax
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment
 from gymnax.visualize.visualizer import Visualizer
+from lightning.pytorch.loggers.wandb import WandbLogger
 from matplotlib import pyplot as plt
 from rejax.algos.mixins import RMSState
 from rejax.evaluate import evaluate
@@ -565,7 +562,7 @@ class JaxRLExample(
     ## These here aren't currently used. They are here to mirror rejax.PPO where the training loop
     # is in the algorithm.
 
-    @jit
+    @functools.partial(jax.jit, static_argnames="skip_initial_evaluation")
     def train(
         self,
         rng: jax.Array,
@@ -874,6 +871,6 @@ class RenderEpisodesCallback(JaxCallback):
 
     def log_image(self, gif_path: Path, trainer: JaxTrainer, step: int):
         for logger in trainer.loggers:
-            if isinstance(logger, lightning.pytorch.loggers.wandb.WandbLogger):
+            if isinstance(logger, WandbLogger):
                 logger.log_image("render_episode", [str(gif_path)], step=step)
                 return

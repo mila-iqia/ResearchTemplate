@@ -21,7 +21,7 @@ import lightning.pytorch.callbacks
 import lightning.pytorch.loggers
 from hydra.core.hydra_config import HydraConfig
 from typing_extensions import TypeVar
-from xtils.jitpp import Static, jit
+from xtils.jitpp import Static
 
 from project.configs.config import Config
 from project.experiment import instantiate_trainer, train_and_evaluate
@@ -255,7 +255,10 @@ class JaxTrainer(flax.struct.PyTreeNode):
 
     verbose: bool = flax.struct.field(pytree_node=False, default=False)
 
-    @jit
+    @functools.partial(
+        jax.jit,
+        static_argnames="skip_initial_evaluation",
+    )
     def fit(
         self,
         algo: JaxModule[Ts, _B, _MetricsT],
