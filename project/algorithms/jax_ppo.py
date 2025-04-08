@@ -554,7 +554,10 @@ class JaxRLExample(
         render_episode(
             actor=actor,
             env=self.env,
-            env_params=jax.tree.map(lambda v: v.item() if v.ndim == 0 else v, self.env_params),
+            env_params=jax.tree.map(
+                lambda v: v if isinstance(v, int | float) else v.item() if v.ndim == 0 else v,
+                self.env_params,
+            ),
             gif_path=Path(gif_path),
             rng=eval_rng if eval_rng is not None else ts.rng,
         )

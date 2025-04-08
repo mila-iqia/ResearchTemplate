@@ -80,15 +80,15 @@ def results_ours(algo: JaxRLExample, rng: chex.PRNGKey, seed: int | Sequence[int
     train_fn = algo.train
 
     if not isinstance(seed, int):
-        train_fn = jax.vmap(train_fn)
+        train_fn = jax.vmap(train_fn, in_axes=(None, 0))
         # rng should already be an array.
         # rng = jax.random.split(rng, n_agents)
     _start = time.perf_counter()
-    train_fn = jax.jit(train_fn).lower(rng).compile()
+    train_fn = jax.jit(train_fn).lower(algo, rng).compile()
     print(f"Our tweaked rejax.PPO: Compiled in {time.perf_counter() - _start:.1f} seconds.")
 
     _start = time.perf_counter()
-    train_states_ours, evals_ours = train_fn(rng)
+    train_states_ours, evals_ours = train_fn(algo, rng)
     jax.block_until_ready((train_states_ours, evals_ours))
     print(f"Our tweaked rejax.PPO: trained in {time.perf_counter() - _start:.1f} seconds.")
     return train_states_ours, evals_ours
