@@ -1,8 +1,8 @@
 import time
 from typing import Any, Generic, Literal
 
-import jax
 import lightning
+import optree
 import torch
 from lightning import LightningModule, Trainer
 from lightning.pytorch.utilities.types import STEP_OUTPUT
@@ -182,12 +182,14 @@ class MeasureSamplesPerSecondCallback(lightning.Callback, Generic[BatchType]):
         )
 
     def get_num_samples(self, batch: BatchType) -> int:
+        if isinstance(batch, Tensor):
+            return batch.shape[0]
         if is_sequence_of(batch, Tensor):
             return batch[0].shape[0]
         if isinstance(batch, dict):
             return next(
                 v.shape[0]
-                for v in jax.tree.leaves(batch)
+                for v in optree.tree_leaves(batch)  # type: ignore
                 if isinstance(v, torch.Tensor) and v.ndim > 1
             )
         raise NotImplementedError(

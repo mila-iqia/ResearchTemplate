@@ -65,6 +65,13 @@ def test_templated_dependencies_are_same_as_in_project():
     assert sorted(project_toml["project"]["dependencies"]) == sorted(
         project_toml_template["project"]["dependencies"]
     )
+    optional_dependencies: dict[str, list[str]] = project_toml["project"]["optional-dependencies"]
+    optional_dependencies.pop("docs")  # not included in the pyproject.toml.jinja template.
+    optional_dependencies_template: dict[str, list[str]] = project_toml_template["project"][
+        "optional-dependencies"
+    ]
+    for group_name, group_dependencies in optional_dependencies.items():
+        assert sorted(group_dependencies) == sorted(optional_dependencies_template[group_name])
 
 
 all_template_versions: list[str] = subprocess.getoutput("git tag --sort=-creatordate").split("\n")
@@ -121,34 +128,78 @@ def copier_answers(
     )
 
 
-@pytest.fixture(scope=_project_fixture_scope)
+@pytest.fixture(scope="function")
+def project_root(tmp_path: Path):
+    tmp_project_dir = tmp_path / "dummy_project"
+    return tmp_project_dir
+
+
+@pytest.fixture(scope="function")
+def temporarily_set_git_config_for_commits(project_root: Path):
+    # On GitHub Actions, we need to set user.name and user.email for the `git commit` commands
+    # to succeed.
+    if not IN_GITHUB_CLOUD_CI:
+        yield
+        return
+    # note: doesn't actually change anything to cd to the project root since we modify the global
+    # git config (which sucks, but the project root is not yet a git repo at this point, so we
+    # can't set the local config).
+    # git = get_git().with_cwd(project_root)
+    # git_user_name_before = git("config", "--get", "user.name")
+    # git_user_email_before = git("config", "--get", "user.email")
+    git_user_name_before = subprocess.getoutput(
+        ("git", "config", "--global", "--get", "user.name")
+    )
+    git_user_email_before = subprocess.getoutput(
+        ("git", "config", "--global", "--get", "user.email")
+    )
+    try:
+        # git("config", "user.name", "your-name")
+        # git("config", "user.email", "your-email@email.com")
+        subprocess.check_call(("git", "config", "--global", "user.name", "your-name"))
+        subprocess.check_call(("git", "config", "--global", "user.email", "your-email@email.com"))
+        yield
+    finally:
+        # git("config", "user.name", git_user_name_before)
+        # git("config", "user.email", git_user_email_before)
+        if git_user_email_before:
+            subprocess.check_call(
+                ("git", "config", "--global", "user.email", git_user_email_before)
+            )
+        else:
+            subprocess.check_call(("git", "config", "--global", "--unset", "user.email"))
+        if git_user_name_before:
+            subprocess.check_call(("git", "config", "--global", "user.name", git_user_name_before))
+        else:
+            subprocess.check_call(("git", "config", "--global", "--unset", "user.name"))
+    return
+
+
+@pytest.fixture(scope="function")
 def project_from_template(
     template_version_used: str,
-    tmp_path_factory: pytest.TempPathFactory,
+    project_root: Path,
     copier_answers: CopierAnswers,
+    temporarily_set_git_config_for_commits: None,
 ):
     """Fixture that provides the project at a given version."""
-    tmp_project_dir = tmp_path_factory.mktemp(f"project_{template_version_used}_test")
     logger.info(
-        f"Setting up a project at {tmp_project_dir} using the template at version {template_version_used} with answers: {copier_answers}"
+        f"Setting up a project at {project_root} using the template at version "
+        f"{template_version_used} with answers: {copier_answers}"
     )
     with Worker(
         src_path="." if template_version_used == "HEAD" else "gh:mila-iqia/ResearchTemplate",
-        dst_path=tmp_project_dir,
+        dst_path=project_root,
         vcs_ref=template_version_used,
         defaults=True,
         data=dataclasses.asdict(copier_answers),
         unsafe=True,
     ) as worker:
         worker.run_copy()
+        assert worker.dst_path == project_root and project_root.exists()
+        yield project_root
 
-        yield worker.dst_path
 
-
-@pytest.mark.skipif(
-    IN_GITHUB_CLOUD_CI,
-    reason="TODO: lots of issues on GitHub CI (commit author, can't install other Python versions).",
-)
 @pytest.mark.skipif(sys.platform == "win32", reason="The template isn't supported on Windows.")
 @pytest.mark.parametrize(
     examples_to_include.__name__,
@@ -157,7 +208,7 @@ def project_from_template(
     ids=["none", *examples, "all"],
 )
 @pytest.mark.parametrize(
-    "python_version",
+    python_version.__name__,
     [
         # These can be very slow but are super important!
         # don't run these unless --slow argument is passed to pytest, to save some time.
@@ -239,7 +290,8 @@ def add_lit_autoencoder_module(
     )
     new_module = project_root / project_module / "algorithms" / "lit_autoencoder.py"
     new_module.write_text(
-        textwrap.dedent("""\
+        textwrap.dedent(
+            """\
         import os
         from torch import optim, nn, utils, Tensor
         from torchvision.datasets import MNIST
@@ -270,16 +322,19 @@ def add_lit_autoencoder_module(
             def configure_optimizers(self):
                 optimizer = optim.Adam(self.parameters(), lr=1e-3)
                 return optimizer
-        """)
+        """
+        )
     )
     new_algo_config = (
         project_root / project_module / "configs" / "algorithm" / "lit_autoencoder.yaml"
     )
     # Add a Hydra config file for the new module.
     new_algo_config.write_text(
-        textwrap.dedent(f"""\
+        textwrap.dedent(
+            f"""\
         _target_: {project_module}.algorithms.lit_autoencoder.LitAutoEncoder
-        """)
+        """
+        )
     )
 
     yield  # Yield, (let the project update if needed)

@@ -7,9 +7,10 @@ See the `JaxRLExample` class for a description of the differences w.r.t. `rejax.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import functools
 import operator
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
 from typing import Any, Generic, TypedDict
@@ -21,25 +22,21 @@ import gymnax
 import gymnax.environments.spaces
 import jax
 import jax.numpy as jnp
-import lightning
-import lightning.pytorch
-import lightning.pytorch.loggers
-import lightning.pytorch.loggers.wandb
 import numpy as np
 import optax
 from flax.training.train_state import TrainState
 from flax.typing import FrozenVariableDict
 from gymnax.environments.environment import Environment
 from gymnax.visualize.visualizer import Visualizer
+from lightning.pytorch.loggers.wandb import WandbLogger
 from matplotlib import pyplot as plt
 from rejax.algos.mixins import RMSState
 from rejax.evaluate import evaluate
 from rejax.networks import DiscretePolicy, GaussianPolicy, VNetwork
 from typing_extensions import TypeVar
-from xtils.jitpp import Static
+from xtils.jitpp import Static, jit
 
 from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer, get_error_from_metrics
-from project.utils.typing_utils.jax_typing_utils import field, jit
 
 logger = get_logger(__name__)
 
@@ -94,6 +91,48 @@ class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
     critic_ts: TrainState
     rng: chex.PRNGKey
     data_collection_state: TrajectoryCollectionState[TEnvState]
+
+
+T = TypeVar("T")
+
+
+def field(
+    *,
+    default: T | dataclasses._MISSING_TYPE = dataclasses.MISSING,
+    default_factory: Callable[[], T] | dataclasses._MISSING_TYPE = dataclasses.MISSING,
+    init=True,
+    repr=True,
+    hash=None,
+    compare=True,
+    metadata: Mapping[Any, Any] | None = None,
+    kw_only=dataclasses.MISSING,
+    pytree_node: bool | None = None,
+) -> T:
+    """Small Typing fix for `flax.struct.field`.
+
+    - Add type annotations so it doesn't drop the signature of the `dataclasses.field` function.
+    - Make the `pytree_node` has a default value of `False` for ints and bools, and `True` for
+      everything else.
+    """
+    if pytree_node is None and isinstance(default, int):  # note: also includes `bool`.
+        pytree_node = False
+    if pytree_node is None:
+        pytree_node = True
+    if metadata is None:
+        metadata = {}
+    else:
+        metadata = dict(metadata)
+    metadata.setdefault("pytree_node", pytree_node)
+    return dataclasses.field(
+        default=default,
+        default_factory=default_factory,  # type: ignore
+        init=init,
+        repr=repr,
+        hash=hash,
+        compare=compare,
+        metadata=metadata,
+        kw_only=kw_only,
+    )  # type: ignore
 
 
 class PPOHParams(flax.struct.PyTreeNode):
@@ -512,7 +551,10 @@ class JaxRLExample(
         render_episode(
             actor=actor,
             env=self.env,
-            env_params=jax.tree.map(lambda v: v.item() if v.ndim == 0 else v, self.env_params),
+            env_params=jax.tree.map(
+                lambda v: v if isinstance(v, int | float) else v.item() if v.ndim == 0 else v,
+                self.env_params,
+            ),
             gif_path=Path(gif_path),
             rng=eval_rng if eval_rng is not None else ts.rng,
         )
@@ -520,12 +562,12 @@ class JaxRLExample(
     ## These here aren't currently used. They are here to mirror rejax.PPO where the training loop
     # is in the algorithm.
 
-    @functools.partial(jit, static_argnames=["skip_initial_evaluation"])
+    @functools.partial(jax.jit, static_argnames="skip_initial_evaluation")
     def train(
         self,
         rng: jax.Array,
         train_state: PPOState[TEnvState] | None = None,
-        skip_initial_evaluation: bool = False,
+        skip_initial_evaluation: Static[bool] = False,
     ) -> tuple[PPOState[TEnvState], EvalMetrics]:
         """Full training loop in jax.
 
@@ -624,9 +666,9 @@ def _normalize_obs(rms_state: RMSState, obs: jax.Array):
     return (obs - rms_state.mean) / jnp.sqrt(rms_state.var + 1e-8)
 
 
-@functools.partial(jit, static_argnames=["num_minibatches"])
+@jit
 def shuffle_and_split(
-    data: AdvantageMinibatch, rng: chex.PRNGKey, num_minibatches: int
+    data: AdvantageMinibatch, rng: chex.PRNGKey, num_minibatches: Static[int]
 ) -> AdvantageMinibatch:
     assert data.trajectories.obs.shape
     iteration_size = data.trajectories.obs.shape[0] * data.trajectories.obs.shape[1]
@@ -639,7 +681,7 @@ def shuffle_and_split(
     return jax.tree.map(_shuffle_and_split_fn, data)
 
 
-@functools.partial(jit, static_argnames=["num_minibatches"])
+@jit
 def _shuffle_and_split(x: jax.Array, permutation: jax.Array, num_minibatches: Static[int]):
     x = x.reshape((x.shape[0] * x.shape[1], *x.shape[2:]))
     x = jnp.take(x, permutation, axis=0)
@@ -683,7 +725,7 @@ def get_advantages(
     return (advantage, transition_data.value), advantage
 
 
-@functools.partial(jit, static_argnames=["actor"])
+@jit
 def actor_loss_fn(
     params: FrozenVariableDict,
     actor: Static[flax.linen.Module],
@@ -710,7 +752,7 @@ def actor_loss_fn(
     return pi_loss - ent_coef * entropy
 
 
-@functools.partial(jit, static_argnames=["critic"])
+@jit
 def critic_loss_fn(
     params: FrozenVariableDict,
     critic: Static[flax.linen.Module],
@@ -829,6 +871,6 @@ class RenderEpisodesCallback(JaxCallback):
 
     def log_image(self, gif_path: Path, trainer: JaxTrainer, step: int):
         for logger in trainer.loggers:
-            if isinstance(logger, lightning.pytorch.loggers.wandb.WandbLogger):
+            if isinstance(logger, WandbLogger):
                 logger.log_image("render_episode", [str(gif_path)], step=step)
                 return
