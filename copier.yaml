@@ -306,7 +306,7 @@ _tasks:
   # todo: Causes issues on GitHub CI (asking for user)
   - command: |
       git add .
-      git commit -m "Clean project from template"
+      git commit -m "Clean project from template" || true  # don't fail if there are no changes
     when: "{{run_setup}}"
   # - command: "git commit -m 'Initial commit'"
   - "uvx pre-commit install"
