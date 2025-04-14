@@ -17,6 +17,7 @@ dependencies = [
     "tqdm>=4.66.5",
     "hydra-zen==0.13.1rc1",
     "matplotlib>=3.9.2",
+    "optree>=0.15.0",                 # to get tree ops without needing jax as a dependency.
     # Hugging Face dependencies:
     "evaluate>=0.4.2",
     "transformers>=4.44.0",
@@ -56,7 +57,7 @@ dev = [
 ]
 
 [project.optional-dependencies]
-gpu = ["jax[cuda12]>=0.4.31"]
+gpu = ["jax[cuda12]>=0.4.31; sys_platform == 'linux'"]
 
 [tool.pytest.ini_options]
 testpaths = ["{{module_name}}", "tests"]
