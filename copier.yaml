@@ -301,7 +301,7 @@ _tasks:
 
   # Fix the import order in Python files with ruff
   - "uvx ruff check . --fix || true"
-  - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
+  # - "uvx pre-commit run --all-files || true" # we don't care if there are errors here.
   - "uv sync --all-extras"
   # todo: Causes issues on GitHub CI (asking for user)
   - command: |
@@ -309,7 +309,7 @@ _tasks:
       git commit -m "Clean project from template" || true  # don't fail if there are no changes
     when: "{{run_setup}}"
   # - command: "git commit -m 'Initial commit'"
-  - "uvx pre-commit install"
+  # - "uvx pre-commit install"
 
   #  - Open the new project in vscode into the project if the `code` command is available and if
   #    this isn't being run as part of a test.
