@@ -22,6 +22,8 @@ from project.datamodules.image_classification.image_classification import (
 from project.datamodules.image_classification.mnist import MNISTDataModule
 from project.utils.typing_utils import HydraConfigFor
 
+logger = logging.getLogger(__name__)
+
 
 def flatten(x: jax.Array) -> jax.Array:
     return x.reshape((x.shape[0], -1))
@@ -95,6 +97,9 @@ class JaxImageClassifier(LightningModule):
         self.save_hyperparameters(ignore=["datamodule"])
 
     def configure_model(self):
+        if self.network is not None:
+            logger.info("Network is already instantiated.")
+            return
         example_input = torch.zeros(
             (self.datamodule.batch_size, *self.datamodule.dims),
         )
