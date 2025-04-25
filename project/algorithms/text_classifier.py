@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 import evaluate
@@ -13,6 +14,8 @@ from transformers.modeling_outputs import BaseModelOutput, CausalLMOutput, Seque
 
 from project.datamodules.text.text_classification import TextClassificationDataModule
 from project.utils.typing_utils import HydraConfigFor
+
+logger = logging.getLogger(__name__)
 
 
 class TextClassifier(LightningModule):
@@ -51,6 +54,9 @@ class TextClassifier(LightningModule):
         self.save_hyperparameters(ignore=["datamodule"])
 
     def configure_model(self) -> None:
+        if self.network is not None:
+            logger.info("Network is already instantiated.")
+            return
         with torch.random.fork_rng(devices=[self.device]):
             # deterministic weight initialization
             torch.manual_seed(self.init_seed)

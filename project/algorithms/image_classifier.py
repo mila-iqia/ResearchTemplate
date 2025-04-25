@@ -65,6 +65,9 @@ class ImageClassifier(LightningModule):
 
     def configure_model(self):
         # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
+        if self.network is not None:
+            logger.info("Network is already instantiated.")
+            return
         self.example_input_array = torch.zeros((self.datamodule.batch_size, *self.datamodule.dims))
         with torch.random.fork_rng():
             # deterministic weight initialization

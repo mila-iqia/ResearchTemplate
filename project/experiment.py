@@ -112,16 +112,10 @@ def train_lightning(
     algorithm: lightning.LightningModule,
     /,
     *,
-    trainer: lightning.Trainer | None,
+    trainer: lightning.Trainer,
     datamodule: lightning.LightningDataModule | None = None,
     config: Config,
 ):
-    # Create the Trainer from the config.
-    if trainer is None:
-        _trainer = instantiate_trainer(config.trainer)
-        assert isinstance(_trainer, lightning.Trainer)
-        trainer = _trainer
-
     # Train the model using the dataloaders of the datamodule:
     # The Algorithm gets to "wrap" the datamodule if it wants to. This could be useful for
     # example in RL, where we need to set the actor to use in the environment, as well as

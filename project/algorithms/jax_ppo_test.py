@@ -532,8 +532,13 @@ class PPOLightningModule(lightning.LightningModule):
         self.num_train_iterations = np.ceil(self.learner.hp.eval_freq / iteration_steps).astype(
             int
         )
+        self.actor_params: torch.nn.ParameterList | None = None
+        self.critic_params: torch.nn.ParameterList | None = None
 
     def configure_model(self):
+        if self.actor_params is not None:
+            logger.info("Networks are already instantiated.")
+            return
         self.actor_params = torch.nn.ParameterList(
             jax.tree.leaves(
                 jax.tree.map(
