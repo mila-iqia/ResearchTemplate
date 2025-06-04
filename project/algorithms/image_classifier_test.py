@@ -119,7 +119,10 @@ class TestImageClassifier(LightningModuleTests[ImageClassifier]):
     Take a look at the `LightningModuleTests` class if you want to see the actual test code.
     """
 
-    @pytest.mark.slow
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(),
+        reason="Needs a GPU to run this test quickly.",
+    )
     def test_benchmark_fit_speed(
         self,
         algorithm: ImageClassifier,
@@ -179,7 +182,14 @@ def test_profile_training(tmp_path: Path) -> None:
 
     Outputs a trace file that can be viewed in the browser at `ui.perfetto.dev`.
     When run with `-vvv`, this will open the trace file in a new browser tab.
+
+    TODO: Alternatively, add the profiler to the Trainer used in `do_on_step_of_training` and reuse
+    the output of the "training_step_content" fixture, to piggyback on the existing data instead of
+    re-running some training steps.
+    Other ideas:
+    - Add a `training_loop_content` for tests that want stuff from a short training loop.
     """
+
     datamodule = CIFAR10DataModule(data_dir=DATA_DIR, batch_size=64)
     from torch.optim import Adam  # type: ignore
 
