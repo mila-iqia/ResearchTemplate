@@ -18,6 +18,7 @@ import lightning.pytorch.profilers
 import pytest
 import torch
 import torchvision
+import wandb
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from project.algorithms.lightning_module_tests import LightningModuleTests
@@ -168,6 +169,7 @@ class TestImageClassifier(LightningModuleTests[ImageClassifier]):
             )
             logger.info(f"Trainer log dir: {trainer.log_dir}")
             trainer.fit(algorithm, datamodule=algorithm.datamodule)
+            wandb.finish()  # just to make sure that the logging happens the same way in all runs.
             train_metrics = trainer.logged_metrics
             assert isinstance(train_metrics, dict)
             train_acc = train_metrics["train/accuracy"]
@@ -207,7 +209,6 @@ def test_profile_training(tmp_path: Path) -> None:
         optimizer=functools.partial(Adam, lr=1e-3, weight_decay=1e-4),
     ).cuda()
     datamodule.prepare_data()
-
     run_dir = tmp_path
 
     trainer = lightning.Trainer(
@@ -231,6 +232,8 @@ def test_profile_training(tmp_path: Path) -> None:
     logger.info(f"Trainer log dir: {trainer.log_dir}")
 
     trainer.fit(algo, datamodule=algo.datamodule)
+    wandb.finish()
+
     # Uncomment to also profile validation:
     # _metrics = trainer.validate(algo, datamodule=algo.datamodule)
 
@@ -241,8 +244,7 @@ def test_profile_training(tmp_path: Path) -> None:
         print(f"  {file.name}")
         # If running tests in very verbose mode (-vvv), then open the trace file in a browser tab.
         if "-vvv" in sys.argv:
-            url = _host_perfetto_trace_file(file)
-            webbrowser.open(url, new=2)  # Open in a new tab, if possible.
+            _host_perfetto_trace_file(file)
 
 
 def _host_perfetto_trace_file(path: os.PathLike | str):
@@ -263,6 +265,8 @@ def _host_perfetto_trace_file(path: os.PathLike | str):
             print(f"Open URL in browser: {url}")
             # Once ui.perfetto.dev acquires trace.json from this server we can close
             # it down.
+            webbrowser.open(url, new=2)  # Open in a new tab, if possible.
+
             while httpd.__dict__.get("last_request") != "/" + filename:
                 httpd.handle_request()
     finally:
