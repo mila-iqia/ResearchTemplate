@@ -86,7 +86,8 @@ addopts = [
     # Arguments for pytest-benchmark:
     "--benchmark-autosave",              # save a new benchmark file for each test run.
     "--benchmark-compare",               # compare the current run with the previous one.
-    "--benchmark-compare-fail=mean:10%", # fail if the mean of the new runs is more than 10% slower than the previous run.
+    # TODO: Setup an artifact for the benchmark file for Master branch and pass this in GitHub CI
+    # "--benchmark-compare-fail=mean:10%", # fail if the mean of the new runs is more than 10% slower than the previous run.
     # "--slow",
     # Uncomment for tests to generate missing regression files by default.
     # This also means that you should use a stable hardware configuration (e.g. the same GPU)
