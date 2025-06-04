@@ -177,6 +177,14 @@ class TestImageClassifier(LightningModuleTests[ImageClassifier]):
         benchmark(run_some_training_steps)
 
 
+@pytest.mark.skipif(
+    not torch.cuda.is_available(),
+    reason="Needs a GPU to run this test quickly.",
+)
+@pytest.mark.skipif(
+    "-vvv" not in sys.argv,
+    reason="This test is only useful when run with -vvv to open the trace file in a browser.",
+)
 def test_profile_training(tmp_path: Path) -> None:
     """Runs a little bit of training with the PyTorch Profiler (managed by Lightning).
 
