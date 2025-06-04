@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Generic, Literal, TypeVar, overload
 
 import lightning
+import lightning.pytorch
+import lightning.pytorch.profilers
 import pytest
 import torch
 from lightning import LightningModule
@@ -247,6 +249,8 @@ class LightningModuleTests(Generic[LightningModuleType], ABC):
             enable_checkpointing=False,
             deterministic=True,
             default_root_dir=tmp_path,
+            # todo: include pytorch profiler here?
+            # profiler=lightning.pytorch.profilers.PyTorchProfiler(),
         )
         trainer.fit(algorithm, datamodule=datamodule)
         return callbacks

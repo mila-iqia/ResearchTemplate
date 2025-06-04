@@ -35,8 +35,8 @@ class ImageClassifier(LightningModule):
     def __init__(
         self,
         datamodule: ImageClassificationDataModule,
-        network: HydraConfigFor[torch.nn.Module],
-        optimizer: HydraConfigFor[functools.partial[Optimizer]],
+        network: torch.nn.Module | HydraConfigFor[torch.nn.Module],
+        optimizer: functools.partial[Optimizer] | HydraConfigFor[functools.partial[Optimizer]],
         init_seed: int = 42,
     ):
         """Create a new instance of the algorithm.
@@ -46,10 +46,12 @@ class ImageClassifier(LightningModule):
                 See the lightning docs for [LightningDataModule][lightning.pytorch.core.datamodule.LightningDataModule]
                 for more info.
             network:
-                The config of the network to instantiate and train.
-            optimizer: The config for the Optimizer. Instantiating this will return a function \
-                (a [functools.partial][]) that will create the Optimizer given the hyper-parameters.
-            init_seed: The seed to use when initializing the weights of the network.
+                The network to instantiate and train, or a Hydra config that returns a network \
+                when instantiated.
+            optimizer: A function that returns an optimizer given parameters, or a Hydra config \
+                that creates such a function when instantiated.
+            init_seed: The seed to set while instantiating the network from its config. This only \
+                has an effect if the network is a Hydra config, and not an already instantiated.
         """
         super().__init__()
         self.datamodule = datamodule
@@ -58,10 +60,18 @@ class ImageClassifier(LightningModule):
         self.init_seed = init_seed
 
         # Save hyper-parameters.
-        self.save_hyperparameters(ignore=["datamodule"])
+        self.save_hyperparameters(
+            ignore=["datamodule"]
+            # Ignore those if they are already instantiated objects, otherwise lightning will try
+            # to serialize them to yaml, which will be very slow and may fail.
+            + (["network"] if isinstance(network, torch.nn.Module) else [])
+            + (["optimizer"] if isinstance(optimizer, functools.partial) else [])
+        )
         # Used by Pytorch-Lightning to compute the input/output shapes of the network.
 
-        self.network: torch.nn.Module | None = None
+        self.network: torch.nn.Module | None = (
+            network if isinstance(network, torch.nn.Module) else None
+        )
 
     def configure_model(self):
         # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
@@ -112,8 +122,11 @@ class ImageClassifier(LightningModule):
 
         See [`lightning.pytorch.core.LightningModule.configure_optimizers`][] for more information.
         """
-        # Instantiate the optimizer config into a functools.partial object.
-        optimizer_partial = hydra_zen.instantiate(self.optimizer_config)
+        if isinstance(self.optimizer_config, functools.partial):
+            optimizer_partial = self.optimizer_config
+        else:
+            # Instantiate the optimizer config into a functools.partial object.
+            optimizer_partial = hydra_zen.instantiate(self.optimizer_config)
         # Call the functools.partial object, passing the parameters as an argument.
         optimizer = optimizer_partial(self.parameters())
         # This then returns the optimizer.
