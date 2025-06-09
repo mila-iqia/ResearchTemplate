@@ -19,6 +19,7 @@ from lightning.pytorch.core import LightningModule
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
+from typing_extensions import override
 
 from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
 from project.datamodules.image_classification.image_classification import (
@@ -72,6 +73,8 @@ class ImageClassifier(LightningModule):
         self.network: torch.nn.Module | None = (
             network if isinstance(network, torch.nn.Module) else None
         )
+        self.logits_pinned: torch.Tensor | None = None  # type: Tensor | None
+        self.labels_pinned: torch.Tensor | None = None  # type: Tensor | None
 
     def configure_model(self):
         # Save this for PyTorch-Lightning to infer the input/output shapes of the network.
@@ -94,12 +97,15 @@ class ImageClassifier(LightningModule):
         logits = self.network(input)
         return logits
 
+    @override
     def training_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
         return self.shared_step(batch, batch_index=batch_index, phase="train")
 
+    @override
     def validation_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
         return self.shared_step(batch, batch_index=batch_index, phase="val")
 
+    @override
     def test_step(self, batch: tuple[Tensor, Tensor], batch_index: int):
         return self.shared_step(batch, batch_index=batch_index, phase="test")
 
@@ -112,8 +118,9 @@ class ImageClassifier(LightningModule):
         x, y = batch
         logits: torch.Tensor = self(x)
         loss = F.cross_entropy(logits, y, reduction="mean")
-        self.log(f"{phase}/loss", loss.detach().mean())
+        loss_mean = loss.detach().mean()
         acc = logits.detach().argmax(-1).eq(y).float().mean()
+        self.log(f"{phase}/loss", loss_mean)
         self.log(f"{phase}/accuracy", acc)
         return {"loss": loss, "logits": logits, "y": y}
 
@@ -135,5 +142,6 @@ class ImageClassifier(LightningModule):
     def configure_callbacks(self) -> Sequence[Callback] | Callback:
         """Creates callbacks to be used by default during training."""
         return [
+            # MeasureSamplesPerSecondCallback(),
             ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         ]

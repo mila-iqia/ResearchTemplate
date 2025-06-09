@@ -245,12 +245,17 @@ class LightningModuleTests(Generic[LightningModuleType], ABC):
             accelerator=accelerator,
             callbacks=callbacks,
             devices=devices,
-            fast_dev_run=True,
+            fast_dev_run=3,
             enable_checkpointing=False,
             deterministic=True,
             default_root_dir=tmp_path,
             # todo: include pytorch profiler here?
-            # profiler=lightning.pytorch.profilers.PyTorchProfiler(),
+            profiler=lightning.pytorch.profilers.PyTorchProfiler(
+                profile_memory=True,
+                record_shapes=True,
+                record_module_names=True,
+                schedule=torch.profiler.schedule(wait=0, warmup=1, active=2),
+            ),
         )
         trainer.fit(algorithm, datamodule=datamodule)
         return callbacks

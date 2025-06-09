@@ -35,6 +35,8 @@ dependencies = [
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
     "hydra-orion-sweeper>=1.6.4 ; python_full_version < '3.11'",
+    "tensorboard>=2.19.0",
+    "torch-tb-profiler>=0.4.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
