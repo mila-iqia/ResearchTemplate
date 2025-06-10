@@ -46,8 +46,6 @@ from project.datamodules.image_classification.image_classification import (
 from project.main import REPO_ROOTDIR, setup_logging
 from project.utils.env_vars import DATA_DIR
 
-torch.cuda.set_sync_debug_mode("warn")
-
 logger = logging.getLogger(__name__)
 
 
@@ -116,6 +114,8 @@ def test_profile_lightning(
     Other ideas:
     - Add a `training_loop_content` for tests that want stuff from a short training loop.
     """
+
+    # torch.cuda.set_sync_debug_mode("warn")
     algo, datamodule = algo_and_datamodule
     lightning_training_loop(
         algo, datamodule, num_epochs=2, run_dir=tmp_path, profiler_schedule=profiler_schedule

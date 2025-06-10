@@ -143,6 +143,7 @@ class ImageClassifier(LightningModule):
         """Creates callbacks to be used by default during training."""
         return [
             MeasureSamplesPerSecondCallback(),
-            # Uncomment to log top_k accuracy metrics:
+            # Uncomment to log top_k accuracy metrics.
+            # Note that with small models, this may cause some slowdown during training.
             # ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         ]
