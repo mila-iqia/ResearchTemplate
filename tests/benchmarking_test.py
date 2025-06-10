@@ -27,6 +27,7 @@ from pathlib import Path
 import lightning
 import lightning.pytorch
 import lightning.pytorch.loggers
+import lightning.pytorch.profilers
 import optree
 import pytest
 import torch
@@ -44,6 +45,8 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.main import REPO_ROOTDIR, setup_logging
 from project.utils.env_vars import DATA_DIR
+
+torch.cuda.set_sync_debug_mode("warn")
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +68,15 @@ def algo_and_datamodule(torch_compile: bool):
     datamodule = CIFAR10DataModule(data_dir=DATA_DIR, batch_size=256)
     algo = ImageClassifier(
         datamodule=datamodule,
-        network=torchvision.models.resnet152(weights=None, num_classes=datamodule.num_classes),
+        network=torchvision.models.VisionTransformer(
+            image_size=datamodule.dims[1],
+            patch_size=4,
+            num_layers=24,
+            num_heads=16,
+            hidden_dim=1024,
+            mlp_dim=4096,
+            num_classes=datamodule.num_classes,
+        ),
         optimizer=functools.partial(Adam, lr=1e-3, weight_decay=1e-4),
     ).cuda()
     # Optional:
@@ -111,6 +122,14 @@ def test_profile_lightning(
     )
 
 
+@pytest.mark.skipif(
+    not torch.cuda.is_available(),
+    reason="Needs a GPU to run this test quickly.",
+)
+@pytest.mark.skipif(
+    "-vvv" not in sys.argv,
+    reason="This test is only useful when run with -vvv to open the trace file in a browser.",
+)
 def test_profile_simple_train_loop(
     algo_and_datamodule: tuple[ImageClassifier, ImageClassificationDataModule],
     profiler_schedule: Callable[[int], ProfilerAction],
@@ -140,7 +159,7 @@ def lightning_training_loop(
             # ClassificationMetricsCallback.attach_to(algo, num_classes=datamodule.num_classes),
             MeasureSamplesPerSecondCallback(),
             # Alternative to the Lightning wrapper around the pytorch profiler. Traces are simpler.
-            _ManualProfilerCallback(run_dir, schedule=profiler_schedule),
+            # _ManualProfilerCallback(run_dir, schedule=profiler_schedule),
         ],
         logger=[
             # DO we want to include logging and callbacks?
@@ -157,16 +176,16 @@ def lightning_training_loop(
         enable_progress_bar=False,
         accelerator="auto",
         log_every_n_steps=1,  # to see if logging has an impact on performance.
-        # profiler=lightning.pytorch.profilers.PyTorchProfiler(
-        #     run_dir,
-        #     filename="profiler_output.txt",
-        #     export_to_chrome=True,
-        #     on_trace_ready=torch.profiler.tensorboard_trace_handler(str(run_dir)),
-        #     schedule=profiler_schedule,
-        #     record_shapes=True,
-        #     profile_memory=True,
-        #     # with_stack=True,
-        # ),
+        profiler=lightning.pytorch.profilers.PyTorchProfiler(
+            run_dir,
+            filename="profiler_output.txt",
+            export_to_chrome=True,
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(str(run_dir)),
+            schedule=profiler_schedule,
+            record_shapes=True,
+            profile_memory=True,
+            # with_stack=True,
+        ),
         default_root_dir=run_dir,
     )
     logger.info(f"Trainer log dir: {trainer.log_dir}")
