@@ -21,7 +21,7 @@ from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 from typing_extensions import override
 
-from project.algorithms.callbacks.classification_metrics import ClassificationMetricsCallback
+from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.datamodules.image_classification.image_classification import (
     ImageClassificationDataModule,
 )
@@ -142,6 +142,7 @@ class ImageClassifier(LightningModule):
     def configure_callbacks(self) -> Sequence[Callback] | Callback:
         """Creates callbacks to be used by default during training."""
         return [
-            # MeasureSamplesPerSecondCallback(),
-            ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
+            MeasureSamplesPerSecondCallback(),
+            # Uncomment to log top_k accuracy metrics:
+            # ClassificationMetricsCallback.attach_to(self, num_classes=self.datamodule.num_classes)
         ]
