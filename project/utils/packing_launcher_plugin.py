@@ -5,6 +5,7 @@ Originally implemented by Darshan Patil.
 
 import logging
 import os
+import warnings
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, ClassVar, TypeVar
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Made this a dataclass to avoid having an ugly default repr, but it causes issues with
 # hydra-auto-schema because it tries to create a schema for everything here.
 # @dataclasses.dataclass(init=False)
-class PackedSubmititLauncher(BaseSubmititLauncher):
+class _PackedSubmititLauncher(BaseSubmititLauncher):
     _EXECUTOR: ClassVar[str] = "abstract"  # to be set in subclasses below.
 
     params: dict[str, Any]
@@ -41,24 +42,11 @@ class PackedSubmititLauncher(BaseSubmititLauncher):
         self,
         # TODO: clean up this mess with arbitrary kwargs and prefixes by just passing the executor.
         # executor: Callable[..., submitit.Executor] = submitit.SlurmExecutor,
-        *,
-        # Added:
-        ntasks_per_gpu: int | None = None,
         # NOTE: this **kwargs a mix of things: The constructor arguments for the executor, + some
         # arguments passed to executor.update_parameters
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-
-        additional_parameters = self.params.setdefault("additional_parameters", {})
-        assert isinstance(additional_parameters, dict)
-
-        # Added:
-        if ntasks_per_gpu is not None:
-            additional_parameters["ntasks_per_gpu"] = ntasks_per_gpu
-            if self.params["ntasks_per_node"] is None:
-                # If we only set ntasks_per_gpu, then infer that ntasks_per_node is the same.
-                self.params["ntasks_per_node"] = ntasks_per_gpu
 
     def launch_batch(
         self,
@@ -70,8 +58,9 @@ class PackedSubmititLauncher(BaseSubmititLauncher):
     ) -> JobReturn:
         logger.info(self.config)
         logger.info(os.environ)
-
         task_id = JobEnvironment().global_rank
+        # TODO: For Lightning, we need to patch `rank_zero_only` so that logging happens in all
+        # tasks.
         return self(
             sweep_overrides[task_id],
             job_dir_key[task_id],
@@ -85,15 +74,20 @@ class PackedSubmititLauncher(BaseSubmititLauncher):
     ) -> Sequence[JobReturn]:
         additional_parameters = self.params.get("additional_parameters", {})
         assert isinstance(additional_parameters, dict)
-        num_tasks: int = 1
-        if "task_per_node" in self.params:
-            num_tasks = int(self.params["tasks_per_node"])
-        elif "ntask_per_node" in self.params:
-            num_tasks = int(self.params["ntasks_per_node"])
-        elif "ntasks_per_gpu" in additional_parameters:
-            num_tasks = int(additional_parameters["ntasks_per_gpu"])
+        ntasks_per_node: int | None = self.params.get("tasks_per_node")
 
-        if num_tasks == 1:
+        # TODO: use the ntasks_per_gpu sbatch flag instead!
+        ntasks_per_gpu: int | None = additional_parameters.get("ntasks_per_gpu")
+        if ntasks_per_gpu is None:
+            ntasks_per_gpu = 1
+        if ntasks_per_gpu > 1 and ntasks_per_node not in (None, 1):
+            warnings.warn(
+                RuntimeWarning(
+                    "Using `tasks_per_node` > 1 with `tasks_per_gpu` > 1 is potentially problematic. "
+                )
+            )
+
+        if ntasks_per_gpu == 1:
             # DO the same as the original submitit launcher.
             logger.info("Not using job packing, using the default `launch` method.")
             return super().launch(job_overrides, initial_job_idx)
@@ -145,7 +139,7 @@ class PackedSubmititLauncher(BaseSubmititLauncher):
 
         jobs = executor.map_array(
             self.launch_batch,
-            *list(batch(jps, num_tasks) for jps in zip(*job_params)),
+            *list(batch(jps, ntasks_per_gpu) for jps in zip(*job_params)),
         )
         # Unpack all results from all tasks in each job.
         return [res for j in jobs for res in j.results()]
@@ -158,9 +152,9 @@ def batch(x: Sequence[T], bs: int) -> list[Sequence[T]]:
     return [x[i : i + bs] for i in range(0, len(x), bs)]
 
 
-class LocalLauncher(PackedSubmititLauncher):
+class PackedLocalLauncher(_PackedSubmititLauncher):
     _EXECUTOR = "local"
 
 
-class SlurmLauncher(PackedSubmititLauncher):
+class PackedSlurmLauncher(_PackedSubmititLauncher):
     _EXECUTOR = "slurm"
