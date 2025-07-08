@@ -18,16 +18,13 @@ hydra:
     cpus_per_task: 2
     array_parallelism: 16 # max num of jobs to run in parallel
     # Other things to pass to `sbatch`:
-    # gres: "gpu:1"
+    gres: "gpu:1"
     # nodes: 1
-    # mem_gb: 16
+    mem_gb: 16
+    tasks_per_node: ???
     stderr_to_stdout: true
     additional_parameters:
       time: 1-00:00:00 # maximum wall time allocated for the job (D-HH:MM:SS)
-      mem_per_cpu: "4GB"
-      ntasks_per_gpu: ???
-
-
 
     ## A list of commands to add to the generated sbatch script before running srun:
     # setup:

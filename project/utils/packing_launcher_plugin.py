@@ -77,7 +77,10 @@ class _PackedSubmititLauncher(BaseSubmititLauncher):
         ntasks_per_node: int | None = self.params.get("tasks_per_node")
 
         # TODO: use the ntasks_per_gpu sbatch flag instead!
-        ntasks_per_gpu: int | None = additional_parameters.get("ntasks_per_gpu")
+        ntasks_per_gpu: int | None = ntasks_per_node
+        # ntasks_per_gpu: int | None = additional_parameters.get("ntasks_per_gpu")
+        # self.params.pop("tasks_per_node", None)
+        # self.params.pop("nodes", None)
         if ntasks_per_gpu is None:
             ntasks_per_gpu = 1
         if ntasks_per_gpu > 1 and ntasks_per_node not in (None, 1):
@@ -125,8 +128,9 @@ class _PackedSubmititLauncher(BaseSubmititLauncher):
         job_params: list[Any] = []
         for idx, overrides in enumerate(job_overrides):
             idx = initial_job_idx + idx
+            job_num = idx // ntasks_per_gpu
             lst = " ".join(filter_overrides(overrides))
-            logger.info(f"\t#{idx} : {lst}")
+            logger.info(f"\t#{idx} (job #{job_num} task #{idx % ntasks_per_gpu}): {lst}")
             job_params.append(
                 (
                     list(overrides),
