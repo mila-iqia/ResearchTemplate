@@ -32,7 +32,7 @@ jobs:
       with:
         python-version: "3.12"
     - name: Setup uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
         # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
