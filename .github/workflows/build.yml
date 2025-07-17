@@ -18,10 +18,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  UV_VERSION: "0.6.2"
-
-
 
 jobs:
   linting:
@@ -31,9 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
-          version: ${{ env.UV_VERSION }}
+          version: "latest"
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: uvx pre-commit run --all-files --show-diff-on-failure
@@ -47,9 +43,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
-          version: ${{ env.UV_VERSION }}
+          version: "latest"
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
@@ -68,9 +64,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
-          version: ${{ env.UV_VERSION }}
+          version: "latest"
           python-version: ${{ matrix.python-version }}
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -133,9 +129,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
-          version: ${{ env.UV_VERSION }}
+          version: "latest"
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
