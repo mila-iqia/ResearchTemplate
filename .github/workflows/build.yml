@@ -134,6 +134,7 @@ jobs:
           version: "latest"
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: "3.12"
       - name: Install dependencies
         run: uv sync --all-extras --frozen
       - name: Show installed packages
