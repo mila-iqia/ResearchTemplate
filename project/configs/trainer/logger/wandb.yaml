@@ -2,6 +2,7 @@
 
 wandb:
   _target_: lightning.pytorch.loggers.wandb.WandbLogger
+  entity: "MyOrganisation" #Optionnal
   project: "ResearchTemplate"
   name: ${name}
   save_dir: "."
