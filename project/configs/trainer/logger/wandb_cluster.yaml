@@ -1,6 +1,7 @@
 defaults:
   - wandb
 wandb:
+  entity: "MyOrganisation" #Optionnal
   project: "ResearchTemplate"
   # TODO: Use the Orion trial name?
   name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
