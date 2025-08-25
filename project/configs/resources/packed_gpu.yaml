@@ -24,6 +24,8 @@ hydra:
     tasks_per_node: ???
     stderr_to_stdout: true
     additional_parameters:
+      # note: using additional_parameters.time is more flexible than timeout_min, but a bit harder
+      # to override from the command-line.
       time: 1-00:00:00 # maximum wall time allocated for the job (D-HH:MM:SS)
 
     ## A list of commands to add to the generated sbatch script before running srun:

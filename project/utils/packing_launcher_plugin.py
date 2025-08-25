@@ -40,9 +40,10 @@ class _PackedSubmititLauncher(BaseSubmititLauncher):
     # This makes the code more explicit, and enabled autocomplete in IDEs in .py and .yaml files.
     def __init__(
         self,
-        # TODO: clean up this mess with arbitrary kwargs and prefixes by just passing the executor.
-        # executor: Callable[..., submitit.Executor] = submitit.SlurmExecutor,
-        # NOTE: this **kwargs a mix of things: The constructor arguments for the executor, + some
+        # TODO: clean up this mess with arbitrary kwargs and prefixes by just passing a partially configured executor:
+        # executor: Callable[..., submitit.Executor] = submitit.SlurmExecutor, # or RemoteSlurmExecutor, etc.
+        # Something like this might eventually help decouple the "where to run the job" from the "resources the job needs".
+        # NOTE: this **kwargs is an ugly mix of two things: The constructor arguments for the executor, + some
         # arguments passed to executor.update_parameters
         **kwargs,
     ) -> None:
