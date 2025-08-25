@@ -1,6 +1,3 @@
-# Make a Mock for the remote slurm launcher plugin
-# Use monkeypatch.setattr(project.utils.remote_launcher_plugin, ..., that_mock)
-# Assert That the mock launcher plugin was instantiated
 import os
 import shlex
 import sys

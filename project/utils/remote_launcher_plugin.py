@@ -274,9 +274,13 @@ _AddedArgumentsConf = hydra_zen.builds(
 
 @dataclasses.dataclass
 class PatchedSlurmQueueConf(_AddedArgumentsConf, SlurmQueueConf):
-    """Adds more SLURM parameters to the config for the SLURM submitit launcher of Hydra."""
+    """Typed version of the submitit_slurm config of the submitit Hydra plugin.
 
-    _target_: str = "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"  # type: ignore
+    This has the arguments from the `_make_sbatch_string` function added to it, so that your IDE
+    can help you know which options are available or valid in the yaml config file.
+    """
+
+    _target_: str = SlurmQueueConf._target_  # type: ignore (keep the same target as the base class).
 
     signal_delay_s: int = 120
     """USR1 signal delay before timeout."""
@@ -302,9 +306,12 @@ class PatchedSlurmQueueConf(_AddedArgumentsConf, SlurmQueueConf):
     """A list of commands to run in sbatch before running srun."""
 
 
+# Override the `submitit_slurm` with the typed version. This changes nothing apart from making it
+# easier to write the config file in Yaml.
+
 ConfigStore.instance().store(
     group="hydra/launcher",
-    name="patched_submitit_slurm",
+    name="submitit_slurm",
     node=PatchedSlurmQueueConf,
     provider="Mila",
 )
