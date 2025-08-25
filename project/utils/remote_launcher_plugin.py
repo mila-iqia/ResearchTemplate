@@ -189,7 +189,7 @@ class RemoteSlurmLauncher(BaseSubmititLauncher):
         # that it being called multiple times doesn't cause issues).
 
         logger.info(
-            f"Submitit '{self._EXECUTOR}' sweep output dir : " f"{self.config.hydra.sweep.dir}"
+            f"Submitit '{self._EXECUTOR}' sweep output dir : {self.config.hydra.sweep.dir}"
         )
         sweep_dir = Path(str(self.config.hydra.sweep.dir))
         sweep_dir.mkdir(parents=True, exist_ok=True)
@@ -259,25 +259,24 @@ RemoteSlurmQueueConf = hydra_zen.builds(
 
 from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf  # noqa
 from hydra_plugins.hydra_submitit_launcher.submitit_launcher import SlurmLauncher  # noqa
-# from hydra_plugins.hydra_submitit_launcher. import SlurmLauncher  # noqa
-
-from submitit.slurm.slurm import _make_sbatch_string  # noqa
-
-# Interesting idea: Create the config based on the signature of that function directly.
-_AddedArgumentsConf = hydra_zen.builds(
-    _make_sbatch_string,
-    populate_full_signature=True,
-    hydra_convert="object",
-    zen_exclude=["command", "folder", "map_count"],
-)
 
 
 @dataclasses.dataclass
-class PatchedSlurmQueueConf(_AddedArgumentsConf, SlurmQueueConf):
-    """Typed version of the submitit_slurm config of the submitit Hydra plugin.
+class PatchedSlurmQueueConf(SlurmQueueConf):
+    """Typed version of the submitit_slurm config from the submitit Hydra plugin.
 
-    This has the arguments from the `_make_sbatch_string` function added to it, so that your IDE
-    can help you know which options are available or valid in the yaml config file.
+    This shows more explicitly the options that the submitit launcher can take, Enables more of the existing submitit features that are not available with the submitit launcher.
+
+    Specifically, these are the options that this enables:
+    - dependency
+    - exclusive
+    - mail_type
+    - mail_user
+    - nodelist
+    - srun_args
+    - time
+    - use_srun
+    - wckey
     """
 
     _target_: str = SlurmQueueConf._target_  # type: ignore (keep the same target as the base class).
@@ -304,6 +303,20 @@ class PatchedSlurmQueueConf(_AddedArgumentsConf, SlurmQueueConf):
 
     setup: list[str] | None = None
     """A list of commands to run in sbatch before running srun."""
+
+    # Added fields that aren't properly shown to be available in the submitit_slurm launcher:
+
+    dependency: str | None = None
+    """Job dependency string, e.g. "afterok:12345" or "afterany:12345"."""
+
+    exclusive: bool | str | None = None
+    mail_type: str | None = None
+    mail_user: str | None = None
+    nodelist: str | None = None
+    srun_args: list[str] | None = None
+    time: str | None = None
+    use_srun: bool = True
+    wckey: str = "submitit"
 
 
 # Override the `submitit_slurm` with the typed version. This changes nothing apart from making it
