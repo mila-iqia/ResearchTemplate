@@ -190,7 +190,7 @@ class MeasureSamplesPerSecondCallback(lightning.Callback, Generic[BatchType]):
             return next(
                 v.shape[0]
                 for v in optree.tree_leaves(batch)  # type: ignore
-                if isinstance(v, torch.Tensor) and v.ndim > 1
+                if isinstance(v, torch.Tensor) and v.ndim >= 1
             )
         raise NotImplementedError(
             f"Don't know how many 'samples' there are in batch of type {type(batch)}"

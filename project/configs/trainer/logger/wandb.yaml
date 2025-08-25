@@ -2,6 +2,7 @@
 
 wandb:
   _target_: lightning.pytorch.loggers.wandb.WandbLogger
+  entity: null  # Optional. It can be useful to set this explicitly if you use a different organization account for this project.
   project: "ResearchTemplate"
   name: ${name}
   save_dir: "."

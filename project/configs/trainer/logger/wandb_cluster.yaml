@@ -1,6 +1,7 @@
 defaults:
   - wandb
 wandb:
+  entity: null  # Optional. It can be useful to set this explicitly if you use a different organization account for this project.
   project: "ResearchTemplate"
   # TODO: Use the Orion trial name?
   name: ${oc.env:SLURM_JOB_ID}_${oc.env:SLURM_PROCID}
