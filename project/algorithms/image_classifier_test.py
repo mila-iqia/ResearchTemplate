@@ -1,7 +1,15 @@
 """Example showing how the test suite can be used to add tests for a new algorithm."""
 
+import logging
+
+import lightning
+import lightning.pytorch
+import lightning.pytorch.loggers
+import lightning.pytorch.profilers
 import pytest
 import torch
+import wandb
+from pytest_benchmark.fixture import BenchmarkFixture
 
 from project.algorithms.lightning_module_tests import LightningModuleTests
 from project.configs import Config
@@ -15,6 +23,8 @@ from project.utils.env_vars import SLURM_JOB_ID
 from project.utils.testutils import IN_GITHUB_CI, run_for_all_configs_of_type
 
 from .image_classifier import ImageClassifier
+
+logger = logging.getLogger(__name__)
 
 experiment_commands_to_test.extend(
     [
@@ -99,3 +109,62 @@ class TestImageClassifier(LightningModuleTests[ImageClassifier]):
 
     Take a look at the `LightningModuleTests` class if you want to see the actual test code.
     """
+
+    @pytest.mark.slow
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(),
+        reason="Needs a GPU to run this test quickly.",
+    )
+    def test_benchmark_fit_speed(
+        self,
+        algorithm: ImageClassifier,
+        datamodule: ImageClassificationDataModule,
+        tmp_path_factory: pytest.TempPathFactory,
+        benchmark: BenchmarkFixture,
+    ):
+        """Runs a few training steps a few times to compare wall-clock time between revisions.
+
+        This uses [`pytest-benchmark`](https://pytest-benchmark.readthedocs.io/en/latest/index.html) to
+        run a measure the time it takes to run a few training steps.
+        """
+        # NOTE: Here we run this test will all the datamodules and networks that are parametrized
+        # on the class. If you wanted to run this test outside of this repo or with a specific
+        # datamodule or network, you could simply do this directly:
+        # from torch.optim import Adam  # type: ignore
+        # datamodule = CIFAR10DataModule(data_dir=DATA_DIR, batch_size=64)
+        # algo = ImageClassifier(
+        #     datamodule=datamodule,
+        #     network=torchvision.models.resnet18(weights=None, num_classes=datamodule.num_classes),
+        #     optimizer=functools.partial(Adam, lr=1e-3, weight_decay=1e-4),
+        # ).cuda()
+
+        if datamodule is not None:
+            # Do the data preparation ahead of time.
+            datamodule.prepare_data()
+
+        def run_some_training_steps() -> float:
+            run_dir = tmp_path_factory.mktemp("benchmark_training_speed")
+            trainer = lightning.Trainer(
+                max_epochs=2,
+                limit_train_batches=10,
+                limit_val_batches=2,
+                num_sanity_val_steps=0,
+                log_every_n_steps=2,  # Benchmark with or without logging?
+                logger=[
+                    # lightning.pytorch.loggers.TensorBoardLogger(run_dir),
+                    lightning.pytorch.loggers.WandbLogger(save_dir=run_dir, mode="offline"),
+                ],
+                devices=1,
+                accelerator="auto",
+                default_root_dir=run_dir,
+            )
+            logger.info(f"Trainer log dir: {trainer.log_dir}")
+            trainer.fit(algorithm, datamodule=algorithm.datamodule)
+            wandb.finish()  # just to make sure that the logging happens the same way in all runs.
+            train_metrics = trainer.logged_metrics
+            assert isinstance(train_metrics, dict)
+            train_acc = train_metrics["train/accuracy"]
+            assert isinstance(train_acc, torch.Tensor)
+            return train_acc.item()
+
+        benchmark(run_some_training_steps)

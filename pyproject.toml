@@ -35,6 +35,8 @@ dependencies = [
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
     "hydra-orion-sweeper>=1.6.4 ; python_full_version < '3.11'",
+    "tensorboard>=2.19.0",
+    "torch-tb-profiler>=0.4.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -43,7 +45,7 @@ requires-python = ">= 3.10"
 dev = [
     "mktestdocs>=0.2.2",
     "pre-commit>=4.1.0",
-    "pytest-benchmark>=4.0.0",
+    "pytest-benchmark[histogram]>=4.0.0",
     "pytest-cov>=5.0.0",
     "pytest-env>=1.1.3",
     "pytest-regressions>=2.5.0",
@@ -83,6 +85,11 @@ addopts = [
     # todo: look into using https://github.com/scientific-python/pytest-doctestplus
     "--doctest-modules",
     "--stats-rounding-precision=3",
+    # Arguments for pytest-benchmark:
+    "--benchmark-autosave",              # save a new benchmark file for each test run.
+    "--benchmark-compare",               # compare the current run with the previous one.
+    # TODO: Setup an artifact for the benchmark file for Master branch and pass this in GitHub CI
+    # "--benchmark-compare-fail=mean:10%", # fail if the mean of the new runs is more than 10% slower than the previous run.
     # "--slow",
     # Uncomment for tests to generate missing regression files by default.
     # This also means that you should use a stable hardware configuration (e.g. the same GPU)
