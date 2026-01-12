@@ -35,7 +35,7 @@ examples: list[str] = [
     )
 ]
 
-_DEFAULT_PYTHON_VERSION = "3.10"
+_DEFAULT_PYTHON_VERSION = "3.11"
 """The default choice of python version in the copier.yaml file."""
 
 _project_fixture_scope = "module"
@@ -212,11 +212,8 @@ def project_from_template(
     [
         # These can be very slow but are super important!
         # don't run these unless --slow argument is passed to pytest, to save some time.
-        # TODO: This seems to be the only one that works in the CI atm, because:
-        # - UV seems unable to download other python versions?
-        # - Python 3.11 and 3.12 aren't able to install orion atm.
-        "3.10",
-        pytest.param("3.11", marks=pytest.mark.slow),
+        # "3.10",
+        "3.11",
         pytest.param("3.12", marks=pytest.mark.slow),
         pytest.param(
             "3.13",

@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
 
-    "torch==2.4.1",
+    "torch>=2.9.1",
     "hydra-core>=1.3.2",
     "hydra-submitit-launcher>=1.2.0",
     "wandb>=0.17.6",
@@ -23,9 +23,9 @@ dependencies = [
     "transformers>=4.44.0",
     "datasets>=2.21.0",
     # Jax-related dependencies:
-    "jax==0.4.33",
-    "jaxlib==0.4.33",
-    "torch-jax-interop>=0.0.7",
+    "jax",
+    "flax",
+    "torch-jax-interop>=0.0.8",
     "gymnax @ git+https://www.github.com/lebrice/gymnax@fix-classic-control-rendering",
     "rejax>=0.1.0",
     "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
@@ -34,10 +34,10 @@ dependencies = [
     "hydra-colorlog>=1.2.0",
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
-    "hydra-orion-sweeper>=1.6.4 ; python_full_version < '3.11'",
+    "hydra-orion-sweeper>=1.6.4",
 ]
 readme = "README.md"
-requires-python = ">= {{python_version}}"
+requires-python = ">= {{python_version}},<3.14"
 
 [dependency-groups]
 dev = [
@@ -53,11 +53,11 @@ dev = [
     "pytest-xdist>=3.6.1",
     "pytest>=8.3.2",
     "ruff>=0.6.0",
-    "tensor-regression>=0.0.8",
+    "tensor-regression>=0.1.2",
 ]
 
 [project.optional-dependencies]
-gpu = ["jax[cuda12]>=0.4.31; sys_platform == 'linux'"]
+gpu = ["jax[cuda13]; sys_platform == 'linux'"]
 
 [tool.pytest.ini_options]
 testpaths = ["{{module_name}}", "tests"]
@@ -82,9 +82,6 @@ lint.select = ["E4", "E7", "E9", "F", "I", "UP"]
 [tool.uv]
 managed = true
 
-[tool.uv.sources]
-remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", branch = "master" }
-
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning"]
@@ -98,3 +95,17 @@ packages = ["{{module_name}}"]
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+remote-slurm-executor = { git = "https://github.com/lebrice/remote-slurm-executor", branch = "master" }
+torch = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]

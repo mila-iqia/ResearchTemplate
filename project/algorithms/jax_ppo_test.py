@@ -4,6 +4,7 @@ import dataclasses
 import functools
 import operator
 import time
+import warnings
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
 from pathlib import Path
@@ -156,9 +157,7 @@ def test_ours(
     original_datadir: Path,
 ):
     ts, evaluations = results_ours
-    tensor_regression.check(
-        jax.tree.map(operator.methodcaller("__array__"), dataclasses.asdict(evaluations))
-    )
+    tensor_regression.check(jax.tree.map(np.asarray, dataclasses.asdict(evaluations)))
 
     eval_rng = rng
     if isinstance(seed, int):
@@ -311,7 +310,7 @@ def _visualize_rejax(rejax_algo: rejax.PPO, rejax_ts: Any, eval_rng: chex.PRNGKe
     actor = functools.partial(
         _actor,
         actor_ts=actor_ts,
-        rms_state=rejax_ts.rms_state,
+        rms_state=rejax_ts.obs_rms_state,  # changed in rejax recently.
         normalize_observations=rejax_algo.normalize_observations,
     )
     render_episode(
@@ -463,14 +462,19 @@ def debug_jit_warnings():
     # Temporarily make this particular warning into an error to help future-proof our jax code.
     import jax._src.deprecations
 
-    val_before = jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated
-    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = True
+    deprecations_to_trigger_error_for = ["tracer-hash"]
+    values_before = {}
+    for dep in deprecations_to_trigger_error_for:
+        if val := jax._src.deprecations._registered_deprecations.get(dep):
+            values_before[dep] = val.accelerated
+            val.accelerated = True
+        else:
+            warnings.warn(
+                f"Couldn't find jax deprecation {dep!r} to set to error, might not exist anymore."
+            )
     yield
-    jax._src.deprecations._registered_deprecations["tracer-hash"].accelerated = val_before
-
-    # train_pure_jax(algo, backend="cpu")
-    # train_rejax(env=algo.env, env_params=algo.env_params, hp=algo.hp, backend="cpu")
-    # train_lightning(algo, accelerator="cpu")
+    for dep, previous_value in values_before.items():
+        jax._src.deprecations._registered_deprecations[dep].accelerated = previous_value
 
 
 @pytest.fixture
