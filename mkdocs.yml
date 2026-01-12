@@ -92,7 +92,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          import:
+          inventories:
             - https://docs.python-requests.org/en/master/objects.inv
             - https://omegaconf.readthedocs.io/en/latest/objects.inv
             - https://lightning.ai/docs/pytorch/stable/objects.inv
