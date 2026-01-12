@@ -310,7 +310,7 @@ def _visualize_rejax(rejax_algo: rejax.PPO, rejax_ts: Any, eval_rng: chex.PRNGKe
     actor = functools.partial(
         _actor,
         actor_ts=actor_ts,
-        rms_state=rejax_ts.rms_state,
+        rms_state=rejax_ts.obs_rms_state,  # changed in rejax recently.
         normalize_observations=rejax_algo.normalize_observations,
     )
     render_episode(
