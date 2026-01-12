@@ -56,7 +56,7 @@ dev = [
 ]
 
 [project.optional-dependencies]
-gpu = ["jax[cuda12]>=0.4.31; sys_platform == 'linux'"]
+gpu = ["jax[cuda13]; sys_platform == 'linux'"]
 
 [tool.pytest.ini_options]
 testpaths = ["{{module_name}}", "tests"]
