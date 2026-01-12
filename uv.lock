@@ -4231,7 +4231,7 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "pytest-xdist", specifier = ">=3.6.1" },
     { name = "ruff", specifier = ">=0.6.0" },
-    { name = "tensor-regression", specifier = ">=0.0.8" },
+    { name = "tensor-regression", specifier = ">=0.1.2" },
 ]
 
 [[package]]
@@ -4560,16 +4560,16 @@ wheels = [
 
 [[package]]
 name = "tensor-regression"
-version = "0.1.1"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "optree" },
     { name = "pytest-regressions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/58/97/5f06a19197afabfc1bde7f1264af35abff4d240399d9336b0f88b94d6c89/tensor_regression-0.1.1.tar.gz", hash = "sha256:96c2c0af24356188ad1e17bc0ee8c568653d2dddd1407d0d9ed5c19dd77bda3c", size = 54891, upload-time = "2025-04-30T14:00:10.132Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/1f/22e0554f5d415a242b5b95872be7f90fbed37e3670c687162cb3beb07726/tensor_regression-0.1.2.tar.gz", hash = "sha256:d4505ed6cb2638536da638e80a8a879e389621306b9a3014a583aa5dae0ec72f", size = 16705, upload-time = "2026-01-12T20:52:04.491Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/42/f3780ccb76d58820d129823fc13d04090b38f1bdf631392aa6cf805fb1b9/tensor_regression-0.1.1-py3-none-any.whl", hash = "sha256:a14d41bf7f6f6fbc2b025b0dcb56331213de534875fe790861494f2daf42c09f", size = 12090, upload-time = "2025-04-30T14:00:07.744Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/83/44b0bc68fb124741fa1aced1e61607e63a57285f5dd2ab182cda06200fcf/tensor_regression-0.1.2-py3-none-any.whl", hash = "sha256:00fe39d8802e61e9f448c96ca90934566a8f29fe5bdf85af65407e6d34933bf5", size = 12092, upload-time = "2026-01-12T20:52:03.019Z" },
 ]
 
 [[package]]
