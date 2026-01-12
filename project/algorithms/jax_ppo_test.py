@@ -157,9 +157,7 @@ def test_ours(
     original_datadir: Path,
 ):
     ts, evaluations = results_ours
-    tensor_regression.check(
-        jax.tree.map(operator.methodcaller("__array__"), dataclasses.asdict(evaluations))
-    )
+    tensor_regression.check(jax.tree.map(np.asarray, dataclasses.asdict(evaluations)))
 
     eval_rng = rng
     if isinstance(seed, int):

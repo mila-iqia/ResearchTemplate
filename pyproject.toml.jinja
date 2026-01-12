@@ -23,9 +23,8 @@ dependencies = [
     "transformers>=4.44.0",
     "datasets>=2.21.0",
     # Jax-related dependencies:
-    "jax==0.4.33",
-    "jaxlib==0.4.33",
-    "torch-jax-interop>=0.0.7",
+    "jax",
+    "torch-jax-interop>=0.0.8",
     "gymnax @ git+https://www.github.com/lebrice/gymnax@fix-classic-control-rendering",
     "rejax>=0.1.0",
     "xtils[jitpp] @ git+https://github.com/jessefarebro/xtils",
@@ -37,7 +36,7 @@ dependencies = [
     "hydra-orion-sweeper>=1.6.4",
 ]
 readme = "README.md"
-requires-python = ">= {{python_version}}"
+requires-python = ">= {{python_version}},<3.14"
 
 [dependency-groups]
 dev = [

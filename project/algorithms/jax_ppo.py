@@ -40,6 +40,10 @@ from project.trainers.jax_trainer import JaxCallback, JaxModule, JaxTrainer, get
 
 logger = get_logger(__name__)
 
+# Little compatibility patch for rejax.
+if not hasattr(jax, "tree_map"):
+    setattr(jax, "tree_map", jax.tree.map)
+
 TEnvParams = TypeVar("TEnvParams", bound=gymnax.EnvParams, default=gymnax.EnvParams)
 """Type variable for the env params (`gymnax.EnvParams`)."""
 
