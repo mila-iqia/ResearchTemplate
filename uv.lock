@@ -4040,6 +4040,7 @@ source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "evaluate" },
+    { name = "flax" },
     { name = "gymnasium", extra = ["classic-control"] },
     { name = "gymnax" },
     { name = "hydra-auto-schema" },
@@ -4101,6 +4102,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ruff" },
     { name = "tensor-regression" },
+    { name = "tomli" },
 ]
 
 [package.metadata]
@@ -4108,6 +4110,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'docs'", specifier = ">=24.8.0" },
     { name = "datasets", specifier = ">=2.21.0" },
     { name = "evaluate", specifier = ">=0.4.2" },
+    { name = "flax" },
     { name = "gymnasium", extras = ["classic-control"], specifier = ">=0.29.1" },
     { name = "gymnax", git = "https://www.github.com/lebrice/gymnax?rev=fix-classic-control-rendering" },
     { name = "hydra-auto-schema", specifier = ">=0.0.7" },
@@ -4162,6 +4165,7 @@ dev = [
     { name = "pytest-xdist", specifier = ">=3.6.1" },
     { name = "ruff", specifier = ">=0.6.0" },
     { name = "tensor-regression", specifier = ">=0.1.2" },
+    { name = "tomli", specifier = ">=2.3.0" },
 ]
 
 [[package]]

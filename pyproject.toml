@@ -24,6 +24,7 @@ dependencies = [
     "datasets>=2.21.0",
     # Jax-related dependencies:
     "jax",
+    "flax",
     "torch-jax-interop>=0.0.8",
     "gymnax @ git+https://www.github.com/lebrice/gymnax@fix-classic-control-rendering",
     "rejax>=0.1.0",
@@ -54,6 +55,7 @@ dev = [
     "ruff>=0.6.0",
     "tensor-regression>=0.1.2",
     "copier>=9.5.0",
+    "tomli>=2.3.0",
 ]
 
 [project.optional-dependencies]

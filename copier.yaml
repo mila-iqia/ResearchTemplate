@@ -255,7 +255,7 @@ _tasks:
   ## Jax-related dependencies:
   - command: uv remove rejax gymnax gymnasium xtils --no-sync
     when: "{{ run_setup and 'jax_ppo' not in examples_to_include }}"
-  - command: uv remove jax torch-jax-interop --no-sync
+  - command: uv remove jax torch-jax-interop flax --no-sync
     when: "{{ run_setup and 'jax_ppo' not in examples_to_include and 'jax_image_classifier' not in examples_to_include }}"
 
   ## Huggingface-related dependencies:
