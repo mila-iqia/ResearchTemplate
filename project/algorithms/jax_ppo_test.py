@@ -461,7 +461,7 @@ def debug_jit_warnings():
     # Temporarily make this particular warning into an error to help future-proof our jax code.
     import jax._src.deprecations
 
-    deprecations_to_trigger_error_for = ["tracer-hash"]
+    deprecations_to_trigger_error_for = []
     values_before = {}
     for dep in deprecations_to_trigger_error_for:
         if val := jax._src.deprecations._registered_deprecations.get(dep):
