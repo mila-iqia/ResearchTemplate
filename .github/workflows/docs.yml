@@ -17,10 +17,7 @@ jobs:
           version: "latest"
           # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache-suffix: "3.10"
-
-      - name: Pin python-version
-        run: uv python pin 3.10
+          python-version: "3.12"
 
       - name: Install dependencies
         run: uv sync --extra docs --frozen
