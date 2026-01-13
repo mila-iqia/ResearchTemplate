@@ -34,7 +34,7 @@ dependencies = [
     "hydra-colorlog>=1.2.0",
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
-    "orion",
+    "orion>=0.2.8",
     "hydra-orion-sweeper>=1.6.4",
 ]
 readme = "README.md"
