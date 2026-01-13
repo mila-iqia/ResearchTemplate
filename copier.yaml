@@ -65,11 +65,9 @@ python_version:
   question: "What Python version do you want to use?"
   required: true
   choices:
-    - "3.10"
-    - "3.11"
     - "3.12"
-    # - "3.13" # todo: There seem to be some dependency issues with python 3.13 that need fixing.
-  default: "3.10"
+    - "3.13" # todo: There seem to be some dependency issues with python 3.13 that need fixing.
+  default: "3.12"
 
 # IDEA: Simplify the repo creation part of the form for new users.
 # However, does that maybe make too many assumptions about how people will use this?
