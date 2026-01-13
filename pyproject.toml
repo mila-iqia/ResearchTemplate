@@ -34,6 +34,7 @@ dependencies = [
     "hydra-colorlog>=1.2.0",
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
+    "orion",
     "hydra-orion-sweeper>=1.6.4",
 ]
 readme = "README.md"
@@ -133,3 +134,6 @@ torch = [
 torchvision = [
     { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+
+# note: Orion doesn't yet (2026-01-13) have a released build for python 3.12+ on PyPI.
+orion = { git = "https://github.com/Epistimio/orion", tag = "v0.2.8" }
