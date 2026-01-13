@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       # list of supported hooks: https://pre-commit.com/hooks.html
       - id: trailing-whitespace
@@ -32,7 +32,7 @@ repos:
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: "v0.6.9"
+    rev: "v0.14.11"
     hooks:
       - id: ruff
         args: ["--line-length", "99", "--fix"]
@@ -41,7 +41,7 @@ repos:
   # python docstring formatting
   - repo: https://github.com/myint/docformatter
     # Don't autoupdate until https://github.com/PyCQA/docformatter/issues/293 is fixed
-    rev: eb1df347edd128b30cd3368dddc3aa65edcfac38
+    rev: v1.7.7
     hooks:
       - id: docformatter
         language: python
@@ -59,33 +59,34 @@ repos:
 
   # jupyter notebook cell output clearing
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.7.1
+    rev: 0.8.2
     hooks:
       - id: nbstripout
         require_serial: true
 
   # md formatting
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.17
-    hooks:
-      - id: mdformat
-        exclude: "docs/" # terrible, I know, but it's messing up everything with mkdocs fences!
-        args: ["--number"]
-        additional_dependencies:
-          - mdformat-gfm
-          - mdformat-tables
-          - mdformat_frontmatter
-          - mdformat-toc
-          - mdformat-config
-          - mdformat-black
-          # see https://github.com/KyleKing/mdformat-mkdocs
-          # Doesn't seem to work!
-          - mdformat-mkdocs[recommended]>=2.1.0
-        require_serial: true
+  # TODO: Getting errors with python 3.13. Turning off for now.
+  # - repo: https://github.com/executablebooks/mdformat
+  #   rev: 1.0.0
+  #   hooks:
+  #     - id: mdformat
+  #       exclude: "docs/" # terrible, I know, but it's messing up everything with mkdocs fences!
+  #       args: ["--number"]
+  #       additional_dependencies:
+  #         - mdformat-gfm
+  #         - mdformat-tables
+  #         - mdformat_frontmatter
+  #         - mdformat-toc
+  #         - mdformat-config
+  #         - mdformat-black
+  #         # see https://github.com/KyleKing/mdformat-mkdocs
+  #         # Doesn't seem to work!
+  #         - mdformat-mkdocs[recommended]>=2.1.0
+  #       require_serial: true
 
   # word spelling linter
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
+    rev: v2.4.1
     hooks:
       - id: codespell
         args:

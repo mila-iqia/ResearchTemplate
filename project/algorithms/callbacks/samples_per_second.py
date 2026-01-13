@@ -1,5 +1,5 @@
 import time
-from typing import Any, Generic, Literal
+from typing import Any, Literal, override
 
 import lightning
 import optree
@@ -8,18 +8,13 @@ from lightning import LightningModule, Trainer
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from torch import Tensor
 from torch.optim.optimizer import Optimizer
-from typing_extensions import TypeVar, override
 
 from project.utils.typing_utils import NestedMapping, is_sequence_of
 
-BatchType = TypeVar(
-    "BatchType",
-    bound=torch.Tensor | tuple[torch.Tensor, ...] | NestedMapping[str, torch.Tensor],
-    contravariant=True,
-)
+type _Batch = torch.Tensor | tuple[torch.Tensor, ...] | NestedMapping[str, torch.Tensor]
 
 
-class MeasureSamplesPerSecondCallback(lightning.Callback, Generic[BatchType]):
+class MeasureSamplesPerSecondCallback[BatchType: _Batch](lightning.Callback):
     def __init__(self, num_optimizers: int | None = None):
         super().__init__()
         self.last_step_times: dict[Literal["train", "val", "test"], float] = {}

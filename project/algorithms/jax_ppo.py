@@ -77,7 +77,7 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     targets: chex.Array
 
 
-class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
+class TrajectoryCollectionState[TEnvState: gymnax.EnvState](flax.struct.PyTreeNode):
     """Struct containing the state related to the collection of data from the environment."""
 
     last_obs: jax.Array
@@ -88,7 +88,7 @@ class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
     rng: chex.PRNGKey
 
 
-class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
+class PPOState[TEnvState: gymnax.EnvState](flax.struct.PyTreeNode):
     """Contains all the state of the `JaxRLExample` algorithm."""
 
     actor_ts: TrainState
@@ -97,10 +97,7 @@ class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
     data_collection_state: TrajectoryCollectionState[TEnvState]
 
 
-T = TypeVar("T")
-
-
-def field(
+def field[T](
     *,
     default: T | dataclasses._MISSING_TYPE = dataclasses.MISSING,
     default_factory: Callable[[], T] | dataclasses._MISSING_TYPE = dataclasses.MISSING,

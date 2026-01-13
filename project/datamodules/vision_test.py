@@ -1,7 +1,6 @@
 import sys
 from logging import getLogger
 from pathlib import Path
-from typing import TypeVar
 
 import matplotlib.pyplot as plt
 import pytest
@@ -14,10 +13,11 @@ from project.datamodules.datamodule_tests import DataModuleTests
 from project.datamodules.vision import VisionDataModule
 
 logger = getLogger(__name__)
-VisionDataModuleType = TypeVar("VisionDataModuleType", bound=VisionDataModule)
 
 
-class VisionDataModuleTests(DataModuleTests[VisionDataModuleType]):
+class VisionDataModuleTests[VisionDataModuleType: VisionDataModule](
+    DataModuleTests[VisionDataModuleType]
+):
     """Tests for a datamodule/dataset for vision tasks.
 
     This is a simple data regression test for now.

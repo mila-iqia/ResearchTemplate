@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, override
 
 import lightning
 import pytest
@@ -9,7 +9,6 @@ from lightning import LightningModule
 from tensor_regression import TensorRegressionFixture
 from torch import Tensor
 from transformers import PreTrainedModel
-from typing_extensions import override
 
 from project.algorithms.text_classifier import TextClassifier
 from project.datamodules.text.text_classification import TextClassificationDataModule

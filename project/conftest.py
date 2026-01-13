@@ -70,7 +70,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal
 
 import hydra.errors
 import lightning
@@ -554,9 +554,7 @@ def setup_with_overrides(
                     return shortest[:i]
         return shortest
 
-    T = TypeVar("T")
-
-    def _assert_type(v: Any, t: type[T]) -> T:
+    def _assert_type[T](v: Any, t: type[T]) -> T:
         assert isinstance(v, t)
         return v
 

@@ -1,6 +1,6 @@
 import warnings
 from logging import getLogger as get_logger
-from typing import Literal, NotRequired, Required, TypedDict
+from typing import Literal, NotRequired, Required, TypedDict, override
 
 import lightning
 import torch
@@ -8,7 +8,6 @@ import torchmetrics
 from lightning import LightningModule, Trainer
 from torch import Tensor
 from torchmetrics.classification import MulticlassAccuracy
-from typing_extensions import override
 
 from project.utils.typing_utils.protocols import ClassificationDataModule
 
@@ -17,7 +16,7 @@ logger = get_logger(__name__)
 
 class ClassificationOutputs(TypedDict, total=False):
     """The outputs that should be minimally returned from the training/val/test_step of
-    classification LightningModules so that metrics can be added aumatically by the
+    classification LightningModules so that metrics can be added automatically by the
     `ClassificationMetricsCallback`."""
 
     loss: NotRequired[torch.Tensor | float]

@@ -1,11 +1,9 @@
 import abc
 import sys
-from typing import Generic, TypeVar
 
 import hydra_zen
 import omegaconf
 import pytest
-from lightning import LightningDataModule
 from lightning.fabric.utilities.exceptions import MisconfigurationException
 from lightning.pytorch.trainer.states import RunningStage
 from tensor_regression.fixture import TensorRegressionFixture
@@ -14,11 +12,15 @@ from torch.utils.data import DataLoader
 from project.algorithms.lightning_module_tests import convert_list_and_tuples_to_dicts
 from project.conftest import algorithm_config
 from project.utils.testutils import IN_GITHUB_CLOUD_CI
-
-DataModuleType = TypeVar("DataModuleType", bound=LightningDataModule)
+from project.utils.typing_utils.protocols import DataModule
 
 # Use a dummy, empty algorithm, to keep the datamodule tests independent of the algorithms.
 # This is a unit test for the datamodule, so we don't want to involve the algorithm here.
+
+
+# NOTE: Here these parametrizations are actually inherited by all the test classes that inherit from DataModuleTests
+# and run tests for different datamodules. This is a bit unusual, but avoids us having to repeat these parametrizations
+# in every single datamodule test class.
 
 
 @pytest.mark.skipif(
@@ -26,7 +28,7 @@ DataModuleType = TypeVar("DataModuleType", bound=LightningDataModule)
     reason="Getting weird bugs with MacOS on GitHub CI.",
 )
 @pytest.mark.parametrize(algorithm_config.__name__, ["no_op"], indirect=True, ids=[""])
-class DataModuleTests(Generic[DataModuleType], abc.ABC):
+class DataModuleTests[DataModuleType: DataModule](abc.ABC):
     @pytest.fixture(
         scope="class",
         params=[

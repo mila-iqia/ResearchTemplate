@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import Any
+from typing import Any, override
 
 import chex
 import gymnax
@@ -27,7 +27,6 @@ from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from tensor_regression import TensorRegressionFixture
 from torch.utils.data import DataLoader
-from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.main_test import experiment_commands_to_test

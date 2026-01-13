@@ -12,7 +12,6 @@ from dataclasses import fields, is_dataclass
 from logging import getLogger as get_logger
 from typing import (
     Any,
-    TypeVar,
 )
 
 import hydra.utils
@@ -254,8 +253,7 @@ def instance_attr(
                 instantiated_obj = instantiate(obj)
             except Exception as err:
                 logger.error(
-                    f"Unable to instantiate {obj} to get the missing {attr_part} "
-                    f"attribute: {err}"
+                    f"Unable to instantiate {obj} to get the missing {attr_part} attribute: {err}"
                 )
                 break
             new_instantiated_objects[path_so_far] = instantiated_obj
@@ -347,10 +345,7 @@ def _being_called_by(*functions: Callable) -> bool:
     return False
 
 
-Target = TypeVar("Target")
-
-
-def make_config_and_store(
+def make_config_and_store[Target](
     target: Callable[..., Target], *, store: hydra_zen.ZenStore, **overrides
 ):
     """Creates a config dataclass for the given target and stores it in the config store.
