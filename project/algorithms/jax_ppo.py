@@ -13,7 +13,7 @@ import operator
 from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, TypedDict
+from typing import Any, TypedDict
 
 import chex
 import flax.linen
@@ -88,7 +88,8 @@ class TrajectoryCollectionState[TEnvState: gymnax.EnvState](flax.struct.PyTreeNo
     rng: chex.PRNGKey
 
 
-class PPOState[TEnvState: gymnax.EnvState](flax.struct.PyTreeNode):
+@flax.struct.dataclass
+class PPOState[TEnvState: gymnax.EnvState]:
     """Contains all the state of the `JaxRLExample` algorithm."""
 
     actor_ts: TrainState
@@ -204,10 +205,9 @@ def get_error_from_ppo_eval_metrics(metrics: EvalMetrics) -> tuple[str, float]:
     )
 
 
-class JaxRLExample(
+class JaxRLExample[TEnvState: gymnax.EnvState, TEnvParams: gymnax.EnvParams](
     flax.struct.PyTreeNode,
     JaxModule[PPOState[TEnvState], TrajectoryWithLastObs, EvalMetrics],
-    Generic[TEnvState, TEnvParams],
 ):
     """Example of an RL algorithm written in Jax: PPO, based on `rejax.PPO`.
 
