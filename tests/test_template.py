@@ -215,16 +215,7 @@ def project_from_template(
         # "3.10",
         # "3.11",
         "3.12",
-        pytest.param(
-            "3.13",
-            marks=[
-                # pytest.mark.slow,
-                pytest.mark.xfail(
-                    reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13",
-                    strict=True,
-                ),
-            ],
-        ),
+        "3.13",
     ],
     indirect=True,
 )
