@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import typing
-from typing import Literal, ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 if typing.TYPE_CHECKING:
     from torch import nn
     from torch.utils.data import DataLoader
 
-P = ParamSpec("P")
-OutT = TypeVar("OutT", covariant=True)
-
 
 @runtime_checkable
-class Module(Protocol[P, OutT]):
+class Module[**P, OutT](Protocol):
     """Small protocol that can be used to annotate the input/output types of `torch.nn.Module`s."""
 
     def forward(self, *args: P.args, **kwargs: P.kwargs) -> OutT:
@@ -35,11 +32,8 @@ class Module(Protocol[P, OutT]):
         to = nn.Module().to
 
 
-BatchType = TypeVar("BatchType", covariant=True)
-
-
 @runtime_checkable
-class DataModule(Protocol[BatchType]):
+class DataModule[BatchType](Protocol):
     """Protocol that shows the minimal attributes / methods of the `LightningDataModule` class.
 
     This is used to type hint the batches that are yielded by the DataLoaders.
@@ -53,7 +47,7 @@ class DataModule(Protocol[BatchType]):
 
 
 @runtime_checkable
-class ClassificationDataModule(DataModule[BatchType], Protocol):
-    """Protocol that matches "datamodules with a 'num_classes' int attribute."""
+class ClassificationDataModule[BatchType](DataModule[BatchType], Protocol):
+    """Protocol for classification datamodules (datasets) with a 'num_classes' int attribute."""
 
     num_classes: int

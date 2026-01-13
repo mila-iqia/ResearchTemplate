@@ -15,7 +15,7 @@ dependencies = [
     "torchvision>=0.19.0",
     "rich>=13.7.1",
     "tqdm>=4.66.5",
-    "hydra-zen==0.13.1rc1",
+    "hydra-zen>=0.16.0",
     "matplotlib>=3.9.2",
     "optree>=0.15.0",                 # to get tree ops without needing jax as a dependency.
     # Hugging Face dependencies:
@@ -34,6 +34,7 @@ dependencies = [
     "hydra-colorlog>=1.2.0",
     "remote-slurm-executor",
     "hydra-auto-schema>=0.0.7",
+    "orion>=0.2.8",
     "hydra-orion-sweeper>=1.6.4",
 ]
 readme = "README.md"
@@ -109,3 +110,4 @@ torch = [
 torchvision = [
     { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+orion = { git = "https://github.com/Epistimio/orion", tag = "v0.2.8" }

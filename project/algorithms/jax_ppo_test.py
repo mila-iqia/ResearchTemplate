@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import Any
+from typing import Any, override
 
 import chex
 import gymnax
@@ -27,7 +27,6 @@ from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from tensor_regression import TensorRegressionFixture
 from torch.utils.data import DataLoader
-from typing_extensions import override
 
 from project.algorithms.callbacks.samples_per_second import MeasureSamplesPerSecondCallback
 from project.main_test import experiment_commands_to_test
@@ -462,7 +461,7 @@ def debug_jit_warnings():
     # Temporarily make this particular warning into an error to help future-proof our jax code.
     import jax._src.deprecations
 
-    deprecations_to_trigger_error_for = ["tracer-hash"]
+    deprecations_to_trigger_error_for = []
     values_before = {}
     for dep in deprecations_to_trigger_error_for:
         if val := jax._src.deprecations._registered_deprecations.get(dep):

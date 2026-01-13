@@ -13,7 +13,7 @@ import operator
 from collections.abc import Callable, Mapping, Sequence
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, TypedDict
+from typing import Any, TypedDict
 
 import chex
 import flax.linen
@@ -77,7 +77,7 @@ class AdvantageMinibatch(flax.struct.PyTreeNode):
     targets: chex.Array
 
 
-class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
+class TrajectoryCollectionState[TEnvState: gymnax.EnvState](flax.struct.PyTreeNode):
     """Struct containing the state related to the collection of data from the environment."""
 
     last_obs: jax.Array
@@ -88,7 +88,8 @@ class TrajectoryCollectionState(Generic[TEnvState], flax.struct.PyTreeNode):
     rng: chex.PRNGKey
 
 
-class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
+@flax.struct.dataclass
+class PPOState[TEnvState: gymnax.EnvState]:
     """Contains all the state of the `JaxRLExample` algorithm."""
 
     actor_ts: TrainState
@@ -97,10 +98,7 @@ class PPOState(Generic[TEnvState], flax.struct.PyTreeNode):
     data_collection_state: TrajectoryCollectionState[TEnvState]
 
 
-T = TypeVar("T")
-
-
-def field(
+def field[T](
     *,
     default: T | dataclasses._MISSING_TYPE = dataclasses.MISSING,
     default_factory: Callable[[], T] | dataclasses._MISSING_TYPE = dataclasses.MISSING,
@@ -207,10 +205,9 @@ def get_error_from_ppo_eval_metrics(metrics: EvalMetrics) -> tuple[str, float]:
     )
 
 
-class JaxRLExample(
+class JaxRLExample[TEnvState: gymnax.EnvState, TEnvParams: gymnax.EnvParams](
     flax.struct.PyTreeNode,
     JaxModule[PPOState[TEnvState], TrajectoryWithLastObs, EvalMetrics],
-    Generic[TEnvState, TEnvParams],
 ):
     """Example of an RL algorithm written in Jax: PPO, based on `rejax.PPO`.
 

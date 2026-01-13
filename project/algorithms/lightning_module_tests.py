@@ -5,13 +5,13 @@ See the [project.algorithms.image_classifier_test][] module for an example of ho
 
 from __future__ import annotations
 
+import abc
 import copy
 import dataclasses
-from abc import ABC
 from collections.abc import Mapping
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import Any, Generic, Literal, TypeVar, overload
+from typing import Any, Literal, overload
 
 import lightning
 import pytest
@@ -28,11 +28,9 @@ from project.utils.hydra_utils import resolve_dictconfig
 
 logger = get_logger(__name__)
 
-LightningModuleType = TypeVar("LightningModuleType", bound=LightningModule)
-
 
 @pytest.mark.incremental  # https://docs.pytest.org/en/stable/example/simple.html#incremental-testing-test-steps
-class LightningModuleTests(Generic[LightningModuleType], ABC):
+class LightningModuleTests[LightningModuleType: LightningModule](abc.ABC):
     """Suite of generic tests for a LightningModule.
 
     Simply inherit from this class and decorate the class with the appropriate markers to get a set

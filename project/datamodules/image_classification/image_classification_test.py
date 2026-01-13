@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import TypeVar
 
 import pytest
 from lightning.pytorch.trainer.states import RunningStage
@@ -12,12 +11,10 @@ from project.datamodules.image_classification.image_classification import (
 )
 from project.datamodules.vision_test import VisionDataModuleTests
 
-ImageClassificationDataModuleType = TypeVar(
-    "ImageClassificationDataModuleType", bound=ImageClassificationDataModule
-)
 
-
-class ImageClassificationDataModuleTests(VisionDataModuleTests[ImageClassificationDataModuleType]):
+class ImageClassificationDataModuleTests[
+    ImageClassificationDataModuleType: ImageClassificationDataModule
+](VisionDataModuleTests[ImageClassificationDataModuleType]):
     """Tests for a datamodule/dataset for image classification.
 
     This is a simple data regression test for now.

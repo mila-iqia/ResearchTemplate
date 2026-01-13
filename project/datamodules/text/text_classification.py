@@ -241,7 +241,8 @@ class TextClassificationDataModule(LightningDataModule):
         features = self.tokenizer.batch_encode_plus(
             texts_or_text_pairs,
             max_length=self.max_seq_length,
-            pad_to_max_length=True,
+            # pad_to_max_length=True,
+            padding="max_length",
             truncation=True,
         )
         if "label" in example_batch and "labels" not in example_batch:

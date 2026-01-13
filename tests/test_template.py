@@ -13,7 +13,6 @@ import pytest
 import tomli
 import yaml
 from copier import Worker
-from copier.vcs import get_git
 from plumbum import local
 
 import project
@@ -22,6 +21,23 @@ from project.main import REPO_ROOTDIR
 from project.utils.testutils import IN_GITHUB_CLOUD_CI
 
 logger = getLogger(__name__)
+
+
+def get_git(context_dir: str | Path | None = None):
+    """Gets `git` command, or fails if it's not available."""
+
+    GIT_USER_NAME = "Copier"
+    GIT_USER_EMAIL = "copier@copier"
+    command = local["git"].with_env(
+        GIT_AUTHOR_NAME=GIT_USER_NAME,
+        GIT_AUTHOR_EMAIL=GIT_USER_EMAIL,
+        GIT_COMMITTER_NAME=GIT_USER_NAME,
+        GIT_COMMITTER_EMAIL=GIT_USER_EMAIL,
+    )
+    if context_dir:
+        command = command["-C", context_dir]
+    return command
+
 
 example_folder = Path(project.algorithms.__file__).parent
 examples: list[str] = [
@@ -35,7 +51,7 @@ examples: list[str] = [
     )
 ]
 
-_DEFAULT_PYTHON_VERSION = "3.11"
+_DEFAULT_PYTHON_VERSION = "3.12"
 """The default choice of python version in the copier.yaml file."""
 
 _project_fixture_scope = "module"
@@ -213,18 +229,9 @@ def project_from_template(
         # These can be very slow but are super important!
         # don't run these unless --slow argument is passed to pytest, to save some time.
         # "3.10",
-        "3.11",
-        pytest.param("3.12", marks=pytest.mark.slow),
-        pytest.param(
-            "3.13",
-            marks=[
-                pytest.mark.slow,
-                pytest.mark.xfail(
-                    reason="TODO: Update dependencies (torch, jax, t-j-i, mujoco, ...) for python 3.13",
-                    strict=True,
-                ),
-            ],
-        ),
+        # "3.11",
+        "3.12",
+        "3.13",
     ],
     indirect=True,
 )
@@ -408,7 +415,7 @@ def test_update_project(
 
     with modification(project_root, copier_answers, template_version_used):
         # Need to commit changes for copier to accept to update.
-        git = get_git().with_cwd(project_root)
+        git = get_git(context_dir=project_root)
         # TODO: Double-check that these changes only affect the temporary cloned repo, not this
         # current dev repo.
         git("config", "commit.gpgsign", "false")

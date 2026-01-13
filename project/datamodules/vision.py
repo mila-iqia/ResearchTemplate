@@ -5,7 +5,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from logging import getLogger as get_logger
 from pathlib import Path
-from typing import ClassVar, Concatenate, Literal, ParamSpec, TypeVar
+from typing import ClassVar, Concatenate, Literal
 
 import torch
 import torchvision.transforms
@@ -22,11 +22,8 @@ from project.utils.typing_utils.protocols import DataModule
 
 logger = get_logger(__name__)
 
-BatchType_co = TypeVar("BatchType_co", covariant=True)
-P = ParamSpec("P")
 
-
-class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
+class VisionDataModule[BatchType_co](LightningDataModule, DataModule[BatchType_co]):
     """A LightningDataModule for image datasets.
 
     (Taken from pl_bolts which is not very well maintained.)
@@ -220,7 +217,7 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
     def default_transforms(self) -> Callable:
         """Default transform for the dataset."""
 
-    def train_dataloader(
+    def train_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -238,7 +235,7 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             **kwargs,
         )
 
-    def val_dataloader(
+    def val_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -255,7 +252,7 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             **kwargs,
         )
 
-    def test_dataloader(
+    def test_dataloader[**P](
         self,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
         *args: P.args,
@@ -272,7 +269,7 @@ class VisionDataModule(LightningDataModule, DataModule[BatchType_co]):
             **kwargs,
         )
 
-    def _data_loader(
+    def _data_loader[**P](
         self,
         dataset: Dataset,
         _dataloader_fn: Callable[Concatenate[Dataset, P], DataLoader] = DataLoader,
@@ -335,5 +332,5 @@ def _contains_normalization_transform(transforms: Callable) -> bool:
     if isinstance(transforms, torchvision.transforms.Compose | torchvision.transforms.v2.Compose):
         return any(_contains_normalization_transform(t) for t in transforms.transforms)
     if isinstance(transforms, torch.nn.Sequential):
-        return any(_contains_normalization_transform(t) for t in transforms.transforms)
+        return any(_contains_normalization_transform(t) for t in transforms)
     return False

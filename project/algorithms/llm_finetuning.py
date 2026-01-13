@@ -14,7 +14,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import Concatenate
 
 import datasets
 import datasets.distributed
@@ -517,10 +517,7 @@ def get_hash_of(config_dataclass) -> str:
     return hashlib.md5(vals_string.encode()).hexdigest()
 
 
-V = TypeVar("V")
-
-
-def flatten_dict(d: NestedMapping[str, V]) -> dict[str, V]:
+def flatten_dict[V](d: NestedMapping[str, V]) -> dict[str, V]:
     result = {}
     for k, v in d.items():
         if isinstance(v, Mapping):
@@ -530,10 +527,7 @@ def flatten_dict(d: NestedMapping[str, V]) -> dict[str, V]:
     return result
 
 
-P = ParamSpec("P")
-
-
-def _try_to_load_prepared_dataset_from(
+def _try_to_load_prepared_dataset_from[**P](
     dataset_path: Path,
     _load_from_disk_fn: Callable[Concatenate[Path, P], Dataset | DatasetDict] = load_from_disk,
     *_load_from_disk_args: P.args,
