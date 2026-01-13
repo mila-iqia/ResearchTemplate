@@ -1387,16 +1387,16 @@ wheels = [
 
 [[package]]
 name = "hydra-zen"
-version = "0.13.1rc1"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "hydra-core" },
     { name = "omegaconf" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/8e/75255e0f0b8042d84df6afe9d3ab2d8b0f45359f3f7a80c2194e7371de2a/hydra_zen-0.13.1rc1.tar.gz", hash = "sha256:37f577e2615fc5692eab73c954f4f8dc1d01386327d208057cc169fbf5d86e0b", size = 1329925, upload-time = "2024-07-13T17:19:01.326Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/61/b0f50be4f34b52390fdd204d86696aa37f718e91c73f727cdcbc782592ba/hydra_zen-0.16.0.tar.gz", hash = "sha256:55b931ba79bef329c9baa64e47c44b2dcc1594b0df292a445bed5d9a349596b0", size = 1332416, upload-time = "2025-10-22T17:29:52.861Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/bd/0061300354aed319076b8564d2137967794f3b886065c2a532db87b51180/hydra_zen-0.13.1rc1-py3-none-any.whl", hash = "sha256:c0d5dfb3a47aaf507e7df1eca561766cdadcd1c047107010d5a746c929c2d45f", size = 103951, upload-time = "2024-07-13T17:18:59.009Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/cc/64d0fad725570ed6a02f5c7676cbfe3a268bed2fc3b10a74b59425ce6386/hydra_zen-0.16.0-py3-none-any.whl", hash = "sha256:fdf33060dfc530ef14248b861c5a8ab43ebb54df38fec8fb6d0be15b5af617ea", size = 106312, upload-time = "2025-10-22T17:29:50.925Z" },
 ]
 
 [[package]]
@@ -3650,7 +3650,7 @@ requires-dist = [
     { name = "hydra-core", specifier = ">=1.3.2" },
     { name = "hydra-orion-sweeper", specifier = ">=1.6.4" },
     { name = "hydra-submitit-launcher", specifier = ">=1.2.0" },
-    { name = "hydra-zen", specifier = "==0.13.1rc1" },
+    { name = "hydra-zen", specifier = ">=0.16.0" },
     { name = "jax" },
     { name = "jax", extras = ["cuda13"], marker = "sys_platform == 'linux' and extra == 'gpu'" },
     { name = "lightning", specifier = ">=2.4.0" },
