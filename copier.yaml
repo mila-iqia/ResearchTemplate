@@ -33,20 +33,18 @@ module_name:
 user_name:
   type: str
   question: "What is your name?"
-  required: true
-  placeholder: "FirstName LastName"
+  required: False
 
 github_user:
   type: str
   question: "What is your GitHub username?"
-  required: true
+  required: False
   validator: "{% if github_user == '' %}Please enter your username on github.{% endif %}"
   help: |
     What is your GitHub username?
 
     NOTE: This script does not create a GitHub repository for you, but a link will be printed below
     to help you set that up yourself.
-  placeholder: "{{ user_name | lower | replace(' ', '') }}"
 
 user_email:
   type: str
@@ -318,7 +316,7 @@ _tasks:
           echo "Installing the Python vscode extension..."
           code --install-extension ms-python.python
           echo "Opening the new project with VsCode..."
-          code --new-window --goto "{{ _copier_conf.dst_path }}/README.md" "{{ _copier_conf.dst_path }}"
+          code --new-window --goto "{{ _copier_conf.dst_path.resolve() }}/README.md" "{{ _copier_conf.dst_path.resolve() }}"
       fi
     when: "{{run_setup}}"
   # todos / ideas:

@@ -3,7 +3,9 @@ name = "{{project_name}}"
 dynamic = ["version"]
 description = "{{project_description}}"
 authors = [
+    {% if user_email and user_name %}
     { name = "{{user_name}}", email = "{{user_email}}" },
+    {% endif %}
 ]
 dependencies = [
 
