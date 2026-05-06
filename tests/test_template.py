@@ -46,7 +46,6 @@ todo: ideally we'd only setup the project once per initial version and reuse it 
 some tests update the folder (e.g. `test_update_project`), so we can't reuse the fixture atm.
 """
 
-
 @pytest.fixture(
     params=[[], *[[example] for example in examples], examples],
     scope=_project_fixture_scope,
@@ -61,8 +60,8 @@ def examples_to_include(request: pytest.FixtureRequest):
 def test_build_workflow_python_version_is_templated():
     """Test that the generated build.yml uses the python_version from copier answers.
 
-    This verifies that the build.yml.jinja template correctly substitutes the
-    python_version variable, rather than having a hardcoded Python version.
+    This verifies that the build.yml.jinja template correctly substitutes the python_version
+    variable, rather than having a hardcoded Python version.
     """
     build_yml_jinja = Path(".github/workflows/build.yml.jinja")
     assert build_yml_jinja.exists(), "build.yml.jinja template not found"
@@ -409,8 +408,7 @@ def test_update_project(
     tmp_path: Path,
 ):
     """IDEA: Test that sets up a project from the template at a given version and then updates it
-    to new version with `copier update`.
-    """
+    to new version with `copier update`."""
     project_root = tmp_path / "temp_project"
     data_file = tmp_path / "copier_inputs.yaml"
     data_file.write_text(yaml.dump(dataclasses.asdict(copier_answers)))
