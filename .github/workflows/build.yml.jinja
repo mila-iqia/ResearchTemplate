@@ -1,0 +1,160 @@
+{% raw %}# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+# https://stackoverflow.com/a/72408109/6388696
+# https://docs.github.com/en/actions/using-jobs/using-concurrency#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  linting:
+    name: Run linting/pre-commit checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: uvx pre-commit run --all-files --show-diff-on-failure
+
+  unit_tests:
+    needs: [linting]
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      max-parallel: 4
+      matrix:
+        platform: [ubuntu-latest, macos-latest]{% endraw %}
+        python-version: ["{{ python_version }}"]{% raw %}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          python-version: ${{ matrix.python-version }}
+          # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ matrix.python-version }}
+      - name: Test with pytest
+        env:
+          JAX_PLATFORMS: cpu
+        run: uv run --frozen pytest -v --cov=project --cov-report=xml --cov-append --gen-missing
+
+      - name: Store coverage report as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-unit-tests-${{ matrix.platform }}-${{ matrix.python-version }}
+          path: ./coverage.xml
+
+  launch-slurm-actions-runner:
+    needs: [unit_tests]
+    runs-on: self-hosted
+    timeout-minutes: 5
+    strategy:
+      max-parallel: 5
+      matrix:
+        cluster: ["mila"] #, 'narval', 'beluga']
+    outputs:
+      # note: doesn't really work. Not that big a deal. Would have been nice to show the jobid in
+      # the name of the next job.
+      job_id: ${{ steps.sbatch.outputs.stdout }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy job script to the cluster
+        # note: The script will be overwritten by different CI runs, but it shouldn't really
+        # change, so not a big deal.
+        # todo: there are some assumptions about the GPU type to use in that script.
+        run: "scp .github/launch_actions_runner.sh ${{ matrix.cluster }}:launch_actions_runner.sh"
+
+      - name: Launch Slurm Actions Runner
+        id: sbatch
+        # TODO: for DRAC clusters, we could set the default slurm account to use with a
+        # export SLURM_ACCOUNT=... in ~/.bash_aliases.
+        # TODO: Hard-coded mila-specific GPU to use for running tests.
+        # This isn't great, but currently necessary for reproducibility tests.
+        # Output the job ID to a file so that the next step can use it.
+        run: |
+          job_id=`ssh ${{ matrix.cluster }} 'cd $SCRATCH && sbatch --gpus=rtx8000:1 --parsable $HOME/launch_actions_runner.sh'`
+          echo "Submitted job $job_id on the ${{ matrix.cluster }} cluster!"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+
+  # This step runs in a self-hosted Github Actions runner inside a SLURM job on the compute node of the cluster.
+  slurm_integration_tests:
+    name: Run integration tests on the ${{ matrix.cluster }} cluster in job ${{ needs.launch-slurm-actions-runner.outputs.job_id}}
+    needs: [launch-slurm-actions-runner]
+    runs-on: ["self-hosted", "${{ matrix.cluster }}"]
+    timeout-minutes: 30
+    strategy:
+      max-parallel: 5
+      matrix:
+        # TODO: this should be tied to the same setting in the `launch-slurm-actions-runner` job.
+        # cluster: ${{ needs.launch-slurm-actions-runner.strategy.matrix.cluster }}
+        cluster: ["mila"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          # https://github.com/astral-sh/setup-uv?tab=readme-ov-file#github-authentication-token
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install dependencies
+        run: uv sync --all-extras --frozen
+      - name: Show installed packages
+        run: uv pip list
+      - name: Test with pytest
+        run: uv run pytest -v --gen-missing --cov=project --cov-report=xml --cov-append
+
+      # TODO: Disabling full regression tests on the cluster for now, because the worker is often
+      # interrupted and we want to avoid using the unkillable partition to not interrupt other's
+      # work. The full regression tests can be run manually with the `--slow` flag.
+      # - name: Test with pytest (only slow tests)
+      #   run: rye run pytest -v -m slow --slow --cov=project --cov-report=xml --cov-append
+
+      - name: Store coverage report as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-slurm-integration-tests-${{ matrix.cluster }}
+          path: ./coverage.xml
+
+  # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
+  upload-coverage-codecov:
+    needs: [slurm_integration_tests]
+    runs-on: ubuntu-latest
+    name: Upload coverage reports to Codecov
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-reports-*
+          merge-multiple: false
+          # download all the artifacts in this directory (each .coverage.xml will be in a subdirectory)
+          # Next step if this doesn't work would be to give the coverage files a unique name and use merge-multiple: true
+          path: coverage_reports
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: coverage_reports
+          fail_ci_if_error: true
+{% endraw %}

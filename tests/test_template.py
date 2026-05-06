@@ -9,6 +9,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Protocol
 
+import jinja2
 import pytest
 import tomli
 import yaml
@@ -55,6 +56,28 @@ def examples_to_include(request: pytest.FixtureRequest):
     """Fixture that provides the examples that would be selected by the users."""
     # By default, select all of the examples.
     return request.param
+
+
+def test_build_workflow_python_version_is_templated():
+    """Test that the generated build.yml uses the python_version from copier answers.
+
+    This verifies that the build.yml.jinja template correctly substitutes the
+    python_version variable, rather than having a hardcoded Python version.
+    """
+    build_yml_jinja = Path(".github/workflows/build.yml.jinja")
+    assert build_yml_jinja.exists(), "build.yml.jinja template not found"
+
+    template_str = build_yml_jinja.read_text()
+    env = jinja2.Environment(keep_trailing_newline=True, undefined=jinja2.StrictUndefined)
+    template = env.from_string(template_str)
+
+    for python_version in ["3.10", "3.11", "3.12"]:
+        rendered = template.render(python_version=python_version)
+        rendered_yaml = yaml.safe_load(rendered)
+        matrix = rendered_yaml["jobs"]["unit_tests"]["strategy"]["matrix"]
+        assert matrix["python-version"] == [
+            python_version
+        ], f"Expected python-version to be [{python_version!r}], got {matrix['python-version']}"
 
 
 def test_templated_dependencies_are_same_as_in_project():
